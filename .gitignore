@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+node_modules/
+dist/
+build/
+data/
+*.parquet
+*.duckdb
+.DS_Store
+.terraform/
+*.tfstate*
