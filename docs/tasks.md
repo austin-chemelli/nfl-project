@@ -25,7 +25,7 @@ Steps 3, 4 and 5 touch different directories and can run as parallel implementer
 | Waiting on Austin | M0.1 commit; persona-weight review (M2.7 §5) |
 | Done (2026-10-27) | M6.1a narrative contract: `nfl/llm/narrative.py` (schema, store, slate, ingest), `features/narrative.py`, `/nfl-narrative` skill |
 | Done (2026-10-27, Opus) | Step 1: M1.10 availability, M1.11 strength extras + QB, M1.12 schedule context, M1.17 history to 1999 (scored 2005–2025), M2.8 groups (15, inner weights shrunk toward declared signs), personas re-proposed at group level + the Student; market baseline v0.2 (vig-free moneyline). Review in `.notes/persona-review-groups.md` |
-| Waiting on Austin | M0.1 commit; persona review at group level (`.notes/persona-review-groups.md` §Your call) |
+| Done (2026-10-27) | M0.1: first build committed (`f7edd73`); personas kept as characters; turnover margin moved to Quality (registry v2) |
 | Next | Step 2: M4.1 `nfl lock`, M4.2 weekly commands + runbook, M7.1 container, dry-run week |
 
 Ideas added 2026-10-27 (DIY approach, new feature families, scheme priors via coordinators, narrative via skill) are in `.notes/ideas-diy-features-narrative.md`; the tasks below marked *(2026-10-27)* came from it.
