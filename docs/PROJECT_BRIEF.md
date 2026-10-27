@@ -1,6 +1,8 @@
 # NFL Matchup Predictor — Project Brief
 
-Handoff from planning conversations (Oct 2026). This file is the source of truth for scope and decisions; scoping of tiers is still open.
+Handoff from planning conversations (Oct 2026). Source of truth for scope and goals. Decisions are recorded in [adr/](adr/) and the plan in [architecture.md](architecture.md) and [tasks.md](tasks.md); where this brief and an ADR disagree, the ADR records the resolution.
+
+**Reframed 2026-10-25 (ADR 0003):** educational preview tool first, betting as a scoring lens. "Model philosophies" became a shared feature store plus persona-style *approaches* (Traditionalist, Analyst, Sharp; later Matchup, Narrative), each with a persona and a fitted flavor, plus an ensemble, odds-weighted paper bets, divergence-from-market analysis, and a Hypotheses page.
 
 ## Why this project
 - A **public, shipped, live** project showing strategic, effective use of LLMs/agents.
@@ -27,7 +29,7 @@ LLM/agent role: an **explanatory and enrichment layer** — general football-con
 ## Workstreams
 1. **Data platform** — idempotent scheduled ingestion, 2022+ backfill, null-rate audit, Parquet + DuckDB. Every record carries a "known as of" timestamp for point-in-time correctness.
 2. **Tendency store** — per team × situation bucket (down, distance, field zone, score state), offense and defense. Blend league prior + coordinator history + current season with exponential recency decay and beta-binomial shrinkage. Handle discontinuities (coordinator change, QB change). Later: player-availability splits.
-3. **Prediction models ("philosophies")** — Elo-style ratings; opponent-adjusted EPA efficiency; tendency-matchup Monte Carlo drive sim; market-anchored (line + adjustments); ensemble. Each has a parameter grid (decay half-life, HFA, shrinkage).
+3. **Prediction models ("philosophies")** — *Superseded by ADR 0003/0004:* feature store + approaches (persona and fitted flavors, shrink-to-persona ridge) + ensemble. Elo and the market baseline remain as features and reference lines; the Monte Carlo drive sim is an offseason experiment.
 4. **Backtest + tournament** — walk-forward (predict week w using data through w-1). Tune on 2022–2024, select on 2025, run top performers live for rest of 2026. Metrics: log loss, Brier, spread MAE, calibration, ATS, CLV. Automated leakage guards.
 5. **LLM enrichment** — three separate jobs:
    a. General concept explanations (model knowledge, labeled as general).
@@ -48,12 +50,14 @@ LLM/agent role: an **explanatory and enrichment layer** — general football-con
 - **Later:** Approach C game, accounts/leaderboard, availability splits, full Monte Carlo sim.
 - **Defer/cut:** real-money betting, polished UI before data is solid, individual player modeling.
 
-## Open decisions
-1. Number of model philosophies in v1 (suggest 2–3).
-2. Enrichment explain-only in v1 vs. feeding models (suggest explain-only first).
-3. Live-first vs. backtest-first (suggest crude live pipeline + backtest in parallel — ~10 regular-season weeks + playoffs left as of late Oct 2026).
-4. Frontend depth before playoffs.
-5. Hosting + LLM/search budget per week.
+## Open decisions (all resolved, Oct 2026)
+1. Number of model philosophies in v1 — **decided:** three approaches (Traditionalist, Analyst, Sharp) in persona + fitted flavors, plus ensemble and reference lines; Narrative in shadow; Matchup offseason. [ADR 0003](adr/0003-feature-store-and-approaches.md), [ADR 0004](adr/0004-persona-and-fitted-flavors.md).
+2. Enrichment explain-only vs. feeding models — **decided:** narrative features are captured live from launch and feed only the shadow Narrative approach in 2026; previews are explain-only with a faithfulness check. [ADR 0007](adr/0007-llm-layer.md).
+3. Live-first vs. backtest-first — **decided:** both on the same code path; first public lock once the approaches exist (no calendar target), walk-forward backtest 2015–2025 graded by the same code. [ADR 0005](adr/0005-point-in-time-and-locks.md), [ADR 0010](adr/0010-first-live-lock-with-approaches.md).
+4. Frontend depth before playoffs — **decided:** Streamlit locally through P1; React + TS static site on Firebase Hosting in P2; no API or accounts in 2026. [ADR 0009](adr/0009-frontend-timing.md).
+5. Hosting + LLM/search budget — **decided:** local runs until P2, then Terraform'd GCP (Cloud Run Jobs, Scheduler, GCS, Secret Manager, WIF) + Firebase; LLM on an API key, $10–15/week target, $25 cap, Sonnet/Opus/Haiku 5.5 by job, built-in web search. [ADR 0008](adr/0008-hosting-path.md), [ADR 0007](adr/0007-llm-layer.md).
+
+Also decided: free data only ([ADR 0001](adr/0001-open-data-only.md)); Parquet + DuckDB under one data root ([ADR 0002](adr/0002-storage-parquet-duckdb.md)); scoring and odds-weighted bets ([ADR 0006](adr/0006-scoring-and-odds-weighted-bets.md)); licensing ([ADR 0011](adr/0011-licensing.md)).
 
 ## Principles
 - LLM stays out of the numeric core; it explains and enriches. All published numbers are verified against data.

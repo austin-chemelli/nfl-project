@@ -1,0 +1,59 @@
+# Project journal
+
+How this project has evolved: what was tried, what was decided and why, what the data and the backtests showed. Chronological, one entry per working session or milestone. This is the raw material for the eventual write-ups (README results, posts, the "how AI coding tools were used" notes). Decisions themselves live in `docs/adr/`; this file is the story around them.
+
+Conventions: date-headed entries, newest last. Each entry: **what happened**, **decisions** (link the ADR), **findings** (numbers with n), **open** (what was left unresolved). Keep it factual; opinions go in `.notes/`. Append at the end of every session that changes the plan, the data, or the results.
+
+## 2026-10-23: brainstorm
+
+**What happened.** Austin brought a project brief (`docs/PROJECT_BRIEF.md`) with five open decisions. Claude (Fable) reviewed it, verified data facts against nflverse, and kept a running decision log in `.notes/brainstorm.md`.
+
+**Decisions.** Free, redistributable data only (ADR 0001): nflverse plus The Odds API free tier; paid charting sources (NFL Pro, PFF, FTN direct, Fantasy Points) tabled after checking prices and redistribution terms. Parquet + DuckDB under one data root (ADR 0002). Cloud-first hosting on GCP with Firebase Hosting, self-hosting on the spare desktop as a later project (ADR 0008). LLM spend on an API key, not the Max subscription (ADR 0007). Licensing: code MIT, derived data CC-BY-SA (ADR 0011). Two lock points per week (ADR 0005).
+
+**Findings.** Participation data (coverage, personnel, man/zone) is published only after the season; FTN charting (box count, blitzers, motion, play-action, RPO, QB alignment) updates in-season, 2022+. An early draft of the log wrongly said box count was offseason-only; corrected. nflverse schedule lines are untimestamped and closing-ish. Claude Max subscription tokens may not power an application (enforced since ~Apr 2026).
+
+**Open.** Model philosophies, enrichment feeding models or not, live-first vs backtest-first, frontend depth, budget: all resolved on 2026-10-25/26.
+
+## 2026-10-24 to 10-25: local POC
+
+**What happened.** Built a ~1,500-line local POC: ingestion of nflverse parquet into immutable snapshots with manifests, DuckDB-curated tables (games, plays joined to FTN, injuries, depth charts), a null-rate audit, raw team tendencies by situation, three reference models (market baseline, margin-of-victory Elo, naive home), append-only predictions with synthetic backfill locks, grading, and a Streamlit explorer. `nfl run-all` in ~10 s. 7 tests including the first leakage guards.
+
+**Findings.** Market baseline log loss ≈ 0.60–0.62 per season (2022–2025, ~285 games each), Elo ≈ +0.02–0.03 worse, naive 0.69. 99% of pass/run plays join FTN on (game_id, play_id). Bugs found and fixed: `desc` is a DuckDB reserved word; DuckDB 2.0 connections have no `.pl()`; hive partitioning must be off when reading raw snapshot folders; an ATS bug scored "model spread equals the line" as a win. A data walkthrough (`.notes/data-walkthrough.md`) documented sample rows and what is precomputed by nflfastR (EPA, WP, success, CPOE, xpass) versus computed here.
+
+## 2026-10-25: vision v2
+
+**What happened.** Austin reframed the product: educational and insightful first, betting as a scoring lens; several "approaches" that weigh shared evidence differently, like different fans; an ensemble; a slate view, game pages with drill-ins, a season tracker; divergence from the market as the interesting signal; odds-weighted outcomes rather than win/loss.
+
+**Decisions.** Feature store + approaches + calibration replaces "model philosophies" (ADR 0003). Each approach in a persona and a fitted flavor (ADR 0004). Odds-weighted paper bets with a 5-point threshold, flat 1 unit, CLV as the edge metric, divergence buckets (ADR 0006). A basic Hypotheses page is a first-class deliverable. Persona weights proposed by Claude, reviewed by Austin.
+
+## 2026-10-26: plan, then M0–M3 built
+
+**What happened.** `/plan-project` on Fable produced `docs/architecture.md`, ADRs 0001–0011, `docs/tasks.md`, and a rewritten CLAUDE.md. Austin chose: Streamlit through P1 and React in P2 (ADR 0009); first public lock waits for the approaches rather than locking Week 9 with the POC models (ADR 0010); the name stays `nfl-project`. Calendar targets were then removed from the plan at Austin's request: sequence only. Implementation moved to Opus with implementer agents in parallel: feature store (7 families), approach configs, scoring engine, shrink-to-persona ridge fitting with walk-forward λ selection, backfill 2015–2025, grading v2 (ECE, reliability, season-bootstrap CIs, divergence buckets), Odds API snapshots, live market features, and the paper ledger. 93 tests.
+
+**Decisions.** No GitHub Actions cron scheduler; locks are laptop commands until Cloud Scheduler in P2 (ADR 0008 amendment). Backtest feature rows are stamped kickoff − 2h, strictly before the kickoff − 1h synthetic lock. The λ grid moved to 1–10,000 on the summed log loss after the original 0.3–10 proved effectively unregularized. The global fit excludes market features so hypotheses read "does X predict wins", not "is X priced in".
+
+**Findings (backtest 2015–2025, 3,018 games, models never trained on the scored season).** Sharp fitted 0.612 log loss vs market 0.615 (CI on the difference crosses zero); ensemble 0.623; Traditionalist, Analyst and Elo ≈ 0.635; Traditionalist persona 0.642; naive 0.689. When the non-market approaches disagreed with the market by 10+ points (≈ 660 games each), the side they leaned toward won 38–41% of the time against a market expectation of 40–41%, i.e. the market was right. Persona vs fitted weights: the Traditionalist overrates momentum ~6× and rest ~3×; travel, time zones and turnover margin fit near zero; the Analyst overrates defensive EPA and 4th-down aggressiveness and underrates plain results. Platt scale 0.50 for the Traditionalist persona (twice as confident as warranted), 0.73 Analyst, 0.97 Sharp. Backfill paper ledger 2022+: every model loses into closing-ish lines, Sharp fitted −2.9% ROI, the rest −7% to −15%.
+
+**Bugs.** Play-by-play prints current team codes (LA, LAC, LV) for every season while schedules use historical ones (STL, SD, OAK); the strength builder silently dropped those teams' plays. Fixed by joining on franchise codes, with a regression test. The Odds API historical endpoint turned out to be paid-only on the free plan (the brainstorm log had it as included); closing lines now come from our own pre-kickoff snapshots, else nflverse. The Odds API only takes the key as a URL parameter; one probe printed a URL with the key into session output, after which the module was made to redact URLs from every error (tested).
+
+**Open.** Austin's review of the persona weights; the first commit.
+
+## 2026-10-27: ideas, groups, sequence, narrative contract
+
+**What happened.** Austin proposed a build-your-own approach page, asked for more features, and asked to get the LLM narrative research running for Week 8. Claude (Fable) wrote `.notes/ideas-diy-features-narrative.md` (DIY page design that needs no server; ~60 candidate features with calculations; the narrative agent plan), built the narrative record contract (`nfl.llm.narrative`, `nfl.features.narrative`, `nfl narrative slate|ingest|example|list`) and the `/nfl-narrative` Claude Code skill as the development-time producer of the same records the API job will produce. Then, on Austin's observation that 60 features cannot be hand-weighted, two-level features: groups with fitted inner weights, personas weigh groups (ADR 0012). Four grouping options were compared; Austin chose the tight-groups option with the scheme group split three ways (`docs/feature-groups.md`, 15 groups). The work sequence was fixed at the top of `docs/tasks.md`: model identity → live → UI → LLM API → hosting → next feature wave.
+
+**Findings.** Injury reports carry `date_modified`, so availability features can be stamped at report time (the data walkthrough had said no report date). A 2024 participation file has personnel and pressure on 100% of plays and coverage type on ~49% (pass plays), from 2016: scheme priors attached to coordinators are feasible. pbp back to 1999 is ~14 MB per season, so a backfill to 1999 for 21 scored seasons is cheap.
+
+**Open.** Persona weights re-proposed at the group level after M2.8; the Week 8 narrative run with the skill; the commit.
+
+## 2026-10-27 (later): step 1 built (Opus)
+
+**What happened.** Data: play-by-play backfilled to 1999, injuries and depth charts to 2009, new pbp columns (passer id, QB EPA, CPOE, sacks, special-teams flag). Three implementer agents in parallel built the availability family (QB1 out, QB change, starters out, position-weighted injury impact, OL out, report count), strength extras (opponent-adjusted EPA via a weekly ridge, pass/rush splits, early-down and non-garbage EPA, sack rates, Pythagorean win%, luck, strength of schedule, special-teams EPA, QB career EPA and CPOE that follow the quarterback), and schedule context (EPA trend, ATS last 3, bye, short week, road streak, lookahead, letdown, eliminated, clinched). The main session built the group machinery (ADR 0012): a 15-group registry, grouped persona configs with overrides, per-group inner weights, unit-variance composites, persona and fitted flavors on composites, stored as flat effective weights so scoring and artifacts didn't change. Personas re-proposed at group level, plus the Student (equal start, learns from results). Scored seasons are now 2005–2025 (5,684 games), training from 2002.
+
+**Decisions.** Inner weights are per-group fits, not the joint global fit, and shrink toward each member's declared sign (ADR 0012 amendment). The market baseline is the vig-free moneyline (v0.2). 1999 kickoff times are imputed by slot and flagged.
+
+**Findings.** Fitted approaches now trail the market by 0.016 log loss (was 0.021 with the flat design). The Sharp ties the market (Δ −0.0004, CI crosses 0). The data's group weights: Quality 0.35, Quarterback 0.22, Offense 0.21, Health 0.11, Defense 0.10, Stakes 0.10, Form 0.08, Venue 0.05, Rest & travel 0.05, scheme ≈ 0, Coaching −0.05. The Traditionalist overrates form and rest about 4× and underrates offense 4× and the QB 2×; the Analyst overrates coaching aggressiveness (fits to 0). Nobody wins when disagreeing with the market by 10+ points.
+
+**Bugs and leaks caught.** (1) The QB "projected starter" was the passer with the most dropbacks in the game, which leaked in-game injuries and benchings in ~3% of team-games; the Sharp briefly "beat the market" with a CI below zero. Switched to the first passer, with a regression test. (2) The remaining Sharp edge was exactly the miscalibration of Φ(spread/13.5) (calibrated spread 0.6083 = Sharp persona 0.6083), hence the vig-free moneyline baseline. (3) 1999 schedules have no kickoff times, so Elo would have replayed 1999 after 2026. (4) Older injury files store season as a float (partitions named `season=2009.0`). (5) Injury `date_modified` exists only 2010–2024, not 2025+ as assumed in the morning. (6) Inner weights shrunk toward zero flipped signs within near-duplicate groups (12 flips), fixed by shrinking toward declared signs.
+
+**Open.** Austin's review of the group-level personas; the coaching group's composition; the first commit.

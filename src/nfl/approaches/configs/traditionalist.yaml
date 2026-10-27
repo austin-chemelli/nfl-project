@@ -1,0 +1,26 @@
+# Group weights (ADR 0012): logit units per 1 SD of each group's unit-variance composite; positive
+# favors the home team's edge in that group. Inner weights come from history unless overridden.
+# Proposed by Claude 2026-10-27 at group level, for Austin's review. Flat v1: .notes/persona-flat-v1/
+id: traditionalist
+name: The Traditionalist
+blurb: >-
+  Trusts the scoreboard, home crowds, rest, travel and who's hot. Thinks you win by running the
+  ball and winning the turnover battle, and doesn't need a spreadsheet to tell him so.
+emphasis: [quality, form, rest_travel]
+calibration: platt
+intercept: {w: 0.25, why: "Home field is worth a good 2.5 points"}
+groups:
+  quality:       {w: 0.45, why: "Wins, who you beat, and winning the turnover battle"}
+  form:          {w: 0.30, why: "Momentum is real; hot teams stay hot"}
+  rest_travel:   {w: 0.20, why: "Fresh legs win late in the year; cross-country trips wear teams down"}
+  venue_weather: {w: 0.15, why: "Crowds, domes and weather decide games"}
+  stakes:        {w: 0.15, why: "Teams play to what's on the line"}
+  defense:       {w: 0.12, why: "Defense wins championships"}
+  coaching:      {w: 0.10, why: "Take the points, establish the run"}
+  health:        {w: 0.10, why: "You play who's healthy"}
+  quarterback:   {w: 0.10, why: "Good to have a QB, but it's a team game"}
+  offense:       {w: 0.05, why: "Has heard of EPA, doesn't really trust it"}
+  buzz:          {w: 0.05, why: "Listens to the talk shows"}
+overrides:
+  # His idea of good coaching, not the data's: 4th-down gambles and pass-happy play-calling are bad.
+  coaching: {decisions.fourth_go_rate_oe: -1.0, decisions.pass_rate_oe: -1.0}

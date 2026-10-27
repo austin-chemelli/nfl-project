@@ -1,0 +1,326 @@
+[
+ {
+  "id": "c93c421e5fa46031a43162d111d981d0",
+  "sport_key": "americanfootball_nfl",
+  "sport_title": "NFL",
+  "commence_time": "2026-11-01T18:00:00Z",
+  "home_team": "Buffalo Bills",
+  "away_team": "Baltimore Ravens",
+  "bookmakers": [
+   {
+    "key": "draftkings",
+    "title": "DraftKings",
+    "last_update": "2026-10-26T21:58:02Z",
+    "markets": [
+     {
+      "key": "h2h",
+      "last_update": "2026-10-26T21:58:02Z",
+      "outcomes": [
+       {
+        "name": "Baltimore Ravens",
+        "price": 154
+       },
+       {
+        "name": "Buffalo Bills",
+        "price": -185
+       }
+      ]
+     },
+     {
+      "key": "spreads",
+      "last_update": "2026-10-26T21:58:02Z",
+      "outcomes": [
+       {
+        "name": "Baltimore Ravens",
+        "price": -118,
+        "point": 3.5
+       },
+       {
+        "name": "Buffalo Bills",
+        "price": -102,
+        "point": -3.5
+       }
+      ]
+     },
+     {
+      "key": "totals",
+      "last_update": "2026-10-26T21:58:02Z",
+      "outcomes": [
+       {
+        "name": "Over",
+        "price": -112,
+        "point": 53.5
+       },
+       {
+        "name": "Under",
+        "price": -108,
+        "point": 53.5
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "fanduel",
+    "title": "FanDuel",
+    "last_update": "2026-10-26T21:59:19Z",
+    "markets": [
+     {
+      "key": "h2h",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Baltimore Ravens",
+        "price": 152
+       },
+       {
+        "name": "Buffalo Bills",
+        "price": -180
+       }
+      ]
+     },
+     {
+      "key": "spreads",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Baltimore Ravens",
+        "price": -118,
+        "point": 3.5
+       },
+       {
+        "name": "Buffalo Bills",
+        "price": -104,
+        "point": -3.5
+       }
+      ]
+     },
+     {
+      "key": "totals",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Over",
+        "price": -105,
+        "point": 53.5
+       },
+       {
+        "name": "Under",
+        "price": -115,
+        "point": 53.5
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "betrivers",
+    "title": "BetRivers",
+    "last_update": "2026-10-26T21:59:19Z",
+    "markets": [
+     {
+      "key": "h2h",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Baltimore Ravens",
+        "price": 143
+       },
+       {
+        "name": "Buffalo Bills",
+        "price": -177
+       }
+      ]
+     },
+     {
+      "key": "spreads",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Baltimore Ravens",
+        "price": -117,
+        "point": 3.5
+       },
+       {
+        "name": "Buffalo Bills",
+        "price": -105,
+        "point": -3.5
+       }
+      ]
+     },
+     {
+      "key": "totals",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Over",
+        "price": -108,
+        "point": 53.0
+       },
+       {
+        "name": "Under",
+        "price": -113,
+        "point": 53.0
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f2a036d5edf483a277880014861e78ad",
+  "sport_key": "americanfootball_nfl",
+  "sport_title": "NFL",
+  "commence_time": "2026-11-01T21:25:00Z",
+  "home_team": "Denver Broncos",
+  "away_team": "Kansas City Chiefs",
+  "bookmakers": [
+   {
+    "key": "draftkings",
+    "title": "DraftKings",
+    "last_update": "2026-10-26T21:58:02Z",
+    "markets": [
+     {
+      "key": "h2h",
+      "last_update": "2026-10-26T21:58:02Z",
+      "outcomes": [
+       {
+        "name": "Denver Broncos",
+        "price": 105
+       },
+       {
+        "name": "Kansas City Chiefs",
+        "price": -125
+       }
+      ]
+     },
+     {
+      "key": "spreads",
+      "last_update": "2026-10-26T21:58:02Z",
+      "outcomes": [
+       {
+        "name": "Denver Broncos",
+        "price": -110,
+        "point": 1.5
+       },
+       {
+        "name": "Kansas City Chiefs",
+        "price": -110,
+        "point": -1.5
+       }
+      ]
+     },
+     {
+      "key": "totals",
+      "last_update": "2026-10-26T21:58:02Z",
+      "outcomes": [
+       {
+        "name": "Over",
+        "price": -105,
+        "point": 41.5
+       },
+       {
+        "name": "Under",
+        "price": -115,
+        "point": 41.5
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "betus",
+    "title": "BetUS",
+    "last_update": "2026-10-26T21:58:53Z",
+    "markets": [
+     {
+      "key": "spreads",
+      "last_update": "2026-10-26T21:58:53Z",
+      "outcomes": [
+       {
+        "name": "Denver Broncos",
+        "price": 100,
+        "point": 0.0
+       },
+       {
+        "name": "Kansas City Chiefs",
+        "price": -120,
+        "point": 0.0
+       }
+      ]
+     },
+     {
+      "key": "totals",
+      "last_update": "2026-10-26T21:58:53Z",
+      "outcomes": [
+       {
+        "name": "Over",
+        "price": -110,
+        "point": 41.0
+       },
+       {
+        "name": "Under",
+        "price": -110,
+        "point": 41.0
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "key": "fanduel",
+    "title": "FanDuel",
+    "last_update": "2026-10-26T21:59:19Z",
+    "markets": [
+     {
+      "key": "h2h",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Denver Broncos",
+        "price": 102
+       },
+       {
+        "name": "Kansas City Chiefs",
+        "price": -120
+       }
+      ]
+     },
+     {
+      "key": "spreads",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Denver Broncos",
+        "price": -112,
+        "point": 1.5
+       },
+       {
+        "name": "Kansas City Chiefs",
+        "price": -108,
+        "point": -1.5
+       }
+      ]
+     },
+     {
+      "key": "totals",
+      "last_update": "2026-10-26T21:59:19Z",
+      "outcomes": [
+       {
+        "name": "Over",
+        "price": -102,
+        "point": 41.5
+       },
+       {
+        "name": "Under",
+        "price": -120,
+        "point": 41.5
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+]

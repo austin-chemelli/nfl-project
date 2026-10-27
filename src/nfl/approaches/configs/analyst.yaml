@@ -1,0 +1,21 @@
+# See traditionalist.yaml for units. Proposed by Claude 2026-10-27 at group level, for Austin's review.
+id: analyst
+name: The Analyst
+blurb: >-
+  Lives in EPA and success rate. Rewards efficient offenses, good quarterbacks and aggressive
+  fourth-down decisions; treats momentum and turnovers as mostly noise.
+emphasis: [offense, quarterback, defense]
+calibration: platt
+intercept: {w: 0.15, why: "Home field has shrunk to about 1.5 points"}
+groups:
+  offense:       {w: 0.40, why: "Offensive efficiency is the most stable signal in football"}
+  quarterback:   {w: 0.30, why: "The quarterback is most of the offense"}
+  defense:       {w: 0.25, why: "Defense matters, but it's less stable than offense"}
+  quality:       {w: 0.15, why: "Results carry some signal; point differential beats record"}
+  coaching:      {w: 0.15, why: "Going for it and passing early are efficient decisions"}
+  health:        {w: 0.10, why: "Missing starters change the efficiency picture"}
+  venue_weather: {w: 0.10, why: "Neutral sites and divisions shift home field a little"}
+  off_scheme:    {w: 0.05, why: "Motion and play-action help, as the data weighs them"}
+  def_scheme:    {w: 0.05, why: "Pressure helps, as the data weighs it"}
+  rest_travel:   {w: 0.05, why: "Rest is a small but real edge"}
+  form:          {w: 0.02, why: "Momentum is mostly noise"}

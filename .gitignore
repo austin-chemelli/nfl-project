@@ -13,3 +13,8 @@ data/
 .DS_Store
 .terraform/
 *.tfstate*
+!.env.example
+# symlinks into .venv created by the streamlit package
+.agents/
+.claude/skills/developing-with-streamlit
+.claude/settings.local.json
