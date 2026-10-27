@@ -59,3 +59,5 @@ Conventions: date-headed entries, newest last. Each entry: **what happened**, **
 **Open.** Austin's review of the group-level personas; the coaching group's composition; the first commit.
 
 **Later the same day.** Austin kept the personas as characters (the persona-vs-fitted gaps are the point) and moved turnover margin from Coaching to Quality; Coaching's fitted group weight went from −0.05 to 0.00, so turnover margin had been what made "coaching" look harmful. Registry v2. First build committed as `f7edd73` (91 files, 137 tests); not pushed.
+
+**Before going public.** The original project brief carried a personal "About me" section (employer, job-search targets). It was moved to `.notes/about-me.md` (local, never committed) and stripped from every commit with `git filter-branch`; the brief now has a neutral "Why this project" section. The rewrite changed only that file (verified by diffing against a backup branch).
