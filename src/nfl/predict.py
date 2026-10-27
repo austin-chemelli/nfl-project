@@ -1,8 +1,9 @@
-"""Produce prediction rows for every game in the requested seasons, walk-forward.
+"""Reference models (market, Elo, naive) on completed games, walk-forward.
 
-Rows go to marts/predictions.parquet (append-only). Historical games get one synthetic lock
-(kickoff - 1h, is_backfill=true) and are never re-predicted; upcoming games get a new row per run
-with lock_ts = now, so repeated lock runs are preserved as separate rows.
+Rows go to marts/predictions.parquet (append-only). Completed games get one synthetic lock
+(kickoff - 1h, is_backfill=true) and are never re-predicted. Live rows for upcoming games come only
+from `nfl lock` (nfl.lock), never from here: until 2026-10-27 this module also wrote a row per
+upcoming game on every run, which grading would have mistaken for real pre-game locks.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from datetime import timedelta
 import duckdb
 import polars as pl
 
-from nfl.config import FIRST_SEASON, Paths, now_utc
+from nfl.config import FIRST_SEASON, Paths
 from nfl.models import elo as elo_model
 from nfl.models import market, naive
 
@@ -81,7 +82,6 @@ def predict(paths: Paths, seasons: tuple[int, int] | None) -> int:
         .select(pl.concat_str(["game_id", pl.lit("|"), "model_id"]))
         .to_series()
     )
-    now = now_utc().replace(tzinfo=None)
     elo = elo_model.Elo()
     rows: list[dict] = []
 
@@ -91,8 +91,8 @@ def predict(paths: Paths, seasons: tuple[int, int] | None) -> int:
         played = g["result"] is not None
         in_range = lo <= g["season"] <= hi
         neutral = (g["location"] or "Home") != "Home"
-        if in_range and (played or (kickoff is not None and kickoff > now - timedelta(hours=4))):
-            lock_ts = (kickoff - timedelta(hours=1)) if played and kickoff else now
+        if in_range and played:
+            lock_ts = kickoff - timedelta(hours=1)
             preds = {
                 market.MODEL_ID: (
                     market.MODEL_VERSION,

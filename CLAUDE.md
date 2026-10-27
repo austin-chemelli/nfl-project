@@ -20,7 +20,7 @@ Public portfolio project. The goal is a **live, shipped** system with real measu
 
 ## Status
 
-2026-10-27: sequence decided (top of docs/tasks.md); ADR 0012 adds two-level features (groups with fitted inner weights). 2026-10-26: plan written (architecture, ADRs 0001–0011, tasks). M0, M1 (feature store, 7 families), M2 (approaches, fitting, backfill 2015–2025, grading v2) and M3 (Odds API snapshots, live market features, paper ledger with CLV) are built but uncommitted; progress table at the top of docs/tasks.md, backtest findings in `.notes/backtest-2025.md`. Step 1 done 2026-10-27 (groups, availability/QB/schedule features, history from 1999, personas at group level, review in `.notes/persona-review-groups.md`). Next: step 2, the lock. The first public lock waits for the approaches (ADR 0010); there are no calendar targets, only the sequence.
+2026-10-27: sequence decided (top of docs/tasks.md); ADR 0012 adds two-level features (groups with fitted inner weights). 2026-10-26: plan written (architecture, ADRs 0001–0011, tasks). M0, M1 (feature store, 7 families), M2 (approaches, fitting, backfill 2015–2025, grading v2) and M3 (Odds API snapshots, live market features, paper ledger with CLV) are built but uncommitted; progress table at the top of docs/tasks.md, backtest findings in `.notes/backtest-2025.md`. Step 1 done 2026-10-27. Step 2: `nfl lock`, weekly refresh, runbook and README scorecard built 2026-10-27; next is the dry-run week (Week 8), then the first public locks (Week 9). Repo is public. The first public lock waits for the approaches (ADR 0010); there are no calendar targets, only the sequence.
 
 ## Non-negotiable principles
 
@@ -54,13 +54,16 @@ uv run nfl odds snapshot     # Odds API lines now (3 credits) -> raw/odds_api + 
 uv run nfl odds status       # credits used, snapshots on disk (free)
 uv run nfl ledger            # open paper bets at last lock, settle, CLV -> marts/bets*.parquet
 uv run nfl narrative slate 2026 8   # games to research; `ingest <file>` validates+stores a record; `example`, `list`
-uv run nfl run-all           # all of the above (replaced by `nfl weekly` in M4)
+uv run nfl lock --slot thu|sat [--dry-run] [--commit --push]   # the live lock (docs/runbook.md)
+uv run nfl weekly refresh    # Tuesday job: current-season ingest, odds, curate, features, grade, ledger
+uv run nfl readme            # rewrite the README scorecard section
+uv run nfl run-all           # full historical rebuild (POC-era; prefer the individual commands)
 uv run nfl ui                # Streamlit explorer
 uv run pytest -q             # unit tests + leakage guards (guards skip without local data)
 uv run ruff check src tests && uv run ruff format src tests
 ```
 
-Planned (see tasks.md for the milestone): `nfl lock --slot thu|sat [--commit]`, `nfl weekly refresh|grade`, `nfl site`, `nfl narrative`, `nfl hypotheses`.
+Planned (see tasks.md for the milestone): `nfl site`, `nfl narrative`, `nfl hypotheses`.
 
 ## Layout and conventions
 
@@ -72,7 +75,7 @@ Planned (see tasks.md for the milestone): `nfl lock --slot thu|sat [--commit]`, 
 - `marts/predictions.parquet` and `marts/bets.parquet` are append-only. Never edit rows; add rows with a new `lock_ts` or `model_version`.
 - Narrative records (`nfl.llm.narrative.GameNarrative`) are the contract between research and pipeline; `producer` is `claude_code` (the `/nfl-narrative` skill, dev only) or `api` (production). Features from them are stamped with the record's `known_as_of`, never backfilled.
 - `src/nfl/llm/`: separate entrypoints (`narrative.py`, `preview.py`, `faithfulness.py`), prompts versioned in `src/nfl/llm/prompts/<job>_v<N>.md`, every call logged to `marts/llm_calls.parquet`. Weekly cost cap `LLM_WEEKLY_CAP_USD` (default 25).
-- `public/predictions/<season>/week_<w>_<slot>.json` + `.sha256`: committed lock artifacts. Commit message `lock: <season> W<w> <slot>`. Lock-only commits may be pushed without asking (Austin, 2026-10-27), but only when `git log origin/main..HEAD` contains nothing else; every other push asks first.
+- `public/predictions/<season>/week_<ww>_<slot>_<lock ts>.json` + `.sha256`: committed lock artifacts (written by `nfl lock`; never edited). Commit message `lock: <season> W<w> <slot>`. Lock-only commits may be pushed without asking (Austin, 2026-10-27), but only when `git log origin/main..HEAD` contains nothing else; every other push asks first.
 - DuckDB 2.0: use `con.sql(q).pl()`; quote generated identifiers (`desc` is reserved). Timestamps need `pytz`.
 - Data conventions: `spread_line` > 0 means home favored, `result` = home − away; schedule lines are untimestamped (closing-ish); injuries have `week`, and `date_modified` only for 2010–2024 (live point-in-time comes from ingest snapshots); 1999 schedules have no gametime (kickoff imputed by slot, `kickoff_imputed`); depth charts from 2025 are timestamped (`dt`); FTN joins pbp on (`game_id`,`play_id`) = (`nflverse_game_id`,`nflverse_play_id`) for ~99% of pass/run plays; participation (coverage, personnel) is offseason-only.
 - The Odds API key only works as a URL query param: never log URLs or raw httpx errors from `nfl/odds.py` (it redacts them). Historical odds are paid-only on our plan.

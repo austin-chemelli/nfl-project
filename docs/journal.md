@@ -61,3 +61,13 @@ Conventions: date-headed entries, newest last. Each entry: **what happened**, **
 **Later the same day.** Austin kept the personas as characters (the persona-vs-fitted gaps are the point) and moved turnover margin from Coaching to Quality; Coaching's fitted group weight went from −0.05 to 0.00, so turnover margin had been what made "coaching" look harmful. Registry v2. First build committed as `f7edd73` (91 files, 137 tests); not pushed.
 
 **Before going public.** The original project brief carried a personal "About me" section (employer, job-search targets). It was moved to `.notes/about-me.md` (local, never committed) and stripped from every commit with `git filter-branch`; the brief now has a neutral "Why this project" section. The rewrite changed only that file (verified by diffing against a backup branch).
+
+## 2026-10-27 (evening): the lock (step 2 begins)
+
+**What happened.** The repo went public after the history rewrite. Built `nfl lock`: a refresh (current-season ingest, odds snapshot, curate, features), strict as-of scoring of the slot's unplayed games with the frozen 2025 fits plus market/Elo/naive reference lines, append-only prediction rows, paper bets, a deterministic public JSON with SHA-256, and guarded commit/push (commits only the lock files; pushes only when every unpushed commit is a lock commit, matching Austin's standing permission). Also `nfl weekly refresh`, `docs/runbook.md`, a README with a pipeline-written scorecard (`nfl readme`) and an MIT LICENSE.
+
+**Cleanup.** `nfl predict` had been writing a "live" row per upcoming game on every run since the POC; grading would have treated those as real pre-game locks. 673 such rows (and 20 paper bets opened from them) were purged; none were public. `nfl predict` is now backfill-only, and live rows come only from `nfl lock`.
+
+**Findings.** First dry run (Week 8 Thursday, CAR @ GB) end to end in ~30 s: market 0.64, Traditionalist and Analyst 0.68, Sharp 0.61, Student 0.68, ensemble 0.66, Elo 0.67. The Sharp sits below the market because it reads the spread (GB −3.5 ≈ 0.60) while the vig-free moneyline says 0.64: the two markets disagree slightly on this game.
+
+**Open.** Dry-run week (Thu Oct 29, Sat Oct 31), first public locks in Week 9, pushing the code commits before then.

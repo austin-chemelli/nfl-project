@@ -216,7 +216,7 @@ Until P2 these are commands Austin runs (`nfl weekly refresh`, `nfl lock --slot 
 
 ### 4.2 Lock
 
-`nfl lock --season S --week W --slot thu|sat`: take an odds snapshot; build features as-of now for the slot's games; load the frozen fits (trained through `S−1`); score every approach and flavor; append prediction rows with `lock_ts = now`; open bets where the edge exceeds the threshold; write the public JSON and its SHA-256; commit with message `lock: S W<W> <slot>`. Re-running a lock appends new rows; grading uses the last lock before kickoff.
+`nfl lock --slot thu|sat` (implemented in `src/nfl/lock.py`; slots by Eastern weekday: thu = Wed–Fri, sat = Sat–Tue; artifact name `week_<ww>_<slot>_<lock ts>.json`): refresh current-season data, take an odds snapshot; build features as-of now for the slot's games; load the frozen fits (trained through `S−1`); score every approach and flavor; append prediction rows with `lock_ts = now`; open bets where the edge exceeds the threshold; write the public JSON and its SHA-256; commit with message `lock: S W<W> <slot>`. Re-running a lock appends new rows; grading uses the last lock before kickoff.
 
 ### 4.3 Backtest and fit
 

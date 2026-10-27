@@ -261,6 +261,89 @@ def narrative_list(season: int = typer.Option(None)) -> None:
     console.print(t)
 
 
+@app.command("readme")
+def readme_cmd() -> None:
+    """Rewrite the README scorecard section from the marts (run after `nfl grade`)."""
+    from pathlib import Path
+
+    from nfl.readme import update
+
+    changed = update(get_paths(), Path("README.md"))
+    console.print("README scorecard " + ("updated" if changed else "unchanged"))
+
+
+@app.command("lock")
+def lock_cmd(
+    slot: str = typer.Option(..., help="thu (Wed-Fri kickoffs) or sat (Sat-Mon kickoffs)."),
+    season: int = typer.Option(None, help="Default: the week of the next game."),
+    week: int = typer.Option(None),
+    dry_run: bool = typer.Option(False, help="Compute and write to marts/dryrun/ only."),
+    refresh: bool = typer.Option(True, help="Ingest + odds + curate + features first."),
+    odds: bool = typer.Option(True, help="Take an Odds API snapshot (3 credits) during refresh."),
+    commit: bool = typer.Option(False, help="Commit the public lock file (only that file)."),
+    push: bool = typer.Option(False, help="Push, only if every unpushed commit is a lock commit."),
+) -> None:
+    """Lock predictions for one slot of a week: record, publish, optionally commit and push."""
+    from nfl.lock import run
+
+    if push and not commit:
+        raise typer.BadParameter("--push requires --commit")
+    res = run(get_paths(), slot, season, week, dry_run=dry_run, do_refresh=refresh, odds=odds,
+              commit=commit, push=push)  # fmt: skip
+    if res.games.is_empty():
+        console.print(
+            f"[yellow]lock: no {slot} games left to lock in {res.season} week {res.week}[/]"
+        )
+        return
+    show = ["market_baseline", "traditionalist.fitted", "analyst.fitted", "sharp.persona",
+            "student.fitted", "ensemble", "elo_v0"]  # fmt: skip
+    t = Table(title=f"{'DRY RUN ' if dry_run else ''}lock {res.season} W{res.week:02d} {slot} "
+                    f"at {res.lock_ts:%Y-%m-%d %H:%M}Z: P(home win)")  # fmt: skip
+    t.add_column("game")
+    for m in show:
+        t.add_column(
+            m.replace(".fitted", "").replace(".persona", " (p)").replace("_baseline", ""),
+            justify="right",
+        )
+    by = {
+        s.model_id: dict(zip(s.frame["game_id"], s.frame["p_home"], strict=True))
+        for s in res.scored
+    }
+    for g in res.games.iter_rows(named=True):
+        cells = [
+            f"{by.get(m, {}).get(g['game_id']):.2f}"
+            if by.get(m, {}).get(g["game_id"]) is not None
+            else "-"
+            for m in show
+        ]
+        t.add_row(f"{g['away_team']} @ {g['home_team']}", *cells)
+    console.print(t)
+    console.print(f"artifact: {res.artifact_path}")
+    if not dry_run:
+        console.print(
+            f"predictions appended for {len(res.scored)} models; live bets opened: {res.bets_opened}"
+        )
+        console.print(
+            "committed" + (" and pushed" if push else "")
+            if commit
+            else "not committed (use --commit)"
+        )
+
+
+weekly_app = typer.Typer(no_args_is_help=True, help="The weekly jobs (see docs/runbook.md).")
+app.add_typer(weekly_app, name="weekly")
+
+
+@weekly_app.command("refresh")
+def weekly_refresh(
+    odds: bool = typer.Option(True, help="Take an Odds API snapshot (3 credits)."),
+) -> None:
+    """Current-season ingest, odds, curate, tendencies, features, grade, ledger. No refit."""
+    from nfl.weekly import refresh
+
+    refresh(get_paths(), console, odds=odds)
+
+
 @app.command()
 def features(
     seasons: str = typer.Option("1999-2026", help="Season range to write, e.g. 1999-2026."),
