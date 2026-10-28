@@ -13,6 +13,10 @@ locals {
     "storage.googleapis.com",
     "monitoring.googleapis.com",
     "logging.googleapis.com",
+    "billingbudgets.googleapis.com",
+    "iam.googleapis.com",
+    "cloudbilling.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
   ]
 }
 

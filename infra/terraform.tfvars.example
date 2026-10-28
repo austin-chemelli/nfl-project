@@ -1,3 +1,5 @@
 project_id  = "nfl-project-prod"   # your project id
 region      = "us-central1"
 alert_email = "you@example.com"
+
+billing_account = "XXXXXX-XXXXXX-XXXXXX"  # gcloud billing accounts list

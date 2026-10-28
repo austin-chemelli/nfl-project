@@ -1,0 +1,55 @@
+name: image
+
+# Build the job image on every push to main, push it to Artifact Registry, and point the
+# Cloud Run Jobs at the new digest (docs/hosting.md §2). Auth is keyless (Workload Identity).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/workflows/image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev
+  IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/nfl/nfl
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker "$REGISTRY" --quiet
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          build-args: GIT_SHA=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Point the jobs at the new image
+        run: |
+          for job in nfl-weekly-refresh nfl-lock-thu nfl-lock-sat nfl-odds-snapshot; do
+            gcloud run jobs update "$job" --region "${{ vars.GCP_REGION }}" \
+              --image "${IMAGE}@${{ steps.build.outputs.digest }}" --quiet
+          done

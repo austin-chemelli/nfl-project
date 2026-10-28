@@ -12,13 +12,16 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
 FROM python:3.14-slim-bookworm
-RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends git openssh-client ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -u 1000 nfl
 WORKDIR /app
 COPY --from=build --chown=nfl:nfl /app /app
+COPY --chown=nfl:nfl scripts/cloud-job.sh /app/cloud-job.sh
+ARG GIT_SHA=unknown
 ENV PATH="/app/.venv/bin:$PATH" \
     NFL_DATA_ROOT=/mnt/data \
+    NFL_IMAGE_SHA=$GIT_SHA \
     PYTHONUNBUFFERED=1
 USER nfl
 ENTRYPOINT ["nfl"]

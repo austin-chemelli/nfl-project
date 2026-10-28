@@ -16,4 +16,7 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.region
+  # Billing-budget calls need a quota project with user credentials (ADC).
+  user_project_override = true
+  billing_project       = var.project_id
 }

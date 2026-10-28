@@ -25,3 +25,21 @@ variable "alert_email" {
   description = "Where job failures and stale-data alerts go"
   type        = string
 }
+
+variable "billing_account" {
+  description = "Billing account id (XXXXXX-XXXXXX-XXXXXX) for the budget alert; empty disables it"
+  type        = string
+  default     = ""
+}
+
+variable "budget_usd" {
+  description = "Monthly budget for the alert, in whole USD"
+  type        = number
+  default     = 10
+}
+
+variable "locks_paused" {
+  description = "Keep the Thu/Sat lock schedules paused (shadow week); set false to go live"
+  type        = bool
+  default     = true
+}

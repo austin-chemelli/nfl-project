@@ -44,3 +44,20 @@ Takes about 30 seconds.
 - **Odds API fails or is out of credits:** `--no-odds`; the market features then come from the latest snapshot on disk, or nflverse's line.
 - **Missing fit artifacts:** `uv run nfl fit` (only between seasons, or after an announced persona change).
 - **Push refused:** read the listed commits; push code commits yourself, then `git push` the lock.
+
+## In the cloud (step 5, from 2026-10-28)
+
+The same commands run as Cloud Run jobs in `nfl-project-prod` (`docs/hosting.md`), on the schedule above, with the data root at `gs://nfl-project-prod-data`. The lock schedules are paused until the shadow week passes (`infra/variables.tf`, `locks_paused`).
+
+```
+gcloud run jobs list --region us-central1                      # the four jobs
+gcloud run jobs execute nfl-lock-thu --region us-central1 --args="lock,thu,--dry-run,--no-odds" --wait
+gcloud run jobs executions list --job nfl-weekly-refresh --region us-central1
+gcloud logging read 'resource.type="cloud_run_job" AND resource.labels.job_name="nfl-lock-thu"' --limit 50 --freshness 1d
+gcloud scheduler jobs list --location us-central1               # ENABLED / PAUSED
+gcloud storage rsync -r gs://nfl-project-prod-data ./data       # pull the cloud's data root down (never push)
+```
+
+- A failed execution emails Austin (alert policy). Fix the cause, rerun the job by hand.
+- `nfl readme` is laptop-only (a README commit from the cloud would be a non-lock commit).
+- Go live: set `locks_paused = false` in `infra/terraform.tfvars`, `terraform apply`, and stop locking from the laptop.
