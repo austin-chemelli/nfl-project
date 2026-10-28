@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -272,6 +274,22 @@ def site_cmd(season: int = typer.Option(None, help="Default: current season.")) 
     console.print(
         f"[bold]site:[/bold] {out['weeks']} weeks, {out['games']} games in {out['seconds']}s"
     )
+
+
+@app.command("publish")
+def publish_cmd(
+    bucket: str = typer.Option(None, help="Public site bucket. Default: $NFL_SITE_BUCKET."),
+    repo: str = typer.Option(None, help="Repo root holding public/predictions. Default: cwd."),
+) -> None:
+    """Upload marts/site/*.json and public/predictions/ to the public bucket (5-minute cache)."""
+    from nfl.publish import publish
+
+    res = publish(get_paths(), bucket, Path(repo) if repo else None)
+    console.print(
+        f"[bold]publish:[/bold] {len(res.uploaded)} uploaded, {len(res.skipped)} unchanged"
+    )
+    for name in res.uploaded:
+        console.print(f"  {name}")
 
 
 @app.command("scheme")

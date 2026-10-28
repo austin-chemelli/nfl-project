@@ -49,6 +49,50 @@ REFERENCE = {"market_baseline": "Market", "elo_v0": "Elo", "home_naive": "Home t
 SPECIAL = {"ensemble": "Ensemble", "global": "Global fit (all features)"}
 TENDENCY_SITUATIONS = ["all", "early_down", "third_down", "red_zone"]
 
+# Labels for the tendency metrics (contract v2.1, 2026-10-28; previously hard-coded in the Streamlit
+# page). `pair` links an offense metric to the defense metric it faces, for side-by-side charts.
+TENDENCY_METRICS: dict[str, dict] = {
+    "pass_rate": {"side": "off", "label": "Pass rate", "unit": "pct", "pair": "pass_rate_faced",
+                  "help": "Share of plays that are passes (including sacks and scrambles)."},
+    "pass_rate_faced": {"side": "def", "label": "Pass rate faced", "unit": "pct", "pair": "pass_rate",
+                        "help": "Share of opponent plays that are passes."},
+    "success_rate": {"side": "off", "label": "Success rate", "unit": "pct", "pair": "success_rate_allowed",
+                     "help": "Share of plays that improve the scoring outlook (EPA above zero)."},
+    "success_rate_allowed": {"side": "def", "label": "Success rate allowed", "unit": "pct", "pair": "success_rate",
+                             "help": "Share of opponent plays that improve their scoring outlook; lower is better."},
+    "epa_per_play": {"side": "off", "label": "EPA per play", "unit": "epa", "pair": "epa_per_play_allowed",
+                     "help": "Expected points added per play; around 0 is average."},
+    "epa_per_play_allowed": {"side": "def", "label": "EPA allowed per play", "unit": "epa", "pair": "epa_per_play",
+                             "help": "Expected points the defense allows per play; lower is better."},
+    "motion_rate": {"side": "off", "label": "Pre-snap motion", "unit": "pct", "pair": None,
+                    "help": "Share of plays with a player in motion before the snap (FTN charting)."},
+    "play_action_rate": {"side": "off", "label": "Play-action", "unit": "pct", "pair": None,
+                         "help": "Share of passes with a play-action fake (FTN charting)."},
+    "rpo_rate": {"side": "off", "label": "RPO rate", "unit": "pct", "pair": None,
+                 "help": "Share of plays that are run-pass options (FTN charting)."},
+    "screen_rate": {"side": "off", "label": "Screen rate", "unit": "pct", "pair": None,
+                    "help": "Share of passes that are screens (FTN charting)."},
+    "shotgun_rate": {"side": "off", "label": "Shotgun rate", "unit": "pct", "pair": None,
+                     "help": "Share of plays with the QB in shotgun."},
+    "under_center_rate": {"side": "off", "label": "Under center", "unit": "pct", "pair": None,
+                          "help": "Share of plays with the QB under center (FTN charting)."},
+    "no_huddle_rate": {"side": "off", "label": "No-huddle rate", "unit": "pct", "pair": None,
+                       "help": "Share of plays run without a huddle."},
+    "fourth_down_go_rate": {"side": "off", "label": "4th-down go rate", "unit": "pct", "pair": None,
+                            "help": "Share of 4th downs the offense goes for it rather than punting or kicking."},
+    "blitz_rate": {"side": "def", "label": "Blitz rate", "unit": "pct", "pair": None,
+                   "help": "Share of opponent dropbacks with at least one blitzer (FTN charting)."},
+    "pass_rushers_5plus_rate": {"side": "def", "label": "5+ pass rushers", "unit": "pct", "pair": None,
+                                "help": "Share of opponent dropbacks with five or more rushers (FTN charting)."},
+    "box_8plus_vs_run_rate": {"side": "def", "label": "8+ in the box vs runs", "unit": "pct", "pair": None,
+                              "help": "Share of opponent runs faced with 8 or more defenders in the box."},
+    "box_6minus_vs_run_rate": {"side": "def", "label": "Light box vs runs", "unit": "pct", "pair": None,
+                               "help": "Share of opponent runs faced with 6 or fewer defenders in the box."},
+}  # fmt: skip
+TENDENCY_SITUATION_LABELS = {
+    "all": "All plays", "early_down": "Early downs", "third_down": "Third down", "red_zone": "Red zone",
+}  # fmt: skip
+
 
 # ---------------------------------------------------------------------------------------- helpers
 
@@ -344,6 +388,8 @@ def build(paths: Paths, season: int | None = None) -> dict:
             "models": reg,
             "approaches": approaches_meta(paths, season),
             "groups": groups_meta(),
+            "tendency_metrics": TENDENCY_METRICS,
+            "tendency_situations": TENDENCY_SITUATION_LABELS,
             "last_lock": _last_lock(paths),
         },
     )

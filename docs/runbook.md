@@ -60,4 +60,6 @@ gcloud storage rsync -r gs://nfl-project-prod-data ./data       # pull the cloud
 
 - A failed execution emails Austin (alert policy). Fix the cause, rerun the job by hand.
 - `nfl readme` is laptop-only (a README commit from the cloud would be a non-lock commit).
+- `uv run nfl publish --bucket nfl-project-prod-site` pushes the laptop's `marts/site/*.json` and `public/predictions/` to the public bucket (5-minute cache); the cloud jobs do this themselves.
+- Infra changes: edit `infra/*.tf`, open a PR (the `infra` workflow posts the plan in the run summary), merge to apply.
 - Go live: set `locks_paused = false` in `infra/terraform.tfvars`, `terraform apply`, and stop locking from the laptop.

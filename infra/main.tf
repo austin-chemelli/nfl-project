@@ -173,7 +173,7 @@ resource "google_service_account_iam_member" "deploy_wif" {
 
 resource "google_project_iam_member" "deploy_roles" {
   for_each = toset([
-    "roles/artifactregistry.writer",
+    "roles/artifactregistry.admin",
     "roles/run.admin",
     "roles/cloudscheduler.admin",
     "roles/iam.serviceAccountUser",
@@ -183,6 +183,8 @@ resource "google_project_iam_member" "deploy_roles" {
     "roles/serviceusage.serviceUsageAdmin",
     "roles/iam.workloadIdentityPoolAdmin",
     "roles/firebasehosting.admin",
+    "roles/resourcemanager.projectIamAdmin", # this file's project IAM bindings, from CI
+    "roles/logging.admin",
   ])
   project = var.project_id
   role    = each.value
@@ -193,4 +195,12 @@ resource "google_project_iam_member" "deploy_sa_admin" {
   project = var.project_id
   role    = "roles/iam.serviceAccountAdmin"
   member  = "serviceAccount:${google_service_account.deploy.email}"
+}
+
+# The budget lives on the billing account, so CI needs a role there too (empty account = skip).
+resource "google_billing_account_iam_member" "deploy_budgets" {
+  count              = var.billing_account != "" ? 1 : 0
+  billing_account_id = var.billing_account
+  role               = "roles/billing.costsManager"
+  member             = "serviceAccount:${google_service_account.deploy.email}"
 }

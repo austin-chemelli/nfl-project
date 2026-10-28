@@ -3,24 +3,18 @@
 #   refresh          nfl weekly refresh, then publish the site JSON
 #   lock <slot>      clone the repo, nfl lock --slot <slot> --commit --push, publish site + lock files
 #   odds             nfl odds snapshot, rebuild site JSON, publish
-# Environment: NFL_DATA_ROOT (bucket mount), NFL_SITE_ROOT (public bucket mount, optional),
+# Environment: NFL_DATA_ROOT (bucket mount), NFL_SITE_BUCKET (public bucket name, optional),
 #   ODDS_API_KEY, GITHUB_DEPLOY_KEY_FILE (lock only), NFL_IMAGE_SHA (set at image build), NFL_REPO.
 set -euo pipefail
 
 job="${1:?job name}"; shift || true
 repo_url="${NFL_REPO:-git@github.com:austin-chemelli/nfl-project.git}"
-site_root="${NFL_SITE_ROOT:-}"
 
 publish() {
-  # Copy site JSON (and lock artifacts, if a repo clone is given) to the public bucket mount.
-  [ -n "$site_root" ] || { echo "publish: NFL_SITE_ROOT unset, skipping"; return; }
-  mkdir -p "$site_root/site"
-  cp "$NFL_DATA_ROOT"/marts/site/*.json "$site_root/site/"
-  if [ -n "${1:-}" ] && [ -d "$1/public/predictions" ]; then
-    mkdir -p "$site_root/predictions"
-    cp -r "$1"/public/predictions/. "$site_root/predictions/"
-  fi
-  echo "publish: $(ls "$site_root/site" | wc -l) site files -> $site_root"
+  # Upload site JSON (and lock artifacts, if a repo clone is given) to the public bucket with a
+  # 5-minute cache (nfl publish). Skipped when NFL_SITE_BUCKET is unset (local runs).
+  [ -n "${NFL_SITE_BUCKET:-}" ] || { echo "publish: NFL_SITE_BUCKET unset, skipping"; return; }
+  nfl publish --bucket "$NFL_SITE_BUCKET" ${1:+--repo "$1"}
 }
 
 clone_repo() {

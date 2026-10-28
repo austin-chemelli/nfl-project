@@ -54,8 +54,8 @@ resource "google_cloud_run_v2_job" "jobs" {
           value = "/mnt/data"
         }
         env {
-          name  = "NFL_SITE_ROOT"
-          value = "/mnt/site"
+          name  = "NFL_SITE_BUCKET"
+          value = google_storage_bucket.site.name
         }
         env {
           name = "ODDS_API_KEY"
@@ -77,10 +77,6 @@ resource "google_cloud_run_v2_job" "jobs" {
           name       = "data"
           mount_path = "/mnt/data"
         }
-        volume_mounts {
-          name       = "site"
-          mount_path = "/mnt/site"
-        }
         dynamic "volume_mounts" {
           for_each = each.value.secrets_key ? [1] : []
           content {
@@ -94,13 +90,6 @@ resource "google_cloud_run_v2_job" "jobs" {
         name = "data"
         gcs {
           bucket    = google_storage_bucket.data.name
-          read_only = false
-        }
-      }
-      volumes {
-        name = "site"
-        gcs {
-          bucket    = google_storage_bucket.site.name
           read_only = false
         }
       }

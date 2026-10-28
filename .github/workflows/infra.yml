@@ -1,0 +1,62 @@
+name: infra
+
+# Terraform for infra/: plan on pull requests (summary on the run), apply on main.
+# Keyless auth (Workload Identity); non-sensitive values in infra/prod.auto.tfvars, the rest
+# from repository secrets as TF_VAR_*.
+
+on:
+  pull_request:
+    paths: ["infra/**", ".github/workflows/infra.yml"]
+  push:
+    branches: [main]
+    paths: ["infra/**", ".github/workflows/infra.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: infra
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "1"
+  TF_INPUT: "0"
+  TF_VAR_alert_email: ${{ secrets.TF_VAR_ALERT_EMAIL }}
+  TF_VAR_billing_account: ${{ secrets.TF_VAR_BILLING_ACCOUNT }}
+
+jobs:
+  terraform:
+    # Fork PRs have no OIDC token; only same-repo branches can plan.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.0"
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend-config="bucket=${{ vars.GCP_PROJECT_ID }}-tfstate"
+      - run: terraform validate
+      - name: Plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -no-color -out=tfplan -detailed-exitcode > plan.txt 2>&1
+          code=$?
+          set -e
+          { echo '## terraform plan'; echo '```'; tail -c 60000 plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cat plan.txt
+          [ "$code" -ne 1 ] || exit 1
+          echo "changes=$([ "$code" -eq 2 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Apply
+        if: github.event_name != 'pull_request' && steps.plan.outputs.changes == 'true'
+        run: terraform apply -no-color tfplan
