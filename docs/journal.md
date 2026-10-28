@@ -118,3 +118,13 @@ Conventions: date-headed entries, newest last. Each entry: **what happened**, **
 10. *Deferred:* a locked game's page shows feature values and narrative "as of now" next to lock-time numbers (display only; tracked in docs/tasks.md).
 
 **Lesson.** Two of the HIGH findings were invisible to the tests (they passed) and only showed up when the reviewer scored a real slate and measured correlations: worth doing before every first-of-its-kind lock.
+
+## 2026-10-28: step 4 goes local (ADR 0014)
+
+**What happened.** The feedback build was committed and pushed (`1afa8e5`, CI green) after the review fixes. Austin chose to run the LLM work on his desktop (GTX 1070 8 GB, Ryzen 3700X, 16 GB RAM, Windows) instead of paying for API credits. A research agent surveyed late-October-2026 options; its sourcing was thin, so the main session re-verified the load-bearing claims (model choice, Pascal/CUDA status, Ollama support, search-API terms).
+
+**Decisions.** ADR 0014: Qwen3.5-9B Q4_K_M on Ollama (thinking off, 16k context), SearXNG for search, Tailscale between machines, Windows for now (Ubuntu stays in the self-hosting project). No free-form agent on the small model: code searches and fetches, the model does schema-constrained steps citing document ids, so URLs can't be fabricated. A producer-comparison eval against the Claude-skill records gates whether the local records feed the shadow Narrative approach; the Sonnet API job remains the fallback.
+
+**Findings.** CUDA 13 dropped Pascal; the 580 driver branch and CUDA-12 builds keep the 1070 usable. Brave's free search tier is gone. The newest small models are from spring 2026; recent open releases are all large.
+
+**Hosting plan (same day, Fable).** `docs/hosting.md` and ADR 0015: the cloud (Cloud Run Jobs + Scheduler, Terraform, one private bucket mounted as the data root) runs everything numeric and commits locks with a deploy key; the desktop runs only the LLM jobs and uploads records to the same bucket; the React site on Firebase fetches its JSON from a public bucket, so data changes never need a deploy. One shadow week before the cloud becomes the primary lock runner. Not started.

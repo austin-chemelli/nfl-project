@@ -100,7 +100,7 @@ class GameNarrative(BaseModel):
     kickoff_utc: datetime
     known_as_of: datetime
     reported_finished_at: datetime | None = None  # what the producer said; known_as_of is the clock
-    producer: Literal["claude_code", "api"]
+    producer: Literal["claude_code", "api", "local"]  # local = desktop open-weight model (ADR 0014)
     model: str
     prompt_version: str = PROMPT_VERSION
     home: TeamNarrative

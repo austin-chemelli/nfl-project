@@ -1,0 +1,16 @@
+# Build context: code, config and lockfile only. Data never enters the image.
+data/
+.notes/
+.venv/
+.git/
+.github/
+.claude/
+.agents/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+public/
+web/
+infra/
+*.md
+!README.md

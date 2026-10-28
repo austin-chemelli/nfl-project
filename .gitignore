@@ -18,3 +18,7 @@ build/
 .agents/
 .claude/skills/developing-with-streamlit
 .claude/settings.local.json
+infra/.terraform/
+infra/terraform.tfvars
+infra/*.tfplan
+firebase-debug.log

@@ -15,6 +15,7 @@ Public portfolio project. The goal is a **live, shipped** system with real measu
 - [docs/tasks.md](docs/tasks.md): the work sequence, progress, and agent-sized tasks with acceptance criteria. Work from it; update it when scope changes.
 - [docs/feature-groups.md](docs/feature-groups.md): the group registry (ADR 0012): which features roll up into which high-level feature, with signs.
 - [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md): original scope and goals. Where it conflicts with an ADR, the ADR wins (it records the resolution).
+- [docs/hosting.md](docs/hosting.md): how step 5 works (two runners, one bucket; site data from a public bucket) and what Austin sets up by hand. [docs/desktop-llm-setup.md](docs/desktop-llm-setup.md): the desktop LLM server (ADR 0014).
 - [docs/journal.md](docs/journal.md): the project's story so far (sessions, decisions, findings, bugs). **Append an entry at the end of any session that changes the plan, the data, or the results.**
 - `.notes/` (gitignored, local): brainstorm decision log and working notes.
 
