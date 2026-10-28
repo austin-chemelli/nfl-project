@@ -7,6 +7,10 @@ Two sources:
   with the snapshot time (known_as_of = snapshot_ts), source 'odds_api', consensus across books.
   Upcoming games with any snapshot use only these, so a lock sees the line as of its snapshot.
   `market.line_move_pts` = consensus home spread now minus at the game's first snapshot.
+- `market.ml_spread_gap` (both sources) = vig-free moneyline home probability minus the probability
+  the spread implies, Φ(spread / 13.5): books' two prices disagreeing with each other. With
+  `line_move_pts` and the public betting share it forms the "Market behavior" group (ADR 0013);
+  the line's level itself (spread, moneyline p, total) is never an approach input.
 
 Convention: spread_line > 0 means the home team is favored.
 """
@@ -23,7 +27,7 @@ from nfl.features import store
 from nfl.models.market import norm_cdf
 
 SOURCE = "schedules"
-VERSION = "1"
+VERSION = "2"
 SPREAD_SD = 13.5  # same margin SD as nfl.models.market.SD_MARGIN
 
 
@@ -111,9 +115,11 @@ def live_values(paths: Paths, games: pl.DataFrame) -> pl.DataFrame:
             (pl.col("spread_home") - pl.col("spread_home").first().over("game_id")).alias("move")
         )
     )
+    c = c.with_columns(_gap_expr("p_home_vigfree", "spread_home").alias("gap"))
     wide = c.select(
         "game_id",
         pl.col("snapshot_ts").alias("known_as_of"),
+        pl.col("gap").alias("market.ml_spread_gap"),
         pl.col("p_home_vigfree").alias("market.p_home_vigfree"),
         pl.col("spread_home").alias("market.spread_line"),
         pl.col("total").alias("market.total_line"),
@@ -145,8 +151,31 @@ def build(paths: Paths, games: pl.DataFrame, build_ts: datetime) -> pl.DataFrame
     return pl.concat(out)
 
 
+def _gap_expr(p_col: str, spread_col: str) -> pl.Expr:
+    """Moneyline probability minus spread-implied probability (null when either is missing)."""
+    implied = (
+        pl.col(spread_col)
+        .cast(pl.Float64)
+        .map_elements(
+            lambda s: 0.5 * (1.0 + erf(s / SPREAD_SD / sqrt(2.0))), return_dtype=pl.Float64
+        )
+    )
+    return pl.col(p_col) - implied
+
+
 def _schedule_rows(games: pl.DataFrame, build_ts: datetime) -> pl.DataFrame:
-    p = _p_home(games).select("game_id", pl.col("p").alias("market.p_home_vigfree"))
+    p = (
+        games.select(
+            "game_id",
+            _p_ml_expr().alias("_ml"),
+            pl.col("spread_line").cast(pl.Float64).alias("_sp"),
+        )
+        .with_columns(_gap_expr("_ml", "_sp").alias("market.ml_spread_gap"))
+        .select("game_id", "market.ml_spread_gap")
+    )
+    p = p.join(
+        _p_home(games).select("game_id", pl.col("p").alias("market.p_home_vigfree")), on="game_id"
+    )
     vals = games.select(
         "game_id",
         pl.col("spread_line").cast(pl.Float64).alias("market.spread_line"),

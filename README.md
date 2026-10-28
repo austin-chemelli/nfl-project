@@ -19,15 +19,13 @@ No graded live locks yet. Lock files are committed under `public/predictions/` b
 | Model | Games | Log loss | Δ vs market (90% CI) |
 |---|---|---|---|
 | Market (vig-free moneyline) | 5,777 | 0.6095 |  |
-| The Sharp | 5,684 | 0.6082 | -0.0004 (-0.0015 to +0.0006) |
-| Ensemble | 5,684 | 0.6168 | +0.0082 (+0.0054 to +0.0111) |
-| The Traditionalist (fitted) | 5,684 | 0.6244 | +0.0157 (+0.0116 to +0.0193) |
-| The Analyst (fitted) | 5,684 | 0.6245 | +0.0159 (+0.0115 to +0.0195) |
-| The Student (fitted) | 5,684 | 0.6242 | +0.0155 (+0.0116 to +0.0194) |
-| The Traditionalist (persona) | 5,684 | 0.6340 | +0.0254 (+0.0206 to +0.0308) |
-| The Analyst (persona) | 5,684 | 0.6316 | +0.0230 (+0.0167 to +0.0295) |
-| Elo | 5,777 | 0.6295 | +0.0200 (+0.0158 to +0.0240) |
-| Home team 57% | 5,777 | 0.6865 | +0.0770 (+0.0700 to +0.0838) |
+| Ensemble (average of the four) | 5,790 | 0.6242 | +0.0146 (+0.0108 to +0.0189) |
+| The Traditionalist | 5,790 | 0.6305 | +0.0209 (+0.0162 to +0.0263) |
+| The Analyst | 5,790 | 0.6281 | +0.0184 (+0.0135 to +0.0231) |
+| The Sharp | 5,790 | 0.6291 | +0.0193 (+0.0143 to +0.0246) |
+| The Student | 5,790 | 0.6259 | +0.0163 (+0.0122 to +0.0202) |
+| Elo | 5,777 | 0.6295 | +0.0200 (+0.0160 to +0.0237) |
+| Home team 57% | 5,777 | 0.6865 | +0.0770 (+0.0700 to +0.0840) |
 
 <!-- scorecard:end -->
 

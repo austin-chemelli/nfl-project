@@ -4,7 +4,7 @@ global    one ridge fit toward zero on every non-market, non-narrative feature i
           not an approach: it answers "what does history say each feature is worth?" for the
           Hypotheses page and is a reference line. Market features are excluded so a hypothesis
           reads "does rest predict wins", not "is rest already priced in" (a later, separate fit).
-ensemble  σ(mean of the fitted flavors' logits) over non-shadow approaches, equal weights (2026).
+ensemble  σ(mean of the public lines' logits) over the non-shadow approaches, equal weights (2026).
           Contributions are the per-key mean of the members' contributions, so they still sum to
           the ensemble logit.
 """

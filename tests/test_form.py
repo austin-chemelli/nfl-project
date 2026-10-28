@@ -253,7 +253,7 @@ def test_lookahead_uses_next_opponent_elo_but_not_future_results():
     g = _tri_games()
     f = feats(g)
     la = v(f, "la1", "home", "lookahead")
-    assert la > 100  # next opp (CCC, 6-0 blowouts) far above this opp (BBB, 0-6)
+    assert la > 100  # next opp (CCC, 6-0 blowouts) far above an average team (v2 definition)
     assert v(f, "la2", "home", "lookahead") == 0  # last game of the season
     # the *result* of the next game (la2) must not move the lookahead; only the schedule does
     g2 = g.with_columns(

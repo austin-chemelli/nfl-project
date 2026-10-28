@@ -7,10 +7,18 @@ records into feature rows stamped with the record's `known_as_of`.
 
 Rules enforced here: every claim is dated at or before `known_as_of`; the record is stamped before
 kickoff; numbers are in range; the teams match the game. Nothing here calls an LLM.
+
+v2 (2026-10-27, `.notes/ui-feedback.md` #6): per team a paragraph `summary`, bullet `notes` (each
+with a kind, an impact direction and a source) and `scheme_trends` (what the offense or defense has
+been doing and whether it's working, per public analysis); per game `matchup_notes` with `support`,
+the number of independent sources saying it. These are text with citations: they never feed model
+numbers (ADR 0007). `known_as_of` is set by `ingest` to the ingest clock; the producer's own claim is
+kept as `reported_finished_at`. v1 records still load (the new lists default to empty).
 """
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Literal
@@ -20,8 +28,8 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 from nfl.config import Paths
 
-SCHEMA_VERSION = "1"
-PROMPT_VERSION = "narrative_v1"
+SCHEMA_VERSION = "2"
+PROMPT_VERSION = "narrative_v2"
 MAX_SOURCE_AGE_DAYS = 10
 
 Category = Literal["injury", "qb", "coaching", "motivation", "public", "weather", "form", "other"]
@@ -35,6 +43,32 @@ class Claim(BaseModel):
     source_title: str | None = None
     published_at: date | None = None
     confidence: Literal["high", "medium", "low"]
+
+
+class Note(BaseModel):
+    text: str = Field(min_length=10, max_length=300)
+    kind: Literal["injury", "coaching", "scheme", "form", "other"]
+    impact: int = Field(ge=-2, le=2)  # for this team: −2 hurts a lot … +2 helps a lot
+    source_url: HttpUrl | None = None
+
+
+class SchemeTrend(BaseModel):
+    unit: Literal["offense", "defense"]
+    trend: str = Field(min_length=10, max_length=300)
+    working: bool | None = None  # per the coverage: is it producing results?
+    sources: list[HttpUrl] = Field(min_length=1)
+
+
+class MatchupNote(BaseModel):
+    text: str = Field(min_length=10, max_length=300)
+    support: int = Field(ge=1)  # independent sources saying this
+    sources: list[HttpUrl] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _support_matches_sources(self) -> MatchupNote:
+        if self.support > len(self.sources):
+            raise ValueError("support cannot exceed the number of cited sources")
+        return self
 
 
 class TeamNarrative(BaseModel):
@@ -51,11 +85,13 @@ class TeamNarrative(BaseModel):
     motivation: float = Field(ge=-1, le=1)  # -1 nothing to play for, +1 must-win
     revenge: bool = False
     lookahead: bool = False
-    summary: str = Field(min_length=20, max_length=600)
+    summary: str = Field(min_length=20, max_length=1200)
+    notes: list[Note] = []
+    scheme_trends: list[SchemeTrend] = []
 
 
 class GameNarrative(BaseModel):
-    schema_version: Literal["1"] = SCHEMA_VERSION
+    schema_version: Literal["1", "2"] = SCHEMA_VERSION
     game_id: str
     season: int
     week: int
@@ -63,6 +99,7 @@ class GameNarrative(BaseModel):
     away_team: str
     kickoff_utc: datetime
     known_as_of: datetime
+    reported_finished_at: datetime | None = None  # what the producer said; known_as_of is the clock
     producer: Literal["claude_code", "api"]
     model: str
     prompt_version: str = PROMPT_VERSION
@@ -73,12 +110,15 @@ class GameNarrative(BaseModel):
     upset_buzz: float = Field(ge=0, le=1)
     weather_concern: float = Field(ge=0, le=1)
     consensus_narrative: str = Field(min_length=20, max_length=900)
+    matchup_notes: list[MatchupNote] = []
     claims: list[Claim] = Field(min_length=1)
     searches: list[str] = Field(min_length=1)
 
-    @field_validator("kickoff_utc", "known_as_of")
+    @field_validator("kickoff_utc", "known_as_of", "reported_finished_at")
     @classmethod
-    def _naive_utc(cls, v: datetime) -> datetime:
+    def _naive_utc(cls, v: datetime | None) -> datetime | None:
+        if v is None:
+            return v
         return v.astimezone(UTC).replace(tzinfo=None) if v.tzinfo else v
 
     @model_validator(mode="after")
@@ -105,14 +145,49 @@ def store_dir(paths: Paths, season: int, week: int) -> Path:
     return paths.marts / "narrative" / f"season={season}" / f"week={week:02d}"
 
 
-def ingest(paths: Paths, src: Path) -> Path:
-    """Validate a record file and store it under its game and timestamp. Returns the stored path."""
-    rec = GameNarrative.model_validate_json(src.read_text())
+def ingest(paths: Paths, src: Path, now: datetime | None = None) -> Path:
+    """Validate a record file and store it under its game and the ingest time. Returns the path.
+
+    known_as_of is the ingest clock, never the producer's word (2026-10-27: a producer stamped a
+    record four minutes after it was actually written). The producer's value is kept as
+    reported_finished_at. Research ingested at or after kickoff is rejected."""
+    raw = json.loads(src.read_text())
+    now = now or datetime.now(UTC)
+    # naive datetimes are UTC throughout this project (astimezone would read them as local time)
+    clock = (now.astimezone(UTC) if now.tzinfo else now).replace(tzinfo=None, microsecond=0)
+    raw["reported_finished_at"] = raw.get("reported_finished_at") or raw.get("known_as_of")
+    raw["known_as_of"] = clock.isoformat()
+    _check_against_schedule(paths, raw)
+    rec = GameNarrative.model_validate(raw)
     d = store_dir(paths, rec.season, rec.week)
     d.mkdir(parents=True, exist_ok=True)
     out = d / f"{rec.game_id}_{rec.known_as_of.strftime('%Y%m%dT%H%M%SZ')}.json"
     out.write_text(rec.model_dump_json(indent=1))
     return out
+
+
+def _check_against_schedule(paths: Paths, raw: dict) -> None:
+    """The game must exist in the curated schedule with the same season, week and teams; the
+    schedule's kickoff (not the producer's copy) is the one the record must precede, and it
+    overwrites the record's kickoff_utc. Review 2026-10-28: a wrong or flexed kickoff used to pass
+    ingest and then break every feature build."""
+    from nfl.features.store import games_frame
+
+    g = games_frame(paths).filter(pl.col("game_id") == raw.get("game_id"))
+    if g.is_empty():
+        raise ValueError(f"unknown game_id {raw.get('game_id')!r} (not in the curated schedule)")
+    r = g.row(0, named=True)
+    for key, col in (
+        ("season", "season"),
+        ("week", "week"),
+        ("home_team", "home_team"),
+        ("away_team", "away_team"),
+    ):
+        if raw.get(key) != r[col]:
+            raise ValueError(f"{key} {raw.get(key)!r} does not match the schedule ({r[col]!r})")
+    kick = r["kickoff_utc"]
+    kick = kick.replace(tzinfo=None) if kick.tzinfo else kick
+    raw["kickoff_utc"] = kick.isoformat()
 
 
 def load_records(paths: Paths, seasons: tuple[int, int] | None = None) -> list[GameNarrative]:
@@ -172,6 +247,22 @@ def example() -> dict:
             "revenge": False,
             "lookahead": False,
             "summary": "Example summary of the home team's week: who is out, what the beat writers expect.",
+            "notes": [
+                {
+                    "text": "Example: starting WR ruled out; the slot role shifts to a rookie.",
+                    "kind": "injury",
+                    "impact": -1,
+                    "source_url": "https://www.example.com/article",
+                },
+            ],
+            "scheme_trends": [
+                {
+                    "unit": "defense",
+                    "trend": "Example: blitzing on third down far more over the last three weeks.",
+                    "working": True,
+                    "sources": ["https://www.example.com/article"],
+                },
+            ],
         },
         "away": {
             "team": "BAL",
@@ -192,6 +283,13 @@ def example() -> dict:
         "upset_buzz": 0.2,
         "weather_concern": 0.3,
         "consensus_narrative": "Example of the week's story in two or three neutral sentences.",
+        "matchup_notes": [
+            {
+                "text": "Example: analysts expect the home pass rush to overwhelm a reshuffled line.",
+                "support": 2,
+                "sources": ["https://www.example.com/a", "https://www.example.com/b"],
+            },
+        ],
         "claims": [
             {
                 "claim": "Example claim that a named player is listed as Doubtful on Friday's report.",

@@ -7,7 +7,7 @@ venv/
 node_modules/
 dist/
 build/
-data/
+/data/
 *.parquet
 *.duckdb
 .DS_Store

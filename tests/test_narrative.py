@@ -22,6 +22,14 @@ GAMES = pl.DataFrame(
 )
 
 
+def schedule(tmp_path):
+    """A curated games table with the example's game, so ingest can check against the schedule."""
+    d = tmp_path / "curated" / "games" / "season=2026"
+    d.mkdir(parents=True, exist_ok=True)
+    GAMES.with_columns(pl.lit("s").alias("raw_snapshot_ts")).write_parquet(d / "g.parquet")
+    return Paths(tmp_path)
+
+
 def rec(**over):
     d = nar.example()
     d.update(over)
@@ -58,10 +66,10 @@ def test_rejects_team_mismatch_and_ranges():
 
 
 def test_ingest_stores_by_game_and_timestamp(tmp_path):
-    paths = Paths(tmp_path)
+    paths = schedule(tmp_path)
     src = tmp_path / "r.json"
     src.write_text(json.dumps(nar.example()))
-    out = nar.ingest(paths, src)
+    out = nar.ingest(paths, src, now=datetime(2026, 10, 28, 20, 0))
     assert out.name == "2026_08_BAL_BUF_20261028T200000Z.json"
     assert len(nar.load_records(paths)) == 1
     assert nar.load_records(paths, (2025, 2025)) == []
@@ -98,3 +106,71 @@ def test_two_runs_for_one_game_both_stored_and_as_of_picks_latest():
     assert latest["value"][0] == pytest.approx(-0.9)
     earlier = store.as_of(sent, datetime(2026, 10, 29, 12, 0))
     assert earlier["value"][0] == pytest.approx(0.3)
+
+
+def test_ingest_stamps_with_the_clock_and_keeps_the_producers_claim(tmp_path):
+    paths = schedule(tmp_path)
+    d = nar.example()
+    d["known_as_of"] = "2026-10-28T21:30:00Z"  # producer claims later than the clock
+    src = tmp_path / "r.json"
+    src.write_text(json.dumps(d))
+    out = nar.ingest(paths, src, now=datetime(2026, 10, 28, 21, 26, 6))
+    rec = nar.GameNarrative.model_validate_json(out.read_text())
+    assert rec.known_as_of == datetime(2026, 10, 28, 21, 26, 6)
+    assert rec.reported_finished_at == datetime(2026, 10, 28, 21, 30)
+
+
+def test_ingest_after_kickoff_is_rejected(tmp_path):
+    src = tmp_path / "r.json"
+    src.write_text(json.dumps(nar.example()))
+    with pytest.raises(ValueError, match="before kickoff"):
+        nar.ingest(schedule(tmp_path), src, now=datetime(2026, 11, 1, 18, 5))
+
+
+def test_ingest_rejects_games_not_in_the_schedule(tmp_path):
+    paths = schedule(tmp_path)
+    d = nar.example()
+    d["game_id"] = "2026_08_XXX_BUF"
+    src = tmp_path / "r.json"
+    src.write_text(json.dumps(d))
+    with pytest.raises(ValueError, match="unknown game_id"):
+        nar.ingest(paths, src, now=datetime(2026, 10, 28, 20, 0))
+    d = nar.example()
+    d["week"] = 9
+    src.write_text(json.dumps(d))
+    with pytest.raises(ValueError, match="week"):
+        nar.ingest(paths, src, now=datetime(2026, 10, 28, 20, 0))
+
+
+def test_builder_skips_records_not_before_the_scheduled_kickoff(tmp_path):
+    import warnings
+
+    paths = schedule(tmp_path)
+    src = tmp_path / "r.json"
+    src.write_text(json.dumps(nar.example()))
+    nar.ingest(paths, src, now=datetime(2026, 10, 28, 20, 0))
+    flexed = GAMES.with_columns(pl.lit(datetime(2026, 10, 28, 19, 0)).alias("kickoff_utc"))
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        rows = feat.build(paths, flexed, datetime(2026, 10, 28, 21, 0))
+    assert rows.is_empty() and any("skipping narrative record" in str(x.message) for x in w)
+
+
+def test_v2_fields_and_v1_records_still_load():
+    r = rec()
+    assert r.home.notes and r.home.scheme_trends and r.matchup_notes
+    v1 = nar.example()
+    v1["schema_version"] = "1"
+    for side in ("home", "away"):
+        v1[side].pop("notes", None)
+        v1[side].pop("scheme_trends", None)
+    v1.pop("matchup_notes", None)
+    old = nar.GameNarrative.model_validate(v1)
+    assert old.home.notes == [] and old.matchup_notes == []
+
+
+def test_matchup_support_cannot_exceed_sources():
+    d = nar.example()
+    d["matchup_notes"][0]["support"] = 5
+    with pytest.raises(ValueError, match="support"):
+        nar.GameNarrative.model_validate(d)

@@ -6,6 +6,8 @@ Tables (partitioned by season under curated/<table>/season=YYYY/):
   injuries     weekly injury reports (no report date upstream; week-level only)
   depth_charts timestamped depth chart entries
   lines        Odds API snapshots matched to games (nfl.odds.curate_lines)
+  participation one row per play (nflverse participation 2016+) joined to plays, with parsed
+               personnel / coverage fields (curate_participation)
 
 Deterministic: rebuildable from raw at any time. `raw_snapshot_ts` records which snapshot fed each row.
 """
@@ -20,6 +22,7 @@ import duckdb
 
 from nfl.config import DATASETS, Paths
 from nfl.ingest import list_snapshots
+from nfl.models.elo import TEAM_ALIASES
 
 PBP_COLUMNS = [
     "game_id",
@@ -150,6 +153,101 @@ def _counts(
     return [(table, int(s), int(n)) for s, n in rows]
 
 
+TWO_HIGH_COVERAGES = ("COVER_2", "COVER_4", "COVER_6", "2_MAN")
+SINGLE_HIGH_COVERAGES = ("COVER_0", "COVER_1", "COVER_3")
+PROVIDER_CHANGE_SEASON = 2023  # charting moved from NGS (<= 2022) to FTN (>= 2023)
+
+
+def fold_team_sql(col: str) -> str:
+    """SQL expression mapping historical team codes (OAK, SD, STL) to the canonical current ones."""
+    whens = " ".join(f"when '{k}' then '{v}'" for k, v in TEAM_ALIASES.items())
+    return f"(case {col} {whens} else {col} end)"
+
+
+def _count_sql(col: str, *pos: str) -> str:
+    """Sum of the 'n POS' counts in a personnel string (0 when the position is absent)."""
+    return " + ".join(
+        f"coalesce(try_cast(regexp_extract({col}, '(\\d+) {p}(,|$)', 1) as int), 0)" for p in pos
+    )
+
+
+def participation_select_sql(part: str, plays: str) -> str:
+    """SQL producing the curated participation table.
+
+    `part` / `plays` are FROM-able relations (parquet reads or subqueries). Personnel strings
+    differ by provider: NGS (<= 2022) gives DL/LB/DB, FTN (>= 2023) gives CB/S/DE/DT/ILB/...; the
+    DB count is comparable across both, LB/DL counts are not. FB counts as RB.
+    """
+    two_high = ", ".join(f"'{c}'" for c in TWO_HIGH_COVERAGES)
+    one_high = ", ".join(f"'{c}'" for c in SINGLE_HIGH_COVERAGES)
+    return f"""
+    with pp as (
+        select *, split_part(nflverse_game_id, '_', 1)::int as season_g,
+               play_id::int as play_id_i
+        from {part}
+    ),
+    j as (
+        select pp.*, pl.play_id is not null as in_plays,
+               pl.week, pl.posteam as pl_posteam, pl.defteam as pl_defteam, pl.down, pl.ydstogo,
+               pl.play_type, pl."pass" as is_pass, pl.qb_dropback, pl.shotgun, pl.sack,
+               pl.passer_player_id, pl.passer_player_name, pl.epa, pl.success,
+               pl.home_team, pl.away_team
+        from pp left join {plays} pl
+          on pl.game_id = pp.nflverse_game_id and pl.play_id = pp.play_id_i
+    ),
+    k as (
+        select *,
+               {_count_sql("offense_personnel", "RB", "FB")} as n_rb,
+               {_count_sql("offense_personnel", "TE")} as n_te,
+               {_count_sql("offense_personnel", "WR")} as n_wr,
+               {_count_sql("defense_personnel", "DB", "CB", "FS", "SS", "S")} as n_db,
+               coalesce(pl_posteam, {fold_team_sql("possession_team")}) as posteam_c
+        from j
+    )
+    select season_g as season, week, nflverse_game_id as game_id, play_id_i as play_id,
+           posteam_c as posteam,
+           coalesce(pl_defteam,
+                    case when posteam_c = {fold_team_sql("home_team")} then {fold_team_sql("away_team")}
+                         when posteam_c = {fold_team_sql("away_team")} then {fold_team_sql("home_team")} end
+           ) as defteam,
+           in_plays, down, ydstogo, play_type, is_pass as "pass", qb_dropback, shotgun, sack,
+           passer_player_id, passer_player_name, epa, success,
+           case when offense_personnel is null then null else n_rb end as off_rb,
+           case when offense_personnel is null then null else n_te end as off_te,
+           case when offense_personnel is null then null else n_wr end as off_wr,
+           case when offense_personnel is null then null
+                when n_rb = 1 and n_te = 1 then '11' when n_rb = 1 and n_te = 2 then '12'
+                when n_rb = 2 and n_te = 1 then '21' when n_rb = 1 and n_te = 3 then '13'
+                when n_rb = 2 and n_te = 2 then '22' when n_rb = 1 and n_te = 0 then '10'
+                else 'other' end as off_personnel,
+           case when defense_personnel is null then null else n_db end as def_db,
+           case when defense_personnel is null then null
+                when n_db <= 4 then 'base' when n_db = 5 then 'nickel' else 'dime' end as def_package,
+           offense_formation, defenders_in_box, number_of_pass_rushers, was_pressure, time_to_throw,
+           case defense_man_zone_type when 'MAN_COVERAGE' then 'MAN'
+                when 'ZONE_COVERAGE' then 'ZONE' end as man_zone,
+           defense_coverage_type as coverage,
+           case when defense_coverage_type in ({two_high}) then true
+                when defense_coverage_type in ({one_high}) then false end as two_high,
+           case when season_g >= {PROVIDER_CHANGE_SEASON} then 'ftn' else 'ngs' end as provider,
+           raw_snapshot_ts
+    from k
+    """
+
+
+def curate_participation(paths: Paths) -> list[tuple[str, int, int]]:
+    """Write only curated/participation/season=YYYY/ (reads raw participation + curated plays)."""
+    part = latest_files(paths, "participation")
+    plays_dir = paths.curated_table("plays")
+    if not part or not plays_dir.exists():
+        return []
+    con = duckdb.connect()
+    plays = f"read_parquet('{plays_dir.as_posix()}/*/*.parquet', hive_partitioning=true)"
+    out = paths.curated_table("participation")
+    _write_partitioned(con, participation_select_sql(f"({_read_many(part)})", plays), out)
+    return _counts(con, "participation", out)
+
+
 def curate(paths: Paths, seasons: tuple[int, int] | None = None) -> list[tuple[str, int, int]]:
     con = duckdb.connect()
     con.execute("set timezone='UTC'")
@@ -246,4 +344,5 @@ def curate(paths: Paths, seasons: tuple[int, int] | None = None) -> list[tuple[s
         if n:
             summary.append(("lines", 0, n))
 
+    summary += curate_participation(paths)
     return summary

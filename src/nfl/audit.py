@@ -50,6 +50,19 @@ WATCH: dict[str, list[str]] = {
         "home_qb_name",
         "home_coach",
     ],
+    "participation": [
+        "_joined_to_plays",
+        "off_personnel",
+        "def_package",
+        "offense_formation",
+        "defenders_in_box",
+        "number_of_pass_rushers",
+        "was_pressure",
+        "time_to_throw",
+        "man_zone",
+        "coverage",
+        "two_high",
+    ],
     "injuries": ["report_status", "practice_status", "report_primary_injury", "gsis_id"],
 }
 
@@ -78,6 +91,56 @@ def _null_rates(
     return out
 
 
+_PART_DROPBACK_COLS = ["number_of_pass_rushers", "was_pressure", "time_to_throw", "man_zone"]
+_PART_COVERAGE_COLS = ["coverage", "two_high"]
+_PART_SCRIM_COLS = [
+    "off_personnel",
+    "def_package",
+    "offense_formation",
+    "defenders_in_box",
+]
+
+
+def _participation_rows(con: duckdb.DuckDBPyConnection, paths: Paths) -> list[tuple]:
+    """Participation null rates per season, denominators matched to where a field can exist.
+
+    Personnel/formation/box over matched pass+run plays; pressure, rushers, time to throw, man/zone
+    and coverage over matched dropbacks. `_joined_to_plays` is the share of participation rows that
+    found a play (n_null = unmatched). Charting provider is NGS <= 2022, FTN >= 2023.
+    """
+    path = f"{paths.curated_table('participation').as_posix()}/*/*.parquet"
+    scrim = "in_plays and play_type in ('pass','run')"
+    rows = _null_rates(con, path, "participation", _PART_SCRIM_COLS, scrim)
+    dropback = f"{scrim} and qb_dropback = 1"
+    rows += _null_rates(
+        con, path, "participation", _PART_DROPBACK_COLS + _PART_COVERAGE_COLS, dropback
+    )
+    joined = con.execute(
+        f"select season, count(*), count(*) filter (where not in_plays) "
+        f"from read_parquet('{path}', hive_partitioning=true) group by 1 order by 1"
+    ).fetchall()
+    rows += [
+        ("participation", int(sn), "_joined_to_plays", int(n), int(nu), nu / n if n else None)
+        for sn, n, nu in joined
+    ]
+    return rows
+
+
+def _provider_levels(con: duckdb.DuckDBPyConnection, paths: Paths) -> list[tuple]:
+    """League-wide levels per season, to eyeball the NGS (<= 2022) -> FTN (>= 2023) jump."""
+    path = f"{paths.curated_table('participation').as_posix()}/*/*.parquet"
+    return con.execute(
+        f"""select season, any_value(provider),
+            avg((man_zone = 'MAN')::int) filter (where man_zone is not null),
+            avg(two_high::int) filter (where two_high is not null),
+            avg((number_of_pass_rushers >= 5)::int),
+            avg(was_pressure::int), avg(time_to_throw),
+            avg((def_package = 'nickel')::int) filter (where def_package is not null)
+            from read_parquet('{path}', hive_partitioning=true)
+            where in_plays and play_type in ('pass','run') and qb_dropback = 1 group by 1 order by 1"""
+    ).fetchall()
+
+
 def audit(paths: Paths, console: Console, season: int | None = None) -> None:
     con = duckdb.connect()
     plays = f"{paths.curated_table('plays').as_posix()}/*/*.parquet"
@@ -97,6 +160,8 @@ def audit(paths: Paths, console: Console, season: int | None = None) -> None:
         "play_type in ('pass','run') and season >= 2022",
     )
     rows += _null_rates(con, games, "games", WATCH["games"], "game_type = 'REG'")
+    if paths.curated_table("participation").exists():
+        rows += _participation_rows(con, paths)
     if paths.curated_table("injuries").exists():
         rows += _null_rates(con, inj, "injuries", WATCH["injuries"])
 
@@ -107,10 +172,10 @@ def audit(paths: Paths, console: Console, season: int | None = None) -> None:
     con.executemany("insert into audit values (?,?,?,?,?,?)", rows)
     con.execute(f"copy audit to '{(paths.marts / 'audit.parquet').as_posix()}' (format parquet)")
 
-    seasons = sorted({r[1] for r in rows if season is None or r[1] == season})
-    if len(seasons) > 6:
-        seasons = seasons[-6:]
+    all_seasons = sorted({r[1] for r in rows if season is None or r[1] == season})
     for tbl, watch_cols in WATCH.items():
+        tbl_seasons = [s for s in all_seasons if any(r[0] == tbl and r[1] == s for r in rows)]
+        seasons = tbl_seasons if tbl == "participation" else tbl_seasons[-6:]
         t = Table(title=f"null rate: {tbl}", show_lines=False)
         t.add_column("column")
         for s in seasons:
@@ -129,4 +194,11 @@ def audit(paths: Paths, console: Console, season: int | None = None) -> None:
                     cells.append(f"[{style}]{v:.1%}[/{style}]")
             t.add_row(c, *cells)
         console.print(t)
+    if paths.curated_table("participation").exists():
+        lv = Table(title="participation: league levels on dropbacks (provider change 2022 -> 2023)")
+        for h in ("season", "provider", "man", "two-high", "5+ rush", "pressure", "ttt", "nickel"):
+            lv.add_column(h, justify="right")
+        for sn, prov, *vals in _provider_levels(con, paths):
+            lv.add_row(str(sn), prov, *("-" if v is None else f"{v:.3f}" for v in vals))
+        console.print(lv)
     console.print(f"[bold]audit:[/bold] {len(rows):,} rows -> marts/audit.parquet")

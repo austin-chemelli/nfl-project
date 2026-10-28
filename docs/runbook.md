@@ -6,7 +6,7 @@ How to operate the live pipeline by hand until Cloud Scheduler runs it (step 5, 
 
 | When (ET) | Command | Why | Credits |
 |---|---|---|---|
-| Tue ~10:00 | `uv run nfl weekly refresh` then `uv run nfl readme` | Ingest last week's results, grade, settle paper bets, refresh features and the README scorecard; Tuesday opening line | 3 |
+| Tue ~10:00 | `uv run nfl weekly refresh` then `uv run nfl readme` (refresh rebuilds the site JSON; view with `uv run nfl ui`) | Ingest last week's results, grade, settle paper bets, refresh features and the README scorecard; Tuesday opening line | 3 |
 | Wed and Fri (optional) | `/nfl-narrative <season> <week>` in Claude Code | Narrative research records (dev producer until the API job, M6.2) | 0 |
 | **Thu 09:00** | `uv run nfl lock --slot thu --commit --push` | Lock Thursday-night games (and any Wed/Fri game) | 3 |
 | Thu ~20:05 | `uv run nfl odds snapshot` | Closing line for the Thursday game (closing-line value) | 3 |

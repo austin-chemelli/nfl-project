@@ -36,13 +36,18 @@ from nfl.approaches.engine import Model, Scaler, persona_model
 from nfl.approaches.schema import Approach
 from nfl.config import FIRST_SCORED_SEASON, Paths
 from nfl.features import store
-from nfl.features.groups import GROUPS, REGISTRY_VERSION
+from nfl.features.groups import GROUPS, LIVE_PRIORS, REGISTRY_VERSION
 
 VAL_SEASONS = (2022, 2023, 2024)
 INNER_LAMBDA = (
     3000.0  # chosen 2026-10-27 on 2022-24 validation (100: 0.6280, 3000: 0.6231, equal: 0.6265)
 )
 INNER_PRIOR = 0.05  # inner weights shrink toward sign * INNER_PRIOR, not toward 0
+# Public line (ADR 0004 amendment): ridge toward the persona with λ = PUBLIC_RIDGE × (data curvature
+# per composite ≈ 0.22 n). Chosen 2026-10-27 so a persona moves about a quarter of the way toward what
+# history supports (Traditionalist: 3.0 -> 10%, 1.0 -> 25%, 0.5 -> 39%, 0.25 -> 55%): biases stay
+# visible, history still nudges them.
+PUBLIC_RIDGE = 1.0
 MIN_HISTORY = 200  # non-null training games before a member's inner weight is fitted
 SYNTHETIC_LOCK = pl.duration(hours=1)
 
@@ -125,6 +130,7 @@ def log_loss(p: np.ndarray, y: np.ndarray) -> float:
 class FitResult:
     persona: Model
     fitted: Model
+    public: Model | None = None  # the one line shown publicly (ADR 0004 amendment)
 
 
 def inner_weights(
@@ -177,7 +183,7 @@ def fit_flavors(
     approach: Approach, train: pl.DataFrame, lam: float, trained_through: int
 ) -> FitResult:
     feats = [f for f in approach.features if f in train.columns]
-    scaler = Scaler.fit(train, feats)
+    scaler = Scaler.fit(train, feats, priors=LIVE_PRIORS, min_n=MIN_HISTORY)
     z, y = scaler.transform(train), train.get_column("y").to_numpy()
     meta = {
         "approach": approach.id,
@@ -206,7 +212,23 @@ def fit_flavors(
         scaler=scaler,
         meta=meta | {"flavor": "fitted", "lambda": lam},
     )
-    return FitResult(persona, fitted)
+    return FitResult(persona, fitted, _public_from(approach, fitted, None, z, y))
+
+
+def _public_from(approach: Approach, fitted: Model, light: Model | None, z, y) -> Model:
+    """The public line: `light` (calibrated) for personas, or the fitted model for public: fitted."""
+    src = fitted if (approach.public == "fitted" or light is None) else light
+    pub = Model(
+        model_id=approach.id,
+        features=src.features,
+        intercept=src.intercept,
+        weights=list(src.weights),
+        scaler=src.scaler,
+        meta=dict(src.meta) | {"flavor": "public", "public": approach.public},
+    )
+    if src is light and approach.calibration == "platt":
+        pub.calib_a, pub.calib_c = fit_platt(pub.raw_logit(z), y)
+    return pub
 
 
 def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta) -> FitResult:
@@ -243,7 +265,22 @@ def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta) -> FitResult:
         scaler=scaler,
         meta=gmeta | {"flavor": "fitted", "lambda": lam, "group_weights": W_fit},
     )
-    return FitResult(persona, fitted)
+    # public "light" line: shrunk hard toward the persona (it keeps its biases), then calibrated
+    lam_pub = PUBLIC_RIDGE * 0.22 * len(y)
+    bl, Wl = fit_ridge(
+        comp, y, np.array([W_persona[g] for g in gids]), lam_pub, b0=approach.intercept.w
+    )
+    W_light = {g: float(x) for g, x in zip(gids, Wl, strict=True)}
+    light = Model(
+        model_id=approach.id,
+        features=feats,
+        intercept=bl,
+        weights=list(map(float, _flat(feats, inner, W_light))),
+        scaler=scaler,
+        meta=gmeta
+        | {"lambda": lam_pub, "group_weights": W_light, "persona_group_weights": W_persona},
+    )
+    return FitResult(persona, fitted, _public_from(approach, fitted, light, z, y))
 
 
 def config_hash(approach: Approach) -> str:
@@ -323,7 +360,9 @@ def fit_approach(
     for res in walk_forward(approach, data, scored, lam).values():
         if has_persona:  # the global fit has no persona; its artifact is <id>.fitted only
             save(paths, res.persona)
-        save(paths, res.fitted)
+        save(paths, res.fitted)  # diagnostic: "what history would change"
+        if res.public is not None:
+            save(paths, res.public)  # the public line, model_id = approach id
     return table.with_columns(
         pl.lit(approach.id).alias("approach"), (pl.col("lambda") == lam).alias("chosen")
     )

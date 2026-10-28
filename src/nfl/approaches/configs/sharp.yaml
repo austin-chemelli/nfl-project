@@ -1,17 +1,24 @@
-# See traditionalist.yaml for units. Proposed by Claude 2026-10-27 at group level, for Austin's review.
+# See traditionalist.yaml for units. Redefined 2026-10-27 (ADR 0013): the market's own forecast is
+# never an input. The Sharp reads how the market *behaves* (capped at 20% of the budget) and
+# otherwise trusts what the public underrates. Line movement and public betting exist live only, so
+# its historical record is mostly its football weights; its market-reading identity shows up live.
 id: sharp
 name: The Sharp
 blurb: >-
-  Starts from the betting line, which already prices in almost everything, then fades what the
-  public overrates (hot streaks, hype) and nudges toward what it underrates (efficiency, QB news).
-emphasis: [market]
+  Thinks like a professional bettor without copying the line: follows where the line moves, fades
+  where the public piles in, trusts quarterback play and efficiency, and ignores streaks and hype.
+emphasis: [quarterback, offense, market]
 calibration: platt
-intercept: {w: 0.0, why: "The line already includes home field"}
+intercept: {w: 0.15, why: "Home field is worth about a point and a half, no more"}
 groups:
-  market:      {w: 0.85, why: "The market number is the best forecast available"}
-  quarterback: {w: 0.05, why: "QB news moves lines late; get there first"}
-  offense:     {w: 0.05, why: "Efficiency the public underrates"}
-  quality:     {w: 0.03, why: "Ratings the market can be slow to update"}
-  health:      {w: 0.03, why: "Injury reports aren't always fully priced"}
-  form:        {w: -0.05, why: "Fade recency bias: the public overreacts to streaks"}
-  buzz:        {w: -0.10, why: "Fade the hype"}
+  quarterback: {w: 0.30, why: "Quarterback play is the most underpriced edge"}
+  offense:     {w: 0.25, why: "Efficiency per play beats records and narratives"}
+  market:      {w: 0.18, why: "Follow the line moves, fade the public"}
+  defense:     {w: 0.10, why: "Defense matters, but it's noisier than offense"}
+  quality:     {w: 0.10, why: "Results matter only as far as they reflect efficiency"}
+  health:      {w: 0.10, why: "Injury news is often priced late"}
+  form:        {w: -0.08, why: "Fade recency: the public overreacts to streaks"}
+  buzz:        {w: -0.06, why: "Fade the hype"}
+overrides:
+  # His read of the market: moves toward a team are information; a crowded public side is not.
+  market: {market.line_move_pts: 1.0, narrative.public_bet_pct_home: -1.0}

@@ -29,6 +29,7 @@ DEFAULT_SEASONS: dict[str, tuple[int, int]] = {
     "ftn_charting": (2022, 2026),
     "injuries": (2009, 2026),
     "depth_charts": (2009, 2026),
+    "participation": (2016, 2025),  # published after each season; none for the current one
 }
 
 # History starts here (pbp + schedules). Fits train from FIRST_TRAIN_SEASON so Elo and the

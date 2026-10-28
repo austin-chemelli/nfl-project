@@ -9,6 +9,7 @@ the first live week, and the UI must say "weeks tracked".
 
 from __future__ import annotations
 
+import warnings
 from datetime import datetime
 
 import polars as pl
@@ -79,4 +80,17 @@ def build(paths: Paths, games: pl.DataFrame, build_ts: datetime) -> pl.DataFrame
     records = load_records(paths)
     if not records:
         return pl.DataFrame(schema=store.FEATURE_SCHEMA)
-    return rows_from_records(records, games)
+    # A record whose stamp isn't strictly before the scheduled kickoff (e.g. the game was flexed
+    # earlier after ingest) is skipped with a warning, never allowed to break the feature build.
+    kick = dict(zip(games["game_id"], games["kickoff_utc"].dt.replace_time_zone(None), strict=True))
+    keep = []
+    for r in records:
+        k = kick.get(r.game_id)
+        if k is None or r.known_as_of >= k:
+            warnings.warn(
+                f"skipping narrative record {r.game_id} @ {r.known_as_of}: not before kickoff {k}",
+                stacklevel=2,
+            )
+            continue
+        keep.append(r)
+    return rows_from_records(keep, games) if keep else pl.DataFrame(schema=store.FEATURE_SCHEMA)

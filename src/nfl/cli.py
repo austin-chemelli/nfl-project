@@ -87,16 +87,18 @@ def tendencies() -> None:
 def predict(
     seasons: str = typer.Option("2025-2026", help="Seasons to predict (walk-forward)."),
     backfill: bool = typer.Option(
-        False, help="Score the approaches on completed games (needs `nfl fit`); default 2005-2025."
+        False, help="Score the approaches on completed games (needs `nfl fit`); default 2005-now."
     ),
 ) -> None:
     """Reference models (market, Elo, naive), or with --backfill the approaches + ensemble."""
     if backfill:
         from nfl.approaches.run import backfill as run_backfill
 
-        rng = _parse_range(seasons) if seasons != "2025-2026" else (2005, 2025)
+        rng = _parse_range(seasons) if seasons != "2025-2026" else None
         n = run_backfill(get_paths(), rng)
-        console.print(f"[bold]predict --backfill:[/bold] {n:,} approach rows written {rng}")
+        console.print(
+            f"[bold]predict --backfill:[/bold] {n:,} approach rows written {rng or 'all'}"
+        )
         return
     from nfl.predict import predict as run
 
@@ -261,6 +263,50 @@ def narrative_list(season: int = typer.Option(None)) -> None:
     console.print(t)
 
 
+@app.command("site")
+def site_cmd(season: int = typer.Option(None, help="Default: current season.")) -> None:
+    """Write the UI JSON contract (marts/site/): meta, slates, games, tracker, audit."""
+    from nfl.site import build
+
+    out = build(get_paths(), season)
+    console.print(
+        f"[bold]site:[/bold] {out['weeks']} weeks, {out['games']} games in {out['seconds']}s"
+    )
+
+
+@app.command("scheme")
+def scheme_cmd() -> None:
+    """Team-season scheme rates (participation, 2016+) and QB-in-scenario tables -> marts/."""
+    from nfl.scheme import build_scheme, qb_scenarios
+
+    paths = get_paths()
+    console.print(f"[bold]scheme:[/bold] {build_scheme(paths)}; qb: {qb_scenarios(paths)}")
+
+
+@app.command("coaches")
+def coaches_cmd() -> None:
+    """Coordinator scheme profiles (participation 2016+) -> marts + site/coaches.json."""
+    from nfl.coaches import build_profiles
+
+    console.print(f"[bold]coaches:[/bold] {build_profiles(get_paths())}")
+
+
+@app.command("hypotheses")
+def hypotheses_cmd() -> None:
+    """What history says each feature is worth (coef, 90% CI, verdict) -> marts + site JSON."""
+    from nfl.hypotheses import build
+
+    console.print(f"[bold]hypotheses:[/bold] {build(get_paths())}")
+
+
+@app.command("diy-matrix")
+def diy_matrix_cmd() -> None:
+    """Precompute group composites per game for the build-your-own page -> marts + site JSON."""
+    from nfl.approaches.diy import build_matrix
+
+    console.print(f"[bold]diy-matrix:[/bold] {build_matrix(get_paths())}")
+
+
 @app.command("readme")
 def readme_cmd() -> None:
     """Rewrite the README scorecard section from the marts (run after `nfl grade`)."""
@@ -295,8 +341,7 @@ def lock_cmd(
             f"[yellow]lock: no {slot} games left to lock in {res.season} week {res.week}[/]"
         )
         return
-    show = ["market_baseline", "traditionalist.fitted", "analyst.fitted", "sharp.persona",
-            "student.fitted", "ensemble", "elo_v0"]  # fmt: skip
+    show = ["market_baseline", "traditionalist", "analyst", "sharp", "student", "ensemble", "elo_v0"]  # fmt: skip
     t = Table(title=f"{'DRY RUN ' if dry_run else ''}lock {res.season} W{res.week:02d} {slot} "
                     f"at {res.lock_ts:%Y-%m-%d %H:%M}Z: P(home win)")  # fmt: skip
     t.add_column("game")

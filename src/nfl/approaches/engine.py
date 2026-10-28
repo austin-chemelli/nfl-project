@@ -32,13 +32,29 @@ class Scaler:
     sd: list[float]
 
     @classmethod
-    def fit(cls, wide: pl.DataFrame, features: list[str]) -> Scaler:
+    def fit(
+        cls,
+        wide: pl.DataFrame,
+        features: list[str],
+        priors: dict[str, tuple[float, float]] | None = None,
+        min_n: int = 2,
+    ) -> Scaler:
+        """Mean/sd per feature on the training window. A feature with fewer than `min_n` values uses
+        its prior (mean, sd) when one is given (live-only inputs), else (0, 1)."""
         mean, sd = [], []
+        priors = priors or {}
         for f in features:
             col = wide.get_column(f).drop_nulls().cast(pl.Float64) if f in wide.columns else None
-            if col is None or col.len() < 2:
-                mean.append(0.0)
-                sd.append(1.0)
+            n = 0 if col is None else col.len()
+            if n < max(2, min_n):
+                if f in priors:  # live-only input: declared scale, not raw units
+                    m0, s0 = priors[f]
+                elif n >= 2:
+                    m0, s0 = float(col.mean()), float(col.std())
+                else:
+                    m0, s0 = 0.0, 1.0
+                mean.append(m0)
+                sd.append(s0 if s0 and np.isfinite(s0) and s0 > 1e-12 else 1.0)
                 continue
             m, s = float(col.mean()), float(col.std())
             mean.append(m)

@@ -15,7 +15,7 @@ import polars as pl
 
 from nfl.approaches import ensemble, fit
 from nfl.approaches.schema import Approach, check_features, load_all
-from nfl.config import FIRST_SCORED_SEASON, Paths
+from nfl.config import FIRST_SCORED_SEASON, Paths, current_season
 from nfl.features import store
 from nfl.predict import PRED_SCHEMA, append_rows
 
@@ -52,7 +52,10 @@ def fit_all(paths: Paths, scored: tuple[int, int] = (FIRST_SCORED_SEASON, 2026))
     return pl.concat(tables)
 
 
-def backfill(paths: Paths, scored: tuple[int, int] = (FIRST_SCORED_SEASON, 2025)) -> int:
+def backfill(paths: Paths, scored: tuple[int, int] | None = None) -> int:
+    """Default: every completed game from FIRST_SCORED_SEASON through the current season (current-season
+    games use the frozen fits trained through last season, labeled backfill, never locks)."""
+    scored = scored or (FIRST_SCORED_SEASON, current_season())
     approaches = scored_approaches(paths)
     sha = git_sha()
     rows = []
@@ -69,25 +72,26 @@ def backfill(paths: Paths, scored: tuple[int, int] = (FIRST_SCORED_SEASON, 2025)
         locks = g.select("game_id", (pl.col("kickoff_utc") - fit.SYNTHETIC_LOCK).alias("lock_ts"))
         vec = store.game_vectors(store.as_of(store.read_features(paths, (season, season)), locks))
         for a in approaches:
-            flavors = ["fitted"] if a.id == ensemble.GLOBAL_ID else ["persona", "fitted"]
-            for flavor in flavors:
-                mid = a.id if a.id == ensemble.GLOBAL_ID else f"{a.id}.{flavor}"
-                model = fit.load(paths, f"{a.id}.{flavor}", season - 1)
-                # the artifact's own feature list: grouped approaches resolve against the store
-                wide = g.select("game_id").join(
-                    store.to_wide(vec, model.features), on="game_id", how="left"
-                )
-                scored_df = model.score(wide)
-                if flavor == "fitted" and a.id != ensemble.GLOBAL_ID and not a.shadow:
-                    members.append(scored_df)
-                version = f"{sha}+{model.meta.get('config_hash', '')}"
-                rows.append(_rows(g, scored_df, mid, version))
-                model_ids.add(mid)
+            # the one public line per approach (ADR 0004 amendment); global is a reference fit
+            mid = a.id
+            model = fit.load(paths, mid, season - 1)
+            # the artifact's own feature list: grouped approaches resolve against the store
+            wide = g.select("game_id").join(
+                store.to_wide(vec, model.features), on="game_id", how="left"
+            )
+            scored_df = model.score(wide)
+            if a.id != ensemble.GLOBAL_ID and not a.shadow:
+                members.append(scored_df)
+            version = f"{sha}+{model.meta.get('config_hash', '')}"
+            rows.append(_rows(g, scored_df, mid, version))
+            model_ids.add(mid)
         if members:
             rows.append(_rows(g, ensemble.combine(members), ensemble.ENSEMBLE_ID, sha))
             model_ids.add(ensemble.ENSEMBLE_ID)
     new = pl.concat(rows) if rows else pl.DataFrame(schema=PRED_SCHEMA)
-    return append_rows(paths, new, replace_backfill_for=model_ids)
+    # also drop backfill rows of retired ids (<approach>.persona / .fitted before 2026-10-27)
+    retired = {f"{a.id}.{f}" for a in approaches for f in ("persona", "fitted")}
+    return append_rows(paths, new, replace_backfill_for=model_ids | retired)
 
 
 def _rows(games: pl.DataFrame, scored: pl.DataFrame, model_id: str, version: str) -> pl.DataFrame:

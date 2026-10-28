@@ -25,6 +25,7 @@ FAMILIES = [
     "front",
     "market",
     "availability",
+    "scheme",
     "narrative",
 ]
 

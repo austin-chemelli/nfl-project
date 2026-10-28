@@ -148,7 +148,9 @@ Scoring: `logit = b + Σ w_f · z_f`, `p_home = σ(logit)`, `spread_home = Φ⁻
 
 **Groups (ADR 0012, M2.8).** Features belong to groups (`docs/feature-groups.md`); a group's composite is `c_g = Σ v_{g,f} z_f` with inner weights `v` taken from the walk-forward global fit and normalized to unit variance, shared by every approach. Personas and the DIY page weigh the ~10 composites; overrides of `v` are allowed and re-normalized. Flat `weights:` on features remain valid as one-feature groups.
 
-Flavors (`model_id = <approach>.<flavor>`):
+**One public line per approach (ADR 0004 amendment, 2026-10-27):** `model_id = <approach>` is the persona lightly fitted and calibrated; `<approach>.fitted` is kept as a diagnostic. **The market's forecast is never an input (ADR 0013):** the Market group holds market *behavior* only, capped at 20% of a persona's budget.
+
+Flavors as originally designed (`model_id = <approach>.<flavor>`; superseded by the amendment above):
 - **persona**: weights from YAML; Platt calibration `σ(a·logit + b)` fitted walk-forward so the persona's *ranking* is the character's while its confidence is honest.
 - **fitted**: L2-regularized logistic regression with the penalty `λ‖w − w_persona‖²` (shrinks toward the persona, not zero), `λ` chosen per approach on validation seasons.
 - **global**: one unconstrained ridge fit on all features; not an approach, but the source for the Hypotheses page and a reference line.

@@ -24,8 +24,9 @@ from nfl.features.strength import load_plays
 from nfl.models.elo import TEAM_ALIASES, pregame_ratings
 
 SOURCE = "schedules"
-VERSION = "2"
+VERSION = "3"
 WINDOW = 3
+LEAGUE_MEAN_ELO = 1505.0  # Elo regression target (EloParams.mean)
 _BASE = ("last3_win_pct", "last3_margin", "streak")
 _NEW = (
     "epa_trend", "ats_l3", "off_bye", "short_week", "road_streak",
@@ -291,7 +292,10 @@ def compute(games: pl.DataFrame, plays: pl.DataFrame) -> pl.DataFrame:
         .over(fr, "season", "home_cnt")
         .cast(pl.Float64)
         .alias("road_streak"),
-        (pl.col("next_opp_elo") - pl.col("opp_elo")).fill_null(0.0).alias("lookahead"),
+        # v2 (2026-10-27): the next opponent's strength relative to an average team. v1 subtracted
+        # this week's opponent's Elo, which made the feature mostly "this opponent is weak" (a
+        # duplicate of team strength that fit with the wrong sign), not a look-ahead effect.
+        (pl.col("next_opp_elo") - LEAGUE_MEAN_ELO).fill_null(0.0).alias("lookahead"),
         (pl.col("same_prev") & pl.col("prev_trigger"))
         .fill_null(False)
         .cast(pl.Float64)

@@ -17,7 +17,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from nfl.features.groups import GROUPS
+from nfl.features.groups import GROUPS, MARKET_GROUP_CAP, MARKET_LEVEL
 from nfl.features.store import FEATURE_RX
 
 CONFIG_DIR = Path(__file__).parent / "configs"
@@ -54,6 +54,9 @@ class Approach(BaseModel):
     emphasis: list[str]  # families (flat form) or group ids (grouped form)
     calibration: Literal["platt", "none"] = "platt"
     shadow: bool = False  # scored and shown, but excluded from the ensemble and headline scorecard
+    # ADR 0004 amendment: the one public line. "light" = persona weights lightly fitted + calibrated;
+    # "fitted" = the walk-forward fitted weights (the Student, whose identity is the data).
+    public: Literal["light", "fitted"] = "light"
     intercept: Weight
     weights: dict[str, Weight] = {}
     groups: dict[str, Weight] = {}
@@ -85,6 +88,19 @@ class Approach(BaseModel):
 
     @model_validator(mode="after")
     def _shape(self) -> Approach:
+        level = sorted(set(self.weights) & MARKET_LEVEL)
+        level += sorted(f for ov in self.overrides.values() for f in ov if f in MARKET_LEVEL)
+        if level:
+            raise ValueError(
+                f"the market's forecast is never an approach input (ADR 0013): {level}"
+            )
+        if "market" in self.groups:
+            total = sum(abs(w.w) for w in self.groups.values())
+            share = abs(self.groups["market"].w) / total if total else 0.0
+            if share > MARKET_GROUP_CAP + 1e-9:
+                raise ValueError(
+                    f"Market behavior is {share:.0%} of the budget; the cap is {MARKET_GROUP_CAP:.0%} (ADR 0013)"
+                )
         if bool(self.weights) == bool(self.groups):
             raise ValueError("give exactly one of `weights:` (flat) or `groups:` (grouped)")
         if self.groups:

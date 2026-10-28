@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -109,21 +110,26 @@ class LockResult:
 def load_models(
     paths: Paths, trained_through: int
 ) -> tuple[list[tuple[str, Model, bool]], list[str]]:
-    """[(model_id, model, is_ensemble_member)] for every approach flavor + global; missing list."""
+    """[(model_id, model, is_ensemble_member)]: the one public line per approach + global."""
     out, missing = [], []
     for a in [*load_all().values()]:
         if a.id == "narrative":
             continue
-        for flavor in ("persona", "fitted"):
-            mid = f"{a.id}.{flavor}"
-            try:
-                m = fit.load(paths, mid, trained_through)
-            except FileNotFoundError:
-                missing.append(mid)
-                continue
-            out.append((mid, m, flavor == "fitted" and not a.shadow))
+        try:
+            m = fit.load(paths, a.id, trained_through)
+        except FileNotFoundError:
+            missing.append(a.id)
+            continue
+        if m.meta.get("config_hash") != fit.config_hash(a):
+            raise RuntimeError(
+                f"{a.id}: the YAML changed since its fit (config hash mismatch); run `nfl fit` "
+                "before locking, or the lock would publish stale weights"
+            )
+        out.append((a.id, m, not a.shadow))
     try:
-        out.append((ensemble.GLOBAL_ID, fit.load(paths, "global.fitted", trained_through), False))
+        out.append(
+            (ensemble.GLOBAL_ID, fit.load(paths, ensemble.GLOBAL_ID, trained_through), False)
+        )
     except FileNotFoundError:
         missing.append(ensemble.GLOBAL_ID)
     return out, missing
@@ -149,7 +155,7 @@ def score_approaches(
         if member:
             members.append(sc)
     if members:
-        out.append(Scored(ensemble.ENSEMBLE_ID, "mean-fitted", ensemble.combine(members)))
+        out.append(Scored(ensemble.ENSEMBLE_ID, "mean-public", ensemble.combine(members)))
     return out
 
 
@@ -416,6 +422,15 @@ def run(
     from nfl.approaches.run import git_sha
 
     repo = repo or Path.cwd()
+    if commit and not dry_run:
+        dirty = _git(
+            "status", "--porcelain", "--", "src", "pyproject.toml", "uv.lock", cwd=repo
+        ).strip()
+        if dirty:
+            raise RuntimeError(
+                "refusing to commit a lock from uncommitted code (the artifact's code_version would "
+                f"lie); commit first. Dirty: {dirty.splitlines()[:5]}"
+            )
     games = store.games_frame(paths)
     now = now_utc().replace(tzinfo=None)
     if season is None or week is None:
@@ -451,11 +466,19 @@ def run(
     before = ledger.load_bets(paths).filter(~pl.col("is_backfill")).height
     ledger.open_bets(paths)
     res.bets_opened = ledger.load_bets(paths).filter(~pl.col("is_backfill")).height - before
-    if commit:
+    if commit:  # the public record first; nothing after this may block it (review 2026-10-28)
         msg = f"{LOCK_PREFIX}{season} W{week:02d} {slot}\n\nsha256 {digest}"
         commit_lock(repo, [res.artifact_path, res.artifact_path.with_suffix(".json.sha256")], msg)
         if push:
             push_locks(repo)
+    try:
+        from nfl.site import build as build_site
+
+        build_site(
+            paths, season
+        )  # the UI shows the lock right away (statuses flip preview -> locked)
+    except Exception as e:  # noqa: BLE001 - the lock is already recorded; the UI can be rebuilt
+        warnings.warn(f"site rebuild after lock failed: {e!r}; run `nfl site`", stacklevel=2)
     return res
 
 

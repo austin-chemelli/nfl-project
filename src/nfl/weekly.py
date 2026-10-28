@@ -58,4 +58,8 @@ def refresh(paths: Paths, console: Console, odds: bool = True) -> None:
         ledger.summary(ledger.settle(paths)).write_parquet(paths.marts / "ledger_summary.parquet")
 
     step("ledger", _ledger)
+
+    from nfl.site import build as build_site
+
+    step("site", lambda: build_site(paths))
     console.print("weekly refresh: " + ", ".join(f"{n} {s:.0f}s" for n, s in steps))

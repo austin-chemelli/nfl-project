@@ -2,7 +2,7 @@
 
 The two-level feature design is ADR 0012. This file is the group registry in prose; the code registry is `src/nfl/features/groups.py` (M2.8). Chosen 2026-10-27 (option B of `.notes/feature-group-options.md`, with the scheme group split three ways). Signs are the declared default direction *for the team* (positive = good for the home team when home − away is positive); the fitted inner weights may disagree, and the Hypotheses page reports when they do. "Exists" means built as of 2026-10-27; everything else has a task in `docs/tasks.md`. Members marked *adv* are hidden behind "more" in the UI but always part of the composite once built.
 
-Fifteen groups. The UI may show them under six collapsible headings (Who's better / Who's playing / The moment / The setup / The sidelines / The outside world); the headings carry no weights.
+Fifteen groups (registry v3, 2026-10-27: every member also carries a label, a one-line description used as hover help, and a unit; see `src/nfl/features/groups.py`). The UI may show them under six collapsible headings (Who's better / Who's playing / The moment / The setup / The sidelines / The outside world); the headings carry no weights.
 
 | Group | Members (sign) | Exists | What the slider means |
 |---|---|---|---|
@@ -19,10 +19,10 @@ Fifteen groups. The UI may show them under six collapsible headings (Who's bette
 | **Offensive scheme** | `front.motion_rate` (+), `front.play_action_rate` (+), `front.rpo_rate` (+), `front.screen_rate` (−), `front.under_center_rate` (−), `front.no_huddle_rate` (+), `scheme.off_11_rate_prior` (+), `scheme.off_heavy_rate_prior` (−), `scheme.off_time_to_throw_prior` (−) | motion, PA | How the offense is built (style; the fit decides what helps) |
 | **Defensive scheme** | `front.blitz_rate` (+), `front.box_8plus_rate` (+), `front.pass_rushers_5plus_rate` (+), `scheme.def_man_rate_prior` (+), `scheme.def_two_high_rate_prior` (−), `scheme.def_pressure_rate_prior` (+) | blitz, box | How the defense is built |
 | **Matchups** | `matchup.pa_vs_pa_defense`, `matchup.blitz_vs_blitz_offense`, `matchup.motion_vs_motion_defense`, `matchup.under_center_vs_light_box`, `matchup.off_vs_man`, `matchup.off_vs_pressure`, `matchup.off_11_vs_def_11` (all +: offense's edge in that interaction) | none | This offense against this defense specifically |
-| **Market** | `market.spread_line` (+), `market.line_move_pts` (+), `market.ml_spread_gap` (+), `narrative.public_bet_pct_home` (+), *adv* `market.total_line` (no prior direction), `market.key_number` (no prior direction) | spread, total, move | What the line says |
+| **Market behavior** (ADR 0013) | `market.line_move_pts` (+), `market.ml_spread_gap` (+), `narrative.public_bet_pct_home` (no prior direction) | gap; line moves live only | How the betting market is *behaving*, never what it predicts; capped at 20% of a persona's budget; mostly live-only |
 | **Buzz** | `narrative.sentiment` (+), `narrative.hype` (+) | contract only | Media and public mood. Live only; "weeks tracked" applies |
 
-Not in any group: `market.p_home_vigfree` (a restatement of the line, used for divergence and the ledger), `narrative.upset_buzz` (game-level, while Buzz is team-level; shown on the game page), `narrative.public_pick` (categorical). The code registry is the source of truth when this table and `src/nfl/features/groups.py` disagree.
+Not in any group, by ADR 0013 (the market's forecast is the reference, never an input): `market.spread_line`, `market.p_home_vigfree`, `market.total_line`. Also not in a group: `narrative.upset_buzz` (game-level, while Buzz is team-level; shown on the game page), `narrative.public_pick` (categorical). The code registry is the source of truth when this table and `src/nfl/features/groups.py` disagree.
 
 Rules:
 - A feature is in exactly one group. Turnover margin is under Quality (moved from Coaching 2026-10-27: it's a results stat that partly regresses, like `luck`, not a coaching decision). Interception-worthy throws are a QB trait, drops and contested catches are receiver traits, so they live in Quarterback and Offense, not scheme.

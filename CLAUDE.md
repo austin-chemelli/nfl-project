@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repository.
 
 ## What this is
 
-A weekly NFL **preview and prediction tool** that is educational first and market-aware second. Several **approaches** (personas: the Traditionalist, the Analyst, the Sharp; later the Matchup and the Narrative) weigh the same shared features differently, each in a hand-reviewed *persona* flavor and a *fitted* flavor, plus an ensemble. Every approach is scored publicly against the market and a naive baseline on forecast quality, odds-weighted paper bets, and how often it was right when it disagreed with the market. A Hypotheses page shows what history says about each feature. An LLM extracts the week's narrative into structured, cited features (live only) and writes previews whose numbers are checked against the data.
+A weekly NFL **preview and prediction tool** that is educational first and market-aware second. Several **approaches** (personas: the Traditionalist, the Analyst, the Sharp, the Student; later the Matchup and the Narrative) weigh the same shared features differently, each as one public line (the persona's weights, lightly fitted and calibrated), plus an ensemble. The market is the reference everything is compared against, never an input. Every approach is scored publicly against the market and a naive baseline on forecast quality, odds-weighted paper bets, and how often it was right when it disagreed with the market. A Hypotheses page shows what history says about each feature. An LLM extracts the week's narrative into structured, cited features (live only) and writes previews whose numbers are checked against the data.
 
 Public portfolio project. The goal is a **live, shipped** system with real measurements (accuracy, calibration, cost, latency) and evals, not a feature list.
 
@@ -20,7 +20,7 @@ Public portfolio project. The goal is a **live, shipped** system with real measu
 
 ## Status
 
-2026-10-27: sequence decided (top of docs/tasks.md); ADR 0012 adds two-level features (groups with fitted inner weights). 2026-10-26: plan written (architecture, ADRs 0001–0011, tasks). M0, M1 (feature store, 7 families), M2 (approaches, fitting, backfill 2015–2025, grading v2) and M3 (Odds API snapshots, live market features, paper ledger with CLV) are built but uncommitted; progress table at the top of docs/tasks.md, backtest findings in `.notes/backtest-2025.md`. Step 1 done 2026-10-27. Step 2: `nfl lock`, weekly refresh, runbook and README scorecard built 2026-10-27; next is the dry-run week (Week 8), then the first public locks (Week 9). Repo is public. The first public lock waits for the approaches (ADR 0010); there are no calendar targets, only the sequence.
+2026-10-27: sequence decided (top of docs/tasks.md); ADR 0012 adds two-level features (groups with fitted inner weights). 2026-10-26: plan written (architecture, ADRs 0001–0011, tasks). M0, M1 (feature store, 7 families), M2 (approaches, fitting, backfill 2015–2025, grading v2) and M3 (Odds API snapshots, live market features, paper ledger with CLV) are built but uncommitted; progress table at the top of docs/tasks.md, backtest findings in `.notes/backtest-2025.md`. Step 1 done 2026-10-27. Step 2 (`nfl lock`, weekly refresh, runbook, README scorecard) and step 3 (Streamlit UI on the site JSON contract) built 2026-10-27. Next: dry-run week (Week 8), first public locks (Week 9), then step 4 (LLM API path). Repo is public. The first public lock waits for the approaches (ADR 0010); there are no calendar targets, only the sequence.
 
 ## Non-negotiable principles
 
@@ -57,20 +57,24 @@ uv run nfl narrative slate 2026 8   # games to research; `ingest <file>` validat
 uv run nfl lock --slot thu|sat [--dry-run] [--commit --push]   # the live lock (docs/runbook.md)
 uv run nfl weekly refresh    # Tuesday job: current-season ingest, odds, curate, features, grade, ledger
 uv run nfl readme            # rewrite the README scorecard section
+uv run nfl site              # UI JSON contract -> marts/site/ (auto after weekly refresh and real locks)
+uv run nfl hypotheses        # per-feature coef + 90% CI + verdict -> site/hypotheses.json
+uv run nfl diy-matrix        # group composites per game for the build-your-own page
 uv run nfl run-all           # full historical rebuild (POC-era; prefer the individual commands)
-uv run nfl ui                # Streamlit explorer
+uv run nfl ui                # Streamlit app: slate, game, tracker, hypotheses, build your own, method
 uv run pytest -q             # unit tests + leakage guards (guards skip without local data)
 uv run ruff check src tests && uv run ruff format src tests
 ```
 
-Planned (see tasks.md for the milestone): `nfl site`, `nfl narrative`, `nfl hypotheses`.
+
 
 ## Layout and conventions
 
 - `src/nfl/config.py`: paths and dataset registry. `NFL_DATA_ROOT` (default `./data`, gitignored) is always a filesystem path. Layers: `raw/<source>/<dataset>/snapshot_ts=<ts>/` + `manifest.json` (immutable), `curated/<table>/season=YYYY/`, `marts/`. Read raw with `hive_partitioning=false`.
 - `src/nfl/features/<family>.py`: one builder per feature family writing the long schema in architecture §3.3. Feature names are `<family>.<name>`; `side` is `home`/`away`/`game`. Missing values are null in the store and become 0 (league average) after standardization. Builders expose `SOURCE`, `VERSION`, `build(paths, games, build_ts)` returning rows via `store.from_team_values`/`from_game_values`; they never write (architecture §3.3).
-- `src/nfl/approaches/configs/<id>.yaml`: an approach. Persona weights carry a `why`. `model_id` is `<approach>.<persona|fitted>`, plus `global` and `ensemble`. Fit artifacts under `marts/fits/<model_id>/<trained_through>.json`.
+- `src/nfl/approaches/configs/<id>.yaml`: an approach (group weights with a `why`, optional overrides). One public line per approach (ADR 0004 amendment): `model_id` is the approach id (`traditionalist`, `analyst`, `sharp`, `student`), plus `ensemble` and the diagnostic `global`; `<id>.persona` and `<id>.fitted` artifacts are internals and diagnostics, never scorecard lines. The market's forecast is never an approach input (ADR 0013; the schema rejects it). Fit artifacts under `marts/fits/<model_id>/<trained_through>.json`; `nfl lock` refuses artifacts whose config hash doesn't match the YAML, and refuses `--commit` from uncommitted code.
 - Team codes: pbp prints current codes (LA, LAC, LV) for every season while games use historical ones (STL, SD, OAK). Join plays to games on the canonical franchise code (`TEAM_ALIASES`), never the printed code.
+- UI: pages in `src/nfl/ui/pages/` read only `marts/site/*.json` via `nfl.ui.data` (palette, labels, loaders); never parquet. `tests/test_ui.py` renders every page headlessly.
 - `src/nfl/models/`: reference models only (`market.py`, `elo.py`, `naive.py`), numeric, no LLM.
 - `marts/predictions.parquet` and `marts/bets.parquet` are append-only. Never edit rows; add rows with a new `lock_ts` or `model_version`.
 - Narrative records (`nfl.llm.narrative.GameNarrative`) are the contract between research and pipeline; `producer` is `claude_code` (the `/nfl-narrative` skill, dev only) or `api` (production). Features from them are stamped with the record's `known_as_of`, never backfilled.

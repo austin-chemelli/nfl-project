@@ -73,10 +73,10 @@ def test_persona_model_from_flat_config():
             "id": "flat",
             "name": "Flat",
             "blurb": "A flat persona.",
-            "emphasis": ["market"],
+            "emphasis": ["strength"],
             "intercept": {"w": 0.0, "why": "none"},
             "weights": {
-                "market.spread_line": {"w": 0.85, "why": "the line"},
+                "strength.epa_off": {"w": 0.85, "why": "efficiency"},
                 "strength.elo_pre": {"w": 0.05, "why": "ratings"},
             },
         }
@@ -84,6 +84,6 @@ def test_persona_model_from_flat_config():
     sc = engine.Scaler(a.features, [0.0] * len(a.features), [1.0] * len(a.features))
     m = engine.persona_model(a, sc)
     assert m.model_id == "flat.persona"
-    assert m.weights[a.features.index("market.spread_line")] == 0.85
+    assert m.weights[a.features.index("strength.epa_off")] == 0.85
     with pytest.raises(ValueError):
         engine.persona_model(a, engine.Scaler(["x.y"], [0.0], [1.0]))

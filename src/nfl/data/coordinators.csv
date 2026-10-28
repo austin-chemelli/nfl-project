@@ -1,0 +1,353 @@
+season,team,head_coach,offensive_coordinator,defensive_coordinator,off_play_caller,def_play_caller,changed_midseason,notes,source_url
+2016,ARI,Bruce Arians,Harold Goodwin,James Bettcher,Bruce Arians,James Bettcher,false,,https://en.wikipedia.org/wiki/2016_Arizona_Cardinals_season
+2016,ATL,Dan Quinn,Kyle Shanahan,Richard Smith,Kyle Shanahan,Richard Smith,false,,https://en.wikipedia.org/wiki/2016_Atlanta_Falcons_season
+2016,BAL,John Harbaugh,Marty Mornhinweg,Dean Pees,Marty Mornhinweg,Dean Pees,true,OC Marc Trestman fired Oct 2016 after week 5; Marty Mornhinweg interim OC/play-caller rest of season (Wikipedia). Weeks 1-5 play-caller Trestman,https://en.wikipedia.org/wiki/2016_Baltimore_Ravens_season
+2016,BUF,Rex Ryan,Anthony Lynn,Dennis Thurman,Anthony Lynn,Rex Ryan,true,OC Greg Roman fired after week 2; Anthony Lynn OC from week 3; Ryan fired Dec 27 and Lynn interim HC wk 17. DC play-caller unverified,https://en.wikipedia.org/wiki/2016_Buffalo_Bills_season
+2016,CAR,Ron Rivera,Mike Shula,Sean McDermott,Mike Shula,Sean McDermott,false,OC play-caller from general knowledge,https://en.wikipedia.org/wiki/2016_Carolina_Panthers_season
+2016,CHI,John Fox,Dowell Loggains,Vic Fangio,Dowell Loggains,Vic Fangio,false,,https://en.wikipedia.org/wiki/2016_Chicago_Bears_season
+2016,CIN,Marvin Lewis,Ken Zampese,Paul Guenther,Ken Zampese,Paul Guenther,false,,https://en.wikipedia.org/wiki/2016_Cincinnati_Bengals_season
+2016,CLE,Hue Jackson,Pep Hamilton,Ray Horton,Hue Jackson,Ray Horton,false,Pep Hamilton listed as associate HC-offense; Jackson called plays (general knowledge),https://en.wikipedia.org/wiki/2016_Cleveland_Browns_season
+2016,DAL,Jason Garrett,Scott Linehan,Rod Marinelli,Scott Linehan,Rod Marinelli,false,,https://en.wikipedia.org/wiki/2016_Dallas_Cowboys_season
+2016,DEN,Gary Kubiak,Rick Dennison,Wade Phillips,Gary Kubiak,Wade Phillips,false,ST coordinator Joe DeCamillis interim HC for week 6 while Kubiak out (not a coordinator change),https://en.wikipedia.org/wiki/2016_Denver_Broncos_season
+2016,DET,Jim Caldwell,Jim Bob Cooter,Teryl Austin,Jim Bob Cooter,Teryl Austin,false,,https://en.wikipedia.org/wiki/2016_Detroit_Lions_season
+2016,GB,Mike McCarthy,Edgar Bennett,Dom Capers,Mike McCarthy,Dom Capers,false,,https://en.wikipedia.org/wiki/2016_Green_Bay_Packers_season
+2016,HOU,Bill O'Brien,George Godsey,Romeo Crennel,Bill O'Brien,Romeo Crennel,false,,https://en.wikipedia.org/wiki/2016_Houston_Texans_season
+2016,IND,Chuck Pagano,Rob Chudzinski,Ted Monachino,Rob Chudzinski,Ted Monachino,false,,https://en.wikipedia.org/wiki/2016_Indianapolis_Colts_season
+2016,JAX,Gus Bradley,Greg Olson,Todd Wash,Greg Olson,Todd Wash,true,Bradley fired after week 15; Doug Marrone interim HC and Nathaniel Hackett interim OC for final 2 games (Wikipedia); OC Olson role end date unverified,https://en.wikipedia.org/wiki/2016_Jacksonville_Jaguars_season
+2016,KC,Andy Reid,Brad Childress,Bob Sutton,Andy Reid,Bob Sutton,false,Wikipedia lists OC as Childress/Matt Nagy; OC title uncertain,https://en.wikipedia.org/wiki/2016_Kansas_City_Chiefs_season
+2016,LA,Jeff Fisher,Rob Boras,Gregg Williams,Rob Boras,Gregg Williams,false,Fisher fired Dec 12 (after week 14); John Fassel interim HC. OC play-caller unsure,https://en.wikipedia.org/wiki/2016_Los_Angeles_Rams_season
+2016,MIA,Adam Gase,Clyde Christensen,Vance Joseph,Adam Gase,Vance Joseph,false,,https://en.wikipedia.org/wiki/2016_Miami_Dolphins_season
+2016,MIN,Mike Zimmer,Pat Shurmur,George Edwards,Pat Shurmur,George Edwards,true,OC Norv Turner resigned after week 8; Pat Shurmur OC/play-caller from week 9,https://en.wikipedia.org/wiki/2016_Minnesota_Vikings_season
+2016,NE,Bill Belichick,Josh McDaniels,Matt Patricia,Josh McDaniels,Matt Patricia,false,Defensive play-calling shared with Belichick; Patricia named,https://en.wikipedia.org/wiki/2016_New_England_Patriots_season
+2016,NO,Sean Payton,Pete Carmichael Jr.,Dennis Allen,Sean Payton,Dennis Allen,false,,https://en.wikipedia.org/wiki/2016_New_Orleans_Saints_season
+2016,NYG,Ben McAdoo,Mike Sullivan,Steve Spagnuolo,Ben McAdoo,Steve Spagnuolo,false,,https://en.wikipedia.org/wiki/2016_New_York_Giants_season
+2016,NYJ,Todd Bowles,Chan Gailey,Kacy Rodgers,Chan Gailey,Todd Bowles,false,DC play-caller (Bowles) from general knowledge,https://en.wikipedia.org/wiki/2016_New_York_Jets_season
+2016,OAK,Jack Del Rio,Bill Musgrave,Ken Norton Jr.,Bill Musgrave,Ken Norton Jr.,false,,https://en.wikipedia.org/wiki/2016_Oakland_Raiders_season
+2016,PHI,Doug Pederson,Frank Reich,Jim Schwartz,Doug Pederson,Jim Schwartz,false,,https://en.wikipedia.org/wiki/2016_Philadelphia_Eagles_season
+2016,PIT,Mike Tomlin,Todd Haley,Keith Butler,Todd Haley,Keith Butler,false,,https://en.wikipedia.org/wiki/2016_Pittsburgh_Steelers_season
+2016,SD,Mike McCoy,Ken Whisenhunt,John Pagano,Ken Whisenhunt,John Pagano,false,,https://en.wikipedia.org/wiki/2016_San_Diego_Chargers_season
+2016,SEA,Pete Carroll,Darrell Bevell,Kris Richard,Darrell Bevell,Kris Richard,false,,https://en.wikipedia.org/wiki/2016_Seattle_Seahawks_season
+2016,SF,Chip Kelly,Curtis Modkins,Jim O'Neil,Chip Kelly,Jim O'Neil,false,,https://en.wikipedia.org/wiki/2016_San_Francisco_49ers_season
+2016,TB,Dirk Koetter,Todd Monken,Mike Smith,Dirk Koetter,Mike Smith,false,,https://en.wikipedia.org/wiki/2016_Tampa_Bay_Buccaneers_season
+2016,TEN,Mike Mularkey,Terry Robiskie,Dick LeBeau,Mike Mularkey,Dick LeBeau,false,,https://en.wikipedia.org/wiki/2016_Tennessee_Titans_season
+2016,WAS,Jay Gruden,Sean McVay,Joe Barry,Jay Gruden,Joe Barry,false,Gruden called plays; McVay OC (general knowledge),https://en.wikipedia.org/wiki/2016_Washington_Redskins_season
+2017,ARI,Bruce Arians,Harold Goodwin,James Bettcher,Bruce Arians,James Bettcher,false,,https://en.wikipedia.org/wiki/2017_Arizona_Cardinals_season
+2017,ATL,Dan Quinn,Steve Sarkisian,Marquand Manuel,Steve Sarkisian,Marquand Manuel,false,,https://en.wikipedia.org/wiki/2017_Atlanta_Falcons_season
+2017,BAL,John Harbaugh,Marty Mornhinweg,Dean Pees,Marty Mornhinweg,Dean Pees,false,,https://en.wikipedia.org/wiki/2017_Baltimore_Ravens_season
+2017,BUF,Sean McDermott,Rick Dennison,Leslie Frazier,Rick Dennison,Leslie Frazier,false,,https://en.wikipedia.org/wiki/2017_Buffalo_Bills_season
+2017,CAR,Ron Rivera,Mike Shula,Steve Wilks,Mike Shula,Steve Wilks,false,,https://en.wikipedia.org/wiki/2017_Carolina_Panthers_season
+2017,CHI,John Fox,Dowell Loggains,Vic Fangio,Dowell Loggains,Vic Fangio,false,,https://en.wikipedia.org/wiki/2017_Chicago_Bears_season
+2017,CIN,Marvin Lewis,Bill Lazor,Paul Guenther,Bill Lazor,Paul Guenther,true,OC Ken Zampese fired Sep 15 2017 after week 2; Bill Lazor promoted and called plays after,https://en.wikipedia.org/wiki/2017_Cincinnati_Bengals_season
+2017,CLE,Hue Jackson,,Gregg Williams,Hue Jackson,Gregg Williams,false,No OC listed; Jackson called plays,https://en.wikipedia.org/wiki/2017_Cleveland_Browns_season
+2017,DAL,Jason Garrett,Scott Linehan,Rod Marinelli,Scott Linehan,Rod Marinelli,false,,https://en.wikipedia.org/wiki/2017_Dallas_Cowboys_season
+2017,DEN,Vance Joseph,Bill Musgrave,Joe Woods,Bill Musgrave,Joe Woods,true,OC Mike McCoy fired Nov 20 2017; Bill Musgrave OC rest of season. Weeks 1-11 OC McCoy,https://en.wikipedia.org/wiki/2017_Denver_Broncos_season
+2017,DET,Jim Caldwell,Jim Bob Cooter,Teryl Austin,Jim Bob Cooter,Teryl Austin,false,,https://en.wikipedia.org/wiki/2017_Detroit_Lions_season
+2017,GB,Mike McCarthy,Edgar Bennett,Dom Capers,Mike McCarthy,Dom Capers,false,,https://en.wikipedia.org/wiki/2017_Green_Bay_Packers_season
+2017,HOU,Bill O'Brien,,Mike Vrabel,Bill O'Brien,Mike Vrabel,false,No OC listed; O'Brien called plays,https://en.wikipedia.org/wiki/2017_Houston_Texans_season
+2017,IND,Chuck Pagano,Rob Chudzinski,Ted Monachino,Rob Chudzinski,Ted Monachino,false,,https://en.wikipedia.org/wiki/2017_Indianapolis_Colts_season
+2017,JAX,Doug Marrone,Nathaniel Hackett,Todd Wash,Nathaniel Hackett,Todd Wash,false,,https://en.wikipedia.org/wiki/2017_Jacksonville_Jaguars_season
+2017,KC,Andy Reid,Matt Nagy,Bob Sutton,Matt Nagy,Bob Sutton,true,Reid handed in-game play-calling to Nagy mid-season after offense struggled (Wikipedia; exact week not stated); Reid called early season,https://en.wikipedia.org/wiki/2017_Kansas_City_Chiefs_season
+2017,LA,Sean McVay,Matt LaFleur,Wade Phillips,Sean McVay,Wade Phillips,false,McVay called plays,https://en.wikipedia.org/wiki/2017_Los_Angeles_Rams_season
+2017,LAC,Anthony Lynn,Ken Whisenhunt,Gus Bradley,Ken Whisenhunt,Gus Bradley,false,,https://en.wikipedia.org/wiki/2017_Los_Angeles_Chargers_season
+2017,MIA,Adam Gase,Clyde Christensen,Matt Burke,Adam Gase,Matt Burke,false,,https://en.wikipedia.org/wiki/2017_Miami_Dolphins_season
+2017,MIN,Mike Zimmer,Pat Shurmur,George Edwards,Pat Shurmur,George Edwards,false,,https://en.wikipedia.org/wiki/2017_Minnesota_Vikings_season
+2017,NE,Bill Belichick,Josh McDaniels,Matt Patricia,Josh McDaniels,Matt Patricia,false,Defensive play-calling shared with Belichick,https://en.wikipedia.org/wiki/2017_New_England_Patriots_season
+2017,NO,Sean Payton,Pete Carmichael Jr.,Dennis Allen,Sean Payton,Dennis Allen,false,,https://en.wikipedia.org/wiki/2017_New_Orleans_Saints_season
+2017,NYG,Ben McAdoo,Mike Sullivan,Steve Spagnuolo,Ben McAdoo,Steve Spagnuolo,false,McAdoo fired after week 13; DC Spagnuolo interim HC (HC change not coordinator change),https://en.wikipedia.org/wiki/2017_New_York_Giants_season
+2017,NYJ,Todd Bowles,John Morton,Kacy Rodgers,John Morton,Todd Bowles,false,DC play-caller (Bowles) from general knowledge,https://en.wikipedia.org/wiki/2017_New_York_Jets_season
+2017,OAK,Jack Del Rio,Todd Downing,Ken Norton Jr.,Todd Downing,John Pagano,true,DC Ken Norton Jr. fired Nov 21 2017; John Pagano DC/play-caller rest of season. Weeks 1-10 Norton,https://en.wikipedia.org/wiki/2017_Oakland_Raiders_season
+2017,PHI,Doug Pederson,Frank Reich,Jim Schwartz,Doug Pederson,Jim Schwartz,false,,https://en.wikipedia.org/wiki/2017_Philadelphia_Eagles_season
+2017,PIT,Mike Tomlin,Todd Haley,Keith Butler,Todd Haley,Keith Butler,false,,https://en.wikipedia.org/wiki/2017_Pittsburgh_Steelers_season
+2017,SEA,Pete Carroll,Darrell Bevell,Kris Richard,Darrell Bevell,Kris Richard,false,,https://en.wikipedia.org/wiki/2017_Seattle_Seahawks_season
+2017,SF,Kyle Shanahan,Kyle Shanahan,Robert Saleh,Kyle Shanahan,Robert Saleh,false,No separate OC; Shanahan acts as OC,https://en.wikipedia.org/wiki/2017_San_Francisco_49ers_season
+2017,TB,Dirk Koetter,Todd Monken,Mike Smith,Dirk Koetter,Mike Smith,false,,https://en.wikipedia.org/wiki/2017_Tampa_Bay_Buccaneers_season
+2017,TEN,Mike Mularkey,Terry Robiskie,Dick LeBeau,Mike Mularkey,Dick LeBeau,false,,https://en.wikipedia.org/wiki/2017_Tennessee_Titans_season
+2017,WAS,Jay Gruden,Matt Cavanaugh,Greg Manusky,Jay Gruden,Greg Manusky,false,Gruden called plays,https://en.wikipedia.org/wiki/2017_Washington_Redskins_season
+2018,ARI,Steve Wilks,Byron Leftwich,Al Holcomb,Byron Leftwich,Al Holcomb,true,OC Mike McCoy fired Oct 19 2018 (after week 7); Byron Leftwich interim OC/play-caller. Weeks 1-7 McCoy,https://en.wikipedia.org/wiki/2018_Arizona_Cardinals_season
+2018,ATL,Dan Quinn,Steve Sarkisian,Marquand Manuel,Steve Sarkisian,Marquand Manuel,false,,https://en.wikipedia.org/wiki/2018_Atlanta_Falcons_season
+2018,BAL,John Harbaugh,Greg Roman,Don Martindale,Greg Roman,Don Martindale,true,Wikipedia lists Mornhinweg as OC with Roman interim OC; Mornhinweg fired about Oct 31 (week 9) and Roman OC after; dates from general knowledge,https://en.wikipedia.org/wiki/2018_Baltimore_Ravens_season
+2018,BUF,Sean McDermott,Brian Daboll,Leslie Frazier,Brian Daboll,Leslie Frazier,false,,https://en.wikipedia.org/wiki/2018_Buffalo_Bills_season
+2018,CAR,Ron Rivera,Norv Turner,Eric Washington,Norv Turner,Ron Rivera,true,After week 13 Rivera took over defensive play-calling; Washington kept DC title (Wikipedia). Weeks 1-13 def play-caller Eric Washington (assumed),https://en.wikipedia.org/wiki/2018_Carolina_Panthers_season
+2018,CHI,Matt Nagy,Mark Helfrich,Vic Fangio,Matt Nagy,Vic Fangio,false,Nagy called plays (general knowledge),https://en.wikipedia.org/wiki/2018_Chicago_Bears_season
+2018,CIN,Marvin Lewis,Bill Lazor,Marvin Lewis,Bill Lazor,Marvin Lewis,false,Lewis served as his own DC after Guenther left,https://en.wikipedia.org/wiki/2018_Cincinnati_Bengals_season
+2018,CLE,Hue Jackson,Freddie Kitchens,Gregg Williams,Freddie Kitchens,Gregg Williams,true,HC Jackson and OC Todd Haley fired Oct 29 2018; Gregg Williams interim HC (continued calling defense per general knowledge); Freddie Kitchens interim OC. Weeks 1-8 OC Haley (Jackson called plays by general knowledge),https://en.wikipedia.org/wiki/2018_Cleveland_Browns_season
+2018,DAL,Jason Garrett,Scott Linehan,Rod Marinelli,Scott Linehan,Rod Marinelli,false,,https://en.wikipedia.org/wiki/2018_Dallas_Cowboys_season
+2018,DEN,Vance Joseph,Bill Musgrave,Joe Woods,Bill Musgrave,Joe Woods,false,,https://en.wikipedia.org/wiki/2018_Denver_Broncos_season
+2018,DET,Matt Patricia,Jim Bob Cooter,Paul Pasqualoni,Jim Bob Cooter,Paul Pasqualoni,false,,https://en.wikipedia.org/wiki/2018_Detroit_Lions_season
+2018,GB,Mike McCarthy,Joe Philbin,Mike Pettine,Mike McCarthy,Mike Pettine,true,McCarthy fired Dec 2 2018 after week 13; Philbin interim HC (also OC). Play-caller after McCarthy unverified (likely Philbin),https://en.wikipedia.org/wiki/2018_Green_Bay_Packers_season
+2018,HOU,Bill O'Brien,,Romeo Crennel,Bill O'Brien,Romeo Crennel,false,No OC listed; O'Brien called plays,https://en.wikipedia.org/wiki/2018_Houston_Texans_season
+2018,IND,Frank Reich,Nick Sirianni,Matt Eberflus,Frank Reich,Matt Eberflus,false,,https://en.wikipedia.org/wiki/2018_Indianapolis_Colts_season
+2018,JAX,Doug Marrone,Scott Milanovich,Todd Wash,Nathaniel Hackett,Todd Wash,true,OC Nathaniel Hackett fired in Dec 2018 (~week 13); Scott Milanovich interim OC. Dates from general knowledge; Hackett called plays until then,https://en.wikipedia.org/wiki/2018_Jacksonville_Jaguars_season
+2018,KC,Andy Reid,Eric Bieniemy,Bob Sutton,Andy Reid,Bob Sutton,false,Reid called plays (general knowledge),https://en.wikipedia.org/wiki/2018_Kansas_City_Chiefs_season
+2018,LA,Sean McVay,Sean McVay,Wade Phillips,Sean McVay,Wade Phillips,false,No separate OC listed; McVay called plays,https://en.wikipedia.org/wiki/2018_Los_Angeles_Rams_season
+2018,LAC,Anthony Lynn,Ken Whisenhunt,Gus Bradley,Ken Whisenhunt,Gus Bradley,false,,https://en.wikipedia.org/wiki/2018_Los_Angeles_Chargers_season
+2018,MIA,Adam Gase,Dowell Loggains,Matt Burke,Adam Gase,Matt Burke,false,,https://en.wikipedia.org/wiki/2018_Miami_Dolphins_season
+2018,MIN,Mike Zimmer,Kevin Stefanski,George Edwards,Kevin Stefanski,George Edwards,true,OC John DeFilippo fired Dec 3 2018 (after week 13); Kevin Stefanski interim OC. Wikipedia lists Stefanski (interim); firing details from general knowledge,https://en.wikipedia.org/wiki/2018_Minnesota_Vikings_season
+2018,NE,Bill Belichick,Josh McDaniels,,Josh McDaniels,Brian Flores,false,No DC listed; Brian Flores called defense (general knowledge),https://en.wikipedia.org/wiki/2018_New_England_Patriots_season
+2018,NO,Sean Payton,Pete Carmichael Jr.,Dennis Allen,Sean Payton,Dennis Allen,false,,https://en.wikipedia.org/wiki/2018_New_Orleans_Saints_season
+2018,NYG,Pat Shurmur,Mike Shula,James Bettcher,Pat Shurmur,James Bettcher,false,,https://en.wikipedia.org/wiki/2018_New_York_Giants_season
+2018,NYJ,Todd Bowles,Jeremy Bates,Kacy Rodgers,Jeremy Bates,Todd Bowles,false,DC play-caller (Bowles) from general knowledge,https://en.wikipedia.org/wiki/2018_New_York_Jets_season
+2018,OAK,Jon Gruden,Greg Olson,Paul Guenther,Jon Gruden,Paul Guenther,false,,https://en.wikipedia.org/wiki/2018_Oakland_Raiders_season
+2018,PHI,Doug Pederson,Mike Groh,Jim Schwartz,Doug Pederson,Jim Schwartz,false,,https://en.wikipedia.org/wiki/2018_Philadelphia_Eagles_season
+2018,PIT,Mike Tomlin,Randy Fichtner,Keith Butler,Randy Fichtner,Keith Butler,false,,https://en.wikipedia.org/wiki/2018_Pittsburgh_Steelers_season
+2018,SEA,Pete Carroll,Brian Schottenheimer,Ken Norton Jr.,Brian Schottenheimer,Ken Norton Jr.,false,,https://en.wikipedia.org/wiki/2018_Seattle_Seahawks_season
+2018,SF,Kyle Shanahan,Kyle Shanahan,Robert Saleh,Kyle Shanahan,Robert Saleh,false,No separate OC,https://en.wikipedia.org/wiki/2018_San_Francisco_49ers_season
+2018,TB,Dirk Koetter,Todd Monken,Mark Duffner,Dirk Koetter,Mark Duffner,true,DC Mike Smith replaced by Mark Duffner after week 6,https://en.wikipedia.org/wiki/2018_Tampa_Bay_Buccaneers_season
+2018,TEN,Mike Vrabel,Matt LaFleur,Dean Pees,Matt LaFleur,Dean Pees,false,,https://en.wikipedia.org/wiki/2018_Tennessee_Titans_season
+2018,WAS,Jay Gruden,Matt Cavanaugh,Greg Manusky,Jay Gruden,Greg Manusky,false,,https://en.wikipedia.org/wiki/2018_Washington_Redskins_season
+2019,ARI,Kliff Kingsbury,,Vance Joseph,Kliff Kingsbury,Vance Joseph,false,No OC listed (Tom Clements pass game coordinator); Kingsbury called plays,https://en.wikipedia.org/wiki/2019_Arizona_Cardinals_season
+2019,ATL,Dan Quinn,Dirk Koetter,Dan Quinn,Dirk Koetter,Dan Quinn,false,Falcons fired DC Marquand Manuel Dec 31 2018; Quinn served as his own DC and defensive play-caller for 2019,https://en.wikipedia.org/wiki/2019_Atlanta_Falcons_season ; https://www.thefalcoholic.com/2018/12/31/18134265/atlanta-falcons-fire-defensive-coordinator-marquand-manuel-dan-quinn-hot-seat-richard-smith
+2019,BAL,John Harbaugh,Greg Roman,Don Martindale,Greg Roman,Don Martindale,false,,https://en.wikipedia.org/wiki/2019_Baltimore_Ravens_season
+2019,BUF,Sean McDermott,Brian Daboll,Leslie Frazier,Brian Daboll,Leslie Frazier,false,,https://en.wikipedia.org/wiki/2019_Buffalo_Bills_season
+2019,CAR,Ron Rivera,Scott Turner,Eric Washington,Scott Turner,Eric Washington,false,Rivera fired Dec 3 2019; Perry Fewell interim HC (HC change; no coordinator change recorded),https://en.wikipedia.org/wiki/2019_Carolina_Panthers_season
+2019,CHI,Matt Nagy,Mark Helfrich,Chuck Pagano,Matt Nagy,Chuck Pagano,false,Nagy called plays (general knowledge),https://en.wikipedia.org/wiki/2019_Chicago_Bears_season
+2019,CIN,Zac Taylor,Brian Callahan,Lou Anarumo,Zac Taylor,Lou Anarumo,false,Taylor called plays (general knowledge),https://en.wikipedia.org/wiki/2019_Cincinnati_Bengals_season
+2019,CLE,Freddie Kitchens,Todd Monken,Steve Wilks,Freddie Kitchens,Steve Wilks,false,Kitchens called plays (general knowledge; Monken OC),https://en.wikipedia.org/wiki/2019_Cleveland_Browns_season
+2019,DAL,Jason Garrett,Kellen Moore,Rod Marinelli,Kellen Moore,Rod Marinelli,false,,https://en.wikipedia.org/wiki/2019_Dallas_Cowboys_season
+2019,DEN,Vic Fangio,Rich Scangarello,Ed Donatell,Rich Scangarello,Vic Fangio,false,Fangio called defense (general knowledge),https://en.wikipedia.org/wiki/2019_Denver_Broncos_season
+2019,DET,Matt Patricia,Darrell Bevell,Paul Pasqualoni,Darrell Bevell,Paul Pasqualoni,false,,https://en.wikipedia.org/wiki/2019_Detroit_Lions_season
+2019,GB,Matt LaFleur,Nathaniel Hackett,Mike Pettine,Matt LaFleur,Mike Pettine,false,LaFleur called plays (general knowledge),https://en.wikipedia.org/wiki/2019_Green_Bay_Packers_season
+2019,HOU,Bill O'Brien,Tim Kelly,Romeo Crennel,Bill O'Brien,Romeo Crennel,false,,https://en.wikipedia.org/wiki/2019_Houston_Texans_season
+2019,IND,Frank Reich,Nick Sirianni,Matt Eberflus,Frank Reich,Matt Eberflus,false,,https://en.wikipedia.org/wiki/2019_Indianapolis_Colts_season
+2019,JAX,Doug Marrone,John DeFilippo,Todd Wash,John DeFilippo,Todd Wash,false,,https://en.wikipedia.org/wiki/2019_Jacksonville_Jaguars_season
+2019,KC,Andy Reid,Eric Bieniemy,Steve Spagnuolo,Andy Reid,Steve Spagnuolo,false,,https://en.wikipedia.org/wiki/2019_Kansas_City_Chiefs_season
+2019,LA,Sean McVay,Sean McVay,Wade Phillips,Sean McVay,Wade Phillips,false,No separate OC listed,https://en.wikipedia.org/wiki/2019_Los_Angeles_Rams_season
+2019,LAC,Anthony Lynn,Shane Steichen,Gus Bradley,Shane Steichen,Gus Bradley,false,Wikipedia lists Steichen as interim OC without detail,https://en.wikipedia.org/wiki/2019_Los_Angeles_Chargers_season
+2019,MIA,Brian Flores,Chad O'Shea,Patrick Graham,Chad O'Shea,Brian Flores,false,Flores called defense (general knowledge),https://en.wikipedia.org/wiki/2019_Miami_Dolphins_season
+2019,MIN,Mike Zimmer,Kevin Stefanski,George Edwards,Kevin Stefanski,Mike Zimmer,false,Zimmer called defense (general knowledge),https://en.wikipedia.org/wiki/2019_Minnesota_Vikings_season
+2019,NE,Bill Belichick,Josh McDaniels,,Josh McDaniels,Bill Belichick,false,No official DC after Greg Schiano resigned before season; Belichick led defense,https://en.wikipedia.org/wiki/2019_New_England_Patriots_season
+2019,NO,Sean Payton,Pete Carmichael Jr.,Dennis Allen,Sean Payton,Dennis Allen,false,,https://en.wikipedia.org/wiki/2019_New_Orleans_Saints_season
+2019,NYG,Pat Shurmur,Mike Shula,James Bettcher,Pat Shurmur,James Bettcher,false,,https://en.wikipedia.org/wiki/2019_New_York_Giants_season
+2019,NYJ,Adam Gase,Dowell Loggains,Gregg Williams,Adam Gase,Gregg Williams,false,,https://en.wikipedia.org/wiki/2019_New_York_Jets_season
+2019,OAK,Jon Gruden,Greg Olson,Paul Guenther,Jon Gruden,Paul Guenther,false,,https://en.wikipedia.org/wiki/2019_Oakland_Raiders_season
+2019,PHI,Doug Pederson,Mike Groh,Jim Schwartz,Doug Pederson,Jim Schwartz,false,,https://en.wikipedia.org/wiki/2019_Philadelphia_Eagles_season
+2019,PIT,Mike Tomlin,Randy Fichtner,Keith Butler,Randy Fichtner,Keith Butler,false,,https://en.wikipedia.org/wiki/2019_Pittsburgh_Steelers_season
+2019,SEA,Pete Carroll,Brian Schottenheimer,Ken Norton Jr.,Brian Schottenheimer,Ken Norton Jr.,false,,https://en.wikipedia.org/wiki/2019_Seattle_Seahawks_season
+2019,SF,Kyle Shanahan,Kyle Shanahan,Robert Saleh,Kyle Shanahan,Robert Saleh,false,No separate OC,https://en.wikipedia.org/wiki/2019_San_Francisco_49ers_season
+2019,TB,Bruce Arians,Byron Leftwich,Todd Bowles,Bruce Arians,Todd Bowles,false,"OC play-caller unsure (Arians vs Leftwich), VERIFY",https://en.wikipedia.org/wiki/2019_Tampa_Bay_Buccaneers_season
+2019,TEN,Mike Vrabel,Arthur Smith,Dean Pees,Arthur Smith,Dean Pees,false,,https://en.wikipedia.org/wiki/2019_Tennessee_Titans_season
+2019,WAS,Jay Gruden,Kevin O'Connell,Greg Manusky,Kevin O'Connell,Greg Manusky,true,HC Jay Gruden fired Oct 7 2019 (after week 5); Bill Callahan interim HC. OC/DC unchanged; play-caller after change unverified,https://en.wikipedia.org/wiki/2019_Washington_Redskins_season
+2020,ARI,Kliff Kingsbury,,Vance Joseph,Kliff Kingsbury,Vance Joseph,false,No OC listed (Tom Clements pass game coordinator); Kingsbury called plays (general knowledge),https://en.wikipedia.org/wiki/2020_Arizona_Cardinals_season
+2020,ATL,Dan Quinn,Dirk Koetter,Raheem Morris,Dirk Koetter,Raheem Morris,true,HC Dan Quinn fired Oct 11 2020 (after week 5); DC Raheem Morris interim HC; Jeff Ulbrich interim DC rest of season (Wikipedia); DC play-caller after Oct unverified,https://en.wikipedia.org/wiki/2020_Atlanta_Falcons_season
+2020,BAL,John Harbaugh,Greg Roman,Don Martindale,Greg Roman,Don Martindale,false,,https://en.wikipedia.org/wiki/2020_Baltimore_Ravens_season
+2020,BUF,Sean McDermott,Brian Daboll,Leslie Frazier,Brian Daboll,Leslie Frazier,false,,https://en.wikipedia.org/wiki/2020_Buffalo_Bills_season
+2020,CAR,Matt Rhule,Joe Brady,Phil Snow,Joe Brady,Phil Snow,false,,https://en.wikipedia.org/wiki/2020_Carolina_Panthers_season
+2020,CHI,Matt Nagy,Bill Lazor,Chuck Pagano,Bill Lazor,Chuck Pagano,true,Nagy handed play-calling to OC Bill Lazor starting week 10 (Nov 2020); Nagy called plays weeks 1-9,https://en.wikipedia.org/wiki/2020_Chicago_Bears_season ; https://www.nfl.com/news/bears-coach-matt-nagy-hands-off-play-calling-duties-to-bill-lazor
+2020,CIN,Zac Taylor,Brian Callahan,Lou Anarumo,Zac Taylor,Lou Anarumo,false,,https://en.wikipedia.org/wiki/2020_Cincinnati_Bengals_season
+2020,CLE,Kevin Stefanski,Alex Van Pelt,Joe Woods,Kevin Stefanski,Joe Woods,false,Stefanski called plays (general knowledge),https://en.wikipedia.org/wiki/2020_Cleveland_Browns_season
+2020,DAL,Mike McCarthy,Kellen Moore,Mike Nolan,Kellen Moore,Mike Nolan,false,,https://en.wikipedia.org/wiki/2020_Dallas_Cowboys_season
+2020,DEN,Vic Fangio,Pat Shurmur,Ed Donatell,Pat Shurmur,Ed Donatell,false,,https://en.wikipedia.org/wiki/2020_Denver_Broncos_season
+2020,DET,Matt Patricia,Darrell Bevell,Cory Undlin,Darrell Bevell,Cory Undlin,true,HC Matt Patricia fired Nov 28 2020; OC Darrell Bevell interim HC then Robert Prince interim; OC role after Nov 28 unverified,https://en.wikipedia.org/wiki/2020_Detroit_Lions_season
+2020,GB,Matt LaFleur,Nathaniel Hackett,Mike Pettine,Matt LaFleur,Mike Pettine,false,,https://en.wikipedia.org/wiki/2020_Green_Bay_Packers_season
+2020,HOU,Bill O'Brien,Tim Kelly,Anthony Weaver,Bill O'Brien,Anthony Weaver,true,O'Brien fired Oct 5 2020 (after week 4); Romeo Crennel interim HC. Play-caller afterward (Kelly?) unverified,https://en.wikipedia.org/wiki/2020_Houston_Texans_season
+2020,IND,Frank Reich,Nick Sirianni,Matt Eberflus,Frank Reich,Matt Eberflus,false,,https://en.wikipedia.org/wiki/2020_Indianapolis_Colts_season
+2020,JAX,Doug Marrone,Jay Gruden,Todd Wash,Jay Gruden,Todd Wash,false,,https://en.wikipedia.org/wiki/2020_Jacksonville_Jaguars_season
+2020,KC,Andy Reid,Eric Bieniemy,Steve Spagnuolo,Andy Reid,Steve Spagnuolo,false,,https://en.wikipedia.org/wiki/2020_Kansas_City_Chiefs_season
+2020,LA,Sean McVay,Kevin O'Connell,Brandon Staley,Sean McVay,Brandon Staley,false,McVay called plays (general knowledge),https://en.wikipedia.org/wiki/2020_Los_Angeles_Rams_season
+2020,LAC,Anthony Lynn,Shane Steichen,Gus Bradley,Shane Steichen,Gus Bradley,false,,https://en.wikipedia.org/wiki/2020_Los_Angeles_Chargers_season
+2020,LV,Jon Gruden,Greg Olson,Paul Guenther,Jon Gruden,Rod Marinelli,true,DC Paul Guenther fired Dec 13 2020 (after week 14 loss to Colts); Rod Marinelli interim DC rest of season,https://en.wikipedia.org/wiki/2020_Las_Vegas_Raiders_season ; https://www.cbssports.com/nfl/news/raiders-fire-defensive-coordinator-paul-guenther-after-giving-up-44-points-to-colts-in-week-14
+2020,MIA,Brian Flores,Chan Gailey,Josh Boyer,Chan Gailey,Brian Flores,false,,https://en.wikipedia.org/wiki/2020_Miami_Dolphins_season
+2020,MIN,Mike Zimmer,Gary Kubiak,Andre Patterson,Gary Kubiak,Mike Zimmer,false,Wikipedia lists DC as Andre Patterson/Adam Zimmer co-coordinators; Zimmer called defense (general knowledge),https://en.wikipedia.org/wiki/2020_Minnesota_Vikings_season
+2020,NE,Bill Belichick,Josh McDaniels,,Josh McDaniels,Bill Belichick,false,No DC listed,https://en.wikipedia.org/wiki/2020_New_England_Patriots_season
+2020,NO,Sean Payton,Pete Carmichael Jr.,Dennis Allen,Sean Payton,Dennis Allen,false,,https://en.wikipedia.org/wiki/2020_New_Orleans_Saints_season
+2020,NYG,Joe Judge,Jason Garrett,Patrick Graham,Jason Garrett,Patrick Graham,false,,https://en.wikipedia.org/wiki/2020_New_York_Giants_season
+2020,NYJ,Adam Gase,Dowell Loggains,Frank Bush,Dowell Loggains,Frank Bush,true,Gase handed offensive play-calling to Loggains in week 7 (Oct 25) per Wikipedia,https://en.wikipedia.org/wiki/2020_New_York_Jets_season
+2020,PHI,Doug Pederson,,Jim Schwartz,Doug Pederson,Jim Schwartz,false,No OC listed; Pederson called plays,https://en.wikipedia.org/wiki/2020_Philadelphia_Eagles_season
+2020,PIT,Mike Tomlin,Randy Fichtner,Keith Butler,Randy Fichtner,Keith Butler,false,,https://en.wikipedia.org/wiki/2020_Pittsburgh_Steelers_season
+2020,SEA,Pete Carroll,Brian Schottenheimer,Ken Norton Jr.,Brian Schottenheimer,Ken Norton Jr.,false,,https://en.wikipedia.org/wiki/2020_Seattle_Seahawks_season
+2020,SF,Kyle Shanahan,Kyle Shanahan,Robert Saleh,Kyle Shanahan,Robert Saleh,false,No separate OC,https://en.wikipedia.org/wiki/2020_San_Francisco_49ers_season
+2020,TB,Bruce Arians,Byron Leftwich,Todd Bowles,Byron Leftwich,Todd Bowles,false,Leftwich called plays (Arians); VERIFY,https://en.wikipedia.org/wiki/2020_Tampa_Bay_Buccaneers_season
+2020,TEN,Mike Vrabel,Arthur Smith,,Arthur Smith,Shane Bowen,false,No DC listed; Shane Bowen called defense (Wikipedia),https://en.wikipedia.org/wiki/2020_Tennessee_Titans_season
+2020,WAS,Ron Rivera,Scott Turner,Jack Del Rio,Scott Turner,Jack Del Rio,false,,https://en.wikipedia.org/wiki/2020_Washington_Football_Team_season
+2021,ARI,Kliff Kingsbury,,Vance Joseph,Kliff Kingsbury,Vance Joseph,false,No OC listed; Kingsbury called plays (general knowledge),https://en.wikipedia.org/wiki/2021_Arizona_Cardinals_season
+2021,ATL,Arthur Smith,Dave Ragone,Dean Pees,Arthur Smith,Dean Pees,false,Smith called plays (general knowledge),https://en.wikipedia.org/wiki/2021_Atlanta_Falcons_season
+2021,BAL,John Harbaugh,Greg Roman,Don Martindale,Greg Roman,Don Martindale,false,,https://en.wikipedia.org/wiki/2021_Baltimore_Ravens_season
+2021,BUF,Sean McDermott,Brian Daboll,Leslie Frazier,Brian Daboll,Leslie Frazier,false,,https://en.wikipedia.org/wiki/2021_Buffalo_Bills_season
+2021,CAR,Matt Rhule,Joe Brady,Phil Snow,Jeff Nixon,Phil Snow,true,"OC Joe Brady fired Dec 5 2021 (5-7, five games left); senior offensive assistant Jeff Nixon coordinated offense/play-calling rest of season",https://en.wikipedia.org/wiki/2021_Carolina_Panthers_season ; https://africa.espn.com/nfl/story/_/id/32795908/carolina-panthers-fire-oc-joe-brady-team-sitting-5-7
+2021,CHI,Matt Nagy,Bill Lazor,Sean Desai,Bill Lazor,Sean Desai,true,Nagy said he would resume calling plays in 2021 but handed play-calling back to Lazor in Oct 2021 after a loss to the Browns (per Windy City Gridiron/Wikipedia; exact week unverified); Nagy called plays early,https://en.wikipedia.org/wiki/2021_Chicago_Bears_season ; https://www.windycitygridiron.com/2021/10/3/22700160/chicago-bears-matt-nagy-gives-up-play-calling-bill-lazor-over-offensive-coordinator-detroit-lions
+2021,CIN,Zac Taylor,Brian Callahan,Lou Anarumo,Zac Taylor,Lou Anarumo,false,,https://en.wikipedia.org/wiki/2021_Cincinnati_Bengals_season
+2021,CLE,Kevin Stefanski,Alex Van Pelt,Joe Woods,Kevin Stefanski,Joe Woods,false,,https://en.wikipedia.org/wiki/2021_Cleveland_Browns_season
+2021,DAL,Mike McCarthy,Kellen Moore,Dan Quinn,Kellen Moore,Dan Quinn,false,,https://en.wikipedia.org/wiki/2021_Dallas_Cowboys_season
+2021,DEN,Vic Fangio,Pat Shurmur,Ed Donatell,Pat Shurmur,Ed Donatell,false,,https://en.wikipedia.org/wiki/2021_Denver_Broncos_season
+2021,DET,Dan Campbell,Anthony Lynn,Aaron Glenn,Anthony Lynn,Aaron Glenn,false,Campbell/Lynn play-calling split unsure,https://en.wikipedia.org/wiki/2021_Detroit_Lions_season
+2021,GB,Matt LaFleur,Nathaniel Hackett,Joe Barry,Matt LaFleur,Joe Barry,false,,https://en.wikipedia.org/wiki/2021_Green_Bay_Packers_season
+2021,HOU,David Culley,Tim Kelly,Lovie Smith,Tim Kelly,Lovie Smith,false,,https://en.wikipedia.org/wiki/2021_Houston_Texans_season
+2021,IND,Frank Reich,Marcus Brady,Matt Eberflus,Frank Reich,Matt Eberflus,false,,https://en.wikipedia.org/wiki/2021_Indianapolis_Colts_season
+2021,JAX,Urban Meyer,Brian Schottenheimer,Joe Cullen,Brian Schottenheimer,Joe Cullen,true,Meyer fired Dec 16 2021; Darrell Bevell interim HC and interim OC weeks 15-18 (Wikipedia); Bevell likely called plays after,https://en.wikipedia.org/wiki/2021_Jacksonville_Jaguars_season
+2021,KC,Andy Reid,Eric Bieniemy,Steve Spagnuolo,Andy Reid,Steve Spagnuolo,false,,https://en.wikipedia.org/wiki/2021_Kansas_City_Chiefs_season
+2021,LA,Sean McVay,Kevin O'Connell,Raheem Morris,Sean McVay,Raheem Morris,false,,https://en.wikipedia.org/wiki/2021_Los_Angeles_Rams_season
+2021,LAC,Brandon Staley,Joe Lombardi,Renaldo Hill,Joe Lombardi,Brandon Staley,false,Staley called defense (general knowledge),https://en.wikipedia.org/wiki/2021_Los_Angeles_Chargers_season
+2021,LV,Jon Gruden,Greg Olson,Gus Bradley,Greg Olson,Gus Bradley,true,"Gruden resigned Oct 11 2021 (after week 5); Rich Bisaccia interim HC; Gruden had called plays before resigning, Olson (OC) afterward (general knowledge)",https://en.wikipedia.org/wiki/2021_Las_Vegas_Raiders_season
+2021,MIA,Brian Flores,,Josh Boyer,Brian Flores,Josh Boyer,false,Wikipedia lists co-OCs Eric Studesville & George Godsey; enter as blank OC (co-OCs); play-caller for offense unsure,https://en.wikipedia.org/wiki/2021_Miami_Dolphins_season
+2021,MIN,Mike Zimmer,Klint Kubiak,Andre Patterson,Klint Kubiak,Mike Zimmer,false,Co-DCs Andre Patterson and Adam Zimmer (Wikipedia); Zimmer called defense,https://en.wikipedia.org/wiki/2021_Minnesota_Vikings_season
+2021,NE,Bill Belichick,Josh McDaniels,,Josh McDaniels,Bill Belichick,false,No DC listed,https://en.wikipedia.org/wiki/2021_New_England_Patriots_season
+2021,NO,Sean Payton,Pete Carmichael Jr.,Dennis Allen,Sean Payton,Dennis Allen,false,,https://en.wikipedia.org/wiki/2021_New_Orleans_Saints_season
+2021,NYG,Joe Judge,Jason Garrett,Patrick Graham,Freddie Kitchens,Patrick Graham,true,OC Jason Garrett fired Nov 23 2021 (after week 11 loss to TB); Freddie Kitchens took over as interim OC/play-caller,https://en.wikipedia.org/wiki/2021_New_York_Giants_season ; https://africa.espn.com/nfl/story/_/id/32699164/new-york-giants-fire-offensive-coordinator-jason-garrett-sources-say
+2021,NYJ,Robert Saleh,Mike LaFleur,Jeff Ulbrich,Mike LaFleur,Jeff Ulbrich,false,,https://en.wikipedia.org/wiki/2021_New_York_Jets_season
+2021,PHI,Nick Sirianni,Shane Steichen,Jonathan Gannon,Nick Sirianni,Jonathan Gannon,false,Sirianni called plays (general knowledge),https://en.wikipedia.org/wiki/2021_Philadelphia_Eagles_season
+2021,PIT,Mike Tomlin,Matt Canada,Keith Butler,Matt Canada,Keith Butler,false,,https://en.wikipedia.org/wiki/2021_Pittsburgh_Steelers_season
+2021,SEA,Pete Carroll,Shane Waldron,Ken Norton Jr.,Shane Waldron,Ken Norton Jr.,false,,https://en.wikipedia.org/wiki/2021_Seattle_Seahawks_season
+2021,SF,Kyle Shanahan,Mike McDaniel,DeMeco Ryans,Kyle Shanahan,DeMeco Ryans,false,McDaniel was run-game coordinator/OC-title; Shanahan called plays,https://en.wikipedia.org/wiki/2021_San_Francisco_49ers_season
+2021,TB,Bruce Arians,Byron Leftwich,Todd Bowles,Byron Leftwich,Todd Bowles,false,,https://en.wikipedia.org/wiki/2021_Tampa_Bay_Buccaneers_season
+2021,TEN,Mike Vrabel,Todd Downing,Shane Bowen,Todd Downing,Shane Bowen,false,,https://en.wikipedia.org/wiki/2021_Tennessee_Titans_season
+2021,WAS,Ron Rivera,Scott Turner,Jack Del Rio,Scott Turner,Jack Del Rio,false,,https://en.wikipedia.org/wiki/2021_Washington_Football_Team_season
+2022,ARI,Kliff Kingsbury,,Vance Joseph,Kliff Kingsbury,Vance Joseph,false,No OC listed; Kingsbury called plays (general knowledge),https://en.wikipedia.org/wiki/2022_Arizona_Cardinals_season
+2022,ATL,Arthur Smith,Dave Ragone,Dean Pees,Arthur Smith,Dean Pees,false,Smith called plays (general knowledge),https://en.wikipedia.org/wiki/2022_Atlanta_Falcons_season
+2022,BAL,John Harbaugh,Greg Roman,Mike Macdonald,Greg Roman,Mike Macdonald,false,,https://en.wikipedia.org/wiki/2022_Baltimore_Ravens_season
+2022,BUF,Sean McDermott,Ken Dorsey,Leslie Frazier,Ken Dorsey,Leslie Frazier,false,,https://en.wikipedia.org/wiki/2022_Buffalo_Bills_season
+2022,CAR,Matt Rhule,Ben McAdoo,Phil Snow,Ben McAdoo,Phil Snow,true,"Rhule fired Oct 10 2022 (after week 5) and DC Phil Snow also dismissed; Steve Wilks interim HC; Al Holcomb interim DC; offensive play-calling reportedly passed to Thomas Brown (general knowledge, VERIFY)",https://en.wikipedia.org/wiki/2022_Carolina_Panthers_season
+2022,CHI,Matt Eberflus,Luke Getsy,Alan Williams,Luke Getsy,Matt Eberflus,false,Eberflus called defense (general knowledge),https://en.wikipedia.org/wiki/2022_Chicago_Bears_season
+2022,CIN,Zac Taylor,Brian Callahan,Lou Anarumo,Zac Taylor,Lou Anarumo,false,,https://en.wikipedia.org/wiki/2022_Cincinnati_Bengals_season
+2022,CLE,Kevin Stefanski,Alex Van Pelt,Joe Woods,Kevin Stefanski,Joe Woods,false,,https://en.wikipedia.org/wiki/2022_Cleveland_Browns_season
+2022,DAL,Mike McCarthy,Kellen Moore,Dan Quinn,Kellen Moore,Dan Quinn,false,,https://en.wikipedia.org/wiki/2022_Dallas_Cowboys_season
+2022,DEN,Nathaniel Hackett,Justin Outten,Ejiro Evero,Nathaniel Hackett,Ejiro Evero,true,"Hackett fired Dec 26 2022 (after week 16); Jerry Rosburg interim HC. Hackett called plays; Klint Kubiak was pass game coordinator, took over play-calling mid-season (general knowledge, VERIFY)",https://en.wikipedia.org/wiki/2022_Denver_Broncos_season
+2022,DET,Dan Campbell,Ben Johnson,Aaron Glenn,Ben Johnson,Aaron Glenn,false,,https://en.wikipedia.org/wiki/2022_Detroit_Lions_season
+2022,GB,Matt LaFleur,Adam Stenavich,Joe Barry,Matt LaFleur,Joe Barry,false,LaFleur called plays (general knowledge),https://en.wikipedia.org/wiki/2022_Green_Bay_Packers_season
+2022,HOU,Lovie Smith,Pep Hamilton,,Pep Hamilton,,false,"DC not listed on Wikipedia page; left empty, VERIFY",https://en.wikipedia.org/wiki/2022_Houston_Texans_season
+2022,IND,Frank Reich,Marcus Brady,Gus Bradley,Frank Reich,Gus Bradley,true,Reich fired Nov 7 2022 (after week 9); Jeff Saturday interim HC; Parks Frazier listed interim OC (Wikipedia). Play-calling after Reich unverified,https://en.wikipedia.org/wiki/2022_Indianapolis_Colts_season
+2022,JAX,Doug Pederson,Press Taylor,Mike Caldwell,Doug Pederson,Mike Caldwell,false,Pederson called plays (general knowledge),https://en.wikipedia.org/wiki/2022_Jacksonville_Jaguars_season
+2022,KC,Andy Reid,Eric Bieniemy,Steve Spagnuolo,Andy Reid,Steve Spagnuolo,false,,https://en.wikipedia.org/wiki/2022_Kansas_City_Chiefs_season
+2022,LA,Sean McVay,Liam Coen,Raheem Morris,Sean McVay,Raheem Morris,false,McVay called plays,https://en.wikipedia.org/wiki/2022_Los_Angeles_Rams_season
+2022,LAC,Brandon Staley,Joe Lombardi,Renaldo Hill,Joe Lombardi,Brandon Staley,false,Staley called defense (general knowledge),https://en.wikipedia.org/wiki/2022_Los_Angeles_Chargers_season
+2022,LV,Josh McDaniels,Mick Lombardi,Patrick Graham,Josh McDaniels,Patrick Graham,false,McDaniels called plays,https://en.wikipedia.org/wiki/2022_Las_Vegas_Raiders_season
+2022,MIA,Mike McDaniel,Frank Smith,Josh Boyer,Mike McDaniel,Josh Boyer,false,Frank Smith run game coordinator/OC listed; McDaniel called plays,https://en.wikipedia.org/wiki/2022_Miami_Dolphins_season
+2022,MIN,Kevin O'Connell,Wes Phillips,Ed Donatell,Kevin O'Connell,Ed Donatell,false,,https://en.wikipedia.org/wiki/2022_Minnesota_Vikings_season
+2022,NE,Bill Belichick,,,Matt Patricia,Bill Belichick,false,No OC/DC listed; Patricia had offensive play-calling duties (Wikipedia); Belichick led defense,https://en.wikipedia.org/wiki/2022_New_England_Patriots_season
+2022,NO,Dennis Allen,Pete Carmichael Jr.,Ryan Nielsen,Pete Carmichael Jr.,Dennis Allen,false,Co-DCs Ryan Nielsen and Kris Richard (Wikipedia). Allen called defense (general knowledge),https://en.wikipedia.org/wiki/2022_New_Orleans_Saints_season
+2022,NYG,Brian Daboll,Mike Kafka,Wink Martindale,Brian Daboll,Wink Martindale,false,Daboll called plays (general knowledge),https://en.wikipedia.org/wiki/2022_New_York_Giants_season
+2022,NYJ,Robert Saleh,Mike LaFleur,Jeff Ulbrich,Mike LaFleur,Jeff Ulbrich,false,,https://en.wikipedia.org/wiki/2022_New_York_Jets_season
+2022,PHI,Nick Sirianni,Shane Steichen,Jonathan Gannon,Nick Sirianni,Jonathan Gannon,false,,https://en.wikipedia.org/wiki/2022_Philadelphia_Eagles_season
+2022,PIT,Mike Tomlin,Matt Canada,Teryl Austin,Matt Canada,Teryl Austin,false,,https://en.wikipedia.org/wiki/2022_Pittsburgh_Steelers_season
+2022,SEA,Pete Carroll,Shane Waldron,Clint Hurtt,Shane Waldron,Clint Hurtt,false,,https://en.wikipedia.org/wiki/2022_Seattle_Seahawks_season
+2022,SF,Kyle Shanahan,Kyle Shanahan,DeMeco Ryans,Kyle Shanahan,DeMeco Ryans,false,No separate OC,https://en.wikipedia.org/wiki/2022_San_Francisco_49ers_season
+2022,TB,Todd Bowles,Byron Leftwich,,Byron Leftwich,Todd Bowles,false,No DC listed; Bowles called defense,https://en.wikipedia.org/wiki/2022_Tampa_Bay_Buccaneers_season
+2022,TEN,Mike Vrabel,Todd Downing,Shane Bowen,Todd Downing,Shane Bowen,false,,https://en.wikipedia.org/wiki/2022_Tennessee_Titans_season
+2022,WAS,Ron Rivera,Scott Turner,Jack Del Rio,Scott Turner,Jack Del Rio,false,,https://en.wikipedia.org/wiki/2022_Washington_Commanders_season
+2023,ARI,Jonathan Gannon,Drew Petzing,Nick Rallis,Drew Petzing,Nick Rallis,false,,https://en.wikipedia.org/wiki/2023_Arizona_Cardinals_season
+2023,ATL,Arthur Smith,Dave Ragone,Ryan Nielsen,Arthur Smith,Ryan Nielsen,false,Smith called plays (general knowledge),https://en.wikipedia.org/wiki/2023_Atlanta_Falcons_season
+2023,BAL,John Harbaugh,Todd Monken,Mike Macdonald,Todd Monken,Mike Macdonald,false,,https://en.wikipedia.org/wiki/2023_Baltimore_Ravens_season
+2023,BUF,Sean McDermott,Ken Dorsey,Leslie Frazier,Ken Dorsey,Leslie Frazier,true,OC Ken Dorsey fired after week 10 (Nov 2023); Joe Brady interim OC/play-caller (Wikipedia). DC not listed on page; Frazier from general knowledge,https://en.wikipedia.org/wiki/2023_Buffalo_Bills_season
+2023,CAR,Frank Reich,Thomas Brown,Ejiro Evero,Frank Reich,Ejiro Evero,true,"Reich fired Nov 27 2023; Chris Tabor interim HC. Play-calling reported moved from Reich to Brown mid-season (general knowledge, VERIFY)",https://en.wikipedia.org/wiki/2023_Carolina_Panthers_season
+2023,CHI,Matt Eberflus,Luke Getsy,Alan Williams,Luke Getsy,Matt Eberflus,true,DC Alan Williams resigned Sep 20 2023 (Wikipedia); Eberflus took over defense/defensive play-calling (general knowledge),https://en.wikipedia.org/wiki/2023_Chicago_Bears_season
+2023,CIN,Zac Taylor,Brian Callahan,Lou Anarumo,Zac Taylor,Lou Anarumo,false,,https://en.wikipedia.org/wiki/2023_Cincinnati_Bengals_season
+2023,CLE,Kevin Stefanski,Alex Van Pelt,Jim Schwartz,Kevin Stefanski,Jim Schwartz,false,,https://en.wikipedia.org/wiki/2023_Cleveland_Browns_season
+2023,DAL,Mike McCarthy,Brian Schottenheimer,Dan Quinn,Mike McCarthy,Dan Quinn,false,"McCarthy took over play-calling in 2023 (general knowledge, VERIFY)",https://en.wikipedia.org/wiki/2023_Dallas_Cowboys_season
+2023,DEN,Sean Payton,Joe Lombardi,Vance Joseph,Sean Payton,Vance Joseph,false,,https://en.wikipedia.org/wiki/2023_Denver_Broncos_season
+2023,DET,Dan Campbell,Ben Johnson,Aaron Glenn,Ben Johnson,Aaron Glenn,false,,https://en.wikipedia.org/wiki/2023_Detroit_Lions_season
+2023,GB,Matt LaFleur,Adam Stenavich,Joe Barry,Matt LaFleur,Joe Barry,false,,https://en.wikipedia.org/wiki/2023_Green_Bay_Packers_season
+2023,HOU,DeMeco Ryans,Bobby Slowik,Matt Burke,Bobby Slowik,DeMeco Ryans,false,Ryans called defense (general knowledge),https://en.wikipedia.org/wiki/2023_Houston_Texans_season
+2023,IND,Shane Steichen,Jim Bob Cooter,Gus Bradley,Shane Steichen,Gus Bradley,false,,https://en.wikipedia.org/wiki/2023_Indianapolis_Colts_season
+2023,JAX,Doug Pederson,Press Taylor,Mike Caldwell,Doug Pederson,Mike Caldwell,false,,https://en.wikipedia.org/wiki/2023_Jacksonville_Jaguars_season
+2023,KC,Andy Reid,Matt Nagy,Steve Spagnuolo,Andy Reid,Steve Spagnuolo,false,,https://en.wikipedia.org/wiki/2023_Kansas_City_Chiefs_season
+2023,LA,Sean McVay,Mike LaFleur,Raheem Morris,Sean McVay,Raheem Morris,false,,https://en.wikipedia.org/wiki/2023_Los_Angeles_Rams_season
+2023,LAC,Brandon Staley,Kellen Moore,Derrick Ansley,Kellen Moore,Brandon Staley,true,Staley fired Dec 15 2023 (after week 14); Giff Smith interim HC; Staley called defense before (general knowledge),https://en.wikipedia.org/wiki/2023_Los_Angeles_Chargers_season
+2023,LV,Josh McDaniels,Mick Lombardi,Patrick Graham,Josh McDaniels,Patrick Graham,true,"McDaniels and OC Mick Lombardi fired Oct 31 2023 (after week 8); Antonio Pierce interim HC, Bo Hardegree interim OC (Wikipedia). Play-caller afterward Hardegree",https://en.wikipedia.org/wiki/2023_Las_Vegas_Raiders_season
+2023,MIA,Mike McDaniel,Frank Smith,Vic Fangio,Mike McDaniel,Vic Fangio,false,,https://en.wikipedia.org/wiki/2023_Miami_Dolphins_season
+2023,MIN,Kevin O'Connell,Wes Phillips,Brian Flores,Kevin O'Connell,Brian Flores,false,,https://en.wikipedia.org/wiki/2023_Minnesota_Vikings_season
+2023,NE,Bill Belichick,Bill O'Brien,,Bill O'Brien,Bill Belichick,false,No DC listed; Belichick led defense,https://en.wikipedia.org/wiki/2023_New_England_Patriots_season
+2023,NO,Dennis Allen,Pete Carmichael Jr.,Joe Woods,Pete Carmichael Jr.,Joe Woods,false,,https://en.wikipedia.org/wiki/2023_New_Orleans_Saints_season
+2023,NYG,Brian Daboll,Mike Kafka,Wink Martindale,Brian Daboll,Wink Martindale,false,,https://en.wikipedia.org/wiki/2023_New_York_Giants_season
+2023,NYJ,Robert Saleh,Nathaniel Hackett,Jeff Ulbrich,Nathaniel Hackett,Jeff Ulbrich,false,,https://en.wikipedia.org/wiki/2023_New_York_Jets_season
+2023,PHI,Nick Sirianni,Brian Johnson,Sean Desai,Brian Johnson,Matt Patricia,true,Matt Patricia took over defensive play-calling mid-Dec 2023 (before week 15 at SEA); Desai kept DC title but moved to booth,https://en.wikipedia.org/wiki/2023_Philadelphia_Eagles_season ; https://www.fox29.com/sports/matt-patricia-will-call-defensive-plays-for-eagles-sean-desai-remains-coordinator-ap-source-says
+2023,PIT,Mike Tomlin,Matt Canada,Teryl Austin,Matt Canada,Keith Butler,true,OC Matt Canada fired after week 11 (Nov 2023); Eddie Faulkner interim OC (Wikipedia),https://en.wikipedia.org/wiki/2023_Pittsburgh_Steelers_season
+2023,SEA,Pete Carroll,Shane Waldron,Clint Hurtt,Shane Waldron,Clint Hurtt,false,,https://en.wikipedia.org/wiki/2023_Seattle_Seahawks_season
+2023,SF,Kyle Shanahan,Kyle Shanahan,Steve Wilks,Kyle Shanahan,Steve Wilks,false,No separate OC,https://en.wikipedia.org/wiki/2023_San_Francisco_49ers_season
+2023,TB,Todd Bowles,Dave Canales,,Dave Canales,Todd Bowles,false,No DC listed; Bowles called defense,https://en.wikipedia.org/wiki/2023_Tampa_Bay_Buccaneers_season
+2023,TEN,Mike Vrabel,Tim Kelly,Shane Bowen,Tim Kelly,Shane Bowen,false,,https://en.wikipedia.org/wiki/2023_Tennessee_Titans_season
+2023,WAS,Ron Rivera,Eric Bieniemy,Jack Del Rio,Eric Bieniemy,Jack Del Rio,true,DC Jack Del Rio fired after week 12 (Wikipedia); Rivera took over as interim DC (Wikipedia); Rivera fired after season,https://en.wikipedia.org/wiki/2023_Washington_Commanders_season
+2024,ARI,Jonathan Gannon,Drew Petzing,Nick Rallis,Drew Petzing,Nick Rallis,false,,https://en.wikipedia.org/wiki/2024_Arizona_Cardinals_season
+2024,ATL,Raheem Morris,Zac Robinson,Jimmy Lake,Zac Robinson,Jimmy Lake,false,,https://en.wikipedia.org/wiki/2024_Atlanta_Falcons_season
+2024,BAL,John Harbaugh,Todd Monken,Zach Orr,Todd Monken,Zach Orr,false,,https://en.wikipedia.org/wiki/2024_Baltimore_Ravens_season
+2024,BUF,Sean McDermott,Joe Brady,Bobby Babich,Joe Brady,Bobby Babich,false,,https://en.wikipedia.org/wiki/2024_Buffalo_Bills_season
+2024,CAR,Dave Canales,Brad Idzik,Ejiro Evero,Dave Canales,Ejiro Evero,false,Canales called plays (general knowledge),https://en.wikipedia.org/wiki/2024_Carolina_Panthers_season
+2024,CHI,Matt Eberflus,Shane Waldron,Eric Washington,Shane Waldron,Eric Washington,true,"OC Shane Waldron fired ~Nov 10-12 2024 (Wikipedia); Thomas Brown interim OC/play-caller then; Eberflus fired Nov 29, Brown interim HC and Chris Beatty interim OC from Dec 2 (Wikipedia). Play-caller after Waldron: Brown then Beatty",https://en.wikipedia.org/wiki/2024_Chicago_Bears_season
+2024,CIN,Zac Taylor,Dan Pitcher,Lou Anarumo,Zac Taylor,Lou Anarumo,false,,https://en.wikipedia.org/wiki/2024_Cincinnati_Bengals_season
+2024,CLE,Kevin Stefanski,Ken Dorsey,Jim Schwartz,Ken Dorsey,Jim Schwartz,true,"After Deshaun Watson's injury (after week 7), Stefanski handed play-calling to OC Ken Dorsey (Wikipedia; ESPN/AP report Dorsey took over play-calling); Dorsey fired Jan 2025. Weeks 1-7 caller Stefanski (assumed)",https://en.wikipedia.org/wiki/2024_Cleveland_Browns_season ; https://www.espn.com/nfl/story/_/id/43294926/sources-browns-fire-oc-ken-dorsey-ol-coach-andy-dickerson
+2024,DAL,Mike McCarthy,Brian Schottenheimer,Mike Zimmer,Mike McCarthy,Mike Zimmer,false,McCarthy called plays (general knowledge),https://en.wikipedia.org/wiki/2024_Dallas_Cowboys_season
+2024,DEN,Sean Payton,Joe Lombardi,Vance Joseph,Sean Payton,Vance Joseph,false,,https://en.wikipedia.org/wiki/2024_Denver_Broncos_season
+2024,DET,Dan Campbell,Ben Johnson,Aaron Glenn,Ben Johnson,Aaron Glenn,false,,https://en.wikipedia.org/wiki/2024_Detroit_Lions_season
+2024,GB,Matt LaFleur,Adam Stenavich,Jeff Hafley,Matt LaFleur,Jeff Hafley,false,,https://en.wikipedia.org/wiki/2024_Green_Bay_Packers_season
+2024,HOU,DeMeco Ryans,Bobby Slowik,Matt Burke,Bobby Slowik,Matt Burke,false,,https://en.wikipedia.org/wiki/2024_Houston_Texans_season
+2024,IND,Shane Steichen,Jim Bob Cooter,Gus Bradley,Shane Steichen,Gus Bradley,false,,https://en.wikipedia.org/wiki/2024_Indianapolis_Colts_season
+2024,JAX,Doug Pederson,Press Taylor,Ryan Nielsen,Doug Pederson,Ryan Nielsen,false,,https://en.wikipedia.org/wiki/2024_Jacksonville_Jaguars_season
+2024,KC,Andy Reid,Matt Nagy,Steve Spagnuolo,Andy Reid,Steve Spagnuolo,false,,https://en.wikipedia.org/wiki/2024_Kansas_City_Chiefs_season
+2024,LA,Sean McVay,Mike LaFleur,Chris Shula,Sean McVay,Chris Shula,false,,https://en.wikipedia.org/wiki/2024_Los_Angeles_Rams_season
+2024,LAC,Jim Harbaugh,Greg Roman,Jesse Minter,Greg Roman,Jesse Minter,false,,https://en.wikipedia.org/wiki/2024_Los_Angeles_Chargers_season
+2024,LV,Antonio Pierce,Scott Turner,Patrick Graham,Scott Turner,Patrick Graham,true,OC Luke Getsy fired Nov 5 2024; Scott Turner interim OC/play-caller after (Wikipedia). Weeks 1-9 OC Getsy,https://en.wikipedia.org/wiki/2024_Las_Vegas_Raiders_season
+2024,MIA,Mike McDaniel,Frank Smith,Anthony Weaver,Mike McDaniel,Anthony Weaver,false,,https://en.wikipedia.org/wiki/2024_Miami_Dolphins_season
+2024,MIN,Kevin O'Connell,Wes Phillips,Brian Flores,Kevin O'Connell,Brian Flores,false,,https://en.wikipedia.org/wiki/2024_Minnesota_Vikings_season
+2024,NE,Jerod Mayo,Alex Van Pelt,DeMarcus Covington,Alex Van Pelt,DeMarcus Covington,false,,https://en.wikipedia.org/wiki/2024_New_England_Patriots_season
+2024,NO,Dennis Allen,Klint Kubiak,Joe Woods,Klint Kubiak,Joe Woods,false,Allen fired Nov 4 2024; Darren Rizzi interim HC (HC change),https://en.wikipedia.org/wiki/2024_New_Orleans_Saints_season
+2024,NYG,Brian Daboll,Mike Kafka,Shane Bowen,Brian Daboll,Shane Bowen,false,,https://en.wikipedia.org/wiki/2024_New_York_Giants_season
+2024,NYJ,Robert Saleh,Nathaniel Hackett,Jeff Ulbrich,Nathaniel Hackett,Jeff Ulbrich,true,Saleh fired Oct 8 2024 (after week 5); DC Jeff Ulbrich interim HC; Marquand Manuel interim DC and defensive play-caller thereafter (Wikipedia),https://en.wikipedia.org/wiki/2024_New_York_Jets_season
+2024,PHI,Nick Sirianni,Kellen Moore,Vic Fangio,Kellen Moore,Vic Fangio,false,,https://en.wikipedia.org/wiki/2024_Philadelphia_Eagles_season
+2024,PIT,Mike Tomlin,Arthur Smith,Teryl Austin,Arthur Smith,Teryl Austin,false,,https://en.wikipedia.org/wiki/2024_Pittsburgh_Steelers_season
+2024,SEA,Mike Macdonald,Ryan Grubb,Aden Durde,Ryan Grubb,Aden Durde,false,,https://en.wikipedia.org/wiki/2024_Seattle_Seahawks_season
+2024,SF,Kyle Shanahan,Kyle Shanahan,Nick Sorensen,Kyle Shanahan,Nick Sorensen,false,No separate OC,https://en.wikipedia.org/wiki/2024_San_Francisco_49ers_season
+2024,TB,Todd Bowles,Liam Coen,,Liam Coen,Todd Bowles,false,No DC listed; Bowles called defense,https://en.wikipedia.org/wiki/2024_Tampa_Bay_Buccaneers_season
+2024,TEN,Brian Callahan,Nick Holz,Dennard Wilson,Brian Callahan,Dennard Wilson,false,,https://en.wikipedia.org/wiki/2024_Tennessee_Titans_season
+2024,WAS,Dan Quinn,Kliff Kingsbury,Joe Whitt Jr.,Kliff Kingsbury,Joe Whitt Jr.,false,,https://en.wikipedia.org/wiki/2024_Washington_Commanders_season
+2025,ARI,Jonathan Gannon,Drew Petzing,Nick Rallis,Drew Petzing,Nick Rallis,false,,https://en.wikipedia.org/wiki/2025_Arizona_Cardinals_season
+2025,ATL,Raheem Morris,Zac Robinson,Jeff Ulbrich,Zac Robinson,Jeff Ulbrich,false,,https://en.wikipedia.org/wiki/2025_Atlanta_Falcons_season
+2025,BAL,John Harbaugh,Todd Monken,Zach Orr,Todd Monken,Zach Orr,false,,https://en.wikipedia.org/wiki/2025_Baltimore_Ravens_season
+2025,BUF,Sean McDermott,Joe Brady,Bobby Babich,Joe Brady,Bobby Babich,false,,https://en.wikipedia.org/wiki/2025_Buffalo_Bills_season
+2025,CAR,Dave Canales,Brad Idzik,Ejiro Evero,Dave Canales,Ejiro Evero,false,Canales called plays (general knowledge),https://en.wikipedia.org/wiki/2025_Carolina_Panthers_season
+2025,CHI,Ben Johnson,Declan Doyle,Dennis Allen,Ben Johnson,Dennis Allen,false,Johnson called plays (general knowledge),https://en.wikipedia.org/wiki/2025_Chicago_Bears_season
+2025,CIN,Zac Taylor,Dan Pitcher,Al Golden,Zac Taylor,Al Golden,false,,https://en.wikipedia.org/wiki/2025_Cincinnati_Bengals_season
+2025,CLE,Kevin Stefanski,Tommy Rees,Jim Schwartz,Kevin Stefanski,Jim Schwartz,false,Stefanski called plays (general knowledge),https://en.wikipedia.org/wiki/2025_Cleveland_Browns_season
+2025,DAL,Brian Schottenheimer,Klayton Adams,Matt Eberflus,Brian Schottenheimer,Matt Eberflus,false,Schottenheimer called plays (general knowledge),https://en.wikipedia.org/wiki/2025_Dallas_Cowboys_season
+2025,DEN,Sean Payton,Joe Lombardi,Vance Joseph,Sean Payton,Vance Joseph,false,,https://en.wikipedia.org/wiki/2025_Denver_Broncos_season
+2025,DET,Dan Campbell,John Morton,Kelvin Sheppard,John Morton,Kelvin Sheppard,false,,https://en.wikipedia.org/wiki/2025_Detroit_Lions_season
+2025,GB,Matt LaFleur,Adam Stenavich,Jeff Hafley,Matt LaFleur,Jeff Hafley,false,,https://en.wikipedia.org/wiki/2025_Green_Bay_Packers_season
+2025,HOU,DeMeco Ryans,Nick Caley,Matt Burke,Nick Caley,Matt Burke,false,,https://en.wikipedia.org/wiki/2025_Houston_Texans_season
+2025,IND,Shane Steichen,Jim Bob Cooter,Lou Anarumo,Shane Steichen,Lou Anarumo,false,,https://en.wikipedia.org/wiki/2025_Indianapolis_Colts_season
+2025,JAX,Liam Coen,Grant Udinski,Anthony Campanile,Liam Coen,Anthony Campanile,false,Coen called plays (general knowledge),https://en.wikipedia.org/wiki/2025_Jacksonville_Jaguars_season
+2025,KC,Andy Reid,Matt Nagy,Steve Spagnuolo,Andy Reid,Steve Spagnuolo,false,,https://en.wikipedia.org/wiki/2025_Kansas_City_Chiefs_season
+2025,LA,Sean McVay,Mike LaFleur,Chris Shula,Sean McVay,Chris Shula,false,McVay called plays,https://en.wikipedia.org/wiki/2025_Los_Angeles_Rams_season
+2025,LAC,Jim Harbaugh,Greg Roman,Jesse Minter,Greg Roman,Jesse Minter,false,,https://en.wikipedia.org/wiki/2025_Los_Angeles_Chargers_season
+2025,LV,Pete Carroll,Chip Kelly,Patrick Graham,Greg Olson,Patrick Graham,true,OC Chip Kelly fired Nov 23 2025 after 2-9 start; Greg Olson interim OC,https://en.wikipedia.org/wiki/2025_Las_Vegas_Raiders_season ; https://www.tsn.ca/nfl/article/greg-olson-is-named-raiders-interim-offensive-coordinator-after-chip-kellys-firing/
+2025,MIA,Mike McDaniel,Frank Smith,Anthony Weaver,Mike McDaniel,Anthony Weaver,false,,https://en.wikipedia.org/wiki/2025_Miami_Dolphins_season
+2025,MIN,Kevin O'Connell,Wes Phillips,Brian Flores,Kevin O'Connell,Brian Flores,false,,https://en.wikipedia.org/wiki/2025_Minnesota_Vikings_season
+2025,NE,Mike Vrabel,Josh McDaniels,Terrell Williams,Josh McDaniels,Terrell Williams,false,,https://en.wikipedia.org/wiki/2025_New_England_Patriots_season
+2025,NO,Kellen Moore,Doug Nussmeier,Brandon Staley,Kellen Moore,Brandon Staley,false,,https://en.wikipedia.org/wiki/2025_New_Orleans_Saints_season
+2025,NYG,Brian Daboll,Tim Kelly,Shane Bowen,Brian Daboll,Charlie Bullen,true,"Daboll fired Nov 10 2025, Mike Kafka interim HC (play-caller after unverified); DC Shane Bowen fired Nov 24 2025 and Charlie Bullen interim DC",https://en.wikipedia.org/wiki/2025_New_York_Giants_season ; https://www.nfl.com/news/giants-fire-defensive-coordinator-shane-bowen
+2025,NYJ,Aaron Glenn,Tanner Engstrand,Steve Wilks,Tanner Engstrand,Chris Harris,true,DC Steve Wilks fired Dec 15 2025 (after week 15); Chris Harris interim DC and play-caller final 3 games,https://en.wikipedia.org/wiki/2025_New_York_Jets_season ; https://www.newyorkjets.com/news/steve-wilks-relieved-of-duties-jets-defensive-coordinator-12-15-2025
+2025,PHI,Nick Sirianni,Kevin Patullo,Vic Fangio,Nick Sirianni,Vic Fangio,false,Play-caller unsure (Sirianni vs Patullo); VERIFY,https://en.wikipedia.org/wiki/2025_Philadelphia_Eagles_season
+2025,PIT,Mike Tomlin,Arthur Smith,Teryl Austin,Arthur Smith,Teryl Austin,false,,https://en.wikipedia.org/wiki/2025_Pittsburgh_Steelers_season
+2025,SEA,Mike Macdonald,Klint Kubiak,Aden Durde,Klint Kubiak,Aden Durde,false,,https://en.wikipedia.org/wiki/2025_Seattle_Seahawks_season
+2025,SF,Kyle Shanahan,Klay Kubiak,Robert Saleh,Kyle Shanahan,Robert Saleh,false,Shanahan called plays,https://en.wikipedia.org/wiki/2025_San_Francisco_49ers_season
+2025,TB,Todd Bowles,Josh Grizzard,,Josh Grizzard,Todd Bowles,false,No DC listed; Grizzard fired after the season,https://en.wikipedia.org/wiki/2025_Tampa_Bay_Buccaneers_season
+2025,TEN,Brian Callahan,Nick Holz,Dennard Wilson,Nick Holz,Dennard Wilson,true,Callahan fired Oct 13 2025 (after week 6); Mike McCoy interim HC (Wikipedia). Play-caller change unverified,https://en.wikipedia.org/wiki/2025_Tennessee_Titans_season
+2025,WAS,Dan Quinn,Kliff Kingsbury,Joe Whitt Jr.,Kliff Kingsbury,Joe Whitt Jr.,false,,https://en.wikipedia.org/wiki/2025_Washington_Commanders_season
+2026,ARI,Mike LaFleur,Nathaniel Hackett,Nick Rallis,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Arizona_Cardinals_season
+2026,ATL,Kevin Stefanski,Tommy Rees,Jeff Ulbrich,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Atlanta_Falcons_season
+2026,BAL,Jesse Minter,Declan Doyle,Anthony Weaver,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Baltimore_Ravens_season
+2026,BUF,Joe Brady,Pete Carmichael Jr.,Jim Leonhard,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Buffalo_Bills_season
+2026,CAR,Dave Canales,Brad Idzik,Ejiro Evero,Dave Canales,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Carolina_Panthers_season
+2026,CHI,Ben Johnson,Press Taylor,Dennis Allen,Ben Johnson,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Chicago_Bears_season
+2026,CIN,Zac Taylor,Dan Pitcher,Al Golden,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Cincinnati_Bengals_season
+2026,CLE,Todd Monken,Travis Switzer,Mike Rutenberg,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Cleveland_Browns_season
+2026,DAL,Brian Schottenheimer,Klayton Adams,Christian Parker,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Dallas_Cowboys_season
+2026,DEN,Sean Payton,Davis Webb,Vance Joseph,Sean Payton,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Denver_Broncos_season
+2026,DET,Dan Campbell,Drew Petzing,Kelvin Sheppard,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Detroit_Lions_season
+2026,GB,Matt LaFleur,Adam Stenavich,Jonathan Gannon,Matt LaFleur,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Green_Bay_Packers_season
+2026,HOU,DeMeco Ryans,Nick Caley,Matt Burke,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Houston_Texans_season
+2026,IND,Shane Steichen,Jim Bob Cooter,Lou Anarumo,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Indianapolis_Colts_season
+2026,JAX,Liam Coen,Grant Udinski,Anthony Campanile,Liam Coen,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Jacksonville_Jaguars_season
+2026,KC,Andy Reid,Eric Bieniemy,Steve Spagnuolo,Andy Reid,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Kansas_City_Chiefs_season
+2026,LA,Sean McVay,Nathan Scheelhaase,Chris Shula,Sean McVay,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Los_Angeles_Rams_season
+2026,LAC,Jim Harbaugh,Mike McDaniel,Chris O'Leary,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Los_Angeles_Chargers_season
+2026,LV,Klint Kubiak,Andrew Janocko,Rob Leonard,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Las_Vegas_Raiders_season
+2026,MIA,Jeff Hafley,Bobby Slowik,Sean Duggan,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Miami_Dolphins_season
+2026,MIN,Kevin O'Connell,Wes Phillips,Brian Flores,Kevin O'Connell,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Minnesota_Vikings_season
+2026,NE,Mike Vrabel,Josh McDaniels,Zak Kuhr,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_New_England_Patriots_season
+2026,NO,Kellen Moore,Doug Nussmeier,Brandon Staley,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_New_Orleans_Saints_season
+2026,NYG,John Harbaugh,Matt Nagy,Dennard Wilson,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_New_York_Giants_season
+2026,NYJ,Aaron Glenn,Frank Reich,Brian Duker,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_New_York_Jets_season
+2026,PHI,Nick Sirianni,Sean Mannion,Vic Fangio,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Philadelphia_Eagles_season
+2026,PIT,Mike McCarthy,Brian Angelichio,Patrick Graham,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Pittsburgh_Steelers_season
+2026,SEA,Mike Macdonald,Brian Fleury,Aden Durde,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Seattle_Seahawks_season
+2026,SF,Kyle Shanahan,Klay Kubiak,Raheem Morris,Kyle Shanahan,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_San_Francisco_49ers_season
+2026,TB,Todd Bowles,Zac Robinson,,,,false,No DC listed; Bowles de facto DC per Wikipedia; 2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Tampa_Bay_Buccaneers_season
+2026,TEN,Robert Saleh,Brian Daboll,Gus Bradley,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Tennessee_Titans_season
+2026,WAS,Dan Quinn,David Blough,Daronte Jones,,,false,2026 staff per Wikipedia season page (pre-season/offseason); in-season changes through Oct 2026 not found in news search; play-caller left empty unless HC is a long-established caller,https://en.wikipedia.org/wiki/2026_Washington_Commanders_season

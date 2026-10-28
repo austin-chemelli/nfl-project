@@ -71,3 +71,50 @@ Conventions: date-headed entries, newest last. Each entry: **what happened**, **
 **Findings.** First dry run (Week 8 Thursday, CAR @ GB) end to end in ~30 s: market 0.64, Traditionalist and Analyst 0.68, Sharp 0.61, Student 0.68, ensemble 0.66, Elo 0.67. The Sharp sits below the market because it reads the spread (GB −3.5 ≈ 0.60) while the vig-free moneyline says 0.64: the two markets disagree slightly on this game.
 
 **Open.** Dry-run week (Thu Oct 29, Sat Oct 31), first public locks in Week 9, pushing the code commits before then.
+
+## 2026-10-27 (night): step 3 UI
+
+**What happened.** The repo's code was committed and pushed (CI green on GitHub). Built the site JSON contract (`nfl site`: meta, weekly slates, per-game files, tracker, audit; statuses locked / backfill / preview, with a real lock always winning), a Streamlit navigation shell with a shared data/palette module (dataviz reference palette: each approach keeps one hue everywhere, personas dashed, references gray), and, via four parallel implementer agents, the Slate, Game, Season tracker, Method, Hypotheses and Build-your-own pages. Every page renders headlessly in tests; the real server serves them. The approach backfill now covers the current season's completed games.
+
+**Findings.** Hypotheses (57 features, 2002–2025, season bootstrap): QB EPA, Elo, point differential, Pythagorean win%, success rate and QB CPOE lead; momentum predicts alone (0.19 logit/SD) but mostly vanishes after team strength (0.04). The build-your-own evaluator reproduces the backfill (Sharp within 0.0004, Student fitted 0.0001) in ~25 ms per evaluation, so the page needs no server.
+
+**Bug caught.** `form.lookahead` (next opponent Elo − this opponent Elo) ranked 7th of 57 and fit with the wrong sign: it was mostly "this opponent is weak", a duplicate of team strength. Redefined as the next opponent's Elo vs an average team; it is now "weak" with an interval including zero.
+
+**Open.** Clicking through the app in a browser (Austin); the dry-run week; weather at lock.
+
+## 2026-10-27 (late): first click-through feedback
+
+**What happened.** Austin ran the `/nfl-narrative` skill (on Sonnet, in a forked subagent) for CAR @ GB: one record, 7 claims, all sources resolve, visible on the game page. Then a full feedback pass on the UI, triaged in `.notes/ui-feedback.md`.
+
+**Decisions.** (1) One public line per approach: the persona, lightly fitted and calibrated; the fully fitted version becomes a diagnostic (ADR 0004 amendment). (2) The market's forecast is never an input to an approach; a "Market behavior" group (line moves, public %, book disagreement) is a capped supplement; the Sharp is redefined around it (ADR 0013). (3) Every feature and group gets a description and a unit; nothing in log-odds reaches the UI: contributions in win-probability points, edges as percentiles, weights as budget shares. (4) Narrative record v2: per-team paragraph and bullet notes, scheme trends, matchup notes with a support count. (5) The coordinator/participation track moves into the in-season sequence, with a Coaches page.
+
+**Findings.** The Sharp "tying the market" was an artifact of feeding it the market; with ADR 0013 every approach will trail the market by ~0.015, which is the honest picture.
+
+**Open.** Narrative stamp should come from the ingest clock (M6.0); the step 3 UI code is uncommitted.
+
+## 2026-10-28: model identity v2 and the feedback build (Opus)
+
+**What happened.** Implemented the feedback decisions. One public line per approach: the persona's group weights ridge-shrunk toward the persona with a fixed strength (PUBLIC_RIDGE = 1.0, chosen so the Traditionalist moves ~25% of the way toward what history supports: 3.0 → 10%, 1.0 → 25%, 0.25 → 55%), then calibrated; the fully fitted flavor stays as a diagnostic. ADR 0013 enforced in the approach schema (the line's level can't be an input; Market behavior capped at 20%); the Sharp redefined around market behavior, quarterback and efficiency. New market-behavior feature: moneyline-vs-spread gap. Registry v3 with labels, descriptions and units for all ~100 members. Site contract v2: contributions in win-probability points, group edges as percentiles of all matchups 2005–2025, budget shares, league averages for tendencies. Narrative v2 schema and skill; ingest stamps records with its own clock (the v1 producer had stamped four minutes late). In parallel: participation data 2016–2025 ingested and curated with team-season scheme rates; the coordinator table 2016–2026 built by a research agent.
+
+**Findings.** Honest backtest after ADR 0013 (2005–2026, ~5,790 games): every approach trails the market. Ensemble +0.0135, Student +0.0154, Sharp +0.0171, Analyst +0.0178, Elo +0.0200, Traditionalist +0.0209 (log loss vs market). Participation: coverage charting starts in 2018; the 2023 provider change shifts league man rate (0.29 → 0.42 → 0.49 → 0.31 in 2022–2025), so coordinator profiles compare within seasons. Coordinator table: OC/DC from Wikipedia team pages with ~10 news cross-checks; play-callers are the weakest column; PFR blocks automated fetching.
+
+**Open.** Austin's validation of 20 sampled coordinator rows; UI readability agents in flight.
+
+**Later (2026-10-28).** Five implementer agents rebuilt the pages on contract v2: slate and game (edges by group, tendency dumbbells against the league, narrative v2 panel), tracker and method (calibration as "when it says 70%, how often does that team win", divergence as plain sentences), hypotheses over time (any feature or group by season), build-your-own under ADR 0013 plus a season view linked from its best/worst seasons, and a Coaches page with coordinator profiles from participation data. Six scheme-prior features (each play-caller's history relative to each season's league average) joined the store. Full rebuild and 218 tests pass; every page serves. Coordinator profile example: Vic Fangio's defenses play more man coverage than 85% of the league; twenty 2026 coordinators have no participation history yet.
+
+## 2026-10-28: code review before the first commit of the feedback build
+
+**What happened.** Austin asked for a review pass before committing. The reviewer agent (read-only; it also simulated Week 8 scoring without writing) found ten issues; all but one were fixed the same session.
+
+**Findings and fixes.**
+1. *HIGH:* the Sharp's live-only market-behavior inputs entered in raw units (no history to standardize), and the override divided by a tiny composite sd inflated them: a 2-point line move was worth ~0.8 logit (~20 points of win probability). Fixed with declared scale priors for live-only features (`LIVE_PRIORS`) used by the Scaler; Week 8 simulation now tops out at 0.19 logit.
+2. *HIGH, ADR 0013:* `market.ml_spread_gap` (moneyline p − Φ(spread/13.5)) carried ~45% of the spread's information (corr 0.63 with the spread), leaking the line's level into the Sharp and the DIY page. Removed from Market behavior and added to the forbidden set (ADR 0013 amendment). The Sharp now trails the market by 0.019 (was 0.017), behind the Analyst.
+3. *HIGH:* `.gitignore`'s `data/` also matched `src/nfl/data/`, so the coordinator table would not have been committed and CI would fail. Anchored to `/data/`.
+4. Narrative ingest now validates game id, season, week and teams against the schedule and uses the schedule's kickoff; the builder skips (with a warning) records overtaken by a flexed kickoff instead of breaking every build.
+5. *Point-in-time:* scheme priors used the end-of-season play-caller for every week of seasons with a mid-season change (94 of 702 unit-seasons): look-ahead. Those unit-seasons now get no prior.
+6. The lock now commits and pushes before rebuilding the site; a site failure only warns.
+7. The lock refuses `--commit` from uncommitted code and refuses fit artifacts whose config hash doesn't match the YAML; the registry version is bumped (a formatter had silently defeated an earlier bump).
+8–9. Stale model ids in the lock summary and a stale ensemble version label fixed.
+10. *Deferred:* a locked game's page shows feature values and narrative "as of now" next to lock-time numbers (display only; tracked in docs/tasks.md).
+
+**Lesson.** Two of the HIGH findings were invisible to the tests (they passed) and only showed up when the reviewer scored a real slate and measured correlations: worth doing before every first-of-its-kind lock.

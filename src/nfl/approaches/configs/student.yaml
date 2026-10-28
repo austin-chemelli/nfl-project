@@ -8,6 +8,7 @@ blurb: >-
   Has no opinions. Starts by weighting everything equally and learns only from results.
 emphasis: []
 calibration: platt
+public: fitted  # its identity is what the data says; the equal-weight start is shown as its persona
 intercept: {w: 0.0, why: "Learns home field from results"}
 groups:
   quality:       {w: 0.1, why: "Equal start"}
