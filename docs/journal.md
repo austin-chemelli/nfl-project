@@ -148,3 +148,17 @@ Conventions: date-headed entries, newest last. Each entry: **what happened**, **
 **Found by checking the live bucket.** The published `meta.json` predates the tendency labels the contract required, so the first deploy would have shown an error on every page. The fields now default to empty, and CLAUDE.md records the rule: data publishes independently of the site, so contract changes stay additive.
 
 **Lesson.** The cache-header question (which of two matching Firebase header rules wins) is undocumented; making the rules disjoint removed the question instead of guessing.
+## 2026-10-29: the desktop LLM server is up (M6.1b)
+
+**What happened.** Fable walked the desktop through `docs/desktop-llm-setup.md` from the desktop's own WSL, alongside a system cleanup (C: went from 23 GB free to 247 GB; the old Windows copy of the repos moved to H:). Austin stepped in for the UAC prompts, the Ollama tray launch and the Tailscale sign-in. Everything in the doc was re-verified against the real machine and the doc rewritten to match.
+
+**Findings.**
+- The 9B fits: `qwen3.5:9b` at 16k context with q8_0 KV cache runs 100% on the GTX 1070 using 6.9 of 8 GB VRAM, 23 tok/s generation, 206 tok/s prompt eval. `qwen3.5:4b` (4.5 GB, 39 tok/s) stays as the fallback. ADR 0014's "~5.6 GB" was the weights only; the pull is 6.6 GB on disk.
+- Ollama's OpenAI-compatible `/v1` endpoint ignores `think: false`; thinking stays on and a 25-token JSON answer costs 312 completion tokens. `reasoning_effort: "none"` on `/v1` (or `think: false` on the native `/api/chat`) brings it to 19. The M6.1 client must send that on every call.
+- Windows 10 has no WSL mirrored networking, but calling the desktop's Tailscale IP from WSL works anyway (outbound through Windows' Tailscale adapter), including from the desktop's own WSL. The WSL NAT gateway path is blocked by the per-app Block rule Windows auto-created when Ollama first listened on the network; those auto rules also allow Ollama from any Private-network address, so they get deleted in favor of the rule scoped to the tailnet.
+- The Ollama tray app only serves when started from an interactive session; every launch from a WSL shell or script left it running without a listener.
+- Driver 582.28 is the actual last Pascal build (R580 branch, security-only); SearXNG's config lives in the WSL home because Docker Desktop's engine runs there.
+
+**State.** Ollama 0.40.12 and SearXNG answer over Tailscale from WSL; `.env` holds the URLs; `.env.example` documents them with placeholders. Left: the smoke test from the laptop (Tailscale not installed there yet), the admin pass that deletes the auto-created firewall rules, a reboot for the driver.
+
+**Tooling note.** The session ran Windows checks and fixes from WSL through `powershell.exe` with ASCII-only scripts saved with a BOM and parse-checked first; PowerShell 5.1 read BOM-less UTF-8 as CP1252 and an em dash broke a script. Elevated steps were staged as files and launched with one UAC click each.
