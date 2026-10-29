@@ -4,9 +4,9 @@ import { Card, Loaded, Page, Section } from '../components/ui'
 import { useDiyMatrix, useMeta } from '../data/api'
 import type { DiyMatrix, Meta } from '../data/contract'
 import { decodeWeights, encodeWeights, evaluate, normalize, personaWeights, pointsFromWeights, weightsFor, type GroupWeights } from '../diy'
-import { BudgetDonut, rampColor } from './build/charts'
+import { BudgetDonut } from './build/charts'
 import { GroupSliders } from './build/Controls'
-import { blankPoints, headingShares } from './build/points'
+import { blankPoints, headingShares, rampColor } from './build/points'
 import { Aging, Bets, ByContext, Calibration, Divergence, FitTowardYou, Headline, SeasonByseason, type Baseline } from './build/Results'
 
 const HIDDEN_SEASONS = 3
