@@ -107,7 +107,7 @@ curl -s $LLM_BASE_URL/chat/completions -H 'Content-Type: application/json' -d '{
 }'
 ```
 
-All three should answer (the third in a few seconds once the model is loaded, ~20 s cold). Then put the two URLs and `LLM_MODEL=qwen3.5:9b` in the project's `.env`; the M6.1 client and the local research job (M6.2L) read them. Status 2026-10-29: all three pass from the desktop's WSL; the laptop run is still to do.
+All three should answer (the third in a few seconds once the model is loaded, ~20 s cold). Then put the two URLs and `LLM_MODEL=qwen3.5:9b` in the project's `.env`; the M6.1 client and the local research job (M6.2L) read them. Status 2026-10-29: all three pass from the desktop's WSL and from the laptop's WSL (Windows 11, WSL NAT mode, Tailscale on Windows only).
 
 ## Troubleshooting
 
