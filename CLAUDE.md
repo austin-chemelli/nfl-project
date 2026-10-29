@@ -67,6 +67,16 @@ uv run pytest -q             # unit tests + leakage guards (guards skip without 
 uv run ruff check src tests && uv run ruff format src tests
 ```
 
+Web (`web/`, Node 24 via `.nvmrc`; plan in docs/site.md):
+
+```
+npm ci                       # once
+npm run dev                  # http://localhost:5173, reads ../data/marts/site via /data (no bucket)
+npm run typecheck && npm run lint && npm test && npm run build
+uv run python scripts/web_fixtures.py   # refresh test fixtures after a site-contract change
+python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI deploys on push to main)
+```
+
 
 
 ## Layout and conventions
@@ -75,6 +85,7 @@ uv run ruff check src tests && uv run ruff format src tests
 - `src/nfl/features/<family>.py`: one builder per feature family writing the long schema in architecture §3.3. Feature names are `<family>.<name>`; `side` is `home`/`away`/`game`. Missing values are null in the store and become 0 (league average) after standardization. Builders expose `SOURCE`, `VERSION`, `build(paths, games, build_ts)` returning rows via `store.from_team_values`/`from_game_values`; they never write (architecture §3.3).
 - `src/nfl/approaches/configs/<id>.yaml`: an approach (group weights with a `why`, optional overrides). One public line per approach (ADR 0004 amendment): `model_id` is the approach id (`traditionalist`, `analyst`, `sharp`, `student`), plus `ensemble` and the diagnostic `global`; `<id>.persona` and `<id>.fitted` artifacts are internals and diagnostics, never scorecard lines. The market's forecast is never an approach input (ADR 0013; the schema rejects it). Fit artifacts under `marts/fits/<model_id>/<trained_through>.json`; `nfl lock` refuses artifacts whose config hash doesn't match the YAML, and refuses `--commit` from uncommitted code.
 - Team codes: pbp prints current codes (LA, LAC, LV) for every season while games use historical ones (STL, SD, OAK). Join plays to games on the canonical franchise code (`TEAM_ALIASES`), never the printed code.
+- Web: `web/src/data/contract.ts` (zod) mirrors `src/nfl/site.py`; change both together and rerun `scripts/web_fixtures.py`. Data publishes independently of site deploys (ADR 0015), so contract changes stay additive (new fields optional/defaulted in zod), or the web deploy goes out before the data that needs it. Pages use the shared components/chart kit and colors from CSS tokens; numbers are human-readable (no log-odds). Production data URL `VITE_DATA_URL` (default the public bucket).
 - UI: pages in `src/nfl/ui/pages/` read only `marts/site/*.json` via `nfl.ui.data` (palette, labels, loaders); never parquet. `tests/test_ui.py` renders every page headlessly.
 - `src/nfl/models/`: reference models only (`market.py`, `elo.py`, `naive.py`), numeric, no LLM.
 - `marts/predictions.parquet` and `marts/bets.parquet` are append-only. Never edit rows; add rows with a new `lock_ts` or `model_version`.

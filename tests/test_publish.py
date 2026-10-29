@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -16,6 +17,7 @@ class _Blob:
         self.store, self.name = store, name
         self.cache_control = None
         self.content_type = None
+        self.content_encoding = None
 
     def exists(self):
         return self.name in self.store
@@ -23,13 +25,15 @@ class _Blob:
     def reload(self):
         rec = self.store[self.name]
         self.md5_hash, self.cache_control = rec["md5"], rec["cache_control"]
+        self.content_encoding = rec["content_encoding"]
 
-    def upload_from_filename(self, filename, content_type=None):
-        data = Path(filename).read_bytes()
+    def upload_from_string(self, data, content_type=None):
         self.store[self.name] = {
             "md5": base64.b64encode(hashlib.md5(data).digest()).decode(),
             "cache_control": self.cache_control,
             "content_type": content_type,
+            "content_encoding": self.content_encoding,
+            "data": data,
         }
 
 
@@ -82,6 +86,11 @@ def test_publish_uploads_with_cache_header_then_skips_unchanged(tmp_path):
     rec = client.store["site/meta.json"]
     assert rec["cache_control"] == CACHE_CONTROL
     assert rec["content_type"] == "application/json"
+    # site JSON is stored gzipped; lock artifacts stay byte-identical to the committed files
+    assert rec["content_encoding"] == "gzip"
+    assert json.loads(gzip.decompress(rec["data"])) == {"schema_version": "2"}
+    lock = client.store["predictions/2026/week_09_thu_x.json"]
+    assert lock["content_encoding"] is None and lock["data"] == b"{}"
     assert (
         client.store["predictions/2026/week_09_thu_x.json.sha256"]["content_type"] == "text/plain"
     )
