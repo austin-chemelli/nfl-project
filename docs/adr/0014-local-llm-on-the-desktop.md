@@ -1,6 +1,6 @@
 # ADR 0014: Narrative research and previews run on a local open-weight model on the desktop
 
-Status: accepted 2026-10-28. Amends ADR 0007 (LLM layer: spend, model roles, retrieval) and pulls part of ADR 0008's self-hosting work (the desktop) forward.
+Status: accepted 2026-10-28; amended 2026-10-29 (no API fallback, below). Amends ADR 0007 (LLM layer: spend, model roles, retrieval) and pulls part of ADR 0008's self-hosting work (the desktop) forward.
 
 ## Context
 Austin would rather run the LLM work on his spare desktop than pay for API credits. The desktop has a GTX 1070 (8 GB, Pascal, compute 6.1), a Ryzen 7 3700X, 16 GB RAM, and runs Windows. The jobs are batch, not latency-sensitive: narrative research for ~16 games twice a week (search, read, extract into the v2 record) and short game previews checked by the faithfulness validator. Research notes: `.notes/local-llm-research.md`.
@@ -26,3 +26,6 @@ Option 2, with the API as a measured fallback, not a default.
 
 ## Consequences
 LLM cost becomes electricity (~$1–5/month depending on idle policy) and runtime (estimated 10–20 minutes per game, i.e. a few hours per weekly run, overnight; unmeasured until the first run). The desktop must be on for research runs; until Cloud Scheduler (step 5), runs are triggered by hand or a Windows scheduled task. A small model will be worse than a frontier model at judgment ratings (sentiment, hype) and at synthesis across sources; the design keeps those as secondary, text-only fields and the comparison eval makes the gap visible. The weekly API cost cap stays in the code for the fallback path.
+
+## Amendment 2026-10-29: no API fallback
+Austin decided the app never uses a paid LLM API, including as a fallback. The M6.1 client talks only to the desktop's Ollama; it has no Anthropic code path, SDK dependency or cost cap. If the desktop is off or a run fails, LLM jobs fail and Austin gets an email; nothing reroutes. If the M6.2e comparison shows the local model is clearly worse, the options are a better local model or prompt, or keeping the Narrative approach on `/nfl-narrative` skill records (run by hand), not an API job. ADR 0007's spend target and weekly cap no longer apply.

@@ -55,6 +55,7 @@ uv run nfl odds snapshot     # Odds API lines now (3 credits) -> raw/odds_api + 
 uv run nfl odds status       # credits used, snapshots on disk (free)
 uv run nfl ledger            # open paper bets at last lock, settle, CLV -> marts/bets*.parquet
 uv run nfl narrative slate 2026 8   # games to research; `ingest <file>` validates+stores a record; `example`, `list`
+uv run nfl llm ping          # one schema-constrained call to the desktop model (LLM_BASE_URL); `llm calls` = log summary
 uv run nfl lock --slot thu|sat [--dry-run] [--commit --push]   # the live lock (docs/runbook.md)
 uv run nfl weekly refresh    # Tuesday job: current-season ingest, odds, curate, features, grade, ledger
 uv run nfl readme            # rewrite the README scorecard section
@@ -89,8 +90,8 @@ python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI 
 - UI: pages in `src/nfl/ui/pages/` read only `marts/site/*.json` via `nfl.ui.data` (palette, labels, loaders); never parquet. `tests/test_ui.py` renders every page headlessly.
 - `src/nfl/models/`: reference models only (`market.py`, `elo.py`, `naive.py`), numeric, no LLM.
 - `marts/predictions.parquet` and `marts/bets.parquet` are append-only. Never edit rows; add rows with a new `lock_ts` or `model_version`.
-- Narrative records (`nfl.llm.narrative.GameNarrative`) are the contract between research and pipeline; `producer` is `claude_code` (the `/nfl-narrative` skill, dev only) or `api` (production). Features from them are stamped with the record's `known_as_of`, never backfilled.
-- `src/nfl/llm/`: separate entrypoints (`narrative.py`, `preview.py`, `faithfulness.py`), prompts versioned in `src/nfl/llm/prompts/<job>_v<N>.md`, every call logged to `marts/llm_calls.parquet`. Weekly cost cap `LLM_WEEKLY_CAP_USD` (default 25).
+- Narrative records (`nfl.llm.narrative.GameNarrative`) are the contract between research and pipeline; `producer` is `claude_code` (the `/nfl-narrative` skill, dev only) or `local` (the desktop model, production; ADR 0014). Features from them are stamped with the record's `known_as_of`, never backfilled.
+- `src/nfl/llm/`: separate entrypoints (`narrative.py`, `preview.py`, `faithfulness.py`), prompts versioned in `src/nfl/llm/prompts/<job>_v<N>.md`. Every model call goes through `nfl.llm.client.LLMClient.complete` (the desktop's Ollama; thinking off; JSON-schema output; retries), which logs one row per request to `marts/llm_calls.parquet`. **No paid LLM API anywhere in the app** (Austin, 2026-10-29; ADR 0014 amendment): if the desktop is down, LLM jobs fail and email; they never fall back to an API.
 - `public/predictions/<season>/week_<ww>_<slot>_<lock ts>.json` + `.sha256`: committed lock artifacts (written by `nfl lock`; never edited). Commit message `lock: <season> W<w> <slot>`. Lock-only commits may be pushed without asking (Austin, 2026-10-27), but only when `git log origin/main..HEAD` contains nothing else; every other push asks first.
 - DuckDB 2.0: use `con.sql(q).pl()`; quote generated identifiers (`desc` is reserved). Timestamps need `pytz`.
 - Data conventions: `spread_line` > 0 means home favored, `result` = home − away; schedule lines are untimestamped (closing-ish); injuries have `week`, and `date_modified` only for 2010–2024 (live point-in-time comes from ingest snapshots); 1999 schedules have no gametime (kickoff imputed by slot, `kickoff_imputed`); depth charts from 2025 are timestamped (`dt`); FTN joins pbp on (`game_id`,`play_id`) = (`nflverse_game_id`,`nflverse_play_id`) for ~99% of pass/run plays; participation (coverage, personnel) is offseason-only.

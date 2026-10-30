@@ -1,9 +1,9 @@
 """Narrative records: the contract between the research step and the pipeline (ideas note §3).
 
 One JSON record per game per research run, in marts/narrative/season=YYYY/week=WW/<game_id>_<ts>.json.
-`producer` says who did the research: 'claude_code' (the /nfl-narrative skill, development) or 'api'
-(the Sonnet job, production). The pipeline treats them identically; `nfl.features.narrative` turns
-records into feature rows stamped with the record's `known_as_of`.
+`producer` says who did the research: 'claude_code' (the /nfl-narrative skill, development) or
+'local' (the desktop model, production; 'api' is unused). The pipeline treats them identically;
+`nfl.features.narrative` turns records into feature rows stamped with the record's `known_as_of`.
 
 Rules enforced here: every claim is dated at or before `known_as_of`; the record is stamped before
 kickoff; numbers are in range; the teams match the game. Nothing here calls an LLM.

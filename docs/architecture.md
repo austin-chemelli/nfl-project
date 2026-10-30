@@ -168,7 +168,7 @@ Fit artifacts: `marts/fits/<model_id>/<trained_through>.json` with scaler, weigh
 
 ### 3.6 LLM artifacts
 
-`marts/llm_calls.parquet`: `run_id, job, model, prompt_version, input_tokens, output_tokens, cache_read_tokens, cost_usd, latency_ms, ts, game_id`.
+`marts/llm_calls.parquet` (one row per request, retries included; written by `nfl.llm.client`): `run_id, job, model, prompt_version, game_id, attempt, ok, error, input_tokens, output_tokens, cache_read_tokens, energy_wh (estimate: latency × LLM_LOCAL_WATTS), latency_ms, ts`. No cost column: every call is local (ADR 0014). Each machine keeps its own log; the desktop's goes up with its records (M6.2L upload path).
 `marts/narrative/season=YYYY/`: structured extraction per game × team: the features above plus `claims` (list of `{claim, source_url, published_at, confidence}`), `summary`, `prompt_version`, `known_as_of`.
 `marts/previews/`: per game text + the faithfulness report (`numbers_checked, numbers_matched, unmatched[]`). A preview with unmatched numbers is not published.
 

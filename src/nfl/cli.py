@@ -265,6 +265,72 @@ def narrative_list(season: int = typer.Option(None)) -> None:
     console.print(t)
 
 
+llm_app = typer.Typer(no_args_is_help=True, help="LLM client checks and the call log.")
+app.add_typer(llm_app, name="llm")
+
+
+@llm_app.command("ping")
+def llm_ping(model: str = typer.Option(None, help="Default LLM_MODEL.")) -> None:
+    """One schema-constrained call to the desktop model; logged as job 'ping'."""
+    from pydantic import BaseModel
+
+    from nfl.llm.client import LLMClient, LLMConfig
+
+    class Ping(BaseModel):
+        ok: bool
+        team: str
+
+    client = LLMClient(get_paths(), LLMConfig.from_env(model))
+    r = client.complete(
+        [
+            {
+                "role": "user",
+                "content": "Set ok to true and name the NFL team that plays at Lambeau Field.",
+            }
+        ],
+        job="ping",
+        prompt_version="ping_v1",
+        schema=Ping,
+        max_tokens=200,
+    )
+    u = r.usage
+    console.print(
+        f"[bold]llm:[/bold] {r.model}: {r.parsed!r} in {r.latency_ms:,} ms "
+        f"({u.input_tokens} in / {u.output_tokens} out, attempt {r.attempts})"
+    )
+
+
+@llm_app.command("calls")
+def llm_calls(days: int = typer.Option(7, help="Trailing window.")) -> None:
+    """Calls, tokens, latency and energy per job and model over the window."""
+    from datetime import timedelta
+
+    import polars as pl
+
+    from nfl.config import now_utc
+    from nfl.llm.client import read_calls
+
+    df = read_calls(get_paths()).filter(pl.col("ts") >= now_utc() - timedelta(days=days))
+    agg = (
+        df.group_by("job", "model")
+        .agg(
+            pl.len().alias("calls"),
+            (~pl.col("ok")).sum().alias("failed"),
+            pl.col("input_tokens").sum().alias("tokens_in"),
+            pl.col("output_tokens").sum().alias("tokens_out"),
+            pl.col("latency_ms").median().cast(pl.Int64).alias("median_ms"),
+            pl.col("energy_wh").sum().round(1).alias("wh"),
+        )
+        .sort("job", "model")
+    )
+    t = Table(title=f"LLM calls, last {days} days")
+    for c in agg.columns:
+        t.add_column(c)
+    for row in agg.iter_rows():
+        t.add_row(*["" if v is None else str(v) for v in row])
+    console.print(t)
+
+
 @app.command("site")
 def site_cmd(season: int = typer.Option(None, help="Default: current season.")) -> None:
     """Write the UI JSON contract (marts/site/): meta, slates, games, tracker, audit."""
