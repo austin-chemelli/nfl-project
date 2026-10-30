@@ -43,9 +43,9 @@ The 9B fits with about 1.2 GB of VRAM to spare; anything else using the GPU heav
 
 ## 3. SearXNG (search, in Docker under WSL)
 
-Docker Desktop runs the Linux engine inside WSL2, so the config lives in the WSL home, not on `C:`.
+Docker Desktop runs the Linux engine inside WSL2. The config goes in a **named Docker volume**, not a bind mount from the WSL home: Docker Desktop starts at sign-in before the Ubuntu distro is running, and a bind mount of a distro path then resolves to an empty directory, SearXNG writes a default `settings.yml` into it, and every `format=json` request returns 403 until the container is recreated (this happened on the first reboot).
 
-1. In WSL, create `~/searxng/settings.yml`:
+1. In WSL, keep the source copy at `~/searxng/settings.yml`:
    ```yaml
    use_default_settings: true
    server:
@@ -56,9 +56,11 @@ Docker Desktop runs the Linux engine inside WSL2, so the config lives in the WSL
      formats: [html, json]
    ```
    `formats` must include `json` or the API returns 403.
-2. Run it:
+2. Copy it into a named volume and run the container from that volume (repeat the copy after editing the file, then `docker restart searxng`):
    ```
-   docker run -d --name searxng --restart unless-stopped -p 8080:8080 -v ~/searxng:/etc/searxng searxng/searxng:latest
+   docker volume create searxng-config
+   docker run --rm -v searxng-config:/cfg -v ~/searxng:/src:ro alpine sh -c 'cp /src/settings.yml /cfg/ && chown 977:977 /cfg/settings.yml'
+   docker run -d --name searxng --restart unless-stopped -p 8080:8080 -v searxng-config:/etc/searxng searxng/searxng:latest
    ```
 3. Check: `curl 'http://localhost:8080/search?q=green+bay+packers&format=json'` from WSL returns JSON. Docker Desktop publishes the port on Windows too, so it is also reachable at `http://<desktop-tailscale-ip>:8080`.
 4. `--restart unless-stopped` only helps while Docker Desktop is running: Docker Desktop must start at sign-in (its entry in the Run key does that; the setting in Docker Desktop → General is "Start Docker Desktop when you sign in").
@@ -81,9 +83,11 @@ foreach ($r in @(@{n='NFL local LLM - Ollama 11434'; p=11434}, @{n='NFL local LL
     -RemoteAddress @('100.64.0.0/10','172.16.0.0/12') -Profile Any
 }
 Remove-NetFirewallRule -DisplayName 'ollama.exe'   # the auto-created per-app rules from the Windows prompt
+New-NetFirewallRule -DisplayName 'NFL local LLM - Ollama program' -Direction Inbound -Action Allow -Protocol TCP `
+  -Program 'C:\Users\Austin\AppData\Local\Programs\Ollama\ollama.exe' -RemoteAddress @('100.64.0.0/10','172.16.0.0/12') -Profile Any
 ```
 
-The auto-created rules matter: "Allow on Private from any address" would expose Ollama to the whole LAN if the Ethernet connection is ever set to Private. No router port forwarding.
+The auto-created rules matter: "Allow on Private from any address" would expose Ollama to the whole LAN if the Ethernet connection is ever set to Private. Deleting them alone is not enough: Windows shows the prompt again at the next sign-in and recreates them (seen after the first reboot). The scoped **program** rule is what stops the prompt, because Windows only asks when no rule names the executable. No router port forwarding.
 
 ## 6. Power
 
@@ -118,3 +122,4 @@ All three should answer (the third in a few seconds once the model is loaded, ~2
 - **Out of memory / very slow:** drop `OLLAMA_CONTEXT_LENGTH` to 8192 or use `qwen3.5:4b`.
 - **SearXNG returns few results:** some engines rate-limit; enable more engines in `settings.yml` or lower request frequency.
 - **SearXNG down after a reboot:** Docker Desktop isn't running; start it (or fix its start-at-sign-in setting).
+- **SearXNG answers HTML but `format=json` is 403 after a reboot:** the container is running a default `settings.yml`, which happens if its config is a bind mount from the WSL distro (see §3). Move the config to the named volume; as a stopgap, `docker restart searxng` once the distro is up.
