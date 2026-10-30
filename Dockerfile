@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git openssh-cli
     && useradd -m -u 1000 nfl
 WORKDIR /app
 COPY --from=build --chown=nfl:nfl /app /app
-COPY --chown=nfl:nfl scripts/cloud-job.sh /app/cloud-job.sh
+COPY --chown=nfl:nfl --chmod=755 scripts/cloud-job.sh /app/cloud-job.sh
 ARG GIT_SHA=unknown
 ENV PATH="/app/.venv/bin:$PATH" \
     NFL_DATA_ROOT=/mnt/data \
