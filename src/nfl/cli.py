@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -263,6 +264,36 @@ def narrative_list(season: int = typer.Option(None)) -> None:
             r.game_id, r.producer, r.model, str(r.known_as_of), str(len(r.claims)), r.prompt_version
         )
     console.print(t)
+
+
+@narrative_app.command("run")
+def narrative_run(
+    season: int,
+    week: int,
+    game_ids: Annotated[
+        list[str] | None, typer.Argument(help="Default: every game not yet kicked off.")
+    ] = None,
+    store: bool = typer.Option(True, help="Ingest the records (--no-store keeps drafts only)."),
+) -> None:
+    """Research games on the desktop model (search, fetch, extract, compose) and ingest them."""
+    from nfl.llm.research import run_week
+
+    runs = run_week(get_paths(), season, week, game_ids, store=store)
+    t = Table(title=f"{season} week {week}: local narrative research")
+    for c in ("game_id", "result", "pages kept", "facts", "dropped", "minutes"):
+        t.add_column(c)
+    for r in runs:
+        t.add_row(
+            r.game_id,
+            "stored" if r.stored else ("ok (draft)" if r.ok else f"[red]{r.error}[/red]"),
+            str(r.pages.get("kept", 0)),
+            str(r.facts),
+            str(sum(r.dropped.values())),
+            f"{r.seconds / 60:.1f}",
+        )
+    console.print(t)
+    if not all(r.ok for r in runs):
+        raise typer.Exit(1)
 
 
 llm_app = typer.Typer(no_args_is_help=True, help="LLM client checks and the call log.")

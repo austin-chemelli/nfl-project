@@ -170,3 +170,16 @@ Conventions: date-headed entries, newest last. Each entry: **what happened**, **
 **Decision: no API fallback.** The first version also had an Anthropic adapter (SDK, priced cost, weekly cap), following ADR 0014's "API as a measured fallback". It was never automatic (it needed `LLM_PROVIDER=anthropic` and a key), but Austin doesn't want a paid API in the app at all, so it was removed the same day along with the SDK dependency, and ADR 0014 is amended: if the desktop fails, LLM jobs fail and Austin gets an email. The email (for failed runs and for runs that never happen because the desktop is off) is task M6.2u.
 
 **Design notes.** Retries split two ways: transient failures (connection, timeout, 429, 5xx) back off; a reply that fails validation is retried with the error shown to the model, since at temperature 0 a plain resend would repeat the same output. Truncated replies fail at once but still log their tokens. In the extract check the model dropped "expected to start" from a sentence it otherwise split correctly, the kind of gap M6.2e should measure.
+
+## 2026-10-29 (late): local narrative research works end to end (M6.2L)
+
+**What happened.** `nfl narrative run` researches a game with no paid service: code builds the skill's searches as templates, queries SearXNG on the desktop, fetches pages politely (robots.txt, per-domain delay, trafilatura for main text and publish date), and keeps pages dated within 9 days. The 9B extracts facts from one page per call, then writes each team block and the game block citing fact ids; code attaches every URL, date and `support` count, so a fabricated URL is impossible by construction. An implementer agent (Sonnet) built the search and fetch modules in parallel with the pipeline. BAL @ BUF was stored from the laptop: 20 pages, 136 facts, 30 claims, 7.4 minutes and ~25 Wh, about 2 hours for a 16-game week.
+
+**Found on the live runs (three runs of the same game).**
+- Pages were taken query by query, so injury, QB and news searches used the whole page budget and matchup, betting and weather searches never ran. Now every query runs first and pages are picked round-robin.
+- Page dates lie on live hub pages (ESPN's Packers injury page carried Oct 1); the newer of the page and search-engine dates wins. The page cache had no expiry, which would have served last week's injury page next week; it now expires after 12 hours.
+- The model swapped home and away in the game summary and wrote fact ids as "Fact 45" (dropping every Buffalo note); prompts now name home and away outright and ids are parsed leniently.
+- The schedule's QB is the last game's starter, so a prompt that called it "the starting quarterback" made the model list Tyler Huntley at status 2 while its own notes said Lamar Jackson would start. Relabeled; the next run had Jackson at status 1.
+- The guards fired as intended: a public betting share with no percentage in any fact was dropped, and so was a note stating a number its facts didn't contain.
+
+**Open.** Scheme facts are thin (scheme searches mostly return form and stats pieces), and ratings like sentiment are rough; M6.2e compares these records with the skill's on the same games.
