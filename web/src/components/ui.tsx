@@ -4,6 +4,7 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import { colorVar, SHORT } from '../lib/models'
 import { pct } from '../lib/format'
 import { Help } from './Help'
+import { DataError } from '../data/api'
 
 export function Page({ title, lede, children }: { title: string; lede?: ReactNode; children: ReactNode }) {
   return (
@@ -63,7 +64,7 @@ const STATUS: Record<string, { text: string; cls: string; help: string }> = {
   locked: { text: 'Locked', cls: 'border-[var(--good)] text-[var(--good)]', help: 'Committed to the public repo before kickoff; this is the scored pick.' },
   backfill: { text: 'Backfill', cls: 'border-line text-ink-3', help: 'Computed after the fact with data as of a synthetic lock; not part of the live record.' },
   preview: { text: 'Preview', cls: 'border-[var(--warning)] text-ink-2', help: 'Current estimate, not yet locked. It can still change.' },
-  pregame: { text: 'Pre-game', cls: 'border-line text-ink-2', help: 'No lock was recorded for this game: scored as of an hour before kickoff with data known then. Not part of the live record.' },
+  pregame: { text: 'Not locked', cls: 'border-line text-ink-2', help: 'No lock was recorded before kickoff, so this is what the models would have said an hour before kickoff, computed afterwards with only data known then. Not part of the live record.' },
   none: { text: 'No forecast', cls: 'border-line text-ink-3', help: 'No approach has scored this game yet.' },
 }
 export function StatusBadge({ status }: { status: string }) {
@@ -92,10 +93,17 @@ export function Loading({ what = 'data' }: { what?: string }) {
 
 export function ErrorBox({ error }: { error: unknown }) {
   const msg = error instanceof Error ? error.message : String(error)
+  const stale = error instanceof DataError && error.badShape
   return (
     <div role="alert" className="rounded-lg border border-[var(--critical)] bg-surface-1 p-4 text-ink-2">
       <div className="font-medium text-ink">Couldn't load this page's data.</div>
+      {stale && (
+        <div className="mt-1">The site has probably been updated since this page was opened. Reloading usually fixes it.</div>
+      )}
       <div className="mt-1 text-[13px]">{msg}</div>
+      <button type="button" onClick={() => window.location.reload()} className="mt-3 rounded border border-line px-3 py-1 text-[13px] text-ink hover:bg-surface-2">
+        Reload page
+      </button>
     </div>
   )
 }

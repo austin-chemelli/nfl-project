@@ -34,9 +34,9 @@ describe('Game page', () => {
     expect(screen.getByRole('radio', { name: 'Third down' })).toHaveAttribute('aria-checked', 'true')
   })
 
-  it('labels a game scored without a lock as pre-game', async () => {
+  it('labels a game scored without a lock as not locked', async () => {
     renderRoute('/game/2026_08_ARI_DAL')
-    expect(await screen.findByText(/Pre-game: no lock was recorded/)).toBeInTheDocument()
+    expect(await screen.findByText(/Not locked: no lock was recorded/)).toBeInTheDocument()
   })
 
   it('shows "no narrative" for a game without one', async () => {

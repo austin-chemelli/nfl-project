@@ -15,10 +15,12 @@ export const DATA_URL: string = (
 export class DataError extends Error {
   readonly path: string
   readonly notFound: boolean
-  constructor(path: string, message: string, notFound = false) {
+  readonly badShape: boolean
+  constructor(path: string, message: string, notFound = false, badShape = false) {
     super(`${path}: ${message}`)
     this.path = path
     this.notFound = notFound
+    this.badShape = badShape
   }
 }
 
@@ -32,8 +34,9 @@ export async function fetchJson<S extends z.ZodType>(path: string, schema: S): P
   if (!res.ok) throw new DataError(path, `HTTP ${res.status}`)
   const parsed = schema.safeParse(await res.json())
   if (!parsed.success) {
-    // A contract drift between site.py and this app: fail loudly, with the first issues.
-    throw new DataError(path, `unexpected shape: ${parsed.error.issues.slice(0, 3).map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`)
+    // A contract drift between site.py and this app: fail loudly, with the first issues. Usually
+    // a tab opened before a deploy, reading data published after it (ErrorBox offers a reload).
+    throw new DataError(path, `unexpected shape: ${parsed.error.issues.slice(0, 3).map((i) => `${i.path.join('.')} ${i.message}`).join('; ')}`, false, true)
   }
   return parsed.data
 }
