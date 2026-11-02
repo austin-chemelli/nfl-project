@@ -14,6 +14,11 @@ been doing and whether it's working, per public analysis); per game `matchup_not
 the number of independent sources saying it. These are text with citations: they never feed model
 numbers (ADR 0007). `known_as_of` is set by `ingest` to the ingest clock; the producer's own claim is
 kept as `reported_finished_at`. v1 records still load (the new lists default to empty).
+
+Prompt `narrative_v3` (2026-10-30, same schema): claim categories add `scheme` (what a unit does and
+how well) and `matchup` (how the two teams match up); summaries and the consensus say only what a
+cited source says; matchup notes rest on matchup or scheme sources; claims are spread across
+categories instead of mostly injuries. The local pipeline's equivalent is `local_v2`.
 """
 
 from __future__ import annotations
@@ -29,10 +34,13 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from nfl.config import Paths
 
 SCHEMA_VERSION = "2"
-PROMPT_VERSION = "narrative_v2"
+PROMPT_VERSION = "narrative_v3"
 MAX_SOURCE_AGE_DAYS = 10
 
-Category = Literal["injury", "qb", "coaching", "motivation", "public", "weather", "form", "other"]
+Category = Literal[
+    "injury", "qb", "coaching", "motivation", "scheme", "matchup", "public", "weather", "form",
+    "other",
+]  # fmt: skip
 
 
 class Claim(BaseModel):

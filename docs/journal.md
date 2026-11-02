@@ -183,3 +183,17 @@ Conventions: date-headed entries, newest last. Each entry: **what happened**, **
 - The guards fired as intended: a public betting share with no percentage in any fact was dropped, and so was a note stating a number its facts didn't contain.
 
 **Open.** Scheme facts are thin (scheme searches mostly return form and stats pieces), and ratings like sentiment are rough; M6.2e compares these records with the skill's on the same games.
+
+## 2026-10-30: narrative v2: analysis survives, sentences are grounded (`local_v2`, skill `narrative_v3`)
+
+**What happened.** Reading the first stored BAL @ BUF record, Austin saw that everything past injuries and basics was missing. The debug file showed the pipeline had extracted good analysis ("3 keys to a Bills win": Bills 31st against the pass and last in defensive EPA/play, 16 Ravens offensive-line combinations, the Bills' interior rush against it) and then lost it: there was no scheme or matchup category, so analysis was filed as "form" or even "injury"; every page repeats the injury report, so injury facts took 48 of the game prompt's 80 slots; and summaries were only checked for numbers, so one gave Josh Allen a "history of back issues" that no page mentioned.
+
+**Changes.** Extraction gets `scheme` and `matchup` categories and names the player each fact is about; injury and QB facts are deduped per player and capped at 25 per prompt (freshest first); the game prompt gets no injury facts; summary and consensus sentences cite facts; one check drops any item whose numbers, two-word names or injury words aren't in what it cites; matchup notes and scheme trends must rest on a matchup or scheme fact; claims rotate categories; a plain-wording rule ("basement of the AFC North" was true but not neutral). The `/nfl-narrative` skill now states the same rules, so M6.2e compares like with like.
+
+**Found on three live runs.**
+- The first v2 run had the analysis back but named Tyler Huntley as Baltimore's starter (status 2) with 15 facts dated that day saying Lamar Jackson was cleared; "Huntley started the last three games" and the schedule hint won. The starter is now its own small call per team over QB facts only, newest first, checked against what it cites; the team prompt gets the pick with its reports. Jackson came back at status 1 on both later runs.
+- A matchup note moved Baltimore's reshuffled line to Buffalo; fact lines now carry their team (`F12 [matchup, BAL]`).
+- The second run dropped all six Baltimore notes: the 9B cited the fact *next to* the right one (F24 for F1, F28 for F29), and a trailing period ("Highmark Stadium.") broke name lookups. Items whose ids are off are now re-cited to the one fact that backs them on their own (nearest id first, only for text with a number, name or condition in it) and counted; replaying the saved outputs recovered all six with the right sources.
+- Final run: 20 pages, 162 facts, 10.3 minutes; nothing dropped or re-cited; 7 BAL and 5 BUF notes across injury, form, scheme and coaching; 2 scheme trends per team; 3 matchup notes with support 2 to 3 (shootout expected, Jackson's return against a defense allowing 29+ in five of six). Still weak: matchup notes are generic next to the source analysis, and a Week 1 grade (Kyle Hamilton, C+) slipped in as current form.
+
+**Cost.** v2 extracts ~20% more facts and adds two QB calls: about 10–11 minutes a game, ~3 hours for a 16-game week.

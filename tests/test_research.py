@@ -1,5 +1,6 @@
 """Local narrative research: every URL comes from a fetched page, ids map back, unsupported numbers
-and percentages are dropped, the date window holds (stub search, pages and LLM server)."""
+and percentages are dropped, the date window holds (stub search, pages and LLM server). v2: status
+facts deduped and capped, analysis reaches the prompts, every sentence is grounded."""
 
 from __future__ import annotations
 
@@ -12,7 +13,16 @@ from nfl.config import Paths
 from nfl.llm.client import LLMClient, LLMConfig
 from nfl.llm.fetch import Page
 from nfl.llm.narrative import GameNarrative
-from nfl.llm.research import Game, queries, research_game
+from nfl.llm.research import (
+    MAX_STATUS_FACTS,
+    Doc,
+    Fact,
+    Game,
+    _facts_for,
+    _unsupported,
+    queries,
+    research_game,
+)
 from nfl.llm.search import SearchResult
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
@@ -59,23 +69,33 @@ FACTS = {  # by page: what the stub model "extracts"
             "text": "BAL left tackle Ronnie Stanley is out with an ankle injury.",
             "category": "injury",
             "team": "BAL",
+            "player": "Ronnie Stanley",
             "confidence": "high",
         },
     ],
     "https://buffalonews.com/a": [
         {
             "text": "Analysts expect the Bills pass rush to exploit the BAL backup tackle.",
-            "category": "other",
+            "category": "matchup",
             "team": "game",
+            "player": None,
             "confidence": "medium",
         },
     ],
     "https://www.cbssports.com/b": [
         {
             "text": "Preview says the Bills pass rush has the edge over a reshuffled BAL line.",
-            "category": "other",
+            "category": "matchup",
             "team": "game",
+            "player": None,
             "confidence": "medium",
+        },
+        {
+            "text": "Lamar Jackson is cleared to start after missing three games.",
+            "category": "qb",
+            "team": "BAL",
+            "player": "Lamar Jackson",
+            "confidence": "high",
         },
     ],
     "https://www.covers.com/consensus": [
@@ -83,10 +103,14 @@ FACTS = {  # by page: what the stub model "extracts"
             "text": "Consensus shows 64% of bets on the Bills.",
             "category": "public",
             "team": "game",
+            "player": None,
             "confidence": "high",
         },
     ],
 }
+
+
+QB_REPLY = {"qb_name": "Lamar Jackson", "qb_status": 1, "fact_ids": ["F5"]}
 
 
 def _team(f_ids_ok: list[str]) -> dict:
@@ -95,12 +119,17 @@ def _team(f_ids_ok: list[str]) -> dict:
             {"text": "Starting left tackle is out; a backup starts.", "kind": "injury", "impact": -2, "fact_ids": f_ids_ok},
             {"text": "Line has allowed 12 sacks in three games.", "kind": "form", "impact": -1, "fact_ids": f_ids_ok},
             {"text": "Note citing a fact id that doesn't exist.", "kind": "other", "impact": 0, "fact_ids": ["F99"]},
+            {"text": "Ronnie Stanley is out with an ankle injury.", "kind": "injury", "impact": -2, "fact_ids": ["F3"]},
         ],
         "scheme_trends": [],
         "key_absences": ["Ronnie Stanley (OT, Out)"],
-        "qb_name": "Lamar Jackson", "qb_status": 0, "injury_impact": 2, "sentiment": 0.0,
+        "injury_impact": 2, "sentiment": 0.0,
         "hype": 0.5, "coaching_turmoil": 0.0, "motivation": 0.3, "revenge": False,
-        "lookahead": False, "summary": "The team is missing its starting left tackle this week.",
+        "lookahead": False,
+        "summary": [
+            {"text": "The team is missing its starting left tackle this week.", "fact_ids": f_ids_ok},
+            {"text": "He has a history of back issues.", "fact_ids": f_ids_ok},
+        ],
     }  # fmt: skip
 
 
@@ -113,12 +142,20 @@ def _llm(seen: list[dict]):
             text = body["messages"][-1]["content"]
             doc_url = next((u for u in FACTS if f"({_dom(u)}," in text), None)
             out = {"facts": FACTS.get(doc_url, [])}
+        elif name == "QbOut":
+            out = QB_REPLY
         elif name == "TeamOut":
             out = _team(["F1"])
         else:
             out = {
-                "matchup_notes": [{"text": "Bills pass rush against a backup tackle.", "fact_ids": ["F2", "Fact 4"]}],
-                "consensus_narrative": "Buffalo hosts a Baltimore team missing its left tackle.",
+                "matchup_notes": [
+                    {"text": "Bills pass rush against a backup tackle.", "fact_ids": ["F2", "Fact 4"]},
+                    {"text": "Baltimore is missing its starting left tackle.", "fact_ids": ["F1"]},
+                ],
+                "consensus": [
+                    {"text": "Buffalo hosts a Baltimore team missing its left tackle.", "fact_ids": ["F2"]},
+                    {"text": "Both teams sit atop the AFC North.", "fact_ids": ["F2"]},
+                ],
                 "public_pick": "home", "public_bet_pct_home": 0.64, "public_bet_fact_id": "[F3]",
                 "upset_buzz": 0.2, "weather_concern": 0.3,
             }  # fmt: skip
@@ -183,8 +220,82 @@ def test_ids_map_to_sources_and_support_counts_domains(tmp_path):
     notes = rec["home"]["notes"]
     assert [n["text"] for n in notes] == ["Starting left tackle is out; a backup starts."]
     assert notes[0]["source_url"] == "https://www.espn.com/bal"
+    # Stanley's note cites F3 (the betting page): re-cited to F1 in the BAL block; the BUF block
+    # may only borrow BUF or game facts, so there it's dropped.
+    away = rec["away"]["notes"]
+    assert away[1]["text"] == "Ronnie Stanley is out with an ankle injury."
+    assert away[1]["source_url"] == "https://www.espn.com/bal"
+    assert run.recited["note"] == 1
+    assert run.dropped["note with an unsupported name"] == 1
     assert run.dropped["note with an unsupported number"] == 2  # "12 sacks", once per team
     assert run.dropped["note without a valid fact"] == 2
+
+
+def test_every_sentence_is_grounded(tmp_path):
+    run, rec, _ = _run(tmp_path)
+    # "back issues" and the "AFC North" are in no cited fact: those sentences go.
+    assert rec["home"]["summary"] == "The team is missing its starting left tackle this week."
+    assert run.dropped["summary sentence with an unsupported condition"] == 2
+    assert rec["consensus_narrative"] == "Buffalo hosts a Baltimore team missing its left tackle."
+    assert run.dropped["consensus sentence with an unsupported name"] == 1
+    # an injury fact alone doesn't make a matchup note
+    assert [m["text"] for m in rec["matchup_notes"]] == ["Bills pass rush against a backup tackle."]
+    assert run.dropped["matchup note without a matchup or scheme fact"] == 1
+
+
+def test_claims_rotate_categories(tmp_path):
+    _, rec, _ = _run(tmp_path)
+    assert [c["category"] for c in rec["claims"]][:4] == ["injury", "qb", "matchup", "public"]
+
+
+def test_qb_is_its_own_checked_call(tmp_path, monkeypatch):
+    run, rec, seen = _run(tmp_path)
+    qb_calls = [b for b in seen if b["response_format"]["json_schema"]["name"] == "QbOut"]
+    assert len(qb_calls) == 1  # BUF has no QB facts: no call, the schedule's starter
+    assert "F5 [qb, BAL]" in qb_calls[0]["messages"][0]["content"]
+    assert (rec["away"]["qb_name"], rec["away"]["qb_status"]) == ("Lamar Jackson", 1)
+    assert (rec["home"]["qb_name"], rec["home"]["qb_status"]) == ("Josh Allen", 0)
+    assert any("BUF: no quarterback facts" in w for w in run.warnings)
+    # a pick that is neither the schedule's starter nor named in its facts becomes undecided
+    monkeypatch.setitem(QB_REPLY, "qb_name", "Tyler Huntley")
+    run, rec, _ = _run(tmp_path)
+    assert (rec["away"]["qb_name"], rec["away"]["qb_status"]) == (None, 2)
+    assert run.dropped["qb pick not named in its facts"] == 1
+
+
+def _fact(n: int, category: str, player: str | None, day: int, conf: str = "high", team: str = "BAL") -> Fact:  # fmt: skip
+    doc = Doc(f"D{n}", f"https://x.com/{n}", "t", "x.com", date(2026, 10, day), "news", "")
+    return Fact(f"F{n}", doc, f"fact {n}", category, team, conf, player)
+
+
+def test_status_facts_are_deduped_and_capped():
+    facts = [_fact(i, "injury", f"Player {i}", 20) for i in range(1, 31)]  # 30 players
+    facts += [_fact(31 + i, "injury", "Lamar Jackson", 20 + i) for i in range(4)]  # 4 reports
+    facts += [_fact(40 + i, "scheme", None, 25, "medium") for i in range(10)]
+    team = _facts_for(facts, "BAL")
+    status = [f for f in team if f.category == "injury"]
+    assert len(status) == MAX_STATUS_FACTS
+    assert {f.id for f in facts[-10:]} <= {f.id for f in team}  # every scheme fact gets in
+    lamar = [f.id for f in facts if f.player == "Lamar Jackson"]
+    kept = [f.id for f in team if f.player == "Lamar Jackson"]
+    assert kept == lamar[-2:]  # the two newest reports
+    game = _facts_for(facts, None)
+    assert {f.category for f in game} == {"scheme"}
+
+
+def test_unsupported_checks_numbers_names_and_conditions():
+    src = "Lamar Jackson returns from a high ankle sprain. James Cook ran for 120 yards."
+    assert _unsupported("Quarterback Lamar Jackson is back from his ankle sprain.", src) is None
+    assert _unsupported("Running back James Cook ran for 120 yards.", src) is None
+    assert _unsupported("Lamar Jackson's ankle is fine.", src) is None
+    assert _unsupported("James Cook ran for 130 yards.", src) == "number"
+    assert _unsupported("Josh Allen will start.", src) == "name"
+    assert _unsupported("Lamar Jackson has a back injury.", src) == "condition"
+    assert _unsupported("Lamar Jackson tweaked his knee.", src) == "condition"
+    assert (
+        _unsupported("They face Josh Allen.", "Josh Allen starts.") is None
+    )  # sentence-final period
+    assert _unsupported("A back injury.", "The backup starts.") == "condition"  # back is not backup
 
 
 def test_public_share_needs_a_percentage_fact(tmp_path, monkeypatch):
@@ -196,6 +307,7 @@ def test_public_share_needs_a_percentage_fact(tmp_path, monkeypatch):
                 "text": "Most bettors are backing Buffalo this week.",
                 "category": "public",
                 "team": "game",
+                "player": None,
                 "confidence": "high",
             }
         ],
