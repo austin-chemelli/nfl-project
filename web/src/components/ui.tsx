@@ -63,6 +63,8 @@ const STATUS: Record<string, { text: string; cls: string; help: string }> = {
   locked: { text: 'Locked', cls: 'border-[var(--good)] text-[var(--good)]', help: 'Committed to the public repo before kickoff; this is the scored pick.' },
   backfill: { text: 'Backfill', cls: 'border-line text-ink-3', help: 'Computed after the fact with data as of a synthetic lock; not part of the live record.' },
   preview: { text: 'Preview', cls: 'border-[var(--warning)] text-ink-2', help: 'Current estimate, not yet locked. It can still change.' },
+  pregame: { text: 'Pre-game', cls: 'border-line text-ink-2', help: 'No lock was recorded for this game: scored as of an hour before kickoff with data known then. Not part of the live record.' },
+  none: { text: 'No forecast', cls: 'border-line text-ink-3', help: 'No approach has scored this game yet.' },
 }
 export function StatusBadge({ status }: { status: string }) {
   const s = STATUS[status] ?? { text: status, cls: 'border-line text-ink-3', help: '' }

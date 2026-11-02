@@ -58,6 +58,8 @@ def _layout(tmp_path: Path) -> tuple[Paths, Path]:
     paths.site.mkdir(parents=True)
     (paths.site / "meta.json").write_text(json.dumps({"schema_version": "2"}))
     (paths.site / "scorecard.json").write_text("{}")
+    (paths.site / "game").mkdir()
+    (paths.site / "game" / "2026_08_CHI_SEA.json").write_text("{}")
     (paths.marts / "other.parquet").write_bytes(b"not public")
     repo = tmp_path / "repo"
     pred = repo / "public" / "predictions" / "2026"
@@ -73,6 +75,7 @@ def test_plan_lists_site_json_and_lock_files_only(tmp_path):
     assert names == [
         "predictions/2026/week_09_thu_x.json",
         "predictions/2026/week_09_thu_x.json.sha256",
+        "site/game/2026_08_CHI_SEA.json",
         "site/meta.json",
         "site/scorecard.json",
     ]
@@ -82,7 +85,7 @@ def test_publish_uploads_with_cache_header_then_skips_unchanged(tmp_path):
     paths, repo = _layout(tmp_path)
     client = _Client()
     first = publish(paths, "bucket", repo, client=client)
-    assert len(first.uploaded) == 4 and not first.skipped
+    assert len(first.uploaded) == 5 and not first.skipped
     rec = client.store["site/meta.json"]
     assert rec["cache_control"] == CACHE_CONTROL
     assert rec["content_type"] == "application/json"
@@ -96,7 +99,7 @@ def test_publish_uploads_with_cache_header_then_skips_unchanged(tmp_path):
     )
 
     second = publish(paths, "bucket", repo, client=client)
-    assert not second.uploaded and len(second.skipped) == 4
+    assert not second.uploaded and len(second.skipped) == 5
 
     (paths.site / "meta.json").write_text(json.dumps({"schema_version": "2", "x": 1}))
     third = publish(paths, "bucket", repo, client=client)

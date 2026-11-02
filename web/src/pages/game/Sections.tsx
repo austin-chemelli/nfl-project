@@ -16,6 +16,14 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
   const rows = dotModels(g.models)
   const mkt = g.market?.p_home ?? g.models.market_baseline?.p_home ?? null
   const label = (m: string) => SHORT[m] ?? m
+  if (rows.length === 0)
+    return (
+      <Section title="What each approach thinks">
+        <p className="text-ink-2">
+          No approach forecasts for this game yet: it hasn't been locked or scored. The market{mkt != null ? ` gives ${g.home} ${pct(mkt)}` : ' has no line yet'}.
+        </p>
+      </Section>
+    )
   return (
     <Section title="What each approach thinks" help="Each dot is one forecast of the home team's chance of winning. The gray line is the betting market, the benchmark everything is compared with.">
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
@@ -193,7 +201,8 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
 
 export function Edges({ g, meta }: { g: Game; meta: Meta }) {
   const { rows, none } = edgeRows(g.edges, meta)
-  if (rows.length === 0 && none.length === 0) return null
+  if (rows.length === 0 && none.length === 0)
+    return <Section title="Who has the edge, by group"><p className="text-ink-2">No group edges for this game yet.</p></Section>
   return (
     <Section
       title="Who has the edge, by group"

@@ -1,5 +1,5 @@
 """Publish the site data to the public bucket (docs/hosting.md: site data lives in storage, not
-in the site). Uploads marts/site/*.json and public/predictions/** with a 5-minute cache so the
+in the site). Uploads marts/site/**/*.json and public/predictions/** with a 5-minute cache so the
 React site sees locks and grades within minutes. Idempotent: unchanged files (by md5) are skipped.
 Site JSON is stored gzipped (`Content-Encoding: gzip`; GCS decompresses for clients that don't
 accept it): the build-your-own matrix is 1.3 MB raw, 270 KB gzipped. Lock artifacts stay raw so
@@ -34,8 +34,10 @@ class PublishResult:
 def plan(paths: Paths, repo: Path | None = None) -> dict[str, Path]:
     """Object name -> local file for everything that should be public."""
     out: dict[str, Path] = {}
-    for f in sorted(paths.site.glob("*.json")):
-        out[f"{SITE_PREFIX}/{f.name}"] = f
+    # rglob: the per-game detail files live in site/game/ (until 2026-11-02 only the top level
+    # was uploaded, so every game page on the site said "no detail file")
+    for f in sorted(paths.site.rglob("*.json")):
+        out[f"{SITE_PREFIX}/{f.relative_to(paths.site).as_posix()}"] = f
     pred = (repo or Path.cwd()) / "public" / "predictions"
     if pred.is_dir():
         for f in sorted(pred.rglob("*")):

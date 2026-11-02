@@ -97,8 +97,8 @@ function Legend() {
   return (
     <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
       Shaded cell with ▲/▼: the approach is {Math.round(DIVERGE * 100)}+ points more on the home (▲) or away (▼) side than the market. ✓/✗: right or
-      wrong about the winner. <b>Preview</b> = scored now, not a lock; <b>locked</b> = recorded before kickoff; <b>backfill</b> = finished game
-      scored after the fact by frozen models.
+      wrong about the winner. <b>Preview</b> = scored now, not a lock; <b>locked</b> = recorded before kickoff; <b>pre-game</b> = no lock was
+      recorded, scored as of an hour before kickoff; <b>backfill</b> = finished game scored after the fact by frozen models; – = not scored yet.
     </p>
   )
 }

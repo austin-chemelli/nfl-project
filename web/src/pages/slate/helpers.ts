@@ -30,7 +30,7 @@ export function correct(game: GameRow, mid: string): boolean | null {
 
 export function gameStatus(game: GameRow): { status: string; lockTs: string | null } {
   const m = game.models.ensemble ?? Object.values(game.models)[0]
-  return m ? { status: m.status, lockTs: m.lock_ts } : { status: 'preview', lockTs: null }
+  return m ? { status: m.status, lockTs: m.lock_ts } : { status: 'none', lockTs: null }
 }
 
 export function scoreText(game: GameRow): string {

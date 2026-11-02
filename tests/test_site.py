@@ -58,7 +58,7 @@ def test_real_contract_shape():
     )
     for g in sl["games"]:
         for m in g["models"].values():
-            assert m["status"] in (site.LOCKED, site.BACKFILL, site.PREVIEW)
+            assert m["status"] in (site.LOCKED, site.BACKFILL, site.PREVIEW, site.PREGAME)
             assert 0 < m["p_home"] < 1
         detail = json.loads((DATA.site / "game" / f"{g['game_id']}.json").read_text())
         assert {"contributions", "features", "tendencies", "injuries", "narrative"} <= set(detail)

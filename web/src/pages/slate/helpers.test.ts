@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GameRow } from '../../data/contract'
-import { correct, disagreements, divergenceText, homeWon, neighbours, pickOf, sideText } from './helpers'
+import { correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, pickOf, sideText } from './helpers'
 
 const pick = (p: number, div: number | null = null) => ({ p_home: p, spread_home: null, status: 'preview' as const, lock_ts: null, divergence: div })
 const game = (over: Partial<GameRow> = {}): GameRow => ({
@@ -11,6 +11,10 @@ const game = (over: Partial<GameRow> = {}): GameRow => ({
 })
 
 describe('slate helpers', () => {
+  it('says when no approach has scored a game', () => {
+    expect(gameStatus(game({ models: {} }))).toEqual({ status: 'none', lockTs: null })
+    expect(gameStatus(game()).status).toBe('preview')
+  })
   it('picks the favored side', () => {
     expect(pickOf(game(), 'traditionalist')).toMatchObject({ team: 'GB', home: true })
     expect(pickOf(game(), 'analyst')?.team).toBe('CAR')

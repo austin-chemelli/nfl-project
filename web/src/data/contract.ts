@@ -89,7 +89,7 @@ export const Meta = z.looseObject({
 export const ModelPick = z.looseObject({
   p_home: num,
   spread_home: nnum,
-  status: z.enum(['locked', 'backfill', 'preview']),
+  status: z.enum(['locked', 'backfill', 'preview', 'pregame']),
   lock_ts: nstr,
   divergence: nnum,
 })

@@ -8,8 +8,9 @@ product boundary. Everything lands in marts/site/:
                              the group registry
   slate_<season>_<ww>.json   one week: per game the market and every model's p_home / spread with a
                              status: 'locked' (a real lock before kickoff), 'backfill' (completed
-                             game, frozen fits, synthetic lock), or 'preview' (upcoming, scored now,
-                             not a lock)
+                             game, frozen fits, synthetic lock), 'preview' (upcoming, scored now,
+                             not a lock), or 'pregame' (kicked off with no lock or backfill yet:
+                             scored as of an hour before kickoff, not part of the live record)
   game/<game_id>.json        one game: the slate row plus per-model contributions by group and
                              feature, home/away feature values, tendencies, injuries, narrative
   tracker.json               seasons scorecard, current-season cumulative log loss by week, backtest
@@ -31,7 +32,7 @@ from __future__ import annotations
 
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import polars as pl
@@ -44,6 +45,8 @@ SCHEMA_VERSION = "2"  # v2 2026-10-27: one line per approach; no log-odds; descr
 PREVIEW = "preview"
 LOCKED = "locked"
 BACKFILL = "backfill"
+PREGAME = "pregame"
+PREGAME_LEAD = timedelta(hours=1)  # same offset as a synthetic backfill lock
 
 REFERENCE = {"market_baseline": "Market", "elo_v0": "Elo", "home_naive": "Home team 57%"}
 SPECIAL = {"ensemble": "Ensemble", "global": "Global fit (all features)"}
@@ -286,6 +289,27 @@ def preview_rows(
     return (pl.concat(rows) if rows else pl.DataFrame()), market
 
 
+def pregame_rows(paths: Paths, games: pl.DataFrame, have: pl.DataFrame, now: datetime) -> pl.DataFrame:  # fmt: skip
+    """Games that kicked off with neither a lock nor a backfill (a week before public locks, a
+    missed lock, or the days before Tuesday's backfill), scored as of an hour before kickoff with
+    the same models and only data known then, so the page shows what the models said. Labeled
+    'pregame': never part of the live record. Limited to the current and previous week."""
+    started = games.filter(
+        (pl.col("kickoff_utc") <= now) & ~pl.col("game_id").is_in(have["game_id"].to_list())
+    )
+    upcoming = games.filter(pl.col("kickoff_utc") > now)
+    if started.is_empty():
+        return pl.DataFrame()
+    current = int(upcoming["week"].min()) if not upcoming.is_empty() else int(games["week"].max())
+    started = started.filter(pl.col("week") >= current - 1)
+    out = []
+    for (kick,), part in started.group_by(["kickoff_utc"]):
+        rows, _ = preview_rows(paths, games, part, kick - PREGAME_LEAD)
+        if not rows.is_empty():
+            out.append(rows.with_columns(pl.lit(PREGAME).alias("status")))
+    return pl.concat(out, how="vertical_relaxed") if out else pl.DataFrame()
+
+
 def _market_by_game(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.DataFrame:
     """The market per game: the latest feature rows before kickoff (completed) or now (upcoming)."""
     from nfl import lock
@@ -340,11 +364,12 @@ def build(paths: Paths, season: int | None = None) -> dict:
         first = int(upcoming["week"].min())
         upcoming = upcoming.filter(pl.col("week") <= first + 1)
     prev, _ = preview_rows(paths, games, upcoming, now)
+    pre = pregame_rows(paths, games, have, now)
     allrows = pl.concat(
         [r.select("game_id", "model_id", "p_home", "spread_home", "contributions", "lock_ts", "status")
-         for r in (rows, prev) if not r.is_empty()],
+         for r in (rows, prev, pre) if not r.is_empty()],
         how="vertical_relaxed",
-    ) if (not rows.is_empty() or not prev.is_empty()) else pl.DataFrame()  # fmt: skip
+    ) if any(not r.is_empty() for r in (rows, prev, pre)) else pl.DataFrame()  # fmt: skip
     market = _market_by_game(paths, games, now)
 
     feats = store.read_features(paths, seasons=(season, season))

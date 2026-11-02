@@ -11,6 +11,8 @@ const STATUS_TEXT: Record<string, string> = {
   preview: 'Preview: scored now, not yet a lock.',
   locked: 'Locked: recorded before kickoff.',
   backfill: 'Backfill: finished game scored after the fact by frozen models.',
+  pregame: 'Pre-game: no lock was recorded, so this is what the models said an hour before kickoff, using only data known then. Not part of the live record.',
+  none: 'No approach forecasts for this game yet: it has not been locked or scored.',
 }
 
 /** "2026_08_CAR_GB" -> "CAR @ GB" so the title shows before the data arrives. */

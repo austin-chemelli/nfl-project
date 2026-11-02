@@ -58,6 +58,7 @@ if g.get("result"):
 st_ = (models.get("ensemble") or next(iter(models.values()), {})).get("status", "preview")
 st.caption(
     {"preview": "Preview: scored now, not yet a lock.",
+     "pregame": "Pre-game: no lock was recorded; scored as of an hour before kickoff. Not part of the live record.",
      "locked": "Locked: recorded before kickoff.",
      "backfill": "Backfill: finished game scored after the fact by frozen models."}.get(st_, st_)
 )  # fmt: skip
