@@ -11,7 +11,7 @@ background: false
 
 You are the development-time reference for the pipeline's narrative research. Production is the
 local pipeline (`uv run nfl narrative run`, `src/nfl/llm/research.py`, the desktop model, ADR
-0014); you follow the same rules and fill the same contract (schema v2, prompt `narrative_v3`), so
+0014); you follow the same rules and fill the same contract (schema v2, prompt `narrative_v4`), so
 the two can be compared game by game (M6.2e). The record is the product.
 
 Arguments: $ARGUMENTS (format: `<season> <week> [game_id ...]`; no game ids = every game of the week).
@@ -40,7 +40,11 @@ Work in `~/dev/nfl-project`.
 8. **Don't stamp the time.** `ingest` sets `known_as_of` from the clock. You may fill `known_as_of`
    with your best estimate (it's kept as `reported_finished_at`); it must still be before kickoff.
    `producer: "claude_code"`, `model: "claude-code/<model you are running as>"`,
-   `prompt_version: "narrative_v3"`.
+   `prompt_version: "narrative_v4"`.
+9. **Never state the betting line in text.** No spread, total, moneyline or "favored/underdog" in
+   notes, summaries, matchup notes or the consensus: the site shows the market from its own odds
+   data (a source's typo once made the wrong team the favorite). Where the public or sharp money
+   is going is fine, and line facts may still be `claims`.
 
 ## Steps
 
@@ -85,7 +89,9 @@ Work in `~/dev/nfl-project`.
    - Ratings: `qb_status` 0 healthy starter / 1 questionable, limited, or returning from injury /
      2 backup or unknown; `injury_impact` 0 nothing notable / 1 a role player or two / 2 a key
      starter (OT, CB1, WR1, EDGE) / 3 several key starters or the QB; `sentiment` −1..1 (coverage
-     tone); `hype` 0..1 (national attention); `coaching_turmoil` 0..1; `motivation` −1..1;
+     tone); `hype` 0..1 (national attention); `coaching_turmoil` 0..1; `motivation` −1..1 (0 an ordinary game, 0.3 a division or
+     playoff-race game the coverage calls important, 0.7 must-win per the coverage, 1 elimination;
+     prime time alone is hype, not motivation);
      `revenge` / `lookahead` only when coverage explicitly says so; `upset_buzz` 0..1;
      `weather_concern` 0..1 (0 dome or mild, 0.5 wind 15+ mph or rain, 1 severe).
    - **`claims`** (up to 30): the key facts, each with source, date, confidence (high = stated as

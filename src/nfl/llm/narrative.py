@@ -19,6 +19,8 @@ Prompt `narrative_v3` (2026-10-30, same schema): claim categories add `scheme` (
 how well) and `matchup` (how the two teams match up); summaries and the consensus say only what a
 cited source says; matchup notes rest on matchup or scheme sources; claims are spread across
 categories instead of mostly injuries. The local pipeline's equivalent is `local_v2`.
+`narrative_v4` (2026-11-02): no betting line in text (the site shows the market from data);
+motivation anchors. Local equivalent `local_v3`.
 """
 
 from __future__ import annotations
@@ -34,7 +36,7 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from nfl.config import Paths
 
 SCHEMA_VERSION = "2"
-PROMPT_VERSION = "narrative_v3"
+PROMPT_VERSION = "narrative_v4"
 MAX_SOURCE_AGE_DAYS = 10
 
 Category = Literal[

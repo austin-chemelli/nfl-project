@@ -197,3 +197,16 @@ Conventions: date-headed entries, newest last. Each entry: **what happened**, **
 - Final run: 20 pages, 162 facts, 10.3 minutes; nothing dropped or re-cited; 7 BAL and 5 BUF notes across injury, form, scheme and coaching; 2 scheme trends per team; 3 matchup notes with support 2 to 3 (shootout expected, Jackson's return against a defense allowing 29+ in five of six). Still weak: matchup notes are generic next to the source analysis, and a Week 1 grade (Kyle Hamilton, C+) slipped in as current form.
 
 **Cost.** v2 extracts ~20% more facts and adds two QB calls: about 10–11 minutes a game, ~3 hours for a 16-game week.
+
+## 2026-11-02: first skill-vs-local comparison (M6.2e, CHI @ SEA)
+
+**What happened.** With Week 8's Sunday games played, Monday night's Bears @ Seahawks was the first game researched both ways before kickoff: the `/nfl-narrative` skill (Sonnet 5.5, web search) and the local pipeline (`local_v2`, the desktop 9B). Both records stored. Comparison in `.notes/m6.2e-chi-sea-comparison.md`.
+
+**Findings.** The structured fields mostly agree (both QBs at status 0, Seattle's injury impact 2, the main absences). The text does not: the skill's record has 8 notes a team, multi-source scheme trends built on unit stats (EPA, explosive plays allowed, run and blitz rates) and 5 matchup notes with support 2–4; the local one had 5 notes, weak trends, and one matchup note. Three local errors had pipeline causes, and were fixed in `local_v3`:
+- *The wrong favorite.* The consensus said the Bears were favored. The Yahoo betting page quotes a sportsbook director saying "We opened this Bears -3", contradicting its own header (Seattle −3); the 9B took the quote, and grounding passed because a fact said it. Records now never state the line in text: the site shows the market from our odds data, line facts stay out of the compose prompts, and any item stating one is dropped. The skill follows the same rule (`narrative_v4`).
+- *Cut-off text.* Both matchup notes were exactly 300 characters and ended mid-word: Ollama enforces a JSON schema's `maxLength` by stopping the string, not by making the model write less. Prompts ask for under 220 characters, and code trims to the last whole sentence or drops the item.
+- *Motivation 1.0 for a Week 8 game.* Now anchored (0 ordinary, 0.3 division or playoff race, 0.7 must-win, 1 elimination; prime time is hype, not motivation).
+
+v3 also adds the skill's stat-driven searches (EPA ranks, blitz and pressure, betting previews) and 24 pages a game; scheme facts went from 40 to 79. On the re-run those errors were gone and motivation matched the skill; the remaining gap is synthesis: 2 matchup notes, mostly single-source trends, and "the Bears will deploy a heavy blitz package against Seattle's top-ranked pass defense" (a defense against a defense). That is the 9B, and the lever for it is a bigger model, which 8 GB of VRAM limits. Narrative only feeds site text and the shadow Narrative approach, so v3 runs weekly while comparisons accumulate.
+
+**Also.** The skill run rebuilt the site JSON, which exposed a crash in the old Streamlit game page for games without approach forecasts (fixed with a guard). A full local week is now about 13 minutes a game, ~3.5 hours.

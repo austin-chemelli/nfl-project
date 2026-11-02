@@ -101,7 +101,8 @@ else:
     if mk.get("p_home") is not None:
         fig.add_vline(x=mk["p_home"], line={"color": NEU["market"], "dash": "dash", "width": 1},
                       annotation_text="market", annotation_position="top")  # fmt: skip
-    lo, hi = max(0.0, min(ps) - 0.05), min(1.0, max(ps) + 0.05)
+    # a game with no approach forecasts yet (week rolled over, no lock) has nothing to range over
+    lo, hi = (max(0.0, min(ps) - 0.05), min(1.0, max(ps) + 0.05)) if ps else (0.0, 1.0)
     fig.update_layout(
         height=60 + 30 * len(rows), margin={"l": 0, "r": 10, "t": 30, "b": 0},
         xaxis={"title": f"{home} win probability", "tickformat": ".0%", "range": [lo, hi]},

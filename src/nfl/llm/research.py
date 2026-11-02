@@ -22,6 +22,13 @@ matchup notes and scheme trends must rest on a matchup or scheme fact; claims ro
 The first v2 run named the backup (Huntley) for BAL with 15 facts saying Jackson was cleared: the
 starter is now its own call over QB facts sorted newest first, and fact lines carry their team.
 
+v3 (2026-11-02, after the first comparison with the skill, `.notes/m6.2e-chi-sea-comparison.md`):
+records never state the betting line (a source's typo made the Bears the favorite; the site shows
+the market from our own odds data), so line facts stay out of the compose prompts and any item
+stating one is dropped; Ollama enforces the schema's maxLength by cutting the string, so text is
+trimmed to its last full sentence or dropped; stat-driven queries (EPA ranks, blitz and pressure,
+betting previews) and 24 pages; prompt anchors for summaries, trends and motivation.
+
 Undated pages are dropped, except for weather and betting-consensus queries, whose facts become
 claims with `published_at: null` and `confidence: low`. Every LLM call is logged with the game id
 (`nfl llm calls`); the draft record and a run summary are kept under raw/narrative_local/.
@@ -50,14 +57,14 @@ from nfl.llm.search import SearchError, search
 
 PROMPTS = Path(__file__).parent / "prompts"
 EXTRACT_V = "extract_v2"
-TEAM_V = "compose_team_v2"
-GAME_V = "compose_game_v2"
+TEAM_V = "compose_team_v3"
+GAME_V = "compose_game_v3"
 QB_V = "qb_v1"
-RECORD_PROMPT_VERSION = "local_v2"  # the record's prompt_version (feature rows carry it)
+RECORD_PROMPT_VERSION = "local_v3"  # the record's prompt_version (feature rows carry it)
 
 WINDOW_DAYS = 9  # one day inside the validator's 10, so a run that crosses midnight still passes
 PER_QUERY = 3  # pages kept per query at most
-MAX_DOCS = 20  # pages per game, picked round-robin across queries
+MAX_DOCS = 24  # pages per game, picked round-robin across queries
 MAX_FACTS_IN_PROMPT = 80
 MAX_STATUS_FACTS = 25  # injury + QB facts per compose prompt, after the per-player dedupe
 MAX_PER_PLAYER = 2  # status facts kept per player, newest page first
@@ -69,6 +76,14 @@ CLAIM_ORDER = ("injury", "qb", "matchup", "scheme", "public", "form", "coaching"
 UNDATED_OK = {"betting", "weather"}
 RANK = {"high": 0, "medium": 1, "low": 2}
 NUMBER = re.compile(r"\d+(?:\.\d+)?")
+# Statements of the betting line: who is favored, a signed spread or price (not a record: "4-3"),
+# the total. The site shows the market from our own odds data, never from text.
+LINE = re.compile(
+    r"\b(?:favou?red|favou?rites?|underdogs?|moneyline|over/under|point total)\b|"
+    r"\btotal of \d|(?<![\w-])[-+]\d+(?:\.5)?\b",
+    re.IGNORECASE,
+)
+SENTENCE_END = re.compile(r"[.!?][\"'’”)]?$")
 # Runs of capitalized words ("Josh Allen", "C.J. Gardner-Johnson", "AFC North").
 NAME = re.compile(r"[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*)+")
 NAME_LEAD = {
@@ -208,8 +223,13 @@ def queries(g: Game) -> list[tuple[str, str]]:
         q.append(("news", f"{team} news week {g.week} {g.season}"))
     for team in (a, h):
         q.append(("scheme", f"{team} offense defense film breakdown {g.season}"))
+    for team in (a, h):
+        q.append(("scheme", f"{team} offense defense EPA per play rank {g.season}"))
+    for team in (a, h):
+        q.append(("scheme", f"{team} defense blitz rate pressure {g.season}"))
     q.append(("matchup", f"{a} vs {h} week {g.week} preview"))
     q.append(("matchup", f"{a} vs {h} matchup keys to the game"))
+    q.append(("matchup", f"{a} vs {h} prediction betting preview week {g.week}"))
     q.append(("betting", f"{a} vs {h} public betting percentages week {g.week}"))
     if g.outdoors and g.stadium:
         q.append(("weather", f"{g.stadium} weather {g.kickoff_utc:%B %-d %Y}"))
@@ -390,6 +410,7 @@ def _facts_for(facts: list[Fact], team: str | None) -> list[Fact]:
         pool = [f for f in facts if f.category not in STATUS]
     else:
         pool = [f for f in facts if f.team in (team, "game")]
+    pool = [f for f in pool if not LINE.search(f.text)]  # the line comes from data, not text
     status = _latest_status([f for f in pool if f.category in STATUS])
     status = sorted(status, key=_freshest)[:MAX_STATUS_FACTS]
     rest = sorted((f for f in pool if f.category not in STATUS), key=lambda f: (RANK[f.confidence], _num(f)))  # fmt: skip
@@ -566,6 +587,16 @@ def _recite(text: str, ids: list[str], pool: list[Fact], context: str, need: tup
     return min(ok, key=lambda f: (min(abs(_num(f) - n) for n in near), RANK[f.confidence]), default=None)  # fmt: skip
 
 
+def _whole(text: str) -> str | None:
+    """`text` trimmed to its last complete sentence, or None. Ollama enforces a schema maxLength
+    by cutting the string mid-word ("...acquired from Indianapolis, a")."""
+    text = text.strip()
+    if SENTENCE_END.search(text):
+        return text
+    ends = [m.end() for m in re.finditer(r"[.!?](?=\s)", text)]
+    return text[: ends[-1]] if ends else None
+
+
 def _source(cited: list[Fact], context: str) -> str:
     return " ".join(f.text for f in cited) + " " + context
 
@@ -618,9 +649,16 @@ def build_record(g: Game, c: Composed, facts: list[Fact], searches: list[str], m
     ctx = _context(g)
     game = c.game
 
-    def check(what: str, text: str, ids: list[str], extra: str = "", need: tuple = (), teams: tuple | None = None) -> list[Fact] | None:  # fmt: skip
-        """The facts that back `text`: the cited ones if they do, else one found by `_recite`
-        among the facts about `teams` (counted in run.recited), else None (reason counted)."""
+    def check(what: str, text: str, ids: list[str], extra: str = "", need: tuple = (), teams: tuple | None = None) -> tuple[list[Fact], str] | None:  # fmt: skip
+        """(facts that back the text, the text trimmed to whole sentences): the cited facts if
+        they do, else one found by `_recite` among the facts about `teams` (counted in
+        run.recited), else None (reason counted in run.dropped)."""
+        if (text := _whole(text)) is None:
+            run.dropped[f"{what} cut off"] += 1
+            return None
+        if LINE.search(text):
+            run.dropped[f"{what} stating the betting line"] += 1
+            return None
         cited = _cited(ids, by_id)
         context = ctx + " " + extra
         if not cited:
@@ -630,16 +668,16 @@ def build_record(g: Game, c: Composed, facts: list[Fact], searches: list[str], m
         elif (bad := _unsupported(text, _source(cited, context))) is not None:
             why = f"with an unsupported {bad}"
         else:
-            return cited
+            return cited, text
         pool = [f for f in facts if teams is None or f.team in teams]
         if (f := _recite(text, ids, pool, context, need)) is not None:
             run.recited[what] += 1
-            return [f]
+            return [f], text
         run.dropped[f"{what} {why}"] += 1
         return None
 
     def sentences(what: str, items: list[SentenceOut], extra: str = "", teams: tuple | None = None) -> str:  # fmt: skip
-        kept = [x.text.strip() for x in items if check(what, x.text, x.fact_ids, extra, teams=teams)]  # fmt: skip
+        kept = [ok[1] for x in items if (ok := check(what, x.text, x.fact_ids, extra, teams=teams))]  # fmt: skip
         if not kept:
             run.warnings.append(f"no {what} passed the source check")
             return "No summary: none of the generated sentences passed the source check."
@@ -649,12 +687,12 @@ def build_record(g: Game, c: Composed, facts: list[Fact], searches: list[str], m
         mine = (team, "game")
         notes = []
         for n in t.notes:
-            if cited := check("note", n.text, n.fact_ids, teams=mine):
-                notes.append({"text": n.text, "kind": n.kind, "impact": n.impact, "source_url": cited[0].doc.url})  # fmt: skip
+            if ok := check("note", n.text, n.fact_ids, teams=mine):
+                notes.append({"text": ok[1], "kind": n.kind, "impact": n.impact, "source_url": ok[0][0].doc.url})  # fmt: skip
         trends = []
         for s in t.scheme_trends:
-            if cited := check("trend", s.trend, s.fact_ids, need=ANALYSIS, teams=mine):
-                trends.append({"unit": s.unit, "trend": s.trend, "working": s.working, "sources": _distinct_urls(cited)})  # fmt: skip
+            if ok := check("trend", s.trend, s.fact_ids, need=ANALYSIS, teams=mine):
+                trends.append({"unit": s.unit, "trend": ok[1], "working": s.working, "sources": _distinct_urls(ok[0])})  # fmt: skip
         return {
             "team": team, "qb_status": qb.status, "qb_name": qb.name,
             "injury_impact": t.injury_impact, "key_absences": t.key_absences,
@@ -668,9 +706,9 @@ def build_record(g: Game, c: Composed, facts: list[Fact], searches: list[str], m
     away_b = team_block(c.away, g.away, c.qb["away"])
     matchups = []
     for m in game.matchup_notes:
-        if cited := check("matchup note", m.text, m.fact_ids, need=ANALYSIS):
-            support = len({f.doc.domain for f in cited})
-            matchups.append({"text": m.text, "support": support, "sources": _distinct_urls(cited)})
+        if ok := check("matchup note", m.text, m.fact_ids, need=ANALYSIS):
+            support = len({f.doc.domain for f in ok[0]})
+            matchups.append({"text": ok[1], "support": support, "sources": _distinct_urls(ok[0])})
     # The consensus may repeat what the (already checked) team summaries say.
     consensus = sentences("consensus sentence", game.consensus, home_b["summary"] + " " + away_b["summary"])  # fmt: skip
 

@@ -14,12 +14,14 @@ from nfl.llm.client import LLMClient, LLMConfig
 from nfl.llm.fetch import Page
 from nfl.llm.narrative import GameNarrative
 from nfl.llm.research import (
+    LINE,
     MAX_STATUS_FACTS,
     Doc,
     Fact,
     Game,
     _facts_for,
     _unsupported,
+    _whole,
     queries,
     research_game,
 )
@@ -52,7 +54,7 @@ def _search(q: str, max_results: int = 8) -> list[SearchResult]:
     if "injury report" in q and "Baltimore" in q:
         urls = ["https://old.example.com/x", "https://undated.example.com/y"]
         return [res(u) for u in urls + ["https://www.espn.com/bal"]]
-    if "preview" in q:
+    if "preview" in q and "betting" not in q:
         return [res("https://buffalonews.com/a"), res("https://www.cbssports.com/b")]
     return []
 
@@ -344,3 +346,36 @@ def test_weather_query_only_outdoors():
     assert "weather" in kinds
     dome = Game(**{**GAME.__dict__, "roof": "dome"})
     assert "weather" not in [k for k, _ in queries(dome)]
+
+
+def test_line_statements_are_recognized():
+    for text in (
+        "The Bears are favored by three points.",
+        "Chicago is a 3-point favorite.",
+        "The public backs the Bears as an underdog (+145).",
+        "Seattle -3 with a total of 46.5.",
+        "Most bets are on the moneyline.",
+    ):
+        assert LINE.search(text), text
+    for text in ("Chicago is 5-2 after a 30-24 win.", "Seattle allows 30+ yard plays rarely."):
+        assert not LINE.search(text), text
+
+
+def test_whole_trims_cut_off_text():
+    assert _whole("One sentence. Two sentences.") == "One sentence. Two sentences."
+    assert (
+        _whole("First point holds. Then the model ran out at Indianapolis, a")
+        == "First point holds."
+    )
+    assert _whole("Cut off with no sentence end, a") is None
+    assert _whole('He said "it is done."') == 'He said "it is done."'
+
+
+def test_line_facts_stay_out_and_line_sentences_drop(tmp_path, monkeypatch):
+    line = {"text": "The Bills are favored by 3 points at home.", "category": "public", "team": "game", "player": None, "confidence": "high"}  # fmt: skip
+    monkeypatch.setitem(FACTS, "https://www.covers.com/consensus", [*FACTS["https://www.covers.com/consensus"], line])  # fmt: skip
+    _, rec, seen = _run(tmp_path)
+    game_prompt = next(b for b in seen if b["response_format"]["json_schema"]["name"] == "GameOut")
+    assert "favored by 3" not in game_prompt["messages"][0]["content"]
+    assert "64% of bets" in game_prompt["messages"][0]["content"]  # betting action stays
+    assert any("favored by 3" in c["claim"] for c in rec["claims"])  # still a cited claim
