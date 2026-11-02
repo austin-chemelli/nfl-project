@@ -1,19 +1,11 @@
 name: image
 
-# Build the job image on every push to main, push it to Artifact Registry, and point the
-# Cloud Run Jobs at the new digest (docs/hosting.md §2). Auth is keyless (Workload Identity).
+# Build the job image, push it to Artifact Registry, and point the Cloud Run Jobs at the new
+# digest (docs/hosting.md §2). Auth is keyless (Workload Identity). Called by ci.yml after the
+# tests pass on main (when job code changed; the path list is there); manual runs via dispatch.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "scripts/**"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "Dockerfile"
-      - ".dockerignore"
-      - ".github/workflows/image.yml"
+  workflow_call:
   workflow_dispatch:
 
 permissions:

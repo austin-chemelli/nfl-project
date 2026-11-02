@@ -27,13 +27,25 @@ clone_repo() {
   git clone -q --depth 50 --branch main "$repo_url" /tmp/repo
   git -C /tmp/repo config user.name "nfl-jobs"
   git -C /tmp/repo config user.email "nfl-jobs@users.noreply.github.com"
-  local head; head="$(git -C /tmp/repo rev-parse --short HEAD)"
-  case "${NFL_IMAGE_SHA:-$head}" in
-    "$head"*) ;;
-    *) echo "refusing: repo main is at $head but this image was built from $NFL_IMAGE_SHA" >&2
-       echo "(the image workflow has not caught up with the last push; rerun after it finishes)" >&2
-       exit 3 ;;
-  esac
+  check_image_matches /tmp/repo
+}
+
+check_image_matches() {
+  # The image must hold the code main runs: refuse if job code changed after the commit the
+  # image was built from (the paths that trigger an image rebuild in ci.yml). Commits that don't
+  # touch code (lock artifacts, docs, the web app) leave the image valid; the old check demanded
+  # HEAD == image commit, so Saturday's lock would have refused after Thursday's lock commit.
+  local repo="$1" img="${NFL_IMAGE_SHA:-unknown}"
+  [ "$img" != unknown ] || return 0
+  if ! git -C "$repo" cat-file -e "${img}^{commit}" 2>/dev/null; then
+    echo "refusing: the image's commit $img is not in main's recent history" >&2
+    exit 3
+  fi
+  if ! git -C "$repo" diff --quiet "$img" HEAD -- src scripts pyproject.toml uv.lock Dockerfile .dockerignore; then
+    echo "refusing: job code on main changed since the image was built from $img" >&2
+    echo "(the image workflow has not caught up with the last push; rerun after it finishes)" >&2
+    exit 3
+  fi
 }
 
 case "$job" in

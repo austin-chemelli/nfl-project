@@ -1,5 +1,9 @@
 name: ci
 
+# Tests on every push to main and every PR. On main, the deploys run only after both test jobs
+# pass (2026-11-02; before, site and image deployed in parallel with the tests): `site` when the
+# web app changed, `image` when job code changed. The path lists match what each deploy builds.
+
 on:
   push:
     branches: [main]
@@ -36,3 +40,50 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  changes:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      site: ${{ steps.diff.outputs.site }}
+      image: ${{ steps.diff.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # Files changed by this push; everything when the previous head is unknown (new branch,
+          # force push), so a deploy is never skipped by mistake.
+          if git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            files="$(git diff --name-only "$BEFORE" "$GITHUB_SHA")"
+          else
+            files="$(git ls-files)"
+          fi
+          has() { grep -qE "$1" <<<"$files" && echo true || echo false; }
+          echo "site=$(has '^(web/|scripts/firebase_deploy\.py$|\.github/workflows/site\.yml$)')" >> "$GITHUB_OUTPUT"
+          echo "image=$(has '^(src/|scripts/|pyproject\.toml$|uv\.lock$|Dockerfile$|\.dockerignore$|\.github/workflows/image\.yml$)')" >> "$GITHUB_OUTPUT"
+
+  deploy-site:
+    needs: [test, web, changes]
+    if: needs.changes.outputs.site == 'true'
+    concurrency:
+      group: site-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/site.yml
+
+  deploy-image:
+    needs: [test, web, changes]
+    if: needs.changes.outputs.image == 'true'
+    concurrency:
+      group: image-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/image.yml

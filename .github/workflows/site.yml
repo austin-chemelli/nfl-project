@@ -3,23 +3,15 @@ name: site
 # Build the React site and deploy it to Firebase Hosting (docs/site.md, M7.5). Data is not part of
 # the deploy: the app reads the public bucket at runtime, so only code changes trigger this.
 # Auth is keyless (Workload Identity); the deploy script calls the Hosting REST API.
+# Called by ci.yml after the tests pass on main (when web/ changed); manual runs via dispatch.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "web/**"
-      - "scripts/firebase_deploy.py"
-      - ".github/workflows/site.yml"
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
   id-token: write
-
-concurrency:
-  group: site-deploy
-  cancel-in-progress: false
 
 jobs:
   deploy:
