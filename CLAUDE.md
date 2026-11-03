@@ -56,6 +56,7 @@ uv run nfl odds status       # credits used, snapshots on disk (free)
 uv run nfl ledger            # open paper bets at last lock, settle, CLV -> marts/bets*.parquet
 uv run nfl narrative slate 2026 8   # games to research; `ingest <file>` validates+stores a record; `example`, `list`
 uv run nfl narrative run 2026 8 [game_id...]   # local research on the desktop model -> producer 'local' (~13 min/game)
+uv run nfl narrative week | check   # "<season> <week>" of the next games; check = exit 1 if a game lacks a record from the last desktop pass (cloud job before each lock)
 uv run nfl narrative recompose <run.debug.json> --tag X [--model M] [--think job=low,...] [--job-models matchup=qwen3:14b|none] [--rebuild]  # rerun only the writing jobs (or only the checks) on a saved run's facts -> raw/narrative_local/experiments/X/
 uv run nfl narrative compare <record.json>...  # M6.2e side-by-side metrics and texts (--out .notes/...)
 uv run nfl llm ping          # one schema-constrained call to the desktop model (LLM_BASE_URL); `llm calls` = log summary

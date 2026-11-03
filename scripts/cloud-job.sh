@@ -3,6 +3,8 @@
 #   refresh          nfl weekly refresh, then publish the site JSON
 #   lock <slot>      clone the repo, nfl lock --slot <slot> --commit --push, publish site + lock files
 #   odds             nfl odds snapshot, rebuild site JSON, publish
+#   site             rebuild site JSON and publish (after the desktop uploads narrative records)
+#   narrative-check  fail (and so alert) if an upcoming game has no record from the last desktop pass
 #   retro            nfl retro daily (current-season ingest, curate, game retros + recaps), publish
 # Environment: NFL_DATA_ROOT (bucket mount), NFL_SITE_BUCKET (public bucket name, optional),
 #   ODDS_API_KEY, GITHUB_DEPLOY_KEY_FILE (lock only), NFL_IMAGE_SHA (set at image build), NFL_REPO.
@@ -65,6 +67,13 @@ case "$job" in
     nfl odds snapshot "$@"
     nfl site
     publish
+    ;;
+  site)
+    nfl site
+    publish
+    ;;
+  narrative-check)
+    nfl narrative check
     ;;
   retro)
     nfl retro daily "$@"

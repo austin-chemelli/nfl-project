@@ -26,9 +26,10 @@ motivation anchors. Local equivalent `local_v3`.
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 import polars as pl
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
@@ -209,6 +210,49 @@ def load_records(paths: Paths, seasons: tuple[int, int] | None = None) -> list[G
             continue
         out.append(GameNarrative.model_validate_json(f.read_text()))
     return out
+
+
+# The desktop's research passes (M6.2u; Windows Task Scheduler on the desktop, docs/runbook.md):
+# Wednesday evening for every game, Saturday morning again for the Sunday and Monday games, after
+# Friday's injury designations and before the Saturday lock. (weekday, Mon=0; start time, ET.)
+ET = ZoneInfo("America/New_York")
+PASSES = ((2, time(18, 0)), (5, time(7, 0)))
+
+
+def last_pass(now: datetime) -> datetime:
+    """Start of the most recent scheduled pass at or before `now`, both naive UTC."""
+    et = now.replace(tzinfo=UTC).astimezone(ET)
+    starts = [
+        datetime.combine(d, t, ET)
+        for d in (et.date() - timedelta(days=n) for n in range(8))
+        for wd, t in PASSES
+        if d.weekday() == wd
+    ]
+    return max(x for x in starts if x <= et).astimezone(UTC).replace(tzinfo=None)
+
+
+def upcoming_week(paths: Paths, now: datetime) -> tuple[int, int]:
+    """(season, week) of the earliest game that hasn't kicked off; `now` naive UTC."""
+    from nfl.features.store import games_frame
+    from nfl.lock import next_week
+
+    return next_week(games_frame(paths), now)
+
+
+def missing_records(paths: Paths, now: datetime) -> tuple[int, int, datetime, list[str]]:
+    """The upcoming week's games, not yet kicked off, with no `local` record stored since the last
+    scheduled pass started: (season, week, pass start, game ids). Empty when the pass ran."""
+    season, week = upcoming_week(paths, now)
+    since = last_pass(now)
+    games = slate(paths, season, week).filter(
+        pl.col("kickoff_utc").dt.replace_time_zone(None) > now
+    )
+    have = {
+        r.game_id
+        for r in load_records(paths, (season, season))
+        if r.week == week and r.producer == "local" and r.known_as_of >= since
+    }
+    return season, week, since, [g for g in games["game_id"].to_list() if g not in have]
 
 
 def slate(paths: Paths, season: int, week: int) -> pl.DataFrame:
