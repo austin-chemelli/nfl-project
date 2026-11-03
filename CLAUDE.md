@@ -49,7 +49,7 @@ uv run nfl tendencies        # team x situation x metric rates -> marts/tendenci
 uv run nfl features          # feature families -> marts/features/season=YYYY/<family>.parquet (upsert)
 uv run nfl fit               # λ selection + walk-forward fits -> marts/fits/<model_id>/<trained_through>.json
 uv run nfl predict           # reference models (market, Elo, naive) -> marts/predictions.parquet (append-only)
-uv run nfl predict --backfill  # approaches + global + ensemble on 2015-2025 at synthetic locks (replaces backfill rows)
+uv run nfl predict --backfill  # approaches + global + ensemble at synthetic locks; replaces ALL backfill rows of those models, whatever --seasons says
 uv run nfl grade             # scorecard (+ECE), reliability, summary with CIs, divergence buckets, site JSON
 uv run nfl odds snapshot     # Odds API lines now (3 credits) -> raw/odds_api + curated/lines
 uv run nfl odds status       # credits used, snapshots on disk (free)
@@ -62,7 +62,7 @@ uv run nfl narrative compare <record.json>...  # M6.2e side-by-side metrics and 
 uv run nfl llm ping          # one schema-constrained call to the desktop model (LLM_BASE_URL); `llm calls` = log summary
 uv run nfl retro build [--season S] [--week W] [game_id...]   # post-game retrospectives (ADR 0016) -> marts/retro/ + site files; `retro expectations` refits the league tables; `retro daily` = the 07:00 ET cloud job
 uv run nfl lock --slot thu|sat [--dry-run] [--commit --push]   # the live lock (docs/runbook.md)
-uv run nfl weekly refresh    # Tuesday job: current-season ingest, odds, curate, features, grade, ledger
+uv run nfl weekly refresh    # Tuesday job: current-season ingest, odds, curate, features, score unscored finished games (append-only backfill), grade, ledger
 uv run nfl readme            # rewrite the README scorecard section
 uv run nfl site              # UI JSON contract -> marts/site/ (auto after weekly refresh and real locks)
 uv run nfl hypotheses        # per-feature coef + 90% CI + verdict -> site/hypotheses.json
