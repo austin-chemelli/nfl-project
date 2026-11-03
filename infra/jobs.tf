@@ -1,4 +1,4 @@
-# Phase 2: the scheduled jobs (docs/hosting.md §1). One image, five jobs, one scheduler identity.
+# Phase 2: the scheduled jobs (docs/hosting.md §1). One image, seven jobs, one scheduler identity.
 # The image tag is managed by the image workflow (gcloud run jobs update), so Terraform ignores it.
 
 locals {
@@ -9,6 +9,9 @@ locals {
     lock-sat       = { args = ["lock", "sat"], timeout = "3600s", secrets_key = true }
     odds-snapshot  = { args = ["odds"], timeout = "1800s", secrets_key = false }
     retro          = { args = ["retro"], timeout = "1800s", secrets_key = false }
+    # site: started by the desktop after it uploads narrative records (scripts/desktop-narrative.sh)
+    site            = { args = ["site"], timeout = "1800s", secrets_key = false }
+    narrative-check = { args = ["narrative-check"], timeout = "600s", secrets_key = false }
   }
   # Cloud Scheduler cron in America/New_York (DST handled by the time zone).
   # The lock schedules stay paused until the shadow week is verified (docs/hosting.md §4.4);
@@ -18,6 +21,8 @@ locals {
     lock-thu       = { "thu-09" = "0 9 * * 4" }
     lock-sat       = { "sat-12" = "0 12 * * 6" }
     retro          = { "daily-07" = "0 7 * * *" }
+    # half an hour before each lock: did the desktop's narrative pass (Wed evening, Sat 07:00) run?
+    narrative-check = { "thu-0830" = "30 8 * * 4", "sat-1130" = "30 11 * * 6" }
     odds-snapshot = {
       "thu-2005" = "5 20 * * 4"
       "sun-0920" = "20 9 * * 0"

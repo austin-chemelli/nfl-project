@@ -37,6 +37,30 @@ resource "google_monitoring_alert_policy" "job_failed" {
   }
 }
 
+# The desktop's narrative pass (scripts/desktop-narrative.sh) writes an ERROR to the log
+# nfl-desktop-narrative when it fails. A pass that never runs (desktop off or asleep) is caught by
+# the nfl-narrative-check job failing, which job_failed above covers.
+resource "google_monitoring_alert_policy" "desktop_narrative_failed" {
+  display_name = "nfl: the desktop narrative pass failed"
+  combiner     = "OR"
+  conditions {
+    display_name = "ERROR in log nfl-desktop-narrative"
+    condition_matched_log {
+      filter = "logName=\"projects/${var.project_id}/logs/nfl-desktop-narrative\" AND severity>=ERROR"
+    }
+  }
+  notification_channels = [google_monitoring_notification_channel.email.id]
+  alert_strategy {
+    notification_rate_limit {
+      period = "300s"
+    }
+    auto_close = "1800s"
+  }
+  documentation {
+    content = "The desktop's narrative pass failed; the log entry says at which step. The pass's own log is under data/raw/narrative_local/passes/ on the desktop. Rerun from the desktop's WSL: scripts/desktop-narrative.sh (docs/runbook.md)."
+  }
+}
+
 resource "google_billing_budget" "monthly" {
   count           = var.billing_account != "" ? 1 : 0
   billing_account = var.billing_account

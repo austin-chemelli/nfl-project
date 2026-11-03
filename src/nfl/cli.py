@@ -296,6 +296,30 @@ def narrative_run(
         raise typer.Exit(1)
 
 
+@narrative_app.command("week")
+def narrative_week() -> None:
+    """Print '<season> <week>' of the earliest game not yet kicked off (for scripts)."""
+    from nfl.config import now_utc
+    from nfl.llm.narrative import upcoming_week
+
+    season, week = upcoming_week(get_paths(), now_utc().replace(tzinfo=None))
+    print(season, week)
+
+
+@narrative_app.command("check")
+def narrative_check() -> None:
+    """Exit 1 if an upcoming game has no local record since the last scheduled desktop pass
+    (cloud job before each lock: the desktop was off, asleep or failed). Never touches the lock."""
+    from nfl.config import now_utc
+    from nfl.llm.narrative import missing_records
+
+    season, week, since, missing = missing_records(get_paths(), now_utc().replace(tzinfo=None))
+    if missing:
+        console.print(f"[red]{season} week {week}: no local record since the pass at {since:%a %H:%M} UTC for {len(missing)} game(s): {', '.join(missing)}[/red]")  # fmt: skip
+        raise typer.Exit(1)
+    console.print(f"{season} week {week}: every upcoming game has a record since {since:%a %H:%M} UTC")  # fmt: skip
+
+
 @narrative_app.command("recompose")
 def narrative_recompose(
     debug: str = typer.Argument(help="A run's .debug.json under raw/narrative_local/."),

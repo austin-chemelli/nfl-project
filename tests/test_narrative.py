@@ -174,3 +174,30 @@ def test_matchup_support_cannot_exceed_sources():
     d["matchup_notes"][0]["support"] = 5
     with pytest.raises(ValueError, match="support"):
         nar.GameNarrative.model_validate(d)
+
+
+def test_last_pass_is_the_latest_scheduled_start_in_eastern_time():
+    # Wed 18:00 and Sat 07:00 ET; Oct 31 2026 is still EDT (UTC-4), Nov 4 is EST (UTC-5)
+    assert nar.last_pass(datetime(2026, 10, 31, 11, 0)) == datetime(2026, 10, 31, 11, 0)
+    assert nar.last_pass(datetime(2026, 10, 31, 10, 59)) == datetime(2026, 10, 28, 22, 0)
+    assert nar.last_pass(datetime(2026, 11, 4, 22, 59)) == datetime(2026, 10, 31, 11, 0)
+    assert nar.last_pass(datetime(2026, 11, 5, 13, 30)) == datetime(2026, 11, 4, 23, 0)
+
+
+def test_missing_records_counts_only_local_records_since_the_last_pass(monkeypatch):
+    now = datetime(2026, 10, 31, 15, 0)  # Saturday 11:00 EDT, after the 07:00 pass
+    monkeypatch.setattr(nar, "upcoming_week", lambda paths, now: (2026, 8))
+    slate = pl.DataFrame({"game_id": ["2026_08_BAL_BUF", "2026_08_CHI_SEA"],
+                          "kickoff_utc": [datetime(2026, 11, 1, 18, 0), datetime(2026, 11, 3, 1, 15)]})  # fmt: skip
+    monkeypatch.setattr(nar, "slate", lambda paths, season, week: slate)
+    stored = [
+        rec(producer="local", known_as_of="2026-10-28T23:30:00Z"),  # Wednesday's pass: too old
+        rec(producer="claude_code", known_as_of="2026-10-31T12:00:00Z"),  # not the desktop's
+    ]
+    monkeypatch.setattr(nar, "load_records", lambda paths, seasons=None: stored)
+    _, _, since, missing = nar.missing_records(None, now)
+    assert since == datetime(2026, 10, 31, 11, 0)
+    assert missing == ["2026_08_BAL_BUF", "2026_08_CHI_SEA"]
+
+    stored.append(rec(producer="local", known_as_of="2026-10-31T12:30:00Z"))
+    assert nar.missing_records(None, now)[3] == ["2026_08_CHI_SEA"]

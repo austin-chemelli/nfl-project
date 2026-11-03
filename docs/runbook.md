@@ -7,7 +7,10 @@ How to operate the live pipeline by hand until Cloud Scheduler runs it (step 5, 
 | When (ET) | Command | Why | Credits |
 |---|---|---|---|
 | Tue ~10:00 | `uv run nfl weekly refresh` then `uv run nfl readme` (refresh rebuilds the site JSON; view with `uv run nfl ui`) | Ingest last week's results, grade, settle paper bets, refresh features and the README scorecard; Tuesday opening line | 3 |
-| Wed and Fri (optional) | `/nfl-narrative <season> <week>` in Claude Code | Narrative research records (dev producer until the API job, M6.2) | 0 |
+| **Wed 18:00** (desktop) | `scripts/desktop-narrative.sh` (Windows Task Scheduler) | Narrative research for every game of the week on the desktop models, uploaded, site rebuilt (~4 h) | 0 |
+| Thu 08:30 | `nfl narrative check` (cloud job) | Emails if Wednesday's pass left a game without a record | 0 |
+| **Sat 07:00** (desktop) | `scripts/desktop-narrative.sh` | Narrative research again for the Sunday and Monday games, after Friday's injury designations (~3.5 h) | 0 |
+| Sat 11:30 | `nfl narrative check` (cloud job) | Emails if Saturday's pass left a game without a record | 0 |
 | **Thu 09:00** | `uv run nfl lock --slot thu --commit --push` | Lock Thursday-night games (and any Wed/Fri game) | 3 |
 | Thu ~20:05 | `uv run nfl odds snapshot` | Closing line for the Thursday game (closing-line value) | 3 |
 | **Sat 12:00** | `uv run nfl lock --slot sat --commit --push` | Lock every Saturday–Monday game, after Friday's injury report | 3 |
@@ -64,3 +67,35 @@ gcloud storage rsync -r gs://nfl-project-prod-data ./data       # pull the cloud
 - `uv run nfl publish --bucket nfl-project-prod-site` pushes the laptop's `marts/site/*.json` and `public/predictions/` to the public bucket (5-minute cache); the cloud jobs do this themselves.
 - Infra changes: edit `infra/*.tf`, open a PR (the `infra` workflow posts the plan in the run summary), merge to apply.
 - Go live: set `locks_paused = false` in `infra/terraform.tfvars`, `terraform apply`, and stop locking from the laptop.
+
+## Narrative on the desktop (M6.2u, from Week 9)
+
+Two passes a week on the desktop, which has the models (docs/desktop-llm-setup.md): Wednesday 18:00 ET for every game (the Thursday game's final reports are out by then; the rest get an early preview) and Saturday 07:00 ET for the Sunday and Monday games (after Friday's injury designations, done before the 12:00 lock). Each pass stores new records; nothing is overwritten. The site shows a game's newest record, and features and locks use the newest one from before their own time (`known_as_of`). The pass times are `PASSES` in `src/nfl/llm/narrative.py`; the cloud check uses them, so change both together.
+
+`scripts/desktop-narrative.sh` does one pass:
+1. `git pull` and `uv sync`.
+2. Download `curated/games` and `curated/lines` from the bucket (the schedule, starting QBs and lines the research reads).
+3. `nfl narrative run <season> <week>` for every game not yet kicked off.
+4. Upload `marts/narrative/season=S/week=WW/` to the bucket (rsync, never deletes) and start `nfl-site` (rebuild and publish).
+
+Failures go to Cloud Logging (log `nfl-desktop-narrative`, ERROR) and email Austin. A pass that never runs (desktop off, asleep, signed out) is caught by `nfl-narrative-check` at 08:30 Thursday and 11:30 Saturday, which fails, and so emails, if an upcoming game has no `local` record since the last pass started. The check never touches the locks.
+
+**One-time desktop setup** (WSL Ubuntu on the desktop):
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh                    # uv, if missing
+git clone https://github.com/austin-chemelli/nfl-project.git ~/dev/nfl-project   # public repo: pulls need no key
+cd ~/dev/nfl-project && uv sync
+# .env: LLM_BASE_URL=http://<desktop-tailscale-ip>:11434/v1, SEARX_URL=http://<desktop-tailscale-ip>:8080, LLM_MODEL=qwen3.5:9b
+# gcloud CLI (https://cloud.google.com/sdk/docs/install#deb), then:
+gcloud auth login && gcloud config set project nfl-project-prod
+uv run nfl llm ping && uv run nfl narrative week                   # model reachable; prints "<season> <week>" after the first pass's download
+```
+Then register the task from an admin PowerShell. Times are the desktop's local time: 18:00 and 07:00 ET are 17:00 and 06:00 Central.
+```
+$a = New-ScheduledTaskAction -Execute "wsl.exe" -Argument '-d Ubuntu -- bash -lc "~/dev/nfl-project/scripts/desktop-narrative.sh"'
+$t = @((New-ScheduledTaskTrigger -Weekly -DaysOfWeek Wednesday -At 5:00PM), (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Saturday -At 6:00AM))
+$s = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 8)
+Register-ScheduledTask -TaskName "nfl-narrative" -Action $a -Trigger $t -Settings $s
+```
+The task runs when Austin is signed in, which Ollama needs anyway (docs/desktop-llm-setup.md §6). Run a pass by hand: `Start-ScheduledTask nfl-narrative`, or `scripts/desktop-narrative.sh` in WSL. Logs: `data/raw/narrative_local/passes/` on the desktop, and `gcloud logging read 'logName="projects/nfl-project-prod/logs/nfl-desktop-narrative"' --limit 20`.
+
