@@ -43,6 +43,9 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.17.0"
+          # The wrapper script rewrites terraform's exit code, so `plan -detailed-exitcode` never
+          # returned 2 and Apply was always skipped (found 2026-11-02: nfl-retro planned, not created).
+          terraform_wrapper: false
       - run: terraform fmt -check -recursive
       - run: terraform init -backend-config="bucket=${{ vars.GCP_PROJECT_ID }}-tfstate"
       - run: terraform validate
