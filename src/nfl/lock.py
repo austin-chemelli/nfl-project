@@ -208,7 +208,13 @@ def score_reference(games: pl.DataFrame, slate: pl.DataFrame, market: pl.DataFra
             )
         )
     e = elo_model.Elo()
-    done = games.filter(pl.col("result").is_not_null()).sort("kickoff_utc", "game_id")
+    # Only games that kicked off before the slate: when a game is scored after the fact (a pregame
+    # row on the site, a retro), later results exist, and replaying them leaked the game's own
+    # result into its Elo (found 2026-11-03: ARI @ DAL showed DAL 62% instead of 69%).
+    first_kick = slate["kickoff_utc"].min()
+    done = games.filter(pl.col("result").is_not_null() & (pl.col("kickoff_utc") < first_kick)).sort(
+        "kickoff_utc", "game_id"
+    )
     for g in done.iter_rows(named=True):
         e.new_season(g["season"])
         e.update(g["home_team"], g["away_team"], g["result"], (g["location"] or "Home") != "Home")

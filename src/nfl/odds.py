@@ -286,17 +286,35 @@ def read_lines(paths: Paths, seasons: tuple[int, int] | None = None) -> pl.DataF
     )
 
 
+def _decimal(col: str) -> pl.Expr:
+    """American odds -> decimal odds (continuous across even money; 0 is not a price)."""
+    o = pl.col(col).cast(pl.Float64)
+    return pl.when(o > 0).then(1 + o / 100).when(o < 0).then(1 - 100 / o).otherwise(None)
+
+
+def _american(d: pl.Expr) -> pl.Expr:
+    """Decimal odds -> American odds."""
+    return pl.when(d >= 2).then((d - 1) * 100).otherwise(-100 / (d - 1))
+
+
+def _median_price(col: str) -> pl.Expr:
+    """Median price across books, taken in decimal odds. American odds jump from -100 to +100, so
+    their median is wrong when books straddle even money: +105 and -104 gave +0.5, i.e. a 99.5%
+    favorite (CAR @ NO, 2026-11-03)."""
+    return _american(_decimal(col).median())
+
+
 def consensus(lines: pl.DataFrame) -> pl.DataFrame:
     """Per (game_id, snapshot_ts): median across books of the moneylines, the home spread (nflverse
     sign, + = home favored) with its prices, and the total, plus the vig-free home probability from
-    the median moneylines. Medians of American odds are fine here: books cluster tightly."""
+    the median moneylines. Prices are combined in decimal odds (`_median_price`)."""
     from nfl.features.market import _implied_expr
 
     h2h = (
         lines.filter(pl.col("market") == "h2h")
         .pivot(on="side", index=["game_id", "snapshot_ts", "book"], values="price_american")
         .group_by("game_id", "snapshot_ts")
-        .agg(pl.col("home").median().alias("home_ml"), pl.col("away").median().alias("away_ml"))
+        .agg(_median_price("home").alias("home_ml"), _median_price("away").alias("away_ml"))
     )
     sp = lines.filter(pl.col("market") == "spreads")
     spread = (
@@ -304,12 +322,12 @@ def consensus(lines: pl.DataFrame) -> pl.DataFrame:
         .group_by("game_id", "snapshot_ts")
         .agg(
             (-pl.col("point")).median().alias("spread_home"),  # nflverse sign: + = home favored
-            pl.col("price_american").median().alias("home_spread_price"),
+            _median_price("price_american").alias("home_spread_price"),
         )
         .join(
             sp.filter(pl.col("side") == "away")
             .group_by("game_id", "snapshot_ts")
-            .agg(pl.col("price_american").median().alias("away_spread_price")),
+            .agg(_median_price("price_american").alias("away_spread_price")),
             on=["game_id", "snapshot_ts"],
             how="left",
         )
