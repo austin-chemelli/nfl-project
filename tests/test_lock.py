@@ -98,6 +98,31 @@ def test_reference_models_walk_completed_games():
     assert 0.5 < refs["elo_v0"].frame["p_home"][0] < 0.6  # equal teams + home field
 
 
+def test_elo_ignores_results_from_the_slate_and_after():
+    """Scoring a game after the fact (a pregame row, a retro) must not replay its own result or any
+    later one: the Elo has to be what it was before kickoff."""
+    slate = GAMES.filter(pl.col("game_id") == "G_SUN")
+    mk = pl.DataFrame(
+        {"game_id": ["G_SUN"], "p_home": [0.6], "spread_home": [3.0], "total": [52.5]}
+    )
+    before = lock.score_reference(GAMES, slate, mk)
+    played = GAMES.with_columns(
+        pl.when(pl.col("game_id") == "G_SUN")
+        .then(-30.0)
+        .otherwise(pl.col("result"))
+        .alias("result")
+    ).vstack(
+        GAMES.filter(pl.col("game_id") == "G_SUN").with_columns(
+            pl.lit("G_NEXT").alias("game_id"),
+            (pl.col("kickoff_utc") + timedelta(days=7)).alias("kickoff_utc"),
+            pl.lit(-30.0).alias("result"),
+        )
+    )
+    after = lock.score_reference(played, slate, mk)
+    elo = lambda refs: next(s for s in refs if s.model_id == "elo_v0").frame["p_home"][0]
+    assert elo(after) == pytest.approx(elo(before))
+
+
 def test_artifact_is_deterministic_and_hash_matches(tmp_path):
     slate = GAMES.filter(pl.col("game_id") == "G_SUN")
     known = toy_store(SAT_LOCK - timedelta(hours=1))

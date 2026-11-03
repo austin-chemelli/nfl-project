@@ -127,3 +127,29 @@ def test_errors_never_contain_the_key(monkeypatch):
         odds._get("/sports/x/odds", {"regions": "us"})
     assert "SECRET123" not in str(e.value)
     assert e.value.__cause__ is None and e.value.__suppress_context__
+
+
+def test_consensus_prices_straddling_even_money():
+    """Books on both sides of even money: +105 and -104 must not average to +0.5 (CAR @ NO)."""
+    rows = []
+    for book, home, away in (("dk", 105.0, -125.0), ("fd", -104.0, -112.0)):
+        for side, price in (("home", home), ("away", away)):
+            rows.append(
+                {"game_id": "G", "snapshot_ts": SNAP, "book": book, "market": "h2h", "side": side,
+                 "price_american": price, "point": None}
+            )  # fmt: skip
+        for side, price, pt in (
+            ("home", -110.0 if book == "dk" else 100.0, 1.5),
+            ("away", -110.0, -1.5),
+        ):
+            rows.append(
+                {"game_id": "G", "snapshot_ts": SNAP, "book": book, "market": "spreads", "side": side,
+                 "price_american": price, "point": pt}
+            )  # fmt: skip
+    c = odds.consensus(pl.DataFrame(rows)).row(0, named=True)
+    # decimal medians: home (2.05 + 1.9615)/2 = 2.0058 -> +100.6; away (1.8 + 1.8929)/2 -> -118.1
+    assert c["home_ml"] == pytest.approx(100.6, abs=0.1)
+    assert c["away_ml"] == pytest.approx(-118.1, abs=0.1)
+    assert c["p_home_vigfree"] == pytest.approx(0.479, abs=0.002)  # was 0.647
+    assert c["spread_home"] == -1.5  # away favored
+    assert c["home_spread_price"] == pytest.approx(-104.8, abs=0.1)  # -110 and +100, not -5
