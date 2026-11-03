@@ -5,23 +5,30 @@ facts deduped and capped, analysis reaches the prompts, every sentence is ground
 from __future__ import annotations
 
 import json
+import sys
 from datetime import UTC, date, datetime
 
 import httpx
 
 from nfl.config import Paths
+from nfl.llm import research
 from nfl.llm.client import LLMClient, LLMConfig
 from nfl.llm.fetch import Page
 from nfl.llm.narrative import GameNarrative
 from nfl.llm.research import (
+    FACT_REF,
     LINE,
     MAX_STATUS_FACTS,
     Doc,
     Fact,
     Game,
+    _aliases,
     _facts_for,
+    _players,
+    _self_paired,
     _unsupported,
     _whole,
+    _wrong_team,
     queries,
     research_game,
 )
@@ -113,6 +120,12 @@ FACTS = {  # by page: what the stub model "extracts"
 
 
 QB_REPLY = {"qb_name": "Lamar Jackson", "qb_status": 1, "fact_ids": ["F5"]}
+MATCHUPS = [
+    {"kind": "unit", "offense_team": "BAL", "defense_team": "BUF", "edge": "defense",
+     "text": "Bills pass rush against a backup tackle.", "fact_ids": ["F2", "Fact 4"]},
+    {"kind": "game", "offense_team": None, "defense_team": None, "edge": None,
+     "text": "Baltimore is missing its starting left tackle.", "fact_ids": ["F1"]},
+]  # fmt: skip
 
 
 def _team(f_ids_ok: list[str]) -> dict:
@@ -135,6 +148,9 @@ def _team(f_ids_ok: list[str]) -> dict:
     }  # fmt: skip
 
 
+THINK_RUNS_OUT = False  # thinking calls hit max_tokens
+
+
 def _llm(seen: list[dict]):
     def handler(req: httpx.Request) -> httpx.Response:
         body = json.loads(req.content)
@@ -146,14 +162,16 @@ def _llm(seen: list[dict]):
             out = {"facts": FACTS.get(doc_url, [])}
         elif name == "QbOut":
             out = QB_REPLY
-        elif name == "TeamOut":
-            out = _team(["F1"])
+        elif name == "NotesOut":
+            out = {k: v for k, v in _team(["F1"]).items() if k not in ("summary", "scheme_trends")}
+        elif name == "TrendsOut":
+            out = {"scheme_trends": []}
+        elif name == "SummaryOut":
+            out = {"summary": _team(["F1"])["summary"]}
+        elif name == "MatchupsOut":
+            out = {"matchup_notes": MATCHUPS}
         else:
             out = {
-                "matchup_notes": [
-                    {"text": "Bills pass rush against a backup tackle.", "fact_ids": ["F2", "Fact 4"]},
-                    {"text": "Baltimore is missing its starting left tackle.", "fact_ids": ["F1"]},
-                ],
                 "consensus": [
                     {"text": "Buffalo hosts a Baltimore team missing its left tackle.", "fact_ids": ["F2"]},
                     {"text": "Both teams sit atop the AFC North.", "fact_ids": ["F2"]},
@@ -161,11 +179,12 @@ def _llm(seen: list[dict]):
                 "public_pick": "home", "public_bet_pct_home": 0.64, "public_bet_fact_id": "[F3]",
                 "upset_buzz": 0.2, "weather_concern": 0.3,
             }  # fmt: skip
+        stop = "length" if THINK_RUNS_OUT and body["reasoning_effort"] != "none" else "stop"
         return httpx.Response(
             200,
             json={
                 "model": "qwen3.5:9b",
-                "choices": [{"message": {"content": json.dumps(out)}, "finish_reason": "stop"}],
+                "choices": [{"message": {"content": json.dumps(out)}, "finish_reason": stop}],
                 "usage": {"prompt_tokens": 10, "completion_tokens": 5},
             },
         )
@@ -298,6 +317,24 @@ def test_unsupported_checks_numbers_names_and_conditions():
         _unsupported("They face Josh Allen.", "Josh Allen starts.") is None
     )  # sentence-final period
     assert _unsupported("A back injury.", "The backup starts.") == "condition"  # back is not backup
+    assert _unsupported("Caleb Williams' offense leads.", "Caleb Williams starts.") is None
+    assert _unsupported("A Monday Night Football game.", "Monday Night Football") is None
+
+
+def test_recite_combines_two_facts():
+    from nfl.llm.research import _recite
+
+    pool = [
+        _fact(1, "matchup", None, 25),
+        _fact(2, "matchup", None, 25),
+        _fact(3, "form", None, 25),
+    ]
+    pool[0].text, pool[1].text = (
+        "Caleb Williams faces the top pass defense.",
+        "Jeffery Simmons debuts.",
+    )
+    got = _recite("Caleb Williams faces it while Jeffery Simmons debuts.", ["F3"], pool, "", ())
+    assert [f.id for f in got] == ["F1", "F2"]
 
 
 def test_public_share_needs_a_percentage_fact(tmp_path, monkeypatch):
@@ -323,13 +360,13 @@ def test_extract_prompt_is_per_game_and_thinking_is_off(tmp_path):
     _, _, seen = _run(tmp_path)
     extract = [b for b in seen if b["response_format"]["json_schema"]["name"] == "PageFacts"]
     assert len(extract) == 4  # one call per kept page
-    sys = extract[0]["messages"][0]["content"]
-    assert "Baltimore Ravens (BAL) at Buffalo Bills (BUF)" in sys
+    system = extract[0]["messages"][0]["content"]
+    assert "Baltimore Ravens (BAL) at Buffalo Bills (BUF)" in system
     team_enum = extract[0]["response_format"]["json_schema"]["schema"]["$defs"]["Fact"][
         "properties"
     ]["team"]
     assert set(team_enum["enum"]) == {"BAL", "BUF", "game"}
-    assert all(b["reasoning_effort"] == "none" for b in seen)
+    assert all(b["reasoning_effort"] == "none" for b in extract)
 
 
 def test_started_games_are_refused(tmp_path):
@@ -379,3 +416,85 @@ def test_line_facts_stay_out_and_line_sentences_drop(tmp_path, monkeypatch):
     assert "favored by 3" not in game_prompt["messages"][0]["content"]
     assert "64% of bets" in game_prompt["messages"][0]["content"]  # betting action stays
     assert any("favored by 3" in c["claim"] for c in rec["claims"])  # still a cited claim
+
+
+def test_matchup_pairing_and_whole_pages(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "tests.test_research.MATCHUPS",
+        [
+            *MATCHUPS,
+            {"kind": "unit", "offense_team": "BUF", "defense_team": "BUF", "edge": None,
+             "text": "Buffalo's pass rush against Buffalo's pass defense.", "fact_ids": ["F2"]},
+            {"kind": "game", "offense_team": None, "defense_team": None, "edge": None,
+             "text": "The article about the game is long enough to read.", "fact_ids": ["D2"]},
+        ],
+    )  # fmt: skip
+    run, rec, seen = _run(tmp_path)
+    prompt = next(b for b in seen if b["response_format"]["json_schema"]["name"] == "MatchupsOut")
+    assert "D2 (buffalonews.com" in prompt["messages"][0]["content"]  # read whole
+    assert run.dropped["matchup note pairing a unit with its own team"] == 1
+    page_note = next(m for m in rec["matchup_notes"] if m["text"].startswith("The article"))
+    assert page_note["sources"] == ["https://buffalonews.com/a"]
+
+
+def test_one_job_per_call(tmp_path):
+    _, _, seen = _run(tmp_path)
+    names = [b["response_format"]["json_schema"]["name"] for b in seen]
+    assert names[4:] == [  # after 4 extract calls
+        "QbOut", "NotesOut", "TrendsOut", "SummaryOut",  # away (BAL has QB facts)
+        "NotesOut", "TrendsOut", "SummaryOut",  # home (no QB facts: no QB call)
+        "MatchupsOut", "GameOut",
+    ]  # fmt: skip
+    assert all(b["reasoning_effort"] == "none" for b in seen)  # THINK is empty by default
+
+
+def test_thinking_past_budget_redone_without(tmp_path, monkeypatch):
+    monkeypatch.setattr(research, "THINK", {"matchup": "low"})
+    monkeypatch.setattr(sys.modules[__name__], "THINK_RUNS_OUT", True)
+    run, rec, seen = _run(tmp_path)
+    tries = [b["reasoning_effort"] for b in seen if b["response_format"]["json_schema"]["name"] == "MatchupsOut"]  # fmt: skip
+    assert tries == ["low", "none"]
+    assert rec["matchup_notes"]
+    assert any("thinking ran past its budget" in w for w in run.warnings)
+
+
+def _f(team: str, text: str) -> Fact:
+    return Fact("F1", None, text, "scheme", team, "high")  # type: ignore[arg-type]
+
+
+def test_stat_on_the_wrong_team():
+    chi = Game(game_id="2026_08_CHI_SEA", season=2026, week=8, home="SEA", away="CHI", kickoff_utc=NOW, roof="outdoors", stadium=None, home_qb="Sam Darnold", away_qb="Caleb Williams")  # fmt: skip
+    facts = [_f("CHI", "The Bears defense allows only 87.6 rushing yards per game, ranking 4th."),
+             _f("CHI", "Chicago blitzes on 41.1% of pass plays."), _f("SEA", "Sam Darnold ranks 23rd in QBR.")]  # fmt: skip
+    teams, players = _aliases(chi), _players(chi, facts, {"CHI": "Caleb Williams", "SEA": "Sam Darnold"})  # fmt: skip
+
+    def wrong(text: str) -> bool:
+        return _wrong_team(text, facts, teams, players)
+
+    assert wrong("Chicago's rushing attack targets Seattle's run defense (87.6 ypg allowed).")
+    assert not wrong("Seattle's offense faces a Bears run defense allowing 87.6 yards per game.")
+    # a player claims a stat only when the sentence makes it theirs
+    assert not wrong("The Bears will blitz Sam Darnold on 41.1% of pass plays.")
+    assert not wrong("The Bears will pressure Sam Darnold and limit his 23rd-ranked QBR.")
+    assert wrong("Chicago's Caleb Williams faces Seattle, whose 41.1% blitz rate is high.")
+    # records, scores and single digits are not tied to one team
+    assert not wrong("The 5-2 Chicago Bears visit the 4-3 Seattle Seahawks.")
+
+
+def test_matchup_pairing_a_team_with_itself():
+    teams, qbs = _aliases(GAME), {"BAL": "Lamar Jackson", "BUF": "Josh Allen"}
+    assert _self_paired("Josh Allen leads the most efficient offense, which will test a Buffalo defense.", teams, qbs)  # fmt: skip
+    assert not _self_paired("Lamar Jackson's return tests a Buffalo defense that ranks 31st.", teams, qbs)  # fmt: skip
+    assert not _self_paired("Buffalo's offense faces a Ravens defense, while Buffalo's defense must contain Jackson.", teams, qbs)  # fmt: skip
+    assert not _self_paired("Analysts expect another high-scoring shootout.", teams, qbs)
+
+
+def test_fact_ids_stripped_from_text():
+    assert (
+        FACT_REF.sub("", "It allows 144.4 yards per game (F27).")
+        == "It allows 144.4 yards per game."
+    )
+    assert (
+        FACT_REF.sub("", "Bears are 5-2 [F3, F4] at home (2024).")
+        == "Bears are 5-2 at home (2024)."
+    )

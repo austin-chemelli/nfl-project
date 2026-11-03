@@ -6,8 +6,9 @@ request appended to `marts/llm_calls.parquet`.
 
 The only backend is the local OpenAI-compatible server at `LLM_BASE_URL` (Ollama on the desktop;
 llama.cpp works too), model `LLM_MODEL`. There is no paid fallback (ADR 0014, amended 2026-10-29):
-if the desktop is unreachable, calls fail. Thinking is off on every call (`reasoning_effort:
-"none"`, because Ollama's /v1 ignores `think`); structured output via `response_format:
+if the desktop is unreachable, calls fail. Thinking is off unless a call asks for it (`think`,
+sent as `reasoning_effort`, because Ollama's /v1 ignores `think`; the answer still follows the
+schema, and thinking tokens count against max_tokens); structured output via `response_format:
 json_schema` (strict). Energy is estimated as latency x `LLM_LOCAL_WATTS`.
 
 Retries: connection errors, timeouts, 429 and 5xx back off and retry; a reply that fails schema
@@ -183,6 +184,7 @@ class LLMClient:
         game_id: str | None = None,
         max_tokens: int = 4096,
         temperature: float = 0.0,
+        think: str = "none",
     ) -> Reply:
         cfg = self.config
         convo = list(messages)
@@ -194,7 +196,7 @@ class LLMClient:
             parsed: Any = None
             retry_after: float | None = None
             try:
-                got = self._send(system, convo, schema, max_tokens, temperature)
+                got = self._send(system, convo, schema, max_tokens, temperature, think)
                 if got.truncated:
                     raise LLMError(f"reply hit max_tokens={max_tokens}")
                 parsed = _parse(got.text, schema)
@@ -229,7 +231,8 @@ class LLMClient:
     def _record(self, job, prompt_version, game_id, attempt, got: _Attempt, t0, error) -> None:
         if not self._log:
             return
-        ms = int((time.perf_counter() - t0) * 1000)
+        sec = time.perf_counter() - t0
+        ms = int(sec * 1000)
         u = got.usage
         append_call(
             self.paths,
@@ -245,13 +248,13 @@ class LLMClient:
                 "input_tokens": u.input_tokens,
                 "output_tokens": u.output_tokens,
                 "cache_read_tokens": u.cache_read_tokens,
-                "energy_wh": ms / 1000 * self.config.local_watts / 3600,
+                "energy_wh": sec * self.config.local_watts / 3600,
                 "latency_ms": ms,
                 "ts": now_utc(),
             },
         )
 
-    def _send(self, system, messages, schema, max_tokens, temperature) -> _Attempt:
+    def _send(self, system, messages, schema, max_tokens, temperature, think="none") -> _Attempt:
         cfg = self.config
         msgs = ([{"role": "system", "content": system}] if system else []) + messages
         body: dict[str, Any] = {
@@ -259,7 +262,10 @@ class LLMClient:
             "messages": msgs,
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "reasoning_effort": "none",
+            # gpt-oss always reasons; "none" falls back to its default (medium), so ask for low
+            "reasoning_effort": "low"
+            if think == "none" and cfg.model.startswith("gpt-oss")
+            else think,
         }
         if (s := _schema_of(schema)) is not None:
             name, js = s

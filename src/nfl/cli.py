@@ -296,6 +296,47 @@ def narrative_run(
         raise typer.Exit(1)
 
 
+@narrative_app.command("recompose")
+def narrative_recompose(
+    debug: str = typer.Argument(help="A run's .debug.json under raw/narrative_local/."),
+    tag: str = typer.Option(..., help="Experiment name: output goes to experiments/<tag>/."),
+    model: str = typer.Option(None, help="Model for the writing jobs (default LLM_MODEL)."),
+    think: str = typer.Option(
+        None, help="job=effort,... e.g. matchup=low,team_trends=low (default: the pipeline's)."
+    ),
+    rebuild: bool = typer.Option(
+        False, help="Reuse the debug file's saved model outputs; rerun only the code checks."
+    ),
+) -> None:
+    """Rerun only the QB and writing jobs of a saved run on its facts (minutes, not a full run)."""
+    import json
+    from pathlib import Path
+
+    from nfl.llm.research import recompose
+
+    think_map = dict(kv.split("=", 1) for kv in think.split(",")) if think else None
+    s = recompose(get_paths(), Path(debug), tag=tag, model=model, think=think_map, rebuild=rebuild)
+    console.print_json(json.dumps(s))
+
+
+@narrative_app.command("compare")
+def narrative_compare(
+    files: Annotated[list[str], typer.Argument(help="Records or drafts of the same game.")],
+    out: str = typer.Option(None, help="Write the markdown here (default: print)."),
+) -> None:
+    """Side-by-side metrics and texts for narrative records of one game (M6.2e)."""
+    from pathlib import Path
+
+    from nfl.llm.evals import compare_records
+
+    md = compare_records([Path(f) for f in files])
+    if out:
+        Path(out).write_text(md)
+        console.print(f"wrote {out}")
+    else:
+        console.print(md)
+
+
 llm_app = typer.Typer(no_args_is_help=True, help="LLM client checks and the call log.")
 app.add_typer(llm_app, name="llm")
 
@@ -332,8 +373,12 @@ def llm_ping(model: str = typer.Option(None, help="Default LLM_MODEL.")) -> None
 
 
 @llm_app.command("calls")
-def llm_calls(days: int = typer.Option(7, help="Trailing window.")) -> None:
-    """Calls, tokens, latency and energy per job and model over the window."""
+def llm_calls(
+    days: int = typer.Option(7, help="Trailing window."),
+    tail: int = typer.Option(0, help="Instead: the last N calls in order (progress of a run)."),
+) -> None:
+    """Calls, tokens, latency and energy per job and model over the window; `--tail N` lists the
+    latest calls one by one (a call appears when it finishes; a long run shows here as it goes)."""
     from datetime import timedelta
 
     import polars as pl
@@ -342,6 +387,19 @@ def llm_calls(days: int = typer.Option(7, help="Trailing window.")) -> None:
     from nfl.llm.client import read_calls
 
     df = read_calls(get_paths()).filter(pl.col("ts") >= now_utc() - timedelta(days=days))
+    if tail:
+        t = Table(title=f"Last {tail} LLM calls (UTC)")
+        for c in ("time", "job", "model", "game", "try", "ok", "sec", "out tokens", "error"):
+            t.add_column(c)
+        for r in df.sort("ts").tail(tail).iter_rows(named=True):
+            t.add_row(
+                f"{r['ts']:%H:%M:%S}", r["job"].removeprefix("narrative."), r["model"],
+                (r["game_id"] or "").removeprefix(f"{r['ts']:%Y}_"), str(r["attempt"]),
+                "yes" if r["ok"] else "[red]no[/red]", f"{r['latency_ms'] / 1000:.0f}",
+                str(r["output_tokens"]), r["error"] or "",
+            )  # fmt: skip
+        console.print(t)
+        return
     agg = (
         df.group_by("job", "model")
         .agg(

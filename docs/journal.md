@@ -234,3 +234,18 @@ Deploys used to start in parallel with CI on every push to `main`, so a commit t
 
 **Checks.** Kicking and interceptions for CHI @ GB (Week 5) match the published box score (FG 0/1 and 1/3, XP 1/1 and 2/3, 3 and 0 interceptions); third downs, fumbles and penalties could not be checked externally (the box-score sites refuse scripted fetches). 301 Python and 697 web tests.
 
+## 2026-11-03: narrative v4: smaller jobs beat a bigger model (`local_v4`)
+
+**What.** After the CHI @ SEA comparison, Austin asked to push the desktop model further and document it (it is the project's most interesting constraint to talk about): examples, thinking where it helps, one job per call, structured inputs and outputs, and a bigger model, measured against the old results. Write-up: `docs/local-llm-narrative.md`.
+
+**How it was measured.** `nfl narrative recompose` reruns only the writing stage of a saved run on its saved facts, so every variant sees identical input; `--rebuild` reruns only the code checks on saved outputs. Two Week 8 games (BAL @ BUF, CHI @ SEA), read side by side (`nfl narrative compare`).
+
+**Findings.**
+- *Structure moved the 9B most.* Splitting the team call into notes, trends and summary, making unit matchup notes name the offense and the (different) defense, reading the two best analysis pages whole, and adding examples from an invented game: CHI @ SEA matchup notes went from 1 (cut off) to 4, correctly paired and backed by 1–3 sites, at ~3 minutes a game for the writing stage.
+- *Thinking didn't pay.* Ollama's Qwen ignores the effort level (any effort is "on", with no budget): 23.6 vs 3.1 minutes for a game, a trends call past 13,000 tokens, Buffalo's summary dropped for unsupported numbers; on the matchup job alone, fewer and vaguer notes. Off by default; a thinking call gets a fixed budget and is redone without thinking if it runs out.
+- *Bigger models were more fluent, not more faithful.* gpt-oss:20b (MoE, ~3.6B active; ~7 min a game) contradicted its sources (a safety listed as a tackle; "missing Lamar Jackson" the week he returned). qwen3:14b (~15.5 min) had the most specific matchup ideas but put real stats on the wrong team. gemma4:26b was the cleanest but took 98 minutes for one game (18.7 GB against 8 GB of VRAM). qwen3.5:27b took 11.6 minutes for one QB call and was stopped. Memory, not model quality, is the binding limit on this desktop. Kimi K3-class open models (2.8T parameters) are out of reach of any home machine.
+
+**The errors became checks.** A stat whose owner in the sentence (the nearest team name, or a player's when the sentence says "his" or "X's") isn't the team of a cited fact with that number; a matchup note setting a team's offense against its own defense without naming the opponent; fact ids ("(F27)") stripped before the checks. First versions also dropped four correct sentences (records like "5-1"; "blitz Sam Darnold on 41.1% of plays") and were tightened until a rebuild over all seven saved outputs dropped exactly the three known errors. They catch two of the 14B's ~6 errors; the rest (offense vs defense stats for the same team, superlatives, a QB-vs-QB "matchup") need a better writer, not a regex.
+
+**Next.** Austin chose to split jobs between models: the 9B where it is reliable and the 14B where it adds something (v5).
+
