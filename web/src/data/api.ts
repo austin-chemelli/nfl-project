@@ -65,3 +65,8 @@ export const useDiyMatrix = () => useJson('diy', 'site/diy_matrix.json', C.DiyMa
 export const useSeasonFile = (season?: number) =>
   useJson('season', season ? `site/season_${season}.json` : null, C.SeasonFile)
 export const useAudit = () => useJson('audit', 'site/audit.json', C.Audit)
+/** Post-game retrospective (ADR 0016): ask only once the game has a result; a 404 means not built yet. */
+export const useRetro = (id: string | undefined, enabled: boolean) =>
+  useJson('retro', id && enabled ? `site/retro/${id}.json` : null, C.RetroGame)
+export const useRecap = (season?: number, week?: number) =>
+  useJson('recap', season && week ? `site/recap_${season}_${pad(week)}.json` : null, C.WeekRecap)

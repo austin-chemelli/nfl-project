@@ -1,4 +1,4 @@
-# Phase 2: the scheduled jobs (docs/hosting.md §1). One image, four jobs, one scheduler identity.
+# Phase 2: the scheduled jobs (docs/hosting.md §1). One image, five jobs, one scheduler identity.
 # The image tag is managed by the image workflow (gcloud run jobs update), so Terraform ignores it.
 
 locals {
@@ -8,6 +8,7 @@ locals {
     lock-thu       = { args = ["lock", "thu"], timeout = "3600s", secrets_key = true }
     lock-sat       = { args = ["lock", "sat"], timeout = "3600s", secrets_key = true }
     odds-snapshot  = { args = ["odds"], timeout = "1800s", secrets_key = false }
+    retro          = { args = ["retro"], timeout = "1800s", secrets_key = false }
   }
   # Cloud Scheduler cron in America/New_York (DST handled by the time zone).
   # The lock schedules stay paused until the shadow week is verified (docs/hosting.md §4.4);
@@ -16,6 +17,7 @@ locals {
     weekly-refresh = { "tue-10" = "0 10 * * 2" }
     lock-thu       = { "thu-09" = "0 9 * * 4" }
     lock-sat       = { "sat-12" = "0 12 * * 6" }
+    retro          = { "daily-07" = "0 7 * * *" }
     odds-snapshot = {
       "thu-2005" = "5 20 * * 4"
       "sun-0920" = "20 9 * * 0"

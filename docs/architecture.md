@@ -62,6 +62,7 @@ flowchart LR
 | Reference models | `nfl/models/` | `market`, `elo`, `naive` stay as scorecard reference lines and as feature sources. |
 | Lock | `nfl/lock.py` | Live prediction run at a lock point; writes prediction rows and the public JSON + hash. |
 | Grade and ledger | `nfl/grade.py`, `nfl/ledger.py` | Scores predictions, settles paper bets, computes CLV and divergence buckets. |
+| Retrospective | `nfl/retro/` | Post-game: efficiency vs season to date, luck factors priced in points against league expectations, predictions graded per game, group attribution (ADR 0016). Daily job. |
 | Hypotheses | `nfl/hypotheses.py` | Per-feature coefficients, CIs, verdicts from the global fit. |
 | LLM | `nfl/llm/` | Narrative extraction, preview text, faithfulness check, call log. Separate entrypoints, versioned prompts. |
 | Site | `nfl/site.py` | Writes the JSON contract the UI reads. |
@@ -180,6 +181,25 @@ Fit artifacts: `marts/fits/<model_id>/<trained_through>.json` with scaler, weigh
 
 `marts/diy/matrix.parquet` and `site/diy_matrix.json`: per scored game, the standardized vector (scaler trained through season − 1), outcome, market p, spread and context flags. Scoring any weight vector is a matrix product plus walk-forward Platt calibration, so the build-your-own page needs no server: Streamlit in P1, TypeScript on the same JSON in P2.
 
+### 3.6c Retrospectives (ADR 0016, M9)
+
+- `marts/retro/expectations.json`: league tables fit on 2015–2025 plays (3rd/4th-down conversion by distance bucket, FG make rate by distance, XP rate, fumble-lost share, EPA value per event, the "played like" logistic), with `version` and training window.
+- `marts/retro/season=YYYY/<game_id>.json`: one per finished game, validated by `nfl.retro.schema.RetroGame`; stamps `pbp_snapshot_ts`, `pbp_hash` (that game's plays) and `expectations_version`; rebuilt only when the hash or the expectations version changes. Derived: overwritten when nflverse corrects a game.
+- `marts/retro/season=YYYY/recap_<ww>.json`: `WeekRecap` aggregated from the week's game retros.
+
+```mermaid
+%%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%
+flowchart LR
+    P[curated plays<br/>2015-2025] --> X[expectations.json]
+    G[curated plays<br/>this season] --> R[game retro]
+    X --> R
+    PR[predictions + contributions<br/>site.py selection] --> R
+    R --> W[week recap]
+    R & W --> S[site/retro/*.json<br/>site/recap_*.json]
+```
+
+Game retro sections: `result`; `predictions[]` (per approach: status, pick, right, log loss, spread error, best); `played_like` (home win % from the logistic); per team `efficiency[]` (metric, game, season to date, league) and `luck[]` (factor, actual, expected, swing points, sentence) with `luck_net`; `attribution` (per approach, per group: pp, drop-one log-loss value); `headlines[]` (template sentences).
+
 ### 3.7 Site JSON (the UI contract)
 
 | File | Content |
@@ -190,6 +210,8 @@ Fit artifacts: `marts/fits/<model_id>/<trained_through>.json` with scaler, weigh
 | `site/scorecard.json`, `site/tracker.json` | scorecard rows; per model cumulative units, CLV, calibration bins, divergence buckets, weekly series |
 | `site/hypotheses.json` | per feature: coefficient, CI, n, verdict, sentence, approaches that lean on it |
 | `site/audit.json` | null rates, freshness |
+| `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet |
+| `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.
 
@@ -215,6 +237,8 @@ sequenceDiagram
 ```
 
 Until P2 these are commands Austin runs (`nfl weekly refresh`, `nfl lock --slot thu|sat`, `nfl weekly grade`). From P2 Cloud Scheduler triggers the same commands as Cloud Run Jobs.
+
+Daily at 07:00 ET (`nfl-retro`, ADR 0016): ingest this season's pbp and schedules, curate this season's games and plays, build retrospectives for finished games without one (or with a newer pbp snapshot), publish. Thursday, Sunday and Monday games get theirs the next morning.
 
 ### 4.2 Lock
 

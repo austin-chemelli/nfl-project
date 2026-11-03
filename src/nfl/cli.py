@@ -504,6 +504,86 @@ def weekly_refresh(
     refresh(get_paths(), console, odds=odds)
 
 
+retro_app = typer.Typer(no_args_is_help=True, help="Game retrospectives (ADR 0016).")
+app.add_typer(retro_app, name="retro")
+
+
+@retro_app.command("expectations")
+def retro_expectations(
+    start: int = typer.Option(2015, help="First season of the window."),
+    end: int = typer.Option(2025, help="Last season of the window."),
+) -> None:
+    """Build league expectations from history -> marts/retro/expectations.json."""
+    from nfl.retro.expectations import build, write
+
+    paths = get_paths()
+    exp = build(paths, (start, end))
+    out = write(paths, exp)
+    t = Table(title=f"expectations {exp.version} ({start}-{end})")
+    for c in ("cell", "key", "rate", "n", "value"):
+        t.add_column(c, justify="left" if c in ("cell", "key") else "right")
+    for name in ("third_down", "fourth_down", "field_goal"):
+        for b in getattr(exp, name):
+            t.add_row(name, b.key, f"{b.rate:.3f}", f"{b.n:,}", f"{b.value:.2f}")
+    t.add_row("extra_point", "", f"{exp.extra_point_rate:.3f}", f"{exp.extra_point_n:,}", "")
+    t.add_row("fumble_lost", "", f"{exp.fumble_lost_share:.3f}", f"{exp.fumble_n:,}",
+              f"{exp.value_fumble_lost:.2f}")  # fmt: skip
+    t.add_row("interception", "", "", "", f"{exp.value_interception:.2f}")
+    t.add_row("penalty_yard", "", "", "", f"{exp.value_penalty_yard:.4f}")
+    t.add_row("st_big_plays", "", f"{exp.special_teams_big_plays_pg:.3f}", "",
+              f"{exp.value_special_teams_big_play:.2f}")  # fmt: skip
+    pl_ = exp.played_like
+    t.add_row("played_like", f"b0={pl_.intercept:.3f}", f"b_epa={pl_.b_epa:.2f}",
+              f"{pl_.n:,}", f"b_succ={pl_.b_success:.2f}")  # fmt: skip
+    console.print(t)
+    console.print(f"wrote {out}")
+
+
+@retro_app.command("build")
+def retro_build(
+    game_ids: Annotated[list[str] | None, typer.Argument(help="Game ids (default: all).")] = None,
+    season: int = typer.Option(None, help="Season (default: current)."),
+    week: int = typer.Option(None, help="Only this week."),
+    force: bool = typer.Option(False, "--force", help="Rebuild even if up to date."),
+) -> None:
+    """Build game retrospectives -> marts/retro/season=S/<game_id>.json."""
+    from nfl.config import current_season
+    from nfl.retro.game import build
+    from nfl.retro.week import write_recap
+    from nfl.site import write_retro
+
+    paths, season = get_paths(), season or current_season()
+    try:
+        rep = build(paths, season, week, game_ids or None, force)
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/]")
+        raise typer.Exit(1) from e
+    for wk in sorted(rep.weeks):
+        write_recap(paths, season, wk)
+    published = write_retro(paths, season)
+    console.print(f"recaps for weeks {sorted(rep.weeks)}; {len(published)} site files")
+    console.print(
+        f"wrote {len(rep.written)} retros; {rep.up_to_date} up to date; "
+        f"{rep.skipped} finished games skipped (no plays)"
+    )
+
+
+@retro_app.command("daily")
+def retro_daily(
+    season: int = typer.Option(None, help="Season (default: current)."),
+    no_fetch: bool = typer.Option(False, "--no-fetch", help="Skip the nflverse ingest."),
+) -> None:
+    """The 07:00 ET job: ingest + curate the current season, build retros and recaps, site files."""
+    from nfl.retro.daily import run
+
+    r = run(get_paths(), season, fetch=not no_fetch)
+    console.print(
+        f"retro daily {r.season}: wrote {len(r.written)} retros (weeks {r.weeks}); "
+        f"{r.up_to_date} up to date; {r.skipped} skipped; {r.site_files} site files"
+        + ("; built expectations" if r.built_expectations else "")
+    )
+
+
 @app.command()
 def features(
     seasons: str = typer.Option("1999-2026", help="Season range to write, e.g. 1999-2026."),

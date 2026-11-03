@@ -1,0 +1,173 @@
+{
+ "version": "retro_exp_v1",
+ "built_at": "2026-11-03T11:00:00Z",
+ "seasons": [
+  2015,
+  2025
+ ],
+ "third_down": [
+  {
+   "key": "1",
+   "lo": 1.0,
+   "hi": 1.0,
+   "rate": 0.71,
+   "n": 9200,
+   "value": 2.9
+  },
+  {
+   "key": "2-3",
+   "lo": 2.0,
+   "hi": 3.0,
+   "rate": 0.56,
+   "n": 14100,
+   "value": 3.0
+  },
+  {
+   "key": "4-6",
+   "lo": 4.0,
+   "hi": 6.0,
+   "rate": 0.44,
+   "n": 15800,
+   "value": 3.1
+  },
+  {
+   "key": "7-10",
+   "lo": 7.0,
+   "hi": 10.0,
+   "rate": 0.32,
+   "n": 21500,
+   "value": 3.3
+  },
+  {
+   "key": "11+",
+   "lo": 11.0,
+   "hi": null,
+   "rate": 0.17,
+   "n": 12400,
+   "value": 3.4
+  }
+ ],
+ "fourth_down": [
+  {
+   "key": "1",
+   "lo": 1.0,
+   "hi": 1.0,
+   "rate": 0.68,
+   "n": 3100,
+   "value": 3.6
+  },
+  {
+   "key": "2-3",
+   "lo": 2.0,
+   "hi": 3.0,
+   "rate": 0.53,
+   "n": 1900,
+   "value": 3.8
+  },
+  {
+   "key": "4-6",
+   "lo": 4.0,
+   "hi": 6.0,
+   "rate": 0.42,
+   "n": 1100,
+   "value": 3.9
+  },
+  {
+   "key": "7-10",
+   "lo": 7.0,
+   "hi": 10.0,
+   "rate": 0.33,
+   "n": 700,
+   "value": 4.0
+  },
+  {
+   "key": "11+",
+   "lo": 11.0,
+   "hi": null,
+   "rate": 0.22,
+   "n": 500,
+   "value": 4.1
+  }
+ ],
+ "field_goal": [
+  {
+   "key": "<30",
+   "lo": 0.0,
+   "hi": 29.0,
+   "rate": 0.97,
+   "n": 2600,
+   "value": 2.4
+  },
+  {
+   "key": "30-34",
+   "lo": 30.0,
+   "hi": 34.0,
+   "rate": 0.94,
+   "n": 1900,
+   "value": 2.9
+  },
+  {
+   "key": "35-39",
+   "lo": 35.0,
+   "hi": 39.0,
+   "rate": 0.89,
+   "n": 2000,
+   "value": 3.3
+  },
+  {
+   "key": "40-44",
+   "lo": 40.0,
+   "hi": 44.0,
+   "rate": 0.83,
+   "n": 2000,
+   "value": 3.6
+  },
+  {
+   "key": "45-49",
+   "lo": 45.0,
+   "hi": 49.0,
+   "rate": 0.76,
+   "n": 1900,
+   "value": 3.9
+  },
+  {
+   "key": "50-54",
+   "lo": 50.0,
+   "hi": 54.0,
+   "rate": 0.7,
+   "n": 1500,
+   "value": 4.2
+  },
+  {
+   "key": "55-59",
+   "lo": 55.0,
+   "hi": 59.0,
+   "rate": 0.6,
+   "n": 500,
+   "value": 4.5
+  },
+  {
+   "key": "60+",
+   "lo": 60.0,
+   "hi": null,
+   "rate": 0.4,
+   "n": 120,
+   "value": 4.6
+  }
+ ],
+ "extra_point_rate": 0.94,
+ "extra_point_n": 13900,
+ "fumble_lost_share": 0.52,
+ "fumble_n": 8800,
+ "value_fumble_lost": 4.3,
+ "value_interception": 4.4,
+ "value_penalty_yard": 0.06,
+ "special_teams_big_plays_pg": 0.06,
+ "value_special_teams_big_play": 5.5,
+ "played_like": {
+  "intercept": 0.18,
+  "b_epa": 14.5,
+  "b_success": 0.0,
+  "n": 2950
+ }
+}

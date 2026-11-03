@@ -57,6 +57,7 @@ uv run nfl ledger            # open paper bets at last lock, settle, CLV -> mart
 uv run nfl narrative slate 2026 8   # games to research; `ingest <file>` validates+stores a record; `example`, `list`
 uv run nfl narrative run 2026 8 [game_id...]   # local research on the desktop model -> producer 'local' (~7 min/game)
 uv run nfl llm ping          # one schema-constrained call to the desktop model (LLM_BASE_URL); `llm calls` = log summary
+uv run nfl retro build [--season S] [--week W] [game_id...]   # post-game retrospectives (ADR 0016) -> marts/retro/ + site files; `retro expectations` refits the league tables; `retro daily` = the 07:00 ET cloud job
 uv run nfl lock --slot thu|sat [--dry-run] [--commit --push]   # the live lock (docs/runbook.md)
 uv run nfl weekly refresh    # Tuesday job: current-season ingest, odds, curate, features, grade, ledger
 uv run nfl readme            # rewrite the README scorecard section
@@ -76,7 +77,7 @@ npm ci                       # once
 npm run dev                  # http://localhost:5173, reads ../data/marts/site via /data (no bucket)
 npm run typecheck && npm run lint && npm test && npm run build
 uv run python scripts/web_fixtures.py   # refresh test fixtures after a site-contract change
-python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI deploys on push to main)
+python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI deploys on push to main, after the tests pass)
 ```
 
 
@@ -89,6 +90,7 @@ python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI 
 - Team codes: pbp prints current codes (LA, LAC, LV) for every season while games use historical ones (STL, SD, OAK). Join plays to games on the canonical franchise code (`TEAM_ALIASES`), never the printed code.
 - Web: `web/src/data/contract.ts` (zod) mirrors `src/nfl/site.py`; change both together and rerun `scripts/web_fixtures.py`. Data publishes independently of site deploys (ADR 0015), so contract changes stay additive (new fields optional/defaulted in zod), or the web deploy goes out before the data that needs it. Pages use the shared components/chart kit and colors from CSS tokens; numbers are human-readable (no log-odds). Production data URL `VITE_DATA_URL` (default the public bucket).
 - UI: pages in `src/nfl/ui/pages/` read only `marts/site/*.json` via `nfl.ui.data` (palette, labels, loaders); never parquet. `tests/test_ui.py` renders every page headlessly.
+- `src/nfl/retro/`: post-game retrospectives (ADR 0016, M9). Descriptive, computed in code; sentences are templates filled from the record (no LLM). Luck swings are in points, positive = helped the named team; season-to-date baselines use only games that kicked off before. Retros are derived files (overwritten on nflverse corrections), not records; only 2026 is published (`site/retro/`, `site/recap_*`).
 - `src/nfl/models/`: reference models only (`market.py`, `elo.py`, `naive.py`), numeric, no LLM.
 - `marts/predictions.parquet` and `marts/bets.parquet` are append-only. Never edit rows; add rows with a new `lock_ts` or `model_version`.
 - Narrative records (`nfl.llm.narrative.GameNarrative`) are the contract between research and pipeline; `producer` is `claude_code` (the `/nfl-narrative` skill, dev only) or `local` (the desktop model via `nfl.llm.research`, production; ADR 0014). In local records the model never writes a URL, date or source count: it cites fact ids and code attaches the sources from pages it fetched; drafts, debug files (pages, facts, raw outputs) and run summaries are under `raw/narrative_local/`. Features from them are stamped with the record's `known_as_of`, never backfilled.

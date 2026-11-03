@@ -1,10 +1,11 @@
 import { Link, useParams } from 'react-router'
-import { Card, ErrorBox, Loaded, Page, StatusBadge } from '../components/ui'
-import { useGame, useMeta, isNotFound } from '../data/api'
+import { Card, ErrorBox, Loaded, Page, Section, StatusBadge } from '../components/ui'
+import { useGame, useMeta, useRetro, isNotFound } from '../data/api'
 import type { Game, Meta } from '../data/contract'
 import { kickoffEt, pct, spreadLabel } from '../lib/format'
 import { Edges, Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './game/Sections'
 import { NarrativeSection } from './game/Narrative'
+import { Retro } from './game/Retro'
 import { gameStatus } from './slate/helpers'
 
 const STATUS_TEXT: Record<string, string> = {
@@ -69,6 +70,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
         )}
         <div className="text-[13px] text-ink-3">{STATUS_TEXT[status] ?? status}</div>
       </div>
+      <RetroSlot g={g} />
       <ApproachesVsMarket g={g} meta={meta} />
       <Why g={g} meta={meta} />
       <Edges g={g} meta={meta} />
@@ -79,4 +81,15 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       <p className="text-[13px] text-ink-3">Probabilities are the models' estimates, not advice. Fan-made, not affiliated with the NFL.</p>
     </>
   )
+}
+
+/** The post-game retrospective: only for finished games, and nothing at all while loading or when none is built (404). */
+function RetroSlot({ g }: { g: Game }) {
+  const q = useRetro(g.game_id, g.result != null)
+  if (g.result == null || q.isPending) return null
+  if (q.isError) {
+    if (isNotFound(q.error)) return null
+    return <Section title="Game retrospective"><ErrorBox error={q.error} /></Section>
+  }
+  return <Retro r={q.data} />
 }

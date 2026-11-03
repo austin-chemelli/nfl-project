@@ -32,6 +32,7 @@ export default function MethodPage() {
             <HowItWorks meta={m} />
             <Approaches meta={m} />
             <Locks />
+            <Retrospective />
             <Limits />
             <Leaks />
             <Freshness meta={m} audit={audit.data} auditError={audit.isError} />
@@ -131,6 +132,20 @@ function Locks() {
           <li>When a result looks too good, assume leakage before skill.</li>
         </ul>
       </div>
+    </Section>
+  )
+}
+
+function Retrospective() {
+  return (
+    <Section title="Retrospective" help="The after-the-game page: how the forecasts did and how much of the result was luck.">
+      <ul className="max-w-3xl list-disc space-y-1 pl-5 text-[15px] leading-relaxed">
+        <li><strong>What &quot;expected&quot; means.</strong> Expected values come from league rates in the same situations (for example, the same down and distance, or the same field-goal distance) across the 2015 to 2025 regular seasons. Third- and fourth-down rates are also shifted by both teams&apos; form this season, so a good offense converting a lot is not counted as luck.</li>
+        <li><strong>Luck in points.</strong> Each swing, such as fumbles lost, field goals missed or fourth-down tries, is the gap between what happened and what usually happens, priced in points with the EPA value of the event. Positive helped that team, negative hurt it. Only fumble recoveries, kicking and return plays are close to pure luck; conversions, interceptions and penalties are marked &quot;partly skill&quot;, so the net is called a swing, not luck.</li>
+        <li><strong>Played like.</strong> The &quot;played like&quot; chance is a logistic model of how often teams win when they are this efficient, with turnovers left out, fitted on the same history.</li>
+        <li><strong>Which groups mattered.</strong> A group&apos;s value is the drop-one change in log loss: how much worse the forecast would have scored on this game with that group left out. Values overlap, so they do not add up.</li>
+        <li><strong>Read it as description.</strong> It is descriptive, not causal, and one game is noise. A forecast that looked bad here can still be a good forecast.</li>
+      </ul>
     </Section>
   )
 }

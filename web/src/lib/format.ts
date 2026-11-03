@@ -75,3 +75,12 @@ export function llVsMarket(ll: number, market: number): string {
   if (Math.abs(d) < 0.0005) return `${ll.toFixed(3)} (same as the market)`
   return `${ll.toFixed(3)} (${Math.abs(d).toFixed(3)} ${d > 0 ? 'worse' : 'better'} than the market)`
 }
+
+/** Efficiency values by unit: EPA to 2 decimals, rates as percents, pp as points. */
+export function fmtEff(v: number | null | undefined, unit: string): string {
+  if (v == null || Number.isNaN(v)) return dash
+  if (unit === 'epa') return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`
+  if (unit === 'pct') return `${(100 * v).toFixed(1)}%`
+  if (unit === 'pp') return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)} pct pts`
+  return fmtUnit(v, unit)
+}

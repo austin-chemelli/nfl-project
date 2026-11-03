@@ -9,6 +9,8 @@ const FIX = path.resolve(import.meta.dirname, '../test/fixtures/site')
 function schemaFor(rel: string) {
   const base = path.basename(rel)
   if (rel.startsWith('game/')) return C.Game
+  if (rel.startsWith('retro/')) return C.RetroGame
+  if (base.startsWith('recap_')) return C.WeekRecap
   if (base === 'meta.json') return C.Meta
   if (base.startsWith('slate_')) return C.Slate
   if (base === 'tracker.json') return C.Tracker
@@ -26,6 +28,8 @@ function files(root: string): string[] {
   for (const f of fs.readdirSync(root)) if (f.endsWith('.json')) out.push(f)
   const g = path.join(root, 'game')
   if (fs.existsSync(g)) for (const f of fs.readdirSync(g)) if (f.endsWith('.json')) out.push(`game/${f}`)
+  const r = path.join(root, 'retro')
+  if (fs.existsSync(r)) for (const f of fs.readdirSync(r)) if (f.endsWith('.json')) out.push(`retro/${f}`)
   return out
 }
 

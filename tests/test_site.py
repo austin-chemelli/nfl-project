@@ -62,3 +62,29 @@ def test_real_contract_shape():
             assert 0 < m["p_home"] < 1
         detail = json.loads((DATA.site / "game" / f"{g['game_id']}.json").read_text())
         assert {"contributions", "features", "tendencies", "injuries", "narrative"} <= set(detail)
+
+
+def test_write_retro_publishes_only_2026_and_validates(tmp_path):
+    import shutil
+    from pathlib import Path
+
+    from nfl import publish
+    from nfl.retro.schema import RetroGame, WeekRecap
+
+    fix = Path(__file__).parent / "fixtures" / "retro"
+    paths = Paths(tmp_path)
+    for season in (2025, 2026):
+        d = paths.marts / "retro" / f"season={season}"
+        d.mkdir(parents=True)
+        shutil.copy(fix / "game_2026_08_CAR_GB.json", d / "2026_08_CAR_GB.json")
+        shutil.copy(fix / "recap_2026_08.json", d / "recap_08.json")
+    (paths.marts / "retro" / "season=2026" / "bad.json").write_text("{}")
+    assert site.write_retro(paths, 2025) == []
+    assert not paths.site.exists()
+    names = site.write_retro(paths, 2026)
+    assert sorted(names) == ["recap_2026_08.json", "retro/2026_08_CAR_GB.json"]
+    RetroGame.model_validate_json((paths.site / "retro" / "2026_08_CAR_GB.json").read_text())
+    WeekRecap.model_validate_json((paths.site / "recap_2026_08.json").read_text())
+    planned = publish.plan(paths, repo=tmp_path)
+    assert any(k.endswith("/retro/2026_08_CAR_GB.json") for k in planned)
+    assert any(k.endswith("/recap_2026_08.json") for k in planned)

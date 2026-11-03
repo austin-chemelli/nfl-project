@@ -34,6 +34,11 @@ DIY_SEASONS = (
 DIY_MAX_SEASON = 2007  # the "hide recent seasons" case
 WEEK = 8
 GAMES = ["2026_08_CAR_GB"]  # has a narrative record
+RETRO_GAME = "2026_05_CHI_GB"  # a real retro with a clear story (turnover gap); its week's recap
+HAND_WRITTEN = {  # the web tests' examples; tests/fixtures/retro is the source of truth
+    "game_2026_08_CAR_GB.json": "retro/2026_08_CAR_GB.json",
+    "recap_2026_08.json": "recap_2026_08.json",
+}
 N_DIY = 400  # matrix rows kept (most recent seasons)
 N_PEOPLE = 6
 
@@ -94,8 +99,21 @@ def main() -> None:
     audit["null_rates"] = audit.get("null_rates", [])[:40]
     _dump(audit, "audit.json")
 
+    retro_fixtures(src)
+
     total = sum(p.stat().st_size for p in OUT.rglob("*.json"))
     print(f"wrote {len(list(OUT.rglob('*.json')))} fixtures to {OUT} ({total / 1024:.0f} KB)")
+
+
+def retro_fixtures(src: Path) -> None:
+    """Hand-written retro examples (copied from tests/fixtures/retro; the rmtree above removed
+    them) plus one real game retro and its week's recap from `nfl retro build`."""
+    fix = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "retro"
+    for name, dest in HAND_WRITTEN.items():
+        _dump(json.loads((fix / name).read_text()), dest)
+    game = _load(src, f"retro/{RETRO_GAME}.json")
+    _dump(game, f"retro/{RETRO_GAME}.json")
+    _dump(_load(src, f"recap_2026_{game['week']:02d}.json"), f"recap_2026_{game['week']:02d}.json")
 
 
 def _clean(x):

@@ -3,6 +3,7 @@
 #   refresh          nfl weekly refresh, then publish the site JSON
 #   lock <slot>      clone the repo, nfl lock --slot <slot> --commit --push, publish site + lock files
 #   odds             nfl odds snapshot, rebuild site JSON, publish
+#   retro            nfl retro daily (current-season ingest, curate, game retros + recaps), publish
 # Environment: NFL_DATA_ROOT (bucket mount), NFL_SITE_BUCKET (public bucket name, optional),
 #   ODDS_API_KEY, GITHUB_DEPLOY_KEY_FILE (lock only), NFL_IMAGE_SHA (set at image build), NFL_REPO.
 set -euo pipefail
@@ -63,6 +64,10 @@ case "$job" in
   odds)
     nfl odds snapshot "$@"
     nfl site
+    publish
+    ;;
+  retro)
+    nfl retro daily "$@"
     publish
     ;;
   *)

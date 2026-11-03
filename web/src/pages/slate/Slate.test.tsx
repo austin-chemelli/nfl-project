@@ -10,7 +10,7 @@ describe('Slate page', () => {
     expect(screen.getAllByText('ARI @ DAL').length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: /Week 8/ })).toBeInTheDocument()
     // Fixture: ensemble GB 71%, market GB 64%, line GB −3.5
-    const row = screen.getAllByText('CAR @ GB')[0].closest('tr') as HTMLElement
+    const row = screen.getAllByText('CAR @ GB').map((e) => e.closest('tr')).find(Boolean) as HTMLElement
     expect(within(row).getAllByText('71%').length).toBeGreaterThan(0)
     expect(within(row).getByText('64%')).toBeInTheDocument()
     expect(within(row).getByText('GB −3.5')).toBeInTheDocument()

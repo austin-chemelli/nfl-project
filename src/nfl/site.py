@@ -41,6 +41,7 @@ from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
 from nfl.features.groups import FEATURE_GROUP, GROUPS, HEADINGS, REGISTRY_VERSION
 
+RETRO_PUBLISH_SEASONS = {2026}  # retros are published for these seasons only (ADR 0016)
 SCHEMA_VERSION = "2"  # v2 2026-10-27: one line per approach; no log-odds; descriptions + units
 PREVIEW = "preview"
 LOCKED = "locked"
@@ -289,25 +290,90 @@ def preview_rows(
     return (pl.concat(rows) if rows else pl.DataFrame()), market
 
 
-def pregame_rows(paths: Paths, games: pl.DataFrame, have: pl.DataFrame, now: datetime) -> pl.DataFrame:  # fmt: skip
+def pregame_rows(paths: Paths, games: pl.DataFrame, have: pl.DataFrame, now: datetime, game_ids: list[str] | None = None) -> pl.DataFrame:  # fmt: skip
     """Games that kicked off with neither a lock nor a backfill (a week before public locks, a
     missed lock, or the days before Tuesday's backfill), scored as of an hour before kickoff with
     the same models and only data known then, so the page shows what the models said. Labeled
-    'pregame': never part of the live record. Limited to the current and previous week."""
+    'pregame': never part of the live record. Limited to the current and previous week, unless
+    `game_ids` names the games to score (the retro builder: no week window)."""
     started = games.filter(
         (pl.col("kickoff_utc") <= now) & ~pl.col("game_id").is_in(have["game_id"].to_list())
     )
     upcoming = games.filter(pl.col("kickoff_utc") > now)
     if started.is_empty():
         return pl.DataFrame()
-    current = int(upcoming["week"].min()) if not upcoming.is_empty() else int(games["week"].max())
-    started = started.filter(pl.col("week") >= current - 1)
+    if game_ids is None:
+        current = (
+            int(upcoming["week"].min()) if not upcoming.is_empty() else int(games["week"].max())
+        )
+        started = started.filter(pl.col("week") >= current - 1)
+    else:
+        started = started.filter(pl.col("game_id").is_in(game_ids))
+        if started.is_empty():
+            return pl.DataFrame()
     out = []
     for (kick,), part in started.group_by(["kickoff_utc"]):
         rows, _ = preview_rows(paths, games, part, kick - PREGAME_LEAD)
         if not rows.is_empty():
             out.append(rows.with_columns(pl.lit(PREGAME).alias("status")))
     return pl.concat(out, how="vertical_relaxed") if out else pl.DataFrame()
+
+
+def display_rows(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.DataFrame:
+    """Exactly the prediction rows the game pages show: locks/backfill, plus previews of the next
+    two upcoming weeks, plus 'pregame' rows for games that kicked off unlocked. `games` is one
+    season with a tz-naive `kickoff_utc`. Empty frame when there are no predictions at all."""
+    rows = best_rows(paths, games, now)
+    have = (
+        rows.select("game_id").unique()
+        if not rows.is_empty()
+        else pl.DataFrame(schema={"game_id": pl.Utf8})
+    )
+    upcoming = games.filter(
+        (pl.col("kickoff_utc") > now) & ~pl.col("game_id").is_in(have["game_id"].to_list())
+    )
+    # preview only the next two weeks: further out, nothing has been built for those games yet
+    if not upcoming.is_empty():
+        first = int(upcoming["week"].min())
+        upcoming = upcoming.filter(pl.col("week") <= first + 1)
+    prev, _ = preview_rows(paths, games, upcoming, now)
+    pre = pregame_rows(paths, games, have, now)
+    allrows = pl.concat(
+        [r.select("game_id", "model_id", "p_home", "spread_home", "contributions", "lock_ts", "status")
+         for r in (rows, prev, pre) if not r.is_empty()],
+        how="vertical_relaxed",
+    ) if any(not r.is_empty() for r in (rows, prev, pre)) else pl.DataFrame()  # fmt: skip
+    return allrows
+
+
+def write_retro(paths: Paths, season: int) -> list[str]:
+    """Copy validated game retros and recaps from marts/retro to site/retro/<game_id>.json and
+    site/recap_<season>_<ww>.json (published seasons only). Invalid files are skipped.
+    Returns the site-relative names written."""
+    from pydantic import ValidationError
+
+    from nfl.retro.schema import RetroGame, WeekRecap
+
+    if season not in RETRO_PUBLISH_SEASONS:
+        return []
+    src = paths.marts / "retro" / f"season={season}"
+    out: list[str] = []
+    for f in sorted(src.glob("*.json")) if src.exists() else []:
+        is_recap = f.name.startswith("recap_")
+        try:
+            rec = (WeekRecap if is_recap else RetroGame).model_validate_json(f.read_text())
+        except ValidationError:
+            continue
+        name = f"recap_{season}_{rec.week:02d}.json" if is_recap else f"retro/{rec.game_id}.json"
+        _write(paths.site / name, rec.model_dump(mode="json"))
+        out.append(name)
+    return out
+
+
+def market_rows(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.DataFrame:
+    """The market per game as the game page shows it (game_id, p_home, spread_home, total, as_of,
+    source): odds snapshot or schedule line as of kickoff. Empty frame when there is none."""
+    return _market_by_game(paths, games, now)
 
 
 def _market_by_game(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.DataFrame:
@@ -350,26 +416,7 @@ def build(paths: Paths, season: int | None = None) -> dict:
     )
     reg = model_registry()
 
-    rows = best_rows(paths, games, now)
-    have = (
-        rows.select("game_id").unique()
-        if not rows.is_empty()
-        else pl.DataFrame(schema={"game_id": pl.Utf8})
-    )
-    upcoming = games.filter(
-        (pl.col("kickoff_utc") > now) & ~pl.col("game_id").is_in(have["game_id"].to_list())
-    )
-    # preview only the next two weeks: further out, nothing has been built for those games yet
-    if not upcoming.is_empty():
-        first = int(upcoming["week"].min())
-        upcoming = upcoming.filter(pl.col("week") <= first + 1)
-    prev, _ = preview_rows(paths, games, upcoming, now)
-    pre = pregame_rows(paths, games, have, now)
-    allrows = pl.concat(
-        [r.select("game_id", "model_id", "p_home", "spread_home", "contributions", "lock_ts", "status")
-         for r in (rows, prev, pre) if not r.is_empty()],
-        how="vertical_relaxed",
-    ) if any(not r.is_empty() for r in (rows, prev, pre)) else pl.DataFrame()  # fmt: skip
+    allrows = display_rows(paths, games, now)
     market = _market_by_game(paths, games, now)
 
     feats = store.read_features(paths, seasons=(season, season))
@@ -420,6 +467,10 @@ def build(paths: Paths, season: int | None = None) -> dict:
     )
     _write(site / "tracker.json", tracker(paths, season, reg))
     _write(site / "audit.json", audit(paths))
+    try:
+        write_retro(paths, season)
+    except Exception as e:  # noqa: BLE001  retros must never break the site build
+        print(f"site: write_retro failed, continuing: {e!r}")
     return {"weeks": n_weeks, "games": games.height, "seconds": round(time.perf_counter() - t0, 1)}
 
 

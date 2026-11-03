@@ -41,7 +41,13 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Point the jobs at the new image
         run: |
-          for job in nfl-weekly-refresh nfl-lock-thu nfl-lock-sat nfl-odds-snapshot; do
+          existing="$(gcloud run jobs list --region "${{ vars.GCP_REGION }}" --format='value(name)')"
+          for job in nfl-weekly-refresh nfl-lock-thu nfl-lock-sat nfl-odds-snapshot nfl-retro; do
+            # a job Terraform has not created yet (first deploy of a new job) is skipped; it
+            # starts on :latest, which this build also pushed
+            if ! grep -qx "$job" <<<"$existing"; then
+              echo "skip $job: not created yet"; continue
+            fi
             gcloud run jobs update "$job" --region "${{ vars.GCP_REGION }}" \
               --image "${IMAGE}@${{ steps.build.outputs.digest }}" --quiet
           done

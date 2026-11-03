@@ -74,6 +74,23 @@ PBP_COLUMNS = [
     "penalty",
     "aborted_play",
     "desc",
+    "third_down_converted",
+    "third_down_failed",
+    "field_goal_attempt",
+    "field_goal_result",
+    "kick_distance",
+    "extra_point_attempt",
+    "extra_point_result",
+    "fumble",
+    "penalty_team",
+    "penalty_yards",
+    "first_down_penalty",
+    "return_touchdown",
+    "touchdown",
+    "td_team",
+    "punt_blocked",
+    "posteam_score_post",
+    "defteam_score_post",
 ]
 FTN_COLUMNS = [
     "starting_hash",
@@ -135,10 +152,19 @@ def _read_many(files: dict[int | None, Path], extra: str = "") -> str:
     return " union all by name ".join(parts)
 
 
-def _write_partitioned(con: duckdb.DuckDBPyConnection, sql: str, out_dir: Path) -> None:
-    if out_dir.exists():
+def _write_partitioned(
+    con: duckdb.DuckDBPyConnection, sql: str, out_dir: Path, seasons: tuple[int, int] | None = None
+) -> None:
+    """Rewrite a curated table. With `seasons`, only the `season=` partitions in that range are
+    replaced; the other seasons' files are left untouched."""
+    if seasons is not None:
+        for d in out_dir.glob("season=*") if out_dir.exists() else []:
+            tag = d.name.split("=", 1)[1]
+            if tag.isdigit() and seasons[0] <= int(tag) <= seasons[1]:
+                shutil.rmtree(d)
+    elif out_dir.exists():
         shutil.rmtree(out_dir)
-    out_dir.mkdir(parents=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
     con.execute(
         f"copy ({sql}) to '{out_dir.as_posix()}' (format parquet, partition_by (season), overwrite_or_ignore)"
     )
@@ -248,7 +274,17 @@ def curate_participation(paths: Paths) -> list[tuple[str, int, int]]:
     return _counts(con, "participation", out)
 
 
-def curate(paths: Paths, seasons: tuple[int, int] | None = None) -> list[tuple[str, int, int]]:
+def curate(
+    paths: Paths,
+    seasons: tuple[int, int] | None = None,
+    tables: tuple[str, ...] | None = None,
+) -> list[tuple[str, int, int]]:
+    """Build curated tables. `seasons` limits (and, for the partitioned tables, confines the
+    rewrite to) that season range; `tables` limits which tables are built (default all)."""
+
+    def want(t: str) -> bool:
+        return tables is None or t in tables
+
     con = duckdb.connect()
     con.execute("set timezone='UTC'")
     summary: list[tuple[str, int, int]] = []
@@ -257,7 +293,7 @@ def curate(paths: Paths, seasons: tuple[int, int] | None = None) -> list[tuple[s
 
     # games
     sched = latest_files(paths, "schedules")
-    if sched:
+    if sched and want("games"):
         sql = f"""
         with s as ({_read_many(sched)})
         select game_id, season, game_type, week, gameday::date as gameday, weekday, gametime,
@@ -276,13 +312,16 @@ def curate(paths: Paths, seasons: tuple[int, int] | None = None) -> list[tuple[s
         from s where {season_filter}
         """
         out = paths.curated_table("games")
-        _write_partitioned(con, sql, out)
+        _write_partitioned(con, sql, out, seasons)
         summary += _counts(con, "games", out)
 
     # plays = pbp ⋈ ftn
     pbp = latest_files(paths, "pbp")
     ftn = latest_files(paths, "ftn_charting")
-    if pbp:
+    if seasons:  # read only the requested seasons' files
+        pbp = {k: v for k, v in pbp.items() if lo <= k <= hi}
+        ftn = {k: v for k, v in ftn.items() if lo <= k <= hi}
+    if pbp and want("plays"):
         pbp_sel = ", ".join(f'p."{c}"' for c in PBP_COLUMNS)
         ftn_sel = ", ".join(f'f."{c}"' for c in FTN_COLUMNS)
         ftn_sql = (
@@ -303,21 +342,21 @@ def curate(paths: Paths, seasons: tuple[int, int] | None = None) -> list[tuple[s
         where p.{season_filter}
         """
         out = paths.curated_table("plays")
-        _write_partitioned(con, sql, out)
+        _write_partitioned(con, sql, out, seasons)
         summary += _counts(con, "plays", out)
 
     # injuries (week-level; upstream has no report date)
     inj = latest_files(paths, "injuries")
-    if inj:
+    if inj and want("injuries"):
         # pre-2022 files store season (and week) as doubles; normalize so partitions are season=YYYY
         sql = f"select * replace (season::int as season, week::int as week) from ({_read_many(inj)}) where {season_filter}"
         out = paths.curated_table("injuries")
-        _write_partitioned(con, sql, out)
+        _write_partitioned(con, sql, out, seasons)
         summary += _counts(con, "injuries", out)
 
     # depth charts (season derived from file)
     dc = latest_files(paths, "depth_charts")
-    if dc:
+    if dc and want("depth_charts"):
         parts = []
         for s, p in dc.items():
             cols = {
@@ -332,17 +371,18 @@ def curate(paths: Paths, seasons: tuple[int, int] | None = None) -> list[tuple[s
             )
         sql = f"select * from ({' union all by name '.join(parts)}) where {season_filter}"
         out = paths.curated_table("depth_charts")
-        _write_partitioned(con, sql, out)
+        _write_partitioned(con, sql, out, seasons)
         summary += _counts(con, "depth_charts", out)
 
     # lines (The Odds API snapshots, matched to games)
     from nfl.features.store import games_frame
     from nfl.odds import curate_lines
 
-    if paths.curated_table("games").exists():
+    if want("lines") and paths.curated_table("games").exists():
         n = curate_lines(paths, games_frame(paths))
         if n:
             summary.append(("lines", 0, n))
 
-    summary += curate_participation(paths)
+    if want("participation"):
+        summary += curate_participation(paths)
     return summary

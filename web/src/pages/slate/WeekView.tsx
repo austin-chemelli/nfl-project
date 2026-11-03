@@ -6,6 +6,7 @@ import type { GameRow, Meta } from '../../data/contract'
 import { ago, kickoffEt, pct, spreadLabel } from '../../lib/format'
 import { approachOf } from '../../lib/meta'
 import { colorVar } from '../../lib/models'
+import { Recap } from './Recap'
 import { byKickoff, correct, disagreements, divergenceText, DIVERGE, gameStatus, neighbours, pickOf, weekHref, scoreText, sideText } from './helpers'
 
 const COLS = ['traditionalist', 'analyst', 'sharp', 'student', 'ensemble'] as const
@@ -20,6 +21,7 @@ export function WeekView({ meta, season, week }: { meta: Meta; season: number; w
         Site data updated {ago(meta.generated_at)}.{' '}
         {lock ? `Last lock: week ${lock.week}, ${kickoffEt(lock.lock_ts)}.` : 'No live lock yet.'}
       </p>
+      <Recap season={season} week={week} />
       {q.isError && isNotFound(q.error) ? (
         <Card>
           <div className="font-medium">No slate for {season} week {week} yet.</div>

@@ -216,6 +216,118 @@ export const Game = GameRow.extend({
   narrative: Narrative.nullable(),
 })
 
+// --------------------------------------------------------------------------- retrospective
+// Mirrors src/nfl/retro/schema.py (ADR 0016). Separate files (site/retro/<id>.json,
+// site/recap_<season>_<ww>.json); a 404 means not built yet. Swing points are from the named team's
+// view (positive = helped it); pp is toward home; value is the drop-one log-loss change.
+
+const RetroKind = z.enum(['approach', 'ensemble', 'reference', 'global'])
+
+export const Efficiency = z.looseObject({
+  metric: z.string(),
+  unit_side: z.enum(['off', 'def']),
+  label: z.string(),
+  unit: z.string(),
+  higher_is_better: z.boolean(),
+  game: nnum,
+  season: nnum,
+  league: nnum,
+  season_games: num,
+})
+
+export const LuckFactor = z.looseObject({
+  factor: z.string(),
+  label: z.string(),
+  actual: num,
+  expected: num,
+  unit: z.string(),
+  attempts: nnum,
+  swing_pts: num,
+  partly_skill: z.boolean().default(false),
+  sentence: z.string(),
+})
+
+export const TeamRetro = z.looseObject({
+  team: z.string(),
+  score: num,
+  efficiency: z.array(Efficiency),
+  luck: z.array(LuckFactor),
+  luck_net: num,
+})
+
+export const GradedPick = z.looseObject({
+  model_id: z.string(),
+  label: z.string(),
+  kind: RetroKind,
+  status: z.string(),
+  p_home: num,
+  pick: z.string(),
+  p_pick: num,
+  right: z.boolean().nullable(),
+  log_loss: num,
+  spread_home: nnum,
+  spread_error: nnum,
+  best: z.boolean(),
+})
+
+export const GroupValue = z.looseObject({ group: z.string(), label: z.string(), pp: num, value: num })
+
+export const Attribution = z.looseObject({
+  model_id: z.string(),
+  label: z.string(),
+  groups: z.array(GroupValue),
+  most_valuable: nstr,
+})
+
+export const RetroGame = z.looseObject({
+  schema_version: z.string(),
+  game_id: z.string(),
+  season: num,
+  week: num,
+  kickoff_utc: z.string(),
+  away: z.string(),
+  home: z.string(),
+  result: z.looseObject({ home_score: num, away_score: num, margin: num }),
+  built_at: z.string(),
+  pbp_snapshot_ts: z.string(),
+  expectations_version: z.string(),
+  headlines: z.array(z.string()),
+  played_like: z.looseObject({ p_home: num, favored: z.string(), matches_result: z.boolean().nullable(), sentence: z.string() }),
+  teams: z.looseObject({ home: TeamRetro, away: TeamRetro }),
+  predictions: z.array(GradedPick),
+  best_model: nstr,
+  attribution: z.array(Attribution),
+})
+
+export const RecapModel = z.looseObject({
+  model_id: z.string(),
+  label: z.string(),
+  kind: RetroKind,
+  n: num,
+  right: num,
+  log_loss: num,
+  vs_market: nnum,
+  rank: num,
+})
+
+const RecapGame = z.looseObject({ game_id: z.string(), away: z.string(), home: z.string(), value: num, sentence: z.string() })
+const RecapTeam = z.looseObject({ team: z.string(), game_id: z.string(), luck_net: num, sentence: z.string() })
+
+export const WeekRecap = z.looseObject({
+  schema_version: z.string(),
+  season: num,
+  week: num,
+  built_at: z.string(),
+  games: z.array(z.string()),
+  best_model: nstr,
+  models: z.array(RecapModel),
+  upsets: z.array(RecapGame),
+  misread: z.array(RecapGame),
+  luckiest: z.array(RecapTeam),
+  unluckiest: z.array(RecapTeam),
+  note: z.string(),
+})
+
 // ------------------------------------------------------------------------------------- tracker
 
 export const Tracker = z.looseObject({
@@ -402,3 +514,10 @@ export type TeamCaller = z.infer<typeof TeamCaller>
 export type DiyMatrix = z.infer<typeof DiyMatrix>
 export type SeasonFile = z.infer<typeof SeasonFile>
 export type Audit = z.infer<typeof Audit>
+export type RetroGame = z.infer<typeof RetroGame>
+export type TeamRetro = z.infer<typeof TeamRetro>
+export type Efficiency = z.infer<typeof Efficiency>
+export type LuckFactor = z.infer<typeof LuckFactor>
+export type GradedPick = z.infer<typeof GradedPick>
+export type Attribution = z.infer<typeof Attribution>
+export type WeekRecap = z.infer<typeof WeekRecap>

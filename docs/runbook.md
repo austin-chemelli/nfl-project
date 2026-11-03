@@ -50,7 +50,7 @@ Takes about 30 seconds.
 The same commands run as Cloud Run jobs in `nfl-project-prod` (`docs/hosting.md`), on the schedule above, with the data root at `gs://nfl-project-prod-data`. The lock schedules are paused until the shadow week passes (`infra/variables.tf`, `locks_paused`).
 
 ```
-gcloud run jobs list --region us-central1                      # the four jobs
+gcloud run jobs list --region us-central1                      # the five jobs
 gcloud run jobs execute nfl-lock-thu --region us-central1 --args="lock,thu,--dry-run,--no-odds" --wait
 gcloud run jobs executions list --job nfl-weekly-refresh --region us-central1
 gcloud logging read 'resource.type="cloud_run_job" AND resource.labels.job_name="nfl-lock-thu"' --limit 50 --freshness 1d
@@ -58,6 +58,7 @@ gcloud scheduler jobs list --location us-central1               # ENABLED / PAUS
 gcloud storage rsync -r gs://nfl-project-prod-data ./data       # pull the cloud's data root down (never push)
 ```
 
+- **Retrospectives** (ADR 0016) run daily at 07:00 ET (`nfl-retro`). By hand, locally: `uv run nfl retro daily` (fetches nflverse, curates the current season only, builds what is missing or stale) or `uv run nfl retro build [--season S] [--week W] [game_id...] [--force]` on the data already on disk (then `uv run nfl publish --bucket nfl-project-prod-site` to ship). In the cloud: `gcloud run jobs execute nfl-retro --region us-central1 --wait`. If it says the expectations file is missing, `uv run nfl retro expectations` (the daily job builds it itself when absent). Retros are derived and safe to rebuild; only 2026 is published.
 - A failed execution emails Austin (alert policy). Fix the cause, rerun the job by hand.
 - `nfl readme` is laptop-only (a README commit from the cloud would be a non-lock commit).
 - `uv run nfl publish --bucket nfl-project-prod-site` pushes the laptop's `marts/site/*.json` and `public/predictions/` to the public bucket (5-minute cache); the cloud jobs do this themselves.
