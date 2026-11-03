@@ -1,0 +1,29 @@
+# ADR 0017: Site information architecture: one answer first, detail behind tabs
+
+Status: accepted 2026-11-03 (plan; tasks M10.x). Decided with Austin after clicking through the site with the retrospective added.
+
+## Context
+The site has the data but reads as a wall. A finished game's page stacks 21 sections, each with an intro paragraph, hover help, a chart and a table; the slate is a 10-column grid; the tracker is seven sections under a three-sentence lede. Nothing answers "what's the one thing about this game?" before the detail starts, and charts auto-scale to their own values, so a small gap can fill a row and nothing says whether a number is good. Austin wants less text and more visuals, gradual clicking rather than everything on one screen, and numbers that carry their own context. The content of the sections is right and stays; this is about arrangement and framing. The Streamlit UI is disposable (ADR 0009) and is not changed.
+
+## Options
+1. **Tabs with a summary strip (chosen).** Every page opens with 3–5 tiles that each state one thing; the detail lives behind URL-addressable tabs, one on screen at a time.
+2. **Guided story.** Each page is a sequence of full-width frames, one visual and one sentence each, with next/prev. Calmest, but linear (finding the injuries means stepping through), highest effort, and scroll-driven pages are a known trap on phones.
+3. **Dashboard tiles with drill-down panels.** A grid of small charts; clicking one opens a side panel. Good for scanning, but a grid of tiny charts reads as a wall again, which is what the slate already is.
+
+## Decision
+- **One answer first.** Every page and every tab starts with a *summary strip*: 3–5 tiles, each a number or a two-word verdict with a short sub-line, linking to the tab that explains it. A finished game's strip: the call (market and ensemble), best read (approach and log loss), played like, luck (pure luck for the winner), how many approaches were right. A pregame strip: market, ensemble, biggest disagreement, biggest edge, key absence.
+- **Tabs, synced to the URL** (`?tab=`), so the back button and shared links work. Game page: Retro (default when the game is final) · Forecast (default otherwise) · Matchup · Injuries & news. Tracker: This season · Backtest · Calibration · Disagreements · Paper bets. Nothing is removed, only regrouped.
+- **Text budget.** Per section: a title, at most one sentence of lede, method help on hover, legends once per chart kind. Caveats go into one collapsed fine-print block per page, not a footnote per section.
+- **Every number gets a frame.** Where a league distribution exists, a value is drawn on a band (the league's 10th to 90th percentile of team season-to-date values) with the league average as a tick, and the value is printed at the row end, so nothing requires hover. Good/bad color only when the direction is unambiguous (not for style measures like pass rate over expected). The retro contract gains `league_lo`/`league_hi` per efficiency metric (additive; ADR 0015).
+- **Visual before table.** Tables live behind "show the numbers"; the injury report is the one table that stays primary.
+- **Quiet meta.** Kickoff, stadium, QBs and lock status become one muted line under the title; a finished game's score is the only loud header element.
+- **Team colors as a thin accent only.** ADR 0011 bans logos, not colors. A thin bar in each team's primary color marks the team in headers and cards; charts keep the approach colors, and references stay gray. The 32 colors are a static map in the web app, not pipeline data.
+- **Slate as matchup cards** on every screen size, each with the compressed approaches-vs-market strip (the same visual as the game page, so it is learned once) and one computed sentence; sortable by kickoff, disagreement or upset; the table remains as a `?view=table` option. The week recap is the page's summary strip.
+- **Phone first for the slate and the game page**; tracker and build may stay desktop-leaning.
+
+## Consequences
+- New shared pieces: `Tabs`, `SummaryStrip`/`Tile`, `FinePrint`, a `RangeRow` chart, `ProbStrip`, a team-color accent. Pages compose these; chart kit and tokens are unchanged.
+- The pattern is set on one game page first and reviewed with Austin before the slate and tracker follow (M10.3 before M10.4–5).
+- Adding fields to retros needs a rebuild: `SCHEMA_VERSION` becomes "2" and the builder treats a different stored schema version as stale, the same as a changed play hash.
+- The tendencies dumbbells get the same league band later (from `tendencies.parquet`); not in this milestone.
+- Risk: a tab can still be busy. The text budget is the guard, and the review step after M10.3 is where it is checked.

@@ -43,6 +43,10 @@ Global: header nav, "last updated" from `meta.generated_at` and the last lock, f
 3. **Deploy (main session):** the REST deploy script, `site.yml`, the CI web job, a local `npm run build && preview` check.
 4. **Review, then first deploy:** a reviewer pass over `web/`, then (with Austin's go-ahead, since it publishes) a first manual deploy and the push that turns on the workflow.
 
+## v2: one answer first (ADR 0017, M10)
+
+Decided 2026-11-03 after the retrospective made the game page 21 sections long. Every page opens with a summary strip (3–5 tiles, each one statement, linking to the tab that explains it) and keeps its detail behind URL-synced tabs (`?tab=`). Sections keep their content and lose their duplicate explanations (one lede sentence, help on hover, one fine-print block per page). Values are drawn on a league band (p10–p90 of team season-to-date values) with the number printed at the row end. The slate becomes matchup cards with a compact approaches-vs-market strip and one computed sentence (`?view=table` keeps the grid). Team colors appear as a thin accent bar only; charts keep the approach colors. Shared pieces: `Tabs`, `SummaryStrip`/`Tile`, `FinePrint`, `RangeRow`, `ProbStrip`, `TeamAccent`.
+
 ## Out of scope for now
 
 Custom domain (Firebase's `nfl-project-prod.web.app` works), analytics, server-side rendering, historical per-game pages before 2026.
