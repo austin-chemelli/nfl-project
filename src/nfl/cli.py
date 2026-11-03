@@ -304,6 +304,9 @@ def narrative_recompose(
     think: str = typer.Option(
         None, help="job=effort,... e.g. matchup=low,team_trends=low (default: the pipeline's)."
     ),
+    job_models: str = typer.Option(
+        None, help="job=model,... for jobs on another model, or 'none' (default: the pipeline's)."
+    ),
     rebuild: bool = typer.Option(
         False, help="Reuse the debug file's saved model outputs; rerun only the code checks."
     ),
@@ -314,8 +317,15 @@ def narrative_recompose(
 
     from nfl.llm.research import recompose
 
-    think_map = dict(kv.split("=", 1) for kv in think.split(",")) if think else None
-    s = recompose(get_paths(), Path(debug), tag=tag, model=model, think=think_map, rebuild=rebuild)
+    def pairs(v: str | None) -> dict[str, str] | None:
+        if v is None:
+            return None
+        return {} if v == "none" else dict(kv.split("=", 1) for kv in v.split(","))
+
+    s = recompose(
+        get_paths(), Path(debug), tag=tag, model=model, think=pairs(think),
+        models=pairs(job_models), rebuild=rebuild,
+    )  # fmt: skip
     console.print_json(json.dumps(s))
 
 

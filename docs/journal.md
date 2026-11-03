@@ -249,3 +249,7 @@ Deploys used to start in parallel with CI on every push to `main`, so a commit t
 
 **Next.** Austin chose to split jobs between models: the 9B where it is reliable and the 14B where it adds something (v5).
 
+## 2026-11-03: narrative v5: the matchup job on the 14B (`local_v5`)
+
+The v4 comparison was per job, so Austin chose to split jobs between models instead of picking one: the 9B keeps the QB, notes, trends, summaries and game block (correct note kinds, faithful trends, a fifth of the 14B's time), and qwen3:14b writes the matchup notes, where it had the sharpest ideas. The 14B's good v4 notes had been written with thinking on, so v5 was tried both ways on the same two games. With thinking on it reproduced its v4 output exactly, errors included, at 8.6 minutes a game; with thinking off it wrote 5 and 3 matchup notes with cleaner offense-against-defense pairings and no known errors, at 5.3 minutes a game (the model swap included), about 35 minutes more a week. Two of those notes set one defense against the other (the v2 mistake again), so the pairing check now drops that as well; a check-only rerun over every saved output dropped nothing else. On two games the gain over the 9B is small (the 9B named more specifics), so v5 runs in production from Week 9 and the 9B-only version is recomposed on the same facts for a bigger sample.
+

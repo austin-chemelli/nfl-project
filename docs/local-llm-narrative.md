@@ -116,4 +116,19 @@ What the comparison shows:
 
 Rerun over all seven saved outputs, the checks dropped exactly the three known errors and nothing else, and saved 4 gpt-oss sentences.
 
-**Decision:** production stays on qwen3.5:9b, with thinking off and the v4 structure. The next gains are likely in the checks and the inputs (better pages to read in full), not the model.
+**Decision for v4:** production stays on qwen3.5:9b, with thinking off and the v4 structure.
+
+## v5: each job on the model that does it best
+
+The comparison was per job, so the next step was to stop choosing one model. The 9B was better at notes (correct kinds), trends, QB status and summaries; the 14B had the sharper matchup ideas. v5 writes the matchup job on qwen3:14b and everything else on the 9B (`JOB_MODELS` in `research.py`). The matchup call runs last, so Ollama swaps models twice a game; if the 14B fails, the call is redone on the 9B rather than failing the game.
+
+| Matchup job, after all checks | v4: 9B | v5: 14B, thinking off | 14B, thinking on |
+|---|---|---|---|
+| Notes, BAL @ BUF (sites behind each) | 4 (3,2,2,4) | 5 (3,4,2,2,3) | 2 (3,2) |
+| Notes, CHI @ SEA | 4 (3,1,3,2) | 3 (3,1,4) | 2 (2,1) |
+| Known errors left | 1 unit mix-up | 0 | 1 (32.8 points scored written as allowed) |
+| Writing stage per game | 3.1 min | 5.3 min | 8.6 min |
+
+With thinking on, the 14B wrote the same notes as before, errors included. With thinking off, it wrote cleaner offense-against-defense pairings, backed by a few more sites. Two of them pitted one defense against the other ("Chicago's aggressive blitz package faces Seattle's top-ranked pass defense"), so the pairing check now drops that too.
+
+On two games the gain is small: the 9B was more specific (named cornerbacks, the 41-40 last meeting), the 14B cleaner. v5 costs about 35 minutes a week, so it runs in production from Week 9, and the 9B-only version is recomposed on the same facts for a larger comparison.

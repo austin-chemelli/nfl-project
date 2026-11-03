@@ -24,8 +24,8 @@ from nfl.llm.research import (
     Game,
     _aliases,
     _facts_for,
+    _mispaired,
     _players,
-    _self_paired,
     _unsupported,
     _whole,
     _wrong_team,
@@ -149,12 +149,15 @@ def _team(f_ids_ok: list[str]) -> dict:
 
 
 THINK_RUNS_OUT = False  # thinking calls hit max_tokens
+MISSING_MODEL = ""  # a model the stub server doesn't have (HTTP 404)
 
 
 def _llm(seen: list[dict]):
     def handler(req: httpx.Request) -> httpx.Response:
         body = json.loads(req.content)
         seen.append(body)
+        if body["model"] == MISSING_MODEL:
+            return httpx.Response(404, json={"error": f"model '{MISSING_MODEL}' not found"})
         name = body["response_format"]["json_schema"]["name"]
         if name == "PageFacts":
             text = body["messages"][-1]["content"]
@@ -183,7 +186,7 @@ def _llm(seen: list[dict]):
         return httpx.Response(
             200,
             json={
-                "model": "qwen3.5:9b",
+                "model": body["model"],
                 "choices": [{"message": {"content": json.dumps(out)}, "finish_reason": stop}],
                 "usage": {"prompt_tokens": 10, "completion_tokens": 5},
             },
@@ -220,7 +223,7 @@ def test_record_is_valid_and_every_url_was_fetched(tmp_path):
         urls += [u for t in rec[side]["scheme_trends"] for u in t["sources"]]
     urls += [u for m in rec["matchup_notes"] for u in m["sources"]]
     assert urls and set(urls) <= fetched
-    assert rec["producer"] == "local" and rec["model"] == "qwen3.5:9b"
+    assert rec["producer"] == "local" and rec["model"] == "qwen3.5:9b + qwen3:14b (matchup)"
 
 
 def test_date_window_and_undated_policy(tmp_path):
@@ -443,9 +446,22 @@ def test_one_job_per_call(tmp_path):
     assert names[4:] == [  # after 4 extract calls
         "QbOut", "NotesOut", "TrendsOut", "SummaryOut",  # away (BAL has QB facts)
         "NotesOut", "TrendsOut", "SummaryOut",  # home (no QB facts: no QB call)
-        "MatchupsOut", "GameOut",
+        "GameOut", "MatchupsOut",  # matchup last: the one call on another model
     ]  # fmt: skip
     assert all(b["reasoning_effort"] == "none" for b in seen)  # THINK is empty by default
+    models = {b["response_format"]["json_schema"]["name"]: b["model"] for b in seen}
+    assert models.pop("MatchupsOut") == "qwen3:14b"  # JOB_MODELS
+    assert set(models.values()) == {"qwen3.5:9b"}
+
+
+def test_job_model_failure_falls_back_to_the_client_model(tmp_path, monkeypatch):
+    monkeypatch.setattr(research, "JOB_MODELS", {"matchup": "missing:1b"})
+    monkeypatch.setattr(sys.modules[__name__], "MISSING_MODEL", "missing:1b")
+    run, rec, seen = _run(tmp_path)
+    tries = [b["model"] for b in seen if b["response_format"]["json_schema"]["name"] == "MatchupsOut"]  # fmt: skip
+    assert tries == ["missing:1b", "qwen3.5:9b"]
+    assert rec["matchup_notes"] and rec["model"] == "qwen3.5:9b"
+    assert any("missing:1b failed" in w for w in run.warnings)
 
 
 def test_thinking_past_budget_redone_without(tmp_path, monkeypatch):
@@ -483,10 +499,12 @@ def test_stat_on_the_wrong_team():
 
 def test_matchup_pairing_a_team_with_itself():
     teams, qbs = _aliases(GAME), {"BAL": "Lamar Jackson", "BUF": "Josh Allen"}
-    assert _self_paired("Josh Allen leads the most efficient offense, which will test a Buffalo defense.", teams, qbs)  # fmt: skip
-    assert not _self_paired("Lamar Jackson's return tests a Buffalo defense that ranks 31st.", teams, qbs)  # fmt: skip
-    assert not _self_paired("Buffalo's offense faces a Ravens defense, while Buffalo's defense must contain Jackson.", teams, qbs)  # fmt: skip
-    assert not _self_paired("Analysts expect another high-scoring shootout.", teams, qbs)
+    assert _mispaired("Josh Allen leads the most efficient offense, which will test a Buffalo defense.", teams, qbs)  # fmt: skip
+    assert _mispaired("Baltimore's blitz package faces Buffalo's top-ranked pass defense.", teams, qbs)  # fmt: skip
+    assert not _mispaired("Lamar Jackson's return tests a Buffalo defense that ranks 31st.", teams, qbs)  # fmt: skip
+    assert not _mispaired("Buffalo's offense faces a Ravens defense, while Buffalo's defense must contain Jackson.", teams, qbs)  # fmt: skip
+    assert not _mispaired("Buffalo's pass rush could pressure Lamar Jackson behind a Ravens line missing its tackle.", teams, qbs)  # fmt: skip
+    assert not _mispaired("Analysts expect another high-scoring shootout.", teams, qbs)
 
 
 def test_fact_ids_stripped_from_text():

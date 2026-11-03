@@ -185,18 +185,19 @@ class LLMClient:
         max_tokens: int = 4096,
         temperature: float = 0.0,
         think: str = "none",
+        model: str | None = None,
     ) -> Reply:
         cfg = self.config
         convo = list(messages)
         last_error = ""
         for attempt in range(1, cfg.max_attempts + 1):
-            got = _Attempt(model=cfg.model)
+            got = _Attempt(model=model or cfg.model)
             t0 = time.perf_counter()
             error: str | None = None
             parsed: Any = None
             retry_after: float | None = None
             try:
-                got = self._send(system, convo, schema, max_tokens, temperature, think)
+                got = self._send(system, convo, schema, max_tokens, temperature, think, model)
                 if got.truncated:
                     raise LLMError(f"reply hit max_tokens={max_tokens}")
                 parsed = _parse(got.text, schema)
@@ -254,18 +255,17 @@ class LLMClient:
             },
         )
 
-    def _send(self, system, messages, schema, max_tokens, temperature, think="none") -> _Attempt:
+    def _send(self, system, messages, schema, max_tokens, temperature, think="none", model=None) -> _Attempt:  # fmt: skip
         cfg = self.config
+        model = model or cfg.model
         msgs = ([{"role": "system", "content": system}] if system else []) + messages
         body: dict[str, Any] = {
-            "model": cfg.model,
+            "model": model,
             "messages": msgs,
             "temperature": temperature,
             "max_tokens": max_tokens,
             # gpt-oss always reasons; "none" falls back to its default (medium), so ask for low
-            "reasoning_effort": "low"
-            if think == "none" and cfg.model.startswith("gpt-oss")
-            else think,
+            "reasoning_effort": "low" if think == "none" and model.startswith("gpt-oss") else think,
         }
         if (s := _schema_of(schema)) is not None:
             name, js = s
@@ -296,7 +296,7 @@ class LLMClient:
         u = d.get("usage") or {}
         return _Attempt(
             text=choice["message"].get("content") or "",
-            model=d.get("model", cfg.model),
+            model=d.get("model", model),
             usage=Usage(
                 input_tokens=u.get("prompt_tokens", 0),
                 output_tokens=u.get("completion_tokens", 0),

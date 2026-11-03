@@ -64,7 +64,7 @@ TRENDS_V = "team_trends_v1"
 SUMMARY_V = "team_summary_v1"
 MATCHUP_V = "matchup_v1"
 GAME_V = "game_v1"
-RECORD_PROMPT_VERSION = "local_v4"  # the record's prompt_version (feature rows carry it)
+RECORD_PROMPT_VERSION = "local_v5"  # the record's prompt_version (feature rows carry it)
 
 WINDOW_DAYS = 9  # one day inside the validator's 10, so a run that crosses midnight still passes
 PER_QUERY = 3  # pages kept per query at most
@@ -83,6 +83,11 @@ MATCHUP_PAGE_CHARS = 5000  # each; keeps the prompt well inside the desktop's 16
 # gets THINK_BUDGET extra tokens and, if it runs out, is redone with thinking off.
 THINK: dict[str, str] = {}
 THINK_BUDGET = 6000
+# Jobs written by another model than the client's (v5). In the local_v4 comparison qwen3:14b had
+# the most specific matchup ideas but the 9B was better at everything else (note kinds, trends,
+# QB status), at a fifth of the 14B's time. The matchup call runs last in a game, so Ollama swaps
+# models twice a game. If the job's model fails, the call is redone with the client's model.
+JOB_MODELS: dict[str, str] = {"matchup": "qwen3:14b"}
 MAX_CLAIMS = 30
 STATUS = ("injury", "qb")
 ANALYSIS = ("matchup", "scheme")
@@ -101,7 +106,7 @@ SENTENCE_END = re.compile(r"[.!?][\"'’”)]?$")
 # Fact ids the model wrote into the text: "(F27)", "[F3, F4]", "(Fact 12)".
 FACT_REF = re.compile(r"\s*[(\[]\s*(?:fact\s*|[FD])\d+(?:\s*[,;/]\s*(?:fact\s*)?[FD]?\d+)*\s*[)\]]", re.IGNORECASE)  # fmt: skip
 OFFENSE = r"(?:offense|offensive|attack|run game|passing game)"
-DEFENSE = r"(?:defense|defensive|pass rush|secondary|run stop\w*)"
+DEFENSE = r"(?:defense|defensive|pass rush|secondary|blitz|coverage|run stop\w*)"
 # Runs of capitalized words ("Josh Allen", "C.J. Gardner-Johnson", "AFC North").
 NAME = re.compile(r"[A-Z][\w'.-]*(?:\s+[A-Z][\w'.-]*)+")
 NAME_LEAD = {
@@ -505,6 +510,7 @@ class Composed:
     qb: dict[str, Qb]  # by side
     pages: list[Doc] = field(default_factory=list)  # read whole by the matchup job
     seconds: dict[str, float] = field(default_factory=dict)  # by job
+    models: dict[str, str] = field(default_factory=dict)  # jobs written by another model
 
 
 def _player_key(name: str) -> str:
@@ -572,33 +578,44 @@ def _items(lines: list[str]) -> str:
     return "\n".join(lines) or "(none)"
 
 
-def compose(g: Game, facts: list[Fact], client: LLMClient, run: GameRun, now: datetime, docs: list[Doc] | None = None, think: dict[str, str] | None = None) -> Composed:  # fmt: skip
+def compose(g: Game, facts: list[Fact], client: LLMClient, run: GameRun, now: datetime, docs: list[Doc] | None = None, think: dict[str, str] | None = None, models: dict[str, str] | None = None) -> Composed:  # fmt: skip
     """The writing stage, one job per call: per team the starting QB, notes and ratings, scheme
-    trends, then a summary written from those; then matchup notes (facts plus the best analysis
-    pages read whole) and the game block. `think` maps a job to a reasoning effort."""
+    trends, then a summary written from those; then the game block and matchup notes (facts plus
+    the best analysis pages read whole). `think` maps a job to a reasoning effort, `models` to a
+    model other than the client's."""
     think = THINK if think is None else think
+    models = JOB_MODELS if models is None else models
+    used: dict[str, str] = {}
     ctx = _ctx(g, now)
     names = full_names()
     seconds: Counter = Counter()
 
     def call(job: str, version: str, system: str, schema, user: str, max_tokens: int = 3000):
-        effort = think.get(job, "none")
+        effort, model = think.get(job, "none"), models.get(job)
         t0 = time.perf_counter()
 
-        def send(effort: str):
+        def send(effort: str, model: str | None):
             return client.complete(
                 [{"role": "user", "content": user}], system=system, schema=schema,
                 job=f"narrative.{job}", prompt_version=version, game_id=g.game_id,
-                max_tokens=max_tokens if effort == "none" else max_tokens + THINK_BUDGET, think=effort,
+                max_tokens=max_tokens if effort == "none" else max_tokens + THINK_BUDGET,
+                think=effort, model=model,
             )  # fmt: skip
 
         try:
-            r = send(effort)
+            r = send(effort, model)
         except LLMError as e:
-            if effort == "none" or "max_tokens" not in str(e):
+            if effort != "none" and "max_tokens" in str(e):
+                run.warnings.append(f"{job}: thinking ran past its budget; redone without thinking")
+                effort = "none"
+            elif model:
+                run.warnings.append(f"{job}: {model} failed ({str(e)[:120]}); written by {client.config.model}")  # fmt: skip
+                model = None
+            else:
                 raise
-            run.warnings.append(f"{job}: thinking ran past its budget; redone without thinking")
-            r = send("none")
+            r = send(effort, model)
+        if model:
+            used[job] = model
         seconds[job] += time.perf_counter() - t0
         return r.parsed
 
@@ -619,13 +636,6 @@ def compose(g: Game, facts: list[Fact], client: LLMClient, run: GameRun, now: da
         teams[side] = TeamOut(**n.model_dump(exclude={"notes"}), notes=n.notes,
                               scheme_trends=t.scheme_trends, summary=sm.summary)  # fmt: skip
 
-    pages = matchup_pages(docs or [], facts)
-    m = call(
-        "matchup", MATCHUP_V,
-        _prompt(MATCHUP_V, **ctx, facts=_items([f.line() for f in _analysis_facts(facts, (g.away, g.home, "game"))]),
-                pages="\n\n".join(_page_block(d) for d in pages) or "(none)"),
-        matchup_model(g.home, g.away), "Write the matchup notes.",
-    )  # fmt: skip
     gm = call(
         "game", GAME_V,
         _prompt(GAME_V, **ctx, away_summary=_joined(teams["away"].summary),
@@ -633,8 +643,15 @@ def compose(g: Game, facts: list[Fact], client: LLMClient, run: GameRun, now: da
                 facts=_items([f.line() for f in _facts_for(facts, None)])),
         GameOut, "Write the game block.", 2000,
     )  # fmt: skip
+    pages = matchup_pages(docs or [], facts)
+    m = call(  # last: with JOB_MODELS it's the one call on another model
+        "matchup", MATCHUP_V,
+        _prompt(MATCHUP_V, **ctx, facts=_items([f.line() for f in _analysis_facts(facts, (g.away, g.home, "game"))]),
+                pages="\n\n".join(_page_block(d) for d in pages) or "(none)"),
+        matchup_model(g.home, g.away), "Write the matchup notes.",
+    )  # fmt: skip
     return Composed(teams["away"], teams["home"], list(m.matchup_notes), gm, qbs, pages,
-                    {k: round(v, 1) for k, v in seconds.items()})  # fmt: skip
+                    {k: round(v, 1) for k, v in seconds.items()}, used)  # fmt: skip
 
 
 # ----------------------------------------------------------------------------------- mapping
@@ -793,16 +810,24 @@ def _wrong_team(text: str, cited: list[Fact], teams: dict[str, re.Pattern], play
     return False
 
 
-def _self_paired(text: str, aliases: dict[str, re.Pattern], qbs: dict[str, str]) -> bool:
-    """A matchup that sets a team's offense against its own defense, with the opponent never named
-    ("Josh Allen leads the most efficient offense, which will test a Buffalo defense")."""
+def _mispaired(text: str, aliases: dict[str, re.Pattern], qbs: dict[str, str]) -> str | None:
+    """How a matchup note pairs the wrong units, or None: a team's offense against its own defense
+    with the opponent never named ("Josh Allen leads the most efficient offense, which will test a
+    Buffalo defense"), or one defense against the other with no offense in it ("Chicago's blitz
+    package faces Seattle's top-ranked pass defense")."""
     named = {}
     for team, pat in aliases.items():
         unit = rf"(?:{pat.pattern})(?:'s|’s|')?\s+(?:[\w-]+\s+){{0,3}}?"
-        offense = re.search(unit + OFFENSE, text) or (qbs.get(team) and qbs[team] in text)
-        defense = re.search(unit + DEFENSE, text)
-        named[team] = (bool(offense), bool(defense), bool(pat.search(text) or (qbs.get(team) and qbs[team] in text)))  # fmt: skip
-    return any(o and d and not any(n[2] for t, n in named.items() if t != team) for team, (o, d, _) in named.items())  # fmt: skip
+        qb = bool(qbs.get(team) and qbs[team] in text)
+        offense = bool(re.search(unit + OFFENSE, text)) or qb
+        defense = bool(re.search(unit + DEFENSE, text))
+        named[team] = (offense, defense, bool(pat.search(text)) or qb)
+    for team, (o, d, _) in named.items():
+        if o and d and not any(n[2] for t, n in named.items() if t != team):
+            return "pairing a unit with its own team"
+    if all(d for _, d, _ in named.values()) and not any(o for o, _, _ in named.values()) and not re.search(OFFENSE, text):  # fmt: skip
+        return "pitting a defense against a defense"
+    return None
 
 
 def _source(cited: list[Fact], context: str) -> str:
@@ -928,8 +953,8 @@ def build_record(g: Game, c: Composed, facts: list[Fact], searches: list[str], m
         if m.kind == "unit" and (not m.offense_team or not m.defense_team or m.offense_team == m.defense_team):  # fmt: skip
             run.dropped["matchup note pairing a unit with its own team"] += 1
             continue
-        if _self_paired(m.text, aliases, qbs):
-            run.dropped["matchup note pairing a unit with its own team"] += 1
+        if why := _mispaired(m.text, aliases, qbs):
+            run.dropped[f"matchup note {why}"] += 1
             continue
         if ok := check("matchup note", m.text, m.fact_ids, need=ANALYSIS):
             support = len({f.doc.domain for f in ok[0]})
@@ -984,7 +1009,7 @@ def research_game(paths: Paths, g: Game, client: LLMClient, fetcher: Fetcher, *,
         d.mkdir(parents=True, exist_ok=True)
         stem = f"{g.game_id}_{snapshot_ts(now)}"
         _write_debug(d / f"{stem}.debug.json", g, docs, facts, composed)
-        model = _model_name(client, compose_client)
+        model = _model_name(client, compose_client, composed.models)
         rec = build_record(g, composed, facts, searches, model, run, now)
         GameNarrative.model_validate(rec)  # fail here, with the draft kept, before ingest
         draft = d / f"{stem}.json"
@@ -999,9 +1024,14 @@ def research_game(paths: Paths, g: Game, client: LLMClient, fetcher: Fetcher, *,
     return run
 
 
-def _model_name(client: LLMClient, compose_client: LLMClient | None) -> str:
+def _model_name(client: LLMClient, compose_client: LLMClient | None, jobs: dict[str, str] | None = None) -> str:  # fmt: skip
+    """The record's model: "qwen3.5:9b + qwen3:14b (matchup)" when jobs ran on other models."""
     a, b = client.config.model, (compose_client or client).config.model
-    return a if a == b else f"{a} (extract) + {b} (compose)"
+    name = a if a == b else f"{a} (extract) + {b} (compose)"
+    by_model: dict[str, list[str]] = {}
+    for job, m in (jobs or {}).items():
+        by_model.setdefault(m, []).append(job)
+    return " + ".join([name, *(f"{m} ({', '.join(js)})" for m, js in by_model.items())])
 
 
 def _write_debug(path: Path, g: Game, docs: list[Doc], facts: list[Fact], c: Composed) -> None:
@@ -1016,7 +1046,7 @@ def _write_debug(path: Path, g: Game, docs: list[Doc], facts: list[Fact], c: Com
                    "player": f.player, "confidence": f.confidence, "text": f.text} for f in facts],
         "compose": {"away": c.away.model_dump(), "home": c.home.model_dump(),
                     "matchups": [m.model_dump() for m in c.matchups], "game": c.game.model_dump()},
-        "pages_read": [d.id for d in c.pages], "seconds": c.seconds,
+        "pages_read": [d.id for d in c.pages], "seconds": c.seconds, "models": c.models,
         "qb": {side: {"name": q.name, "status": q.status, "raw": q.raw.model_dump() if q.raw else None}
                for side, q in c.qb.items()},
     }  # fmt: skip
@@ -1096,13 +1126,14 @@ def _saved_composed(d: dict, g: Game, docs: list[Doc]) -> Composed:
     return Composed(
         TeamOut(**d["compose"]["away"]), TeamOut(**d["compose"]["home"]), list(notes),
         GameOut(**d["compose"]["game"]), qb, [by_doc[i] for i in d.get("pages_read", [])],
-        d.get("seconds", {}),
+        d.get("seconds", {}), d.get("models", {}),
     )  # fmt: skip
 
 
-def recompose(paths: Paths, debug: Path, *, tag: str, model: str | None = None, think: dict[str, str] | None = None, rebuild: bool = False) -> dict:  # fmt: skip
+def recompose(paths: Paths, debug: Path, *, tag: str, model: str | None = None, think: dict[str, str] | None = None, models: dict[str, str] | None = None, rebuild: bool = False) -> dict:  # fmt: skip
     """Rerun the QB and writing jobs of a saved run on its facts, with the current prompts, and
     write the draft, debug and a summary (seconds and tokens per job) under experiments/<tag>/.
+    `model` is the client's model, `models` the jobs on other models (default JOB_MODELS).
     `rebuild` reuses the model outputs saved in a v4 debug file and reruns only the code checks
     (no model calls). Nothing is ingested. Returns the summary."""
     from dataclasses import replace
@@ -1117,9 +1148,10 @@ def recompose(paths: Paths, debug: Path, *, tag: str, model: str | None = None, 
     if rebuild:
         composed = _saved_composed(json.loads(debug.read_text()), g, docs)
     else:
-        composed = compose(g, facts, client, run, now, docs, think)
+        composed = compose(g, facts, client, run, now, docs, think, models)
     run.seconds = time.perf_counter() - t0
-    rec = build_record(g, composed, facts, searches, client.config.model, run, now)
+    name = _model_name(client, None, composed.models)
+    rec = build_record(g, composed, facts, searches, name, run, now)
     GameNarrative.model_validate(rec)
     out = experiments_dir(paths, tag)
     out.mkdir(parents=True, exist_ok=True)
@@ -1131,7 +1163,7 @@ def recompose(paths: Paths, debug: Path, *, tag: str, model: str | None = None, 
         old = json.loads(debug.with_name(f"{stem}.summary.json").read_text()) if debug.with_name(f"{stem}.summary.json").exists() else {}  # fmt: skip
         run.seconds = old.get("seconds", 0.0)
     summary = {
-        "game_id": g.game_id, "source": str(debug), "tag": tag, "model": client.config.model,
+        "game_id": g.game_id, "source": str(debug), "tag": tag, "model": name,
         "think": think if think is not None else THINK, "prompt_version": RECORD_PROMPT_VERSION,
         "seconds": round(run.seconds, 1), "seconds_by_job": composed.seconds,
         "calls": calls.height, "retries": int((calls["attempt"] > 1).sum()) if calls.height else 0,
