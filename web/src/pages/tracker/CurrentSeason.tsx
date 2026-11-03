@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CartesianGrid, Legend, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { DataTable, ModelBadge, Section, StatTile, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
 import { colorVar, dashArray } from '../../lib/models'
@@ -46,8 +46,8 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
       {focus && <p className="text-lg font-medium">{headlineSentence(focus, sentenceName(meta, focus.model_id))}</p>}
       <p className="mt-1 text-[13px] text-ink-2">
         {summary.liveGames === 0
-          ? 'No live locks have been graded yet, so every number here is backfill: frozen models scored after the fact on this season\'s games. Differences under 0.005 are noise.'
-          : `${summary.liveGames} live ${summary.liveGames === 1 ? 'game has' : 'games have'} been graded from locks made before kickoff (${summary.liveWeeks} ${summary.liveWeeks === 1 ? 'week' : 'weeks'}); the rest are backfill. That is far too few to rank anyone.`}
+          ? 'No live locks have been graded yet, so every number here is backfill.'
+          : `${summary.liveGames} live ${summary.liveGames === 1 ? 'game has' : 'games have'} been graded (${summary.liveWeeks} ${summary.liveWeeks === 1 ? 'week' : 'weeks'}); the rest is backfill.`}
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -63,7 +63,6 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
       </div>
 
       <h3 className="mt-6 font-medium">Cumulative log loss by week</h3>
-      <p className="text-[13px] text-ink-2">Running average since week 1; lower is better. Compare every line with the gray Market line.</p>
       <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lines to show">
         {[...ids].sort((a, b) => order(a) - order(b)).filter((m) => m !== 'global').map((m) => (
           <button
@@ -85,7 +84,6 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
             <XAxis dataKey="week" type="number" domain={[Math.min(...weeks) - 0.5, Math.max(...weeks) + 0.5]} allowDecimals={false} stroke="var(--text-muted)" tick={{ fontSize: 12 }} label={{ value: 'Week', position: 'insideBottom', offset: -2, fill: 'var(--text-muted)', fontSize: 12 }} />
             <YAxis domain={['auto', 'auto']} tickFormatter={(v: number) => v.toFixed(2)} stroke="var(--text-muted)" tick={{ fontSize: 12 }} width={44} />
             <Tooltip formatter={(v, name) => [Number(v).toFixed(3), label(String(name))]} labelFormatter={(w) => `Week ${w}${liveWeeks.has(Number(w)) ? ' (live)' : ''}`} contentStyle={{ background: 'var(--surface-1)', border: '1px solid var(--border)', fontSize: 13 }} />
-            <Legend formatter={(v) => label(String(v))} wrapperStyle={{ fontSize: 12 }} />
             {shown.map((m) => (
               <Line
                 key={m}
@@ -108,9 +106,6 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-[13px] text-ink-2">
-        Shaded weeks are backfill: models frozen before the season, scored after the fact. Diamonds mark live weeks, graded from locks made before kickoff. A handful of 16-game weeks is very noisy; lines crossing early means little.
-      </p>
       <DataTable summary="Show the numbers: this season so far">
         <table className="w-full text-[13px]">
           <thead>

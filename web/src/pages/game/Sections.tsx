@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { DivergingBars, Dumbbell } from '../../charts'
+import { DivergingBars, Dumbbell, ProbStrip } from '../../charts'
 import { Help } from '../../components/Help'
 import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
 import { fmtUnit, pct, pts, ptsToward, spreadLabel } from '../../lib/format'
 import { approachOf, groupOf } from '../../lib/meta'
-import { colorVar, SHORT } from '../../lib/models'
+import { SHORT } from '../../lib/models'
 import {
   byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, injuryRank, sortInjuries, tape, tendencyBlocks,
 } from './helpers'
@@ -26,46 +26,11 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
     )
   return (
     <Section title="What each approach thinks" help="Each dot is one forecast of the home team's chance of winning. The gray line is the betting market, the benchmark everything is compared with.">
-      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        Each dot is one forecast of {g.home}'s chance of winning, on a 0 to 100% scale. Color follows the approach; gray is a reference. The gray
-        vertical line is the market.
-      </p>
-      <div className="relative" role="img" aria-label={`Home win chance for ${g.home} by model: ${rows.map((m) => `${label(m)} ${pct(g.models[m].p_home)}`).join(', ')}`}>
-        <div className="grid grid-cols-[6.5rem_1fr] items-center gap-y-1 sm:grid-cols-[8rem_1fr]">
-          {rows.map((m) => {
-            const p = g.models[m].p_home
-            const isRef = m === 'market_baseline' || m === 'elo_v0'
-            return (
-              <div key={m} className="contents">
-                <div className="text-[13px]">
-                  <Help text={m === 'ensemble' ? 'The average of the four approaches.' : approachOf(meta, m)?.blurb}>
-                    <ModelBadge modelId={m} label={label(m)} />
-                  </Help>
-                </div>
-                <div className="relative h-7">
-                  <div className="absolute inset-x-0 top-1/2 h-px bg-[var(--border)]" />
-                  {[0, 25, 50, 75, 100].map((t) => (
-                    <div key={t} className="absolute top-1/2 h-2 w-px -translate-y-1/2 bg-[var(--border)]" style={{ left: `${t}%` }} />
-                  ))}
-                  {mkt != null && <div className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-[var(--series-market)] opacity-60" style={{ left: `${100 * mkt}%` }} />}
-                  <div
-                    className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2"
-                    style={{ left: `${100 * p}%`, background: isRef ? 'var(--surface-1)' : colorVar(m), borderColor: colorVar(m) }}
-                    title={`${label(m)}: ${g.home} ${pct(p, 1)}`}
-                  />
-                </div>
-              </div>
-            )
-          })}
-          <div />
-          <div className="relative h-5 text-[11px] text-ink-3">
-            {[0, 25, 50, 75, 100].map((t) => (
-              <span key={t} className="absolute -translate-x-1/2" style={{ left: `${t}%` }}>{t}%</span>
-            ))}
-          </div>
-        </div>
-        <div className="mt-1 text-center text-[12px] text-ink-3">{g.home} win probability</div>
-      </div>
+      <ProbStrip
+        home={g.home}
+        market={mkt}
+        models={rows.filter((m) => m !== 'market_baseline').map((m) => ({ id: m, label: label(m), p: g.models[m].p_home, reference: m === 'elo_v0' }))}
+      />
       <DataTable>
         <table className="w-full border-collapse text-[14px]">
           <thead>
@@ -78,10 +43,17 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
           </thead>
           <tbody>
             {rows.map((m) => {
-              const mp = g.models[m]
+              // The market row shows the same line as the chart and the "vs market" column (the game's
+              // market snapshot), not the market_baseline model, which can be a few points off.
+              const isMkt = m === 'market_baseline' && g.market?.p_home != null
+              const mp = isMkt ? { ...g.models[m], p_home: g.market!.p_home!, spread_home: g.market!.spread_home ?? g.models[m].spread_home } : g.models[m]
               return (
                 <tr key={m}>
-                  <td className={td}><ModelBadge modelId={m} label={label(m)} /></td>
+                  <td className={td}>
+                    <Help text={m === 'ensemble' ? 'The average of the four approaches.' : approachOf(meta, m)?.blurb}>
+                      <ModelBadge modelId={m} label={label(m)} />
+                    </Help>
+                  </td>
                   <td className={`${td} tabular`}>{pct(mp.p_home, 1)}</td>
                   <td className={`${td} tabular`}>{spreadLabel(mp.spread_home, g.home, g.away)}</td>
                   <td className={`${td} tabular`}>{m === 'market_baseline' || mp.divergence == null ? '–' : pts(100 * mp.divergence)}</td>
@@ -91,7 +63,6 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
           </tbody>
         </table>
       </DataTable>
-      <p className="mt-2 text-[12px] text-ink-3">Spread is the home spread in points, sportsbook style. "vs market" is the model's home win chance minus the market's, in points.</p>
     </Section>
   )
 }
@@ -112,11 +83,7 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
   const groups = Object.keys(cm.groups).sort((a, b) => Math.abs(cm.groups[b].pp ?? 0) - Math.abs(cm.groups[a].pp ?? 0))
   return (
     <Section title="Why they lean the way they do" help="How much each piece of the picture moves the pick, in points of the home team's win chance.">
-      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        Each bar is how much one piece of the picture moves the pick, in points of {g.home}'s win chance: how far the chance would drop without that
-        piece. Right pushes toward {g.home}, left toward {g.away}. The pieces add up only approximately to the total (the effects overlap and the
-        final probability is also calibrated).
-      </p>
+      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">How far each piece of the picture pushes the pick, in points of {g.home}'s win chance: right toward {g.home}, left toward {g.away}.</p>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <Segmented label="Approach" value={sel} onChange={setSel} options={opts.map((o) => ({ value: o, label: SHORT[o] ?? o }))} />
         <span className="text-[13px] text-ink-2">
@@ -258,7 +225,6 @@ export function TaleOfTheTape({ g, meta }: { g: Game; meta: Meta }) {
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[12px] text-ink-3">Values that describe the game as a whole (like the market line) show the same number for both teams.</p>
     </Section>
   )
 }
@@ -279,10 +245,7 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
       title="Tendencies: offense vs the other side's defense"
       help="How each offense has played this season next to how the opposing defense has been played against, with the league average for scale."
     >
-      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        Season-to-date rates, shrunk toward the league average when plays are few. Where the dots are far apart, expect a mismatch. Each chart has
-        its own scale.
-      </p>
+      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">Where an offense and the defense it faces sit far apart, expect a mismatch.</p>
       <div className="mb-4 overflow-x-auto">
         <Segmented label="Situation" value={sit} onChange={setSit} options={sits.map(([value, label]) => ({ value, label }))} />
       </div>

@@ -6,14 +6,15 @@ import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import numpy as np
 import polars as pl
 import pytest
 
 from nfl.config import Paths
 from nfl.features.groups import FEATURE_GROUP
 from nfl.predict import PRED_SCHEMA
-from nfl.retro.game import build, build_games, retro_path
-from nfl.retro.schema import Expectations, RetroGame
+from nfl.retro.game import _league_bands, _metric_exprs, _metrics, build, build_games, retro_path
+from nfl.retro.schema import SCHEMA_VERSION, Expectations, RetroGame
 
 EXP = Path(__file__).parent / "fixtures" / "retro" / "expectations.json"
 PLAY_COLS = [
@@ -407,3 +408,71 @@ def test_market_from_market_frame_when_no_prediction_row(tree, monkeypatch):
         assert m["label"] == "Market"
     g2 = next(x for x in read(tree, "g2")["predictions"] if x["model_id"] == "market_baseline")
     assert g2["pick"] == "AWY" and g2["right"] is True  # away won 24-17
+
+
+# ---------------------------------------------------------------------------------- league bands
+
+
+def _team_plays(gid, n_teams, epas):
+    """Team T{i} has `epas[i]` EPA on every one of its 4 offensive plays (2 pass, 2 run)."""
+    ps = []
+    for i in range(n_teams):
+        for k in range(4):
+            ps.append(
+                play(gid, f"T{i}", f"T{(i + 1) % n_teams}", "pass" if k % 2 else "run", epas[i])
+            )
+    return ps
+
+
+def _eff(tree, gid, metric):
+    rec = read(tree, gid)
+    return next(e for e in rec["teams"]["home"]["efficiency"] if e["metric"] == metric)
+
+
+def test_league_band_percentiles(tmp_path):
+    epas = [-0.3, -0.2, -0.1, 0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+    plays = _team_plays("g1", 10, epas) + base_plays("g2")
+    tree = write_tree(tmp_path, [G1, G2], plays)
+    build_games(tree, 2026)
+    e = _eff(tree, "g2", "off_epa_play")
+    lo, hi = np.percentile(epas, [10, 90])
+    assert e["league_lo"] == round(lo, 3) and e["league_hi"] == round(hi, 3)
+    # defense bands group by defteam; each team faces one offense, so the same ten values
+    d = _eff(tree, "g2", "def_epa_play")
+    assert d["league_lo"] == round(lo, 3) and d["league_hi"] == round(hi, 3)
+    assert _eff(tree, "g1", "off_epa_play")["league_lo"] is None  # nothing before game 1
+
+
+def test_league_band_needs_eight_teams(tmp_path):
+    plays = _team_plays("g1", 7, [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]) + base_plays("g2")
+    tree = write_tree(tmp_path, [G1, G2], plays)
+    build_games(tree, 2026)
+    e = _eff(tree, "g2", "off_epa_play")
+    assert e["league_lo"] is None and e["league_hi"] is None
+    assert e["league"] is not None  # the league mean is unaffected
+
+
+def test_league_bands_match_metrics_per_team():
+    plays = pl.DataFrame(
+        base_plays("g1") + [play("g1", "AWY", "HOM", "run", 0.9, yards_gained=12.0, sack=1.0)],
+        schema_overrides={"epa": pl.Float64},
+    )
+    per_team = {t: _metrics(plays.filter(pl.col("posteam") == t)) for t in ("HOM", "AWY")}
+    grouped = plays.group_by("posteam").agg(*_metric_exprs())
+    for row in grouped.iter_rows(named=True):
+        for k, v in per_team[row["posteam"]].items():
+            assert row[k] == pytest.approx(v) if v is not None else row[k] is None
+    # two teams only: below the minimum, so no band
+    assert _league_bands(plays, "posteam")["epa_play"] == (None, None)
+
+
+def test_schema_version_staleness(tree):
+    build_games(tree, 2026)
+    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION == "2"
+    assert build_games(tree, 2026) == []  # same hash, expectations and schema: up to date
+    f = retro_path(tree, 2026, "g2")
+    d = json.loads(f.read_text())
+    d["schema_version"] = "1"
+    f.write_text(json.dumps(d))
+    assert build_games(tree, 2026) == ["g2"]
+    assert read(tree, "g2")["schema_version"] == "2"

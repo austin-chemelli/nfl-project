@@ -6,9 +6,9 @@ import { useTheme, type Theme } from './theme'
 const NAV = [
   { to: '/', label: 'This week', end: true },
   { to: '/tracker', label: 'Tracker' },
-  { to: '/hypotheses', label: 'What history says' },
+  { to: '/hypotheses', label: 'History' },
   { to: '/coaches', label: 'Coaches' },
-  { to: '/build', label: 'Build your own' },
+  { to: '/build', label: 'Build' },
   { to: '/method', label: 'How it works' },
 ]
 

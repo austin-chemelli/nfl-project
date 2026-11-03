@@ -1,5 +1,5 @@
 {
- "schema_version": "1",
+ "schema_version": "2",
  "game_id": "2026_08_CAR_GB",
  "season": 2026,
  "week": 8,
@@ -42,6 +42,8 @@
      "game": 0.11,
      "season": 0.04,
      "league": 0.0,
+     "league_lo": -0.12,
+     "league_hi": 0.1,
      "season_games": 7
     },
     {
@@ -53,6 +55,8 @@
      "game": 0.47,
      "season": 0.45,
      "league": 0.44,
+     "league_lo": 0.4,
+     "league_hi": 0.48,
      "season_games": 7
     },
     {
@@ -64,6 +68,8 @@
      "game": 0.15,
      "season": 0.09,
      "league": 0.03,
+     "league_lo": -0.12,
+     "league_hi": 0.16,
      "season_games": 7
     },
     {
@@ -75,6 +81,8 @@
      "game": 0.04,
      "season": -0.04,
      "league": -0.06,
+     "league_lo": -0.18,
+     "league_hi": 0.04,
      "season_games": 7
     },
     {
@@ -86,6 +94,8 @@
      "game": 0.11,
      "season": 0.09,
      "league": 0.09,
+     "league_lo": 0.06,
+     "league_hi": 0.12,
      "season_games": 7
     },
     {
@@ -97,6 +107,8 @@
      "game": 0.05,
      "season": 0.06,
      "league": 0.07,
+     "league_lo": 0.05,
+     "league_hi": 0.09,
      "season_games": 7
     },
     {
@@ -108,6 +120,8 @@
      "game": -1.5,
      "season": 0.8,
      "league": 0.0,
+     "league_lo": -0.06,
+     "league_hi": 0.06,
      "season_games": 7
     },
     {
@@ -119,6 +133,8 @@
      "game": -0.02,
      "season": -0.06,
      "league": 0.0,
+     "league_lo": -0.12,
+     "league_hi": 0.1,
      "season_games": 7
     },
     {
@@ -130,6 +146,8 @@
      "game": 0.43,
      "season": 0.42,
      "league": 0.44,
+     "league_lo": 0.4,
+     "league_hi": 0.48,
      "season_games": 7
     },
     {
@@ -141,6 +159,8 @@
      "game": 0.01,
      "season": -0.03,
      "league": 0.03,
+     "league_lo": -0.12,
+     "league_hi": 0.16,
      "season_games": 7
     },
     {
@@ -152,6 +172,8 @@
      "game": -0.07,
      "season": -0.1,
      "league": -0.06,
+     "league_lo": -0.18,
+     "league_hi": 0.04,
      "season_games": 7
     },
     {
@@ -163,6 +185,8 @@
      "game": 0.08,
      "season": 0.08,
      "league": 0.09,
+     "league_lo": 0.06,
+     "league_hi": 0.12,
      "season_games": 7
     },
     {
@@ -174,6 +198,8 @@
      "game": 0.09,
      "season": 0.07,
      "league": 0.07,
+     "league_lo": 0.05,
+     "league_hi": 0.09,
      "season_games": 7
     },
     {
@@ -185,6 +211,8 @@
      "game": 2.1,
      "season": -1.0,
      "league": 0.0,
+     "league_lo": -0.06,
+     "league_hi": 0.06,
      "season_games": 7
     }
    ],
@@ -282,6 +310,8 @@
      "game": -0.02,
      "season": -0.05,
      "league": 0.0,
+     "league_lo": -0.12,
+     "league_hi": 0.1,
      "season_games": 7
     },
     {
@@ -293,6 +323,8 @@
      "game": 0.43,
      "season": 0.41,
      "league": 0.44,
+     "league_lo": 0.4,
+     "league_hi": 0.48,
      "season_games": 7
     },
     {
@@ -304,6 +336,8 @@
      "game": 0.01,
      "season": -0.02,
      "league": 0.03,
+     "league_lo": -0.12,
+     "league_hi": 0.16,
      "season_games": 7
     },
     {
@@ -315,6 +349,8 @@
      "game": -0.07,
      "season": -0.08,
      "league": -0.06,
+     "league_lo": -0.18,
+     "league_hi": 0.04,
      "season_games": 7
     },
     {
@@ -326,6 +362,8 @@
      "game": 0.08,
      "season": 0.07,
      "league": 0.09,
+     "league_lo": 0.06,
+     "league_hi": 0.12,
      "season_games": 7
     },
     {
@@ -337,6 +375,8 @@
      "game": 0.09,
      "season": 0.08,
      "league": 0.07,
+     "league_lo": 0.05,
+     "league_hi": 0.09,
      "season_games": 7
     },
     {
@@ -348,6 +388,8 @@
      "game": 2.1,
      "season": -2.0,
      "league": 0.0,
+     "league_lo": -0.06,
+     "league_hi": 0.06,
      "season_games": 7
     },
     {
@@ -359,6 +401,8 @@
      "game": 0.11,
      "season": 0.05,
      "league": 0.0,
+     "league_lo": -0.12,
+     "league_hi": 0.1,
      "season_games": 7
     },
     {
@@ -370,6 +414,8 @@
      "game": 0.47,
      "season": 0.46,
      "league": 0.44,
+     "league_lo": 0.4,
+     "league_hi": 0.48,
      "season_games": 7
     },
     {
@@ -381,6 +427,8 @@
      "game": 0.15,
      "season": 0.08,
      "league": 0.03,
+     "league_lo": -0.12,
+     "league_hi": 0.16,
      "season_games": 7
     },
     {
@@ -392,6 +440,8 @@
      "game": 0.04,
      "season": -0.03,
      "league": -0.06,
+     "league_lo": -0.18,
+     "league_hi": 0.04,
      "season_games": 7
     },
     {
@@ -403,6 +453,8 @@
      "game": 0.11,
      "season": 0.1,
      "league": 0.09,
+     "league_lo": 0.06,
+     "league_hi": 0.12,
      "season_games": 7
     },
     {
@@ -414,6 +466,8 @@
      "game": 0.05,
      "season": 0.06,
      "league": 0.07,
+     "league_lo": 0.05,
+     "league_hi": 0.09,
      "season_games": 7
     },
     {
@@ -425,6 +479,8 @@
      "game": -1.5,
      "season": 1.1,
      "league": 0.0,
+     "league_lo": -0.06,
+     "league_hi": 0.06,
      "season_games": 7
     }
    ],

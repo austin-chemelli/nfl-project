@@ -28,7 +28,7 @@ export function PersonaHistory({ meta }: { meta: Meta }) {
       help="Every approach spreads 100 attention points over the same feature groups. The persona chose its split by belief; history's split is what the data alone would choose."
     >
       <p className="mb-3 text-[14px] text-ink-2">
-        Each approach has <strong className="text-ink">100 attention points</strong> to spread over the same groups of evidence. For each group: what the persona believes, the public line (the persona after light fitting and calibration, which is what is scored above), and what history alone would choose.
+        Each approach spreads <strong className="text-ink">100 attention points</strong> over the same groups of evidence.
       </p>
       <Segmented label="Approach" value={sel} onChange={setSel} options={apps.map((x) => ({ value: x.id, label: x.name.replace(/^The /, '') }))} />
       <p className="mt-3 italic text-ink-2">{a.blurb}</p>
@@ -48,7 +48,6 @@ export function PersonaHistory({ meta }: { meta: Meta }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-[13px] text-ink-2">Share of the 100-point attention budget; a negative bar means history says the group points the other way.</p>
       <DataTable summary="Show the numbers: attention points by group">
         <table className="w-full text-[13px]">
           <thead>

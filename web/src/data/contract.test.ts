@@ -46,6 +46,13 @@ function check(root: string, rel: string) {
 describe('contract: checked-in fixtures', () => {
   const fx = files(FIX)
   it('has fixtures for every page', () => expect(fx.length).toBeGreaterThan(5))
+  it('parses a schema-1 retro without league bands (published before M10)', () => {
+    const r = JSON.parse(fs.readFileSync(path.join(FIX, 'retro/2026_08_CAR_GB.json'), 'utf8'))
+    r.schema_version = '1'
+    for (const t of [r.teams.home, r.teams.away]) for (const e of t.efficiency) { delete e.league_lo; delete e.league_hi }
+    const parsed = C.RetroGame.parse(r)
+    expect(parsed.teams.home.efficiency[0]).toMatchObject({ league_lo: null, league_hi: null })
+  })
   for (const rel of fx) it(rel, () => check(FIX, rel))
 })
 

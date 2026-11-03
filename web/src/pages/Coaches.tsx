@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router'
-import { Loaded, Page, Section, Segmented } from '../components/ui'
+import { FinePrint } from '../components/FinePrint'
+import { Loaded, Page, Segmented } from '../components/ui'
 import { useCoaches } from '../data/api'
 import type { Coaches } from '../data/contract'
 import { CoachView } from './coaches/CoachView'
@@ -18,13 +19,12 @@ export default function CoachesPage() {
   return (
     <Page
       title="Coaches & schemes"
-      lede="What each play-caller's units have done, set against that season's league, and what that says about a team's coordinators this year."
+      lede="What each play-caller's units have done, against that season's league."
     >
       {/* The header renders at once; the 1.2 MB file loads below it. */}
       <Loaded q={q} what="coaches">
         {(site) => (
           <>
-            <Notes site={site} />
             <div>
               <Segmented<Mode>
                 label="View"
@@ -42,6 +42,7 @@ export default function CoachesPage() {
             ) : (
               <CoachView site={site} coach={params.get('coach')} onCoach={(c) => update((n) => n.set('coach', c))} />
             )}
+            <Notes site={site} />
           </>
         )}
       </Loaded>
@@ -51,8 +52,8 @@ export default function CoachesPage() {
 
 function Notes({ site }: { site: Coaches }) {
   return (
-    <Section title="How to read this">
-      <ul className="list-disc space-y-1.5 pl-5 text-ink-2">
+    <FinePrint label="How to read this">
+      <ul className="list-disc space-y-1.5 pl-5">
         <li>Percentiles compare a unit with the rest of the league in the <b>same season</b>: 80% means more than 80% of teams. 50% is the league middle.</li>
         <li>{site.note}</li>
         <li>Coverage (man / zone / two-high) is charted only from 2018, and the charting provider changed in 2023, so league-wide man rates jump. That is why nothing here averages raw rates across seasons.</li>
@@ -74,6 +75,6 @@ function Notes({ site }: { site: Coaches }) {
           ))}
         </div>
       </details>
-    </Section>
+    </FinePrint>
   )
 }

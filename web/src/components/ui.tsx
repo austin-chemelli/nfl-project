@@ -6,7 +6,7 @@ import { pct } from '../lib/format'
 import { Help } from './Help'
 import { DataError } from '../data/api'
 
-export function Page({ title, lede, children }: { title: string; lede?: ReactNode; children: ReactNode }) {
+export function Page({ title, lede, children }: { title: ReactNode; lede?: ReactNode; children: ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>

@@ -34,7 +34,7 @@ export function Backtest({ t }: { t: Tracker; meta: Meta }) {
         rightLabel="worse than the market"
       />
       <p className="mt-2 text-[13px] text-ink-2">
-        Log loss minus the market&apos;s, {first} to {last} ({seasons} seasons, up to {games.toLocaleString('en-US')} games per line). Whiskers are a 90% range from resampling whole seasons. The zero line is the market; an approach only beats it if its whole whisker sits left of the line.
+        Log loss minus the market&apos;s, {first} to {last} ({seasons} seasons, up to {games.toLocaleString('en-US')} games per line).
       </p>
       <ul className="mt-2 list-disc pl-5 text-[14px]">
         {LINES.filter((m) => rows.some((r) => r.model_id === m)).map((m) => {

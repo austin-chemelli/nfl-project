@@ -14,7 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
 
 Side = Literal["home", "away"]
 Unit = Literal["epa", "pct", "pp", "count", "yards", "points"]
@@ -92,6 +92,10 @@ class Efficiency(_Model):
     game: float | None
     season: float | None
     league: float | None
+    # 10th/90th percentile of the teams' season-to-date values before this game; None when fewer
+    # than 8 teams have a value
+    league_lo: float | None = None
+    league_hi: float | None = None
     season_games: int
 
 

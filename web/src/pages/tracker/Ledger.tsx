@@ -15,9 +15,7 @@ export function Ledger({ t }: { t: Tracker }) {
     .sort((a, b) => a.kind.localeCompare(b.kind) || (b.units ?? -1e9) - (a.units ?? -1e9) || order.indexOf(a.model_id) - order.indexOf(b.model_id))
   return (
     <Section title="Paper bets" help="Pretend wagers, no money involved. Profit and loss over a season is dominated by luck.">
-      <p className="text-[14px] text-ink-2">
-        <strong className="text-ink">Not betting advice; small samples.</strong> Each lock, every approach stakes a flat 1 unit on the moneyline wherever its win probability differs from the vig-free market by more than 5 points. Season profit and loss is mostly noise; closing-line value (CLV, whether the price you got beat the final price) is the better edge signal. Backfill bets are priced at nflverse&apos;s closing-ish line, so their ROI is a harsh lower bound and their CLV is undefined.
-      </p>
+      <p className="text-[14px] text-ink-2">Flat 1-unit moneyline paper bets wherever an approach differs from the market by more than 5 points.</p>
       {rows.length === 0 ? (
         <p className="mt-3 text-ink-2">No bets recorded yet.</p>
       ) : (
@@ -50,9 +48,6 @@ export function Ledger({ t }: { t: Tracker }) {
           </table>
         </TableScroll>
       )}
-      <p className="mt-2 text-[13px] text-ink-2">
-        Backfill rows cover every graded season in the backtest, not just this one. Live rows appear after the first graded locks. Losing a few percent into the market&apos;s price is what a model that trails the market looks like.
-      </p>
     </Section>
   )
 }

@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react'
 import { Help } from '../components/Help'
+import { Tabs } from '../components/Tabs'
 import { Card, Loaded, Page, Section, DataTable, td, th } from '../components/ui'
 import { useAudit, useMeta } from '../data/api'
 import type { Audit, Meta } from '../data/contract'
@@ -24,25 +26,36 @@ export default function MethodPage() {
   return (
     <Page
       title="Method and data"
-      lede="A weekly NFL preview and prediction tool that is educational first and market-aware second. Here is how the numbers are made, what they cannot tell you, and the mistakes we found along the way."
+      lede="How the numbers are made, what they cannot tell you, and the mistakes we found along the way."
     >
       <Loaded q={meta} what="method">
         {(m) => (
-          <>
-            <HowItWorks meta={m} />
-            <Approaches meta={m} />
-            <Locks />
-            <Retrospective />
-            <Limits />
-            <Leaks />
-            <Freshness meta={m} audit={audit.data} auditError={audit.isError} />
-            <NullAudit audit={audit.data} loading={audit.isPending} error={audit.isError} />
-            <Credits />
-          </>
+          <Tabs
+            label="Method sections"
+            tabs={[
+              { id: 'how', label: 'How it works', content: <Stack><HowItWorks meta={m} /><Approaches meta={m} /><Locks /><Retrospective /></Stack> },
+              { id: 'limits', label: 'Limits and mistakes', content: <Stack><Limits /><Leaks /></Stack> },
+              {
+                id: 'data',
+                label: 'Data',
+                content: (
+                  <Stack>
+                    <Freshness meta={m} audit={audit.data} auditError={audit.isError} />
+                    <NullAudit audit={audit.data} loading={audit.isPending} error={audit.isError} />
+                    <Credits />
+                  </Stack>
+                ),
+              },
+            ]}
+          />
         )}
       </Loaded>
     </Page>
   )
+}
+
+function Stack({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-8">{children}</div>
 }
 
 function HowItWorks({ meta }: { meta: Meta }) {

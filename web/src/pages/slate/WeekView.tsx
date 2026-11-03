@@ -1,13 +1,15 @@
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Help } from '../../components/Help'
-import { Card, Loaded, ModelBadge, ProbCell, Section, StatusBadge, TableScroll, td, th } from '../../components/ui'
+import { FinePrint } from '../../components/FinePrint'
+import { Card, Loaded, ModelBadge, ProbCell, Section, Segmented, StatusBadge, TableScroll, td, th } from '../../components/ui'
 import { isNotFound, useSlate } from '../../data/api'
 import type { GameRow, Meta } from '../../data/contract'
-import { ago, kickoffEt, pct, spreadLabel } from '../../lib/format'
+import { ago, kickoffEt, spreadLabel } from '../../lib/format'
 import { approachOf } from '../../lib/meta'
 import { colorVar } from '../../lib/models'
+import { GameCard } from './GameCard'
 import { Recap } from './Recap'
-import { byKickoff, correct, disagreements, divergenceText, DIVERGE, gameStatus, neighbours, pickOf, weekHref, scoreText, sideText } from './helpers'
+import { correct, divergenceText, DIVERGE, gameStatus, neighbours, parseSort, pickOf, scoreText, SORTS, sortGames, weekHref, type SortKey } from './helpers'
 
 const COLS = ['traditionalist', 'analyst', 'sharp', 'student', 'ensemble'] as const
 
@@ -29,10 +31,9 @@ export function WeekView({ meta, season, week }: { meta: Meta; season: number; w
         </Card>
       ) : (
         <Loaded q={q} what="slate">
-          {(s) => <Games meta={meta} games={byKickoff(s.games)} week={week} />}
+          {(s) => <Games meta={meta} games={s.games} week={week} />}
         </Loaded>
       )}
-      <p className="text-[13px] text-ink-3">Probabilities are the models' estimates, not advice. Fan-made, not affiliated with the NFL.</p>
     </>
   )
 }
@@ -71,58 +72,94 @@ function WeekPicker({ meta, season, week }: { meta: Meta; season: number; week: 
 }
 
 function Games({ meta, games, week }: { meta: Meta; games: GameRow[]; week: number }) {
+  const [params, setParams] = useSearchParams()
+  const location = useLocation()
+  const sort = parseSort(params.get('sort'))
+  const table = params.get('view') === 'table'
   if (games.length === 0) return <Card>No games listed for week {week}.</Card>
+  const sorted = sortGames(games, sort)
+  const anyFinal = games.some((g) => g.result != null)
+  const options = SORTS.filter((o) => o.value !== 'upset' || anyFinal)
+  const setSort = (v: SortKey) =>
+    setParams((p) => {
+      const n = new URLSearchParams(p)
+      if (v === 'kickoff') n.delete('sort')
+      else n.set('sort', v)
+      return n
+    }, { replace: true })
+  const viewLink = new URLSearchParams(params)
+  if (table) viewLink.delete('view')
+  else viewLink.set('view', 'table')
+  const statuses = games.map((g) => gameStatus(g).status)
+  const common = mode(statuses)
   return (
     <>
-      <Disagreements meta={meta} games={games} />
       <Section
         title={`Week ${week}`}
-        help="One line per approach plus the average of all four. Each cell is the team that approach favors and its win chance."
+        help="Each card is one game: the dots are the four approaches and their average, the gray line is the betting market."
+        aside={
+          <div className="flex flex-wrap items-center gap-3">
+            <Segmented label="Sort games" value={options.some((o) => o.value === sort) ? sort : 'kickoff'} options={options} onChange={setSort} />
+            <Link to={{ pathname: location.pathname, search: viewLink.toString() }} replace className="text-[13px] text-accent hover:underline">
+              {table ? 'Show as cards' : 'Show as table'}
+            </Link>
+          </div>
+        }
       >
-        <Legend />
-        <div className="hidden md:block">
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-3">
+          <span className="inline-flex items-center gap-1.5">
+            <StatusBadge status={common} /> {statuses.every((s) => s === common) ? 'on every game' : 'on most games; the others are marked'}
+          </span>
+          {!table && <CardKey />}
+        </div>
+        {table ? (
           <TableScroll>
-            <GameTable meta={meta} games={games} />
+            <GameTable meta={meta} games={sorted} />
           </TableScroll>
-        </div>
-        <div className="flex flex-col gap-3 md:hidden">
-          {games.map((g) => (
-            <GameCard key={g.game_id} meta={meta} g={g} />
-          ))}
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {sorted.map((g) => (
+              <GameCard key={g.game_id} g={g} showStatus={gameStatus(g).status !== common} />
+            ))}
+          </div>
+        )}
       </Section>
+      <FinePrint>
+        <Legend />
+        <p>Probabilities are the models' estimates, not advice. Fan-made, not affiliated with the NFL.</p>
+      </FinePrint>
     </>
+  )
+}
+
+function mode(xs: string[]): string {
+  const counts = new Map<string, number>()
+  for (const x of xs) counts.set(x, (counts.get(x) ?? 0) + 1)
+  return [...counts.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0]
+}
+
+/** The one key for every card's strip: dots are home win chance, left is the away side. */
+function CardKey() {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1">
+      {COLS.map((c) => <ModelBadge key={c} modelId={c} />)}
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden className="inline-block h-3 w-0.5 bg-[var(--series-market)] opacity-60" /> Market
+      </span>
+      <span>· dots: left is the away side, right the home side</span>
+    </span>
   )
 }
 
 function Legend() {
   return (
-    <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-      Shaded cell with ▲/▼: the approach is {Math.round(DIVERGE * 100)}+ points more on the home (▲) or away (▼) side than the market. ✓/✗: right or
+    <p className="max-w-3xl">
+      Shaded cell with ▲/▼ (table view): the approach is {Math.round(DIVERGE * 100)}+ points more on the home (▲) or away (▼) side than the market. ✓/✗: right or
       wrong about the winner. <b>Preview</b> = scored now, not a lock; <b>locked</b> = recorded before kickoff; <b>not locked</b> = no lock was
       recorded, scored as of an hour before kickoff; <b>backfill</b> = finished game scored after the fact by frozen models; – = not scored yet.
+      A card's sentence names the approach furthest from the market, or how the four split, or how they did once the game is final; an upset is a winner the market
+      gave under 45%.
     </p>
-  )
-}
-
-function Disagreements({ meta, games }: { meta: Meta; games: GameRow[] }) {
-  const top = disagreements(games)
-  if (!top.length) return null
-  const name = (id: string) => approachOf(meta, id)?.name.replace(/^The /, '') ?? id
-  return (
-    <Section title="Where they disagree most" help="The games where the four approaches are furthest apart on the home team's chance.">
-      <ul className="flex flex-col gap-1.5">
-        {top.map((d) => (
-          <li key={d.game.game_id}>
-            <Link to={`/game/${d.game.game_id}`} className="font-medium text-accent hover:underline">
-              {d.game.away} @ {d.game.home}
-            </Link>
-            : {name(d.hi)} {sideText(d.game, d.ps[d.hi])} vs {name(d.lo)} {sideText(d.game, d.ps[d.lo])}{' '}
-            <span className="text-ink-3">({Math.round(100 * d.spread)} points apart)</span>
-          </li>
-        ))}
-      </ul>
-    </Section>
   )
 }
 
@@ -210,36 +247,5 @@ function GameTable({ meta, games }: { meta: Meta; games: GameRow[] }) {
         ))}
       </tbody>
     </table>
-  )
-}
-
-function GameCard({ meta, g }: { meta: Meta; g: GameRow }) {
-  return (
-    <Card>
-      <div className="flex items-baseline justify-between gap-2">
-        <Link to={`/game/${g.game_id}`} className="text-lg font-semibold text-accent hover:underline">
-          {g.away} @ {g.home}
-        </Link>
-        <span className="text-[12px] text-ink-3">{kickoffEt(g.kickoff_utc)}</span>
-      </div>
-      <div className="text-[12px] text-ink-3">{g.away_qb ?? '–'} / {g.home_qb ?? '–'}</div>
-      <div className="mt-2 flex items-center justify-between text-[13px]">
-        <span className="text-ink-2">
-          Market: <MarketCell g={g} /> · <ProbCell pHome={g.market?.p_home} home={g.home} away={g.away} />
-        </span>
-        <StatusCell g={g} />
-      </div>
-      <ul className="mt-2 flex flex-col gap-1 border-t border-line pt-2 text-[14px]">
-        {COLS.map((c) => (
-          <li key={c} className="flex items-center justify-between gap-2">
-            <Help text={c === 'ensemble' ? 'The average of the four approaches.' : approachOf(meta, c)?.blurb}>
-              <ModelBadge modelId={c} />
-            </Help>
-            <PickCell g={g} mid={c} />
-          </li>
-        ))}
-      </ul>
-      <div className="mt-1 text-[12px] text-ink-3">Market home win {pct(g.market?.p_home)}</div>
-    </Card>
   )
 }

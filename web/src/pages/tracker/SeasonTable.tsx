@@ -16,7 +16,6 @@ export function SeasonTable({ t }: { t: Tracker }) {
   if (!seasons.length) return null
   return (
     <>
-      <p className="text-[13px] text-ink-2">Mean log loss per season (lower is better; 0.693 is a coin flip). Read each cell against the Market column.</p>
       <DataTable summary="Show the numbers: log loss by season">
         <table className="w-full text-[13px]">
           <thead>
