@@ -23,7 +23,14 @@ function localData(): Plugin {
         ]
         const hit = roots.find(([prefix]) => url.startsWith(prefix))
         const file = hit ? path.join(hit[1], url.slice(hit[0].length)) : null
-        if (!hit || !file || !file.startsWith(hit[1] + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return next()
+        if (!hit || !file || !file.startsWith(hit[1] + path.sep)) return next()
+        // A missing file is a 404, as on the bucket: falling through would serve index.html with a 200,
+        // and "not built yet" (a retro or recap) would surface as a JSON parse error.
+        if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+          res.statusCode = 404
+          res.end('not found')
+          return
+        }
         res.setHeader('Content-Type', 'application/json')
         res.setHeader('Cache-Control', 'no-cache')
         fs.createReadStream(file).on('error', next).pipe(res)

@@ -1,11 +1,16 @@
+import type { ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
-import { Card, ErrorBox, Loaded, Page, Section, StatusBadge } from '../components/ui'
+import { FinePrint } from '../components/FinePrint'
+import { SummaryStrip, Tile } from '../components/SummaryStrip'
+import { Tabs, type TabDef } from '../components/Tabs'
+import { Card, ErrorBox, Loaded, Loading, Page } from '../components/ui'
 import { useGame, useMeta, useRetro, isNotFound } from '../data/api'
-import type { Game, Meta } from '../data/contract'
-import { kickoffEt, pct, spreadLabel } from '../lib/format'
+import type { Game, Meta, RetroGame } from '../data/contract'
 import { Edges, Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './game/Sections'
+import { GameHeader, GameTitle } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
 import { Retro } from './game/Retro'
+import { summaryTiles } from './game/summary'
 import { gameStatus } from './slate/helpers'
 
 const STATUS_TEXT: Record<string, string> = {
@@ -16,10 +21,10 @@ const STATUS_TEXT: Record<string, string> = {
   none: 'No approach forecasts for this game yet: it has not been locked or scored.',
 }
 
-/** "2026_08_CAR_GB" -> "CAR @ GB" so the title shows before the data arrives. */
-function titleFor(id: string | undefined): string {
+/** "2026_08_CAR_GB" -> CAR @ GB so the title shows before the data arrives. */
+function teamsOf(id: string | undefined): { away: string; home: string } | null {
   const m = id?.match(/^\d{4}_\d{2}_([A-Z]+)_([A-Z]+)$/)
-  return m ? `${m[1]} @ ${m[2]}` : 'Game'
+  return m ? { away: m[1], home: m[2] } : null
 }
 
 export default function GamePage() {
@@ -27,8 +32,9 @@ export default function GamePage() {
   const q = useGame(id)
   const meta = useMeta()
   const missing = q.isError && isNotFound(q.error)
+  const teams = teamsOf(id)
   return (
-    <Page title={titleFor(id)}>
+    <Page title={teams ? <GameTitle {...teams} /> : 'Game'}>
       {missing ? (
         <Card>
           <div className="font-medium">No detail file for this game yet.</div>
@@ -48,48 +54,74 @@ export default function GamePage() {
 }
 
 function GameBody({ g, meta }: { g: Game; meta: Meta }) {
-  const mk = g.market
+  const final = g.result != null
+  const rq = useRetro(g.game_id, final)
+  // wait for the retro (a final game's default tab depends on it); a 404 just means not built yet
+  if (final && rq.isPending) return <Loading what="game" />
+  const retro: RetroGame | null = rq.isSuccess ? rq.data : null
+  const retroError = rq.isError && !isNotFound(rq.error) ? rq.error : null
   const { status } = gameStatus(g)
+
+  const tabs: TabDef[] = []
+  if (retro || retroError)
+    tabs.push({ id: 'retro', label: 'What happened', content: retro ? <Retro r={retro} /> : <ErrorBox error={retroError} /> })
+  tabs.push(
+    {
+      id: 'forecast',
+      label: final ? 'Pregame forecast' : 'Forecast',
+      content: (
+        <TabBody>
+          <ApproachesVsMarket g={g} meta={meta} />
+          <Why g={g} meta={meta} />
+          <Edges g={g} meta={meta} />
+          <FinePrint>
+            <p>{STATUS_TEXT[status] ?? status}</p>
+            <p>Probabilities are the models' estimates, not advice. The market is the reference every approach is compared with, never an input.</p>
+            <p>The pieces in "why they lean" add up only approximately to the total: the effects overlap and the final probability is also calibrated.</p>
+          </FinePrint>
+        </TabBody>
+      ),
+    },
+    {
+      id: 'matchup',
+      label: 'Matchup',
+      content: (
+        <TabBody>
+          <TaleOfTheTape g={g} meta={meta} />
+          <Tendencies g={g} meta={meta} />
+          <FinePrint>
+            <p>Tendencies are season-to-date rates, shrunk toward the league average when plays are few. Each chart has its own scale.</p>
+            <p>Values that describe the game as a whole (like the market line) show the same number for both teams.</p>
+          </FinePrint>
+        </TabBody>
+      ),
+    },
+    {
+      id: 'news',
+      label: 'Injuries & news',
+      content: (
+        <TabBody>
+          <Injuries g={g} />
+          <NarrativeSection g={g} />
+        </TabBody>
+      ),
+    },
+  )
+
   return (
     <>
-      <div className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap items-center gap-2 text-ink-2">
-          <span>{kickoffEt(g.kickoff_utc)}</span>
-          <span>·</span>
-          <span>{g.stadium ?? 'stadium n/a'}{g.roof ? ` (${g.roof})` : ''}{g.neutral_site ? ' · neutral site' : ''}</span>
-          <StatusBadge status={status} />
-        </div>
-        <div><b>QBs:</b> {g.away} {g.away_qb ?? 'n/a'}, {g.home} {g.home_qb ?? 'n/a'}</div>
-        <div>
-          <b>Market:</b> {spreadLabel(mk?.spread_home, g.home, g.away)}, total {mk?.total ?? '–'}, {g.home} win {pct(mk?.p_home)}
-        </div>
-        {g.result && (
-          <div className="rounded-md border border-[var(--good)] px-3 py-2 font-medium">
-            Final: {g.away} {g.result.away_score}, {g.home} {g.result.home_score}
-          </div>
-        )}
-        <div className="text-[13px] text-ink-3">{STATUS_TEXT[status] ?? status}</div>
-      </div>
-      <RetroSlot g={g} />
-      <ApproachesVsMarket g={g} meta={meta} />
-      <Why g={g} meta={meta} />
-      <Edges g={g} meta={meta} />
-      <TaleOfTheTape g={g} meta={meta} />
-      <Tendencies g={g} meta={meta} />
-      <Injuries g={g} />
-      <NarrativeSection g={g} />
-      <p className="text-[13px] text-ink-3">Probabilities are the models' estimates, not advice. Fan-made, not affiliated with the NFL.</p>
+      <GameHeader g={g} />
+      <SummaryStrip label="Game summary">
+        {summaryTiles(g, meta, retro).map((t) => (
+          <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} tab={tabs.some((x) => x.id === t.tab) ? t.tab : undefined} modelId={t.modelId} />
+        ))}
+      </SummaryStrip>
+      <Tabs label="Game sections" tabs={tabs} default={retro ? 'retro' : 'forecast'} />
+      <p className="text-[12px] text-ink-3">Fan-made, not affiliated with the NFL. Not betting advice.</p>
     </>
   )
 }
 
-/** The post-game retrospective: only for finished games, and nothing at all while loading or when none is built (404). */
-function RetroSlot({ g }: { g: Game }) {
-  const q = useRetro(g.game_id, g.result != null)
-  if (g.result == null || q.isPending) return null
-  if (q.isError) {
-    if (isNotFound(q.error)) return null
-    return <Section title="Game retrospective"><ErrorBox error={q.error} /></Section>
-  }
-  return <Retro r={q.data} />
+function TabBody({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-8">{children}</div>
 }

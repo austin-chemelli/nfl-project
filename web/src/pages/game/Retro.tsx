@@ -3,21 +3,28 @@
  * Descriptive, not causal; every number comes from the RetroGame record.
  */
 import { useState } from 'react'
+import { FinePrint } from '../../components/FinePrint'
 import { Help } from '../../components/Help'
 import { Card, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Efficiency, GradedPick, RetroGame, TeamRetro } from '../../data/contract'
-import { DivergingBars, Dumbbell, type DumbbellRow } from '../../charts'
+import { DivergingBars, RangeRow, type RangeRowData } from '../../charts'
 import { dash, fmtEff, pct, pts } from '../../lib/format'
 
 export function Retro({ r }: { r: RetroGame }) {
   return (
     <div className="flex flex-col gap-8">
       <Headlines r={r} />
-      <Forecasts r={r} />
       <PlayedLike r={r} />
       <EfficiencySection r={r} />
       <LuckSection r={r} />
+      <Forecasts r={r} />
       <Groups key={r.game_id} r={r} />
+      <FinePrint>
+        <p>The retrospective describes the game; it does not prove why it went that way. Every number is computed from play-by-play, and every sentence is filled in from those numbers.</p>
+        <p>"Expected" comes from league rates in the same situations (2015–2025), and swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played.</p>
+        <p>In the forecast table, dimmed rows are references (the market and simple baselines), not entrants, and cannot be "best". One game is a very noisy score for any model.</p>
+        <p>Group values overlap and do not add up to anything: read their order, not their size.</p>
+      </FinePrint>
     </div>
   )
 }
@@ -28,13 +35,11 @@ function Headlines({ r }: { r: RetroGame }) {
   if (r.headlines.length === 0) return null
   return (
     <Section title="What happened" help="A few plain-language takeaways, each computed from the numbers below. They describe the game; they do not prove why it went that way.">
-      <Card>
-        <ul className="list-disc space-y-1.5 pl-5 text-[15px]">
-          {r.headlines.map((h) => (
-            <li key={h}>{h}</li>
-          ))}
-        </ul>
-      </Card>
+      <ul className="list-disc space-y-1.5 pl-5 text-[15px]">
+        {r.headlines.map((h) => (
+          <li key={h}>{h}</li>
+        ))}
+      </ul>
     </Section>
   )
 }
@@ -71,7 +76,6 @@ function Forecasts({ r }: { r: RetroGame }) {
           </tbody>
         </table>
       </TableScroll>
-      <p className="mt-2 text-[12px] text-ink-3">Dimmed rows are references (the market and simple baselines), not entrants.</p>
     </Section>
   )
 }
@@ -150,20 +154,29 @@ function verdict(e: Efficiency): Verdict {
   if (e.game == null || e.season == null || e.game === e.season) return 'same'
   return (e.game > e.season) === e.higher_is_better ? 'better' : 'worse'
 }
-const VERDICT_COLOR: Record<Verdict, string> = { better: 'var(--good)', worse: 'var(--critical)', same: 'var(--text-muted)', neutral: 'var(--text-muted)' }
 
 const VERDICT_TEXT: Record<Verdict, string> = { better: 'Better than the season level.', worse: 'Worse than the season level.', same: 'Same as the season level.', neutral: 'A style measure: more passing is neither better nor worse.' }
 
 function EfficiencySection({ r }: { r: RetroGame }) {
+  const [side, setSide] = useState<'away' | 'home'>(r.result.margin > 0 ? 'home' : 'away')
+  const t = r.teams[side]
   return (
     <Section
       title="Efficiency"
-      help="How each unit played in this game next to its season to date (before this game), with the league average as a tick. The game dot is green when it beat the team's season level and red when it fell short."
+      help="How each unit played in this game next to its season to date (before this game). The band is the league's typical range (the middle 80% of teams this season), the tick the league average. The game dot is green when it beat the team's season level and red when it fell short."
     >
-      <div className="grid gap-4 lg:grid-cols-2">
-        <TeamEfficiency t={r.teams.away} />
-        <TeamEfficiency t={r.teams.home} />
+      <div className="mb-3">
+        <Segmented
+          label="Team"
+          value={side}
+          onChange={setSide}
+          options={[{ value: 'away', label: r.away }, { value: 'home', label: r.home }]}
+        />
       </div>
+      <Card>
+        <RangeLegend />
+        <TeamEfficiency key={side} t={t} />
+      </Card>
     </Section>
   )
 }
@@ -173,57 +186,60 @@ const UNIT_ORDER = ['epa', 'pct', 'pp']
 /** Keeps the longest labels to two lines in the narrow label column on phones. */
 const shortLabel = (s: string) => s.replace(/^Opponent /, 'Opp. ').replace(/ over expected$/, ' over exp.')
 
-function TeamEfficiency({ t }: { t: TeamRetro }) {
-  const legend = (
-    <div className="mb-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
-      <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: 'var(--text-secondary)' }} /> Season to date</span>
-      <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: 'var(--good)' }} /> This game, better</span>
-      <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: 'var(--critical)' }} /> worse</span>
-      <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-0.5 bg-[var(--text-muted)]" /> League</span>
+/** A change vs the season level: EPA as is, rates in percentage points. */
+function effDelta(d: number, unit: string): string {
+  const sign = d < 0 ? '−' : '+'
+  if (unit === 'epa') return `${sign}${Math.abs(d).toFixed(2)}`
+  if (unit === 'pct') return `${sign}${(100 * Math.abs(d)).toFixed(1)} pts`
+  return `${sign}${Math.abs(d).toFixed(1)} pts`
+}
+
+function RangeLegend() {
+  const item = 'inline-flex items-center gap-1'
+  return (
+    <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
+      <span className={item}><span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-[var(--text-secondary)]" /> Season to date</span>
+      <span className={item}><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--good)]" /> This game, better</span>
+      <span className={item}><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--critical)]" /> worse</span>
+      <span className={item}><span className="inline-block h-3 w-0.5 bg-[var(--text-muted)]" /> League average</span>
+      <span className={item}><span className="inline-block h-2.5 w-5 rounded-sm bg-[var(--div-mid)]" /> Typical range</span>
     </div>
   )
+}
+
+function TeamEfficiency({ t }: { t: TeamRetro }) {
   return (
-    <Card>
-      <h3 className="text-[15px] font-semibold">{t.team}</h3>
-      {legend}
+    <>
       {(['off', 'def'] as const).map((side) => {
         const effs = t.efficiency.filter((e) => e.unit_side === side)
         const rank = (u: string) => (UNIT_ORDER.includes(u) ? UNIT_ORDER.indexOf(u) : UNIT_ORDER.length)
         const units = [...new Set(effs.map((e) => e.unit))].sort((a, b) => rank(a) - rank(b))
         return (
-          <div key={side} className="mt-3">
-            <h4 className="text-[12px] font-medium uppercase tracking-wide text-ink-3">{side === 'off' ? 'Offense' : 'Defense'}</h4>
+          <div key={side} className="mt-3 first:mt-0">
+            <h4 className="text-[12px] font-medium uppercase tracking-wide text-ink-3">
+              {t.team} {side === 'off' ? 'offense' : 'defense'}
+            </h4>
             {units.map((u) => {
-              const rows: DumbbellRow[] = effs.filter((e) => e.unit === u).map((e) => {
+              const rows: RangeRowData[] = effs.filter((e) => e.unit === u).map((e) => {
                 const v = verdict(e)
                 return {
                   key: e.metric,
                   label: shortLabel(e.label),
-                  a: e.season,
-                  b: e.game,
+                  game: e.game,
+                  season: e.season,
                   league: e.league,
-                  bColor: VERDICT_COLOR[v],
-                  title: `${e.label}: this game ${fmtEff(e.game, u)}, season to date ${fmtEff(e.season, u)} (${e.season_games} games), league ${fmtEff(e.league, u)}. ${VERDICT_TEXT[v]}`,
+                  lo: e.league_lo,
+                  hi: e.league_hi,
+                  verdict: v,
+                  title: `${e.label}: this game ${fmtEff(e.game, u)}, season to date ${fmtEff(e.season, u)} (${e.season_games} games), league ${fmtEff(e.league, u)}${e.league_lo != null && e.league_hi != null ? `, typical team ${fmtEff(e.league_lo, u)} to ${fmtEff(e.league_hi, u)}` : ''}. ${VERDICT_TEXT[v]}`,
                 }
               })
-              return (
-                <Dumbbell
-                  key={u}
-                  aName="Season to date"
-                  bName="This game"
-                  aColor="var(--text-secondary)"
-                  bColor="var(--text-muted)"
-                  format={(x) => fmtEff(x, u)}
-                  legend={<></>}
-                  rows={rows}
-                  labelWidth={150}
-                />
-              )
+              return <RangeRow key={u} rows={rows} format={(x) => fmtEff(x, u)} formatDelta={(d) => effDelta(d, u)} legend={false} labelWidth={150} />
             })}
           </div>
         )
       })}
-    </Card>
+    </>
   )
 }
 
@@ -270,7 +286,9 @@ function TeamLuck({ t }: { t: TeamRetro }) {
         format={(v) => pts(v)}
         labelWidth={150}
       />
-      <ul className="mt-3 space-y-1.5 border-t border-line pt-3 text-[13px] text-ink-2">
+      <details className="mt-3 border-t border-line pt-2 text-[13px] text-ink-2">
+        <summary className="cursor-pointer text-ink-3 hover:text-ink">What each swing was</summary>
+      <ul className="mt-2 space-y-1.5">
         {t.luck.map((f) => (
           <li key={f.factor}>
             <span className="font-medium text-ink">{f.label}</span>
@@ -286,6 +304,7 @@ function TeamLuck({ t }: { t: TeamRetro }) {
           </li>
         ))}
       </ul>
+      </details>
       {hasPartly && <p className="mt-2 text-[12px] text-ink-3">* partly skill, not pure luck.</p>}
     </Card>
   )
@@ -328,7 +347,6 @@ function Groups({ r }: { r: RetroGame }) {
           </p>
         )}
         <DivergingBars rows={rows} leftLabel="hurt the forecast" rightLabel="helped the forecast" format={(v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(3)}`} labelWidth={150} />
-        <p className="mt-2 text-[12px] text-ink-3">Group values overlap and do not add up to anything, and one game is noise: read the order, not the size.</p>
       </Card>
     </Section>
   )

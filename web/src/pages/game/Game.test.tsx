@@ -11,17 +11,21 @@ describe('Game page', () => {
     renderRoute('/game/2026_08_CAR_GB')
     expect(await screen.findByText(/Lambeau Field/)).toBeInTheDocument()
     expect(screen.getAllByText(/Bryce Young/).length).toBeGreaterThan(0)
-    // approaches vs market
-    expect(screen.getByRole('img', { name: /Home win chance for GB by model/ })).toBeInTheDocument()
+    // summary strip, then the forecast tab (the default before kickoff)
+    expect(screen.getByRole('group', { name: 'Game summary' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Forecast' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('img', { name: /Home win chance for GB: market/ })).toBeInTheDocument()
     // why: home field +6.2 pts for the analyst, shown in the chart title and group list
     expect(screen.getByText(/Inside each group/)).toBeInTheDocument()
     expect(screen.getAllByText(/toward GB/).length).toBeGreaterThan(0)
     // edges as percentile sentences
     expect(screen.getByText(/edge is in the 88th percentile of matchups/)).toBeInTheDocument()
-    // tendencies
+    // tendencies, on the matchup tab
+    await userEvent.click(screen.getByRole('tab', { name: 'Matchup' }))
     expect(screen.getByText('CAR offense vs GB defense')).toBeInTheDocument()
     expect(screen.getByText('Defensive habits')).toBeInTheDocument()
-    // narrative
+    // narrative, on the news tab
+    await userEvent.click(screen.getByRole('tab', { name: 'Injuries & news' }))
     expect(screen.getByText(/What people are saying about the matchup/)).toBeInTheDocument()
     expect(screen.getByText(/Carolina's run defense is among the league's worst/)).toBeInTheDocument()
     expect(screen.getByText(/claude-code\/sonnet-5.5/)).toBeInTheDocument()
@@ -33,6 +37,7 @@ describe('Game page', () => {
     await screen.findByText(/Lambeau Field/)
     await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Approach' })).getByRole('radio', { name: 'Analyst' }))
     expect(screen.getByText(/Analyst says: GB win chance 71.2%/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Matchup' }))
     await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Situation' })).getByRole('radio', { name: 'Third down' }))
     expect(screen.getByRole('radio', { name: 'Third down' })).toHaveAttribute('aria-checked', 'true')
   })
@@ -43,7 +48,7 @@ describe('Game page', () => {
   })
 
   it('shows "no narrative" for a game without one', async () => {
-    renderRoute('/game/2026_08_ARI_DAL')
+    renderRoute('/game/2026_08_ARI_DAL?tab=news')
     expect(await screen.findByText(/No narrative research for this game yet/)).toBeInTheDocument()
   })
 
@@ -63,14 +68,26 @@ describe('Game page', () => {
     fs.writeFileSync(gp, JSON.stringify(game))
     afterAll(() => fs.rmSync(root, { recursive: true, force: true }))
 
-    it('renders the retrospective at the top of a finished game', async () => {
+    it('opens a finished game on the retrospective, with the post-game summary', async () => {
       renderRoute('/game/2026_08_CAR_GB', root)
       expect(await screen.findByRole('heading', { name: /^How the forecasts did/ })).toBeInTheDocument()
       expect(screen.getByRole('heading', { name: /^Which groups mattered/ })).toBeInTheDocument()
-      // above the approaches chart
-      const retro = screen.getByRole('heading', { name: /^How the forecasts did/ })
-      const chart = screen.getByRole('img', { name: /Home win chance for GB by model/ })
-      expect(retro.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(screen.getByRole('tab', { name: 'What happened' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByLabelText('Final: CAR 23, GB 20')).toBeInTheDocument()
+      const strip = screen.getByRole('group', { name: 'Game summary' })
+      expect(within(strip).getByText('Approaches right')).toBeInTheDocument()
+      expect(within(strip).getByText('0 of 4')).toBeInTheDocument()
+      // the pregame forecast is one tab over
+      expect(screen.queryByRole('img', { name: /Home win chance for GB/ })).toBeNull()
+      await userEvent.click(screen.getByRole('tab', { name: 'Pregame forecast' }))
+      expect(screen.getByRole('img', { name: /Home win chance for GB: market/ })).toBeInTheDocument()
+    })
+
+    it('switches tabs from a summary tile', async () => {
+      renderRoute('/game/2026_08_CAR_GB?tab=news', root)
+      await screen.findByRole('tab', { name: 'Injuries & news' })
+      await userEvent.click(within(screen.getByRole('group', { name: 'Game summary' })).getByText('Played like'))
+      expect(screen.getByRole('tab', { name: 'What happened' })).toHaveAttribute('aria-selected', 'true')
     })
 
     it('renders nothing extra when there is no retro for the game', async () => {
@@ -78,6 +95,8 @@ describe('Game page', () => {
       renderRoute('/game/2026_08_CAR_GB', root)
       expect(await screen.findByText(/Lambeau Field/)).toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: /^How the forecasts did/ })).toBeNull()
+      expect(screen.queryByRole('tab', { name: 'What happened' })).toBeNull()
+      expect(screen.getByRole('tab', { name: 'Pregame forecast' })).toHaveAttribute('aria-selected', 'true')
       expect(screen.queryByRole('alert')).toBeNull()
     })
 

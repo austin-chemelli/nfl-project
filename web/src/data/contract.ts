@@ -232,6 +232,8 @@ export const Efficiency = z.looseObject({
   game: nnum,
   season: nnum,
   league: nnum,
+  league_lo: nnum.default(null),
+  league_hi: nnum.default(null),
   season_games: num,
 })
 

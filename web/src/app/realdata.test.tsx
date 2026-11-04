@@ -12,13 +12,14 @@ const has = fs.existsSync(path.join(REAL, 'site', 'meta.json'))
 const ROUTES = [
   ['/week/2026/1', /ARI/],
   ['/game/2026_01_ARI_LAC', /Injur/i],
-  ['/game/2026_08_CAR_GB', /narrative|saying/i],
+  ['/game/2026_08_KC_DEN', /Efficiency/],
+  ['/game/2026_08_CAR_GB?tab=news', /narrative|saying/i],
   ['/tracker', /market/i],
   ['/hypotheses', /history/i],
   ['/coaches?team=GB', /GB|Green Bay/],
   ['/build', /budget|points/i],
   ['/season/2015', /2015/],
-  ['/method', /freshness|Fresh/i],
+  ['/method?tab=data', /freshness|Fresh/i],
 ] as const
 
 describe.skipIf(!has)('real data smoke', () => {

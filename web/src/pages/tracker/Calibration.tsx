@@ -59,9 +59,6 @@ export function Calibration({ t, meta }: { t: Tracker; meta: Meta }) {
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-[13px] text-ink-2">
-        The dotted diagonal is perfect calibration. Each game counts toward the team the approach favored (so a 25% home team is a 75% away team). The highest bins hold few games, so their wobble is mostly noise.
-      </p>
       <DataTable summary="Show the numbers: calibration bins">
         <table className="w-full text-[13px]">
           <thead>

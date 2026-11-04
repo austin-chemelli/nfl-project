@@ -1,3 +1,7 @@
+import type { ReactNode } from 'react'
+import { FinePrint } from '../components/FinePrint'
+import { SummaryStrip, Tile } from '../components/SummaryStrip'
+import { Tabs } from '../components/Tabs'
 import { Page, Loaded, Section } from '../components/ui'
 import { useMeta, useTracker } from '../data/api'
 import { CurrentSeason } from './tracker/CurrentSeason'
@@ -7,29 +11,101 @@ import { Divergence } from './tracker/Divergence'
 import { Ledger } from './tracker/Ledger'
 import { PersonaHistory } from './tracker/PersonaHistory'
 import { SeasonTable } from './tracker/SeasonTable'
+import { summaryTiles } from './tracker/summary'
+
+function TabBody({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-8">{children}</div>
+}
 
 export default function TrackerPage() {
   const tracker = useTracker()
   const meta = useMeta()
   return (
-    <Page
-      title="Season tracker"
-      lede="Forecast quality comes first (log loss: lower is better; 0.693 is a coin flip), paper bets second. About 180 live games a season cannot rank models, and in the 2005 to 2025 backtest nothing beats the market. Treat everything here as a measurement, not a verdict."
-    >
+    <Page title="Season tracker" lede="How the forecasts are scoring against the market, with paper bets second (log loss: lower is better; 0.693 is a coin flip).">
       <Loaded q={tracker} what="tracker">
         {(t) => (
           <Loaded q={meta} what="tracker">
             {(m) => (
               <>
-                <CurrentSeason t={t} meta={m} />
-                <Backtest t={t} meta={m} />
-                <Calibration t={t} meta={m} />
-                <Divergence t={t} meta={m} />
-                <Ledger t={t} />
-                <PersonaHistory meta={m} />
-                <Section title="Log loss by season" help="Seasons are noisy (about 285 games each); the gaps between lines matter more than the wiggle.">
-                  <SeasonTable t={t} />
-                </Section>
+                <SummaryStrip label="Tracker summary">
+                  {summaryTiles(t).map((x) => (
+                    <Tile key={x.id} label={x.label} value={x.value} sub={x.sub} tab={x.tab} modelId={x.modelId} />
+                  ))}
+                </SummaryStrip>
+                <Tabs
+                  label="Tracker sections"
+                  default="season"
+                  tabs={[
+                    {
+                      id: 'season',
+                      label: 'This season',
+                      content: (
+                        <TabBody>
+                          <CurrentSeason t={t} meta={m} />
+                          <Section title="Log loss by season" help="Seasons are noisy (about 285 games each); the gaps between lines matter more than the wiggle.">
+                            <SeasonTable t={t} />
+                          </Section>
+                          <FinePrint>
+                            <p>About 180 live games a season cannot rank models, and in the 2005 to 2025 backtest nothing beats the market. Treat everything here as a measurement, not a verdict.</p>
+                            <p>Shaded weeks are backfill: models frozen before the season, scored after the fact. Diamonds mark live weeks, graded from locks made before kickoff. A handful of 16-game weeks is very noisy; lines crossing early means little, and differences under 0.005 log loss are noise.</p>
+                            <p>The cumulative chart is a running average since week 1; compare every line with the gray Market line. The season table shows mean log loss per season (0.693 is a coin flip); read each cell against the Market column.</p>
+                          </FinePrint>
+                        </TabBody>
+                      ),
+                    },
+                    {
+                      id: 'backtest',
+                      label: 'Backtest',
+                      content: (
+                        <TabBody>
+                          <Backtest t={t} meta={m} />
+                          <PersonaHistory meta={m} />
+                          <FinePrint>
+                            <p>Whiskers are a 90% range from resampling whole seasons. The zero line is the market; an approach only beats it if its whole whisker sits left of the line.</p>
+                            <p>For each group of evidence: what the persona believes, the public line (the persona after light fitting and calibration, which is what is scored above), and what history alone would choose. Bars are shares of the 100-point attention budget; a negative bar means history says the group points the other way.</p>
+                          </FinePrint>
+                        </TabBody>
+                      ),
+                    },
+                    {
+                      id: 'calibration',
+                      label: 'Calibration',
+                      content: (
+                        <TabBody>
+                          <Calibration t={t} meta={m} />
+                          <FinePrint>
+                            <p>The dotted diagonal is perfect calibration. Each game counts toward the team the approach favored (so a 25% home team is a 75% away team). The highest bins hold few games, so their wobble is mostly noise.</p>
+                          </FinePrint>
+                        </TabBody>
+                      ),
+                    },
+                    {
+                      id: 'disagreements',
+                      label: 'Disagreements',
+                      content: (
+                        <TabBody>
+                          <Divergence t={t} meta={m} />
+                          <FinePrint>
+                            <p>If an approach saw something the market missed, its bar would sit above the market&apos;s. The side an approach leans toward is the underdog relative to the market, so bars below 50% are expected; what matters is the gap between the two bars.</p>
+                          </FinePrint>
+                        </TabBody>
+                      ),
+                    },
+                    {
+                      id: 'bets',
+                      label: 'Paper bets',
+                      content: (
+                        <TabBody>
+                          <Ledger t={t} />
+                          <FinePrint>
+                            <p><strong className="text-ink">Not betting advice; small samples.</strong> Season profit and loss is mostly noise; closing-line value (CLV, whether the price you got beat the final price) is the better edge signal.</p>
+                            <p>Backfill bets are priced at nflverse&apos;s closing-ish line, so their ROI is a harsh lower bound and their CLV is undefined. Backfill rows cover every graded season in the backtest, not just this one; live rows appear after the first graded locks. Losing a few percent into the market&apos;s price is what a model that trails the market looks like.</p>
+                          </FinePrint>
+                        </TabBody>
+                      ),
+                    },
+                  ]}
+                />
               </>
             )}
           </Loaded>

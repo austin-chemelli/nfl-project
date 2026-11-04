@@ -28,7 +28,7 @@ export function Divergence({ t, meta }: { t: Tracker; meta: Meta }) {
       {total > 0 && (
         <p className="mb-3 font-medium">
           {wins === total
-            ? 'The market has been right more often when they disagree. In every approach, in every case where the gap was 5+ points, the market\'s probabilities scored better than the approach\'s on those games.'
+            ? 'When they disagree by 5+ points, the market has scored better in every approach and every gap.'
             : `When they disagree by 5+ points, the market scored better in ${wins} of ${total} approach-and-gap cases.`}
         </p>
       )}
@@ -56,9 +56,6 @@ export function Divergence({ t, meta }: { t: Tracker; meta: Meta }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-[13px] text-ink-2">
-        If an approach saw something the market missed, its bar would sit above the market&apos;s. The side an approach leans toward is the underdog relative to the market, so bars below 50% are expected; what matters is the gap between the two bars.
-      </p>
       <DataTable summary="Show the numbers: disagreement buckets">
         <table className="w-full text-[13px]">
           <thead>

@@ -47,6 +47,16 @@ Global: header nav, "last updated" from `meta.generated_at` and the last lock, f
 
 Decided 2026-11-03 after the retrospective made the game page 21 sections long. Every page opens with a summary strip (3–5 tiles, each one statement, linking to the tab that explains it) and keeps its detail behind URL-synced tabs (`?tab=`). Sections keep their content and lose their duplicate explanations (one lede sentence, help on hover, one fine-print block per page). Values are drawn on a league band (p10–p90 of team season-to-date values) with the number printed at the row end. The slate becomes matchup cards with a compact approaches-vs-market strip and one computed sentence (`?view=table` keeps the grid). Team colors appear as a thin accent bar only; charts keep the approach colors. Shared pieces: `Tabs`, `SummaryStrip`/`Tile`, `FinePrint`, `RangeRow`, `ProbStrip`, `TeamAccent`.
 
+| Route | Summary strip | Tabs (`?tab=`) |
+|---|---|---|
+| `/`, `/week/:season/:week` | week recap: best approach, vs the market, picks right, biggest upset, luckiest team (finished weeks) | none; cards sort by `?sort=kickoff\|disagreement\|upset`, `?view=table` for the grid |
+| `/game/:id` | pregame: the pick, vs the market, the approaches' split, biggest factor, key absence or biggest edge; finished: result, approaches right, played like, swing plays, biggest surprise | `retro` (finished games with a retro; default), `forecast`, `matchup`, `news` |
+| `/tracker` | ensemble vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest`, `calibration`, `disagreements`, `bets` |
+| `/hypotheses` | none | `effects`, `time` (`?item=` picks the feature) |
+| `/method` | none | `how`, `limits`, `data` |
+
+Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
+
 ## Out of scope for now
 
 Custom domain (Firebase's `nfl-project-prod.web.app` works), analytics, server-side rendering, historical per-game pages before 2026.

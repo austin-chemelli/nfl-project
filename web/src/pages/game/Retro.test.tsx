@@ -31,7 +31,7 @@ describe('Retro', () => {
     expect(screen.getAllByText(/lost 3 of its 3 fumbles; about 1\.6/).length).toBeGreaterThan(0)
     // defaults to the best model (Traditionalist); its most valuable group is labeled
     expect(screen.getByText(/Most valuable for The Traditionalist/)).toBeInTheDocument()
-    expect(screen.getByText(/one game is noise/)).toBeInTheDocument()
+    expect(screen.getByText(/read their order, not their size/)).toBeInTheDocument()
   })
 
   it('switches approach in the groups section', async () => {

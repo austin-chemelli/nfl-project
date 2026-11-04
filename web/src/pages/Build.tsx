@@ -21,7 +21,7 @@ export default function BuildPage() {
   return (
     <Page
       title="Build your own approach"
-      lede="Spend attention points on the things that matter to you and see how those beliefs would have done in every game since 2005. Overall confidence is not an input: calibration sets it from earlier seasons, so a loud set of weights gets no credit. Hover any group for what it measures."
+      lede="Spend attention points on what you think wins games, and see how those beliefs would have done in every game since 2005."
     >
       <Loaded q={meta} what="the groups">
         {(m) => <Loaded q={matrix} what="the game matrix">{(mx) => <Builder meta={m} matrix={mx} />}</Loaded>}

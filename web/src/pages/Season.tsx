@@ -23,7 +23,7 @@ export default function SeasonPage() {
   return (
     <Page
       title={`Season view${year ? `: ${year}` : ''}`}
-      lede="Every game of a season, scored with a set of weights. Open it from Build your own to see why a season went well or badly. Games are listed by week; click a column header to sort."
+      lede="Every game of a season, scored with a set of weights."
     >
       <Loaded q={meta} what="the groups">
         {(m) => <Loaded q={matrix} what="the game matrix">{(mx) => <SeasonGate meta={m} matrix={mx} year={year} />}</Loaded>}

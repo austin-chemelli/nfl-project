@@ -33,11 +33,13 @@ from datetime import datetime
 from pathlib import Path
 
 import duckdb
+import numpy as np
 import polars as pl
 
 from nfl.config import Paths, current_season, now_utc
 from nfl.retro.expectations import _in_bucket, expectations_path, load
 from nfl.retro.schema import (
+    SCHEMA_VERSION,
     Attribution,
     Bucket,
     Efficiency,
@@ -194,10 +196,9 @@ def _offense(plays: pl.DataFrame) -> pl.DataFrame:
 # ------------------------------------------------------------------------------------- efficiency
 
 
-def _metrics(df: pl.DataFrame) -> dict[str, float | None]:
-    """The seven efficiency metrics over a frame of offensive plays (pass/run with epa)."""
-    if df.is_empty():
-        return dict.fromkeys(OFF_LABELS)
+def _metric_exprs() -> list[pl.Expr]:
+    """The seven efficiency aggregations, aliased by metric (shared by `_metrics` and the
+    per-team league bands, so both give identical numbers)."""
     db = pl.col("qb_dropback").fill_null(0) == 1
     run = pl.col("play_type") == "run"
     yards = pl.col("yards_gained")
@@ -207,7 +208,7 @@ def _metrics(df: pl.DataFrame) -> dict[str, float | None]:
         .otherwise(((~run) & (yards >= 20)) | (run & (yards >= 10)))
         .cast(pl.Float64)
     )
-    r = df.select(
+    return [
         pl.col("epa").mean().alias("epa_play"),
         pl.col("success").mean().alias("success"),
         pl.col("epa").filter(db).mean().alias("epa_dropback"),
@@ -215,10 +216,40 @@ def _metrics(df: pl.DataFrame) -> dict[str, float | None]:
         explosive.mean().alias("explosive"),
         (pl.col("sack").fill_null(0).filter(db).sum() / db.sum()).alias("sack_rate"),
         pl.col("pass_oe").mean().alias("proe"),
-    ).row(0, named=True)
-    out: dict[str, float | None] = {}
-    for k, v in r.items():
-        out[k] = None if v is None or (isinstance(v, float) and math.isnan(v)) else float(v)
+    ]
+
+
+def _clean(v: object) -> float | None:
+    return None if v is None or (isinstance(v, float) and math.isnan(v)) else float(v)  # type: ignore[arg-type]
+
+
+def _metrics(df: pl.DataFrame) -> dict[str, float | None]:
+    """The seven efficiency metrics over a frame of offensive plays (pass/run with epa)."""
+    if df.is_empty():
+        return dict.fromkeys(OFF_LABELS)
+    r = df.select(_metric_exprs()).row(0, named=True)
+    return {k: _clean(v) for k, v in r.items()}
+
+
+LEAGUE_BAND_MIN_TEAMS = 8
+LEAGUE_BAND_PCT = (10, 90)
+
+
+def _league_bands(before: pl.DataFrame, col: str) -> dict[str, tuple[float | None, float | None]]:
+    """Per metric, the 10th and 90th percentile (linear) of the teams' season-to-date values,
+    grouping `before` by `col` (posteam for offense, defteam for defense)."""
+    none = (None, None)
+    if before.is_empty():
+        return dict.fromkeys(OFF_LABELS, none)
+    per_team = before.filter(pl.col(col).is_not_null()).group_by(col).agg(_metric_exprs())
+    out: dict[str, tuple[float | None, float | None]] = {}
+    for metric in OFF_LABELS:
+        vals = [v for v in map(_clean, per_team[metric].to_list()) if v is not None]
+        if len(vals) < LEAGUE_BAND_MIN_TEAMS:
+            out[metric] = none
+        else:
+            lo, hi = np.percentile(vals, LEAGUE_BAND_PCT)
+            out[metric] = (_round_metric(metric, float(lo)), _round_metric(metric, float(hi)))
     return out
 
 
@@ -238,6 +269,7 @@ def _efficiency(off: pl.DataFrame, team: str, before: pl.DataFrame, gid: str) ->
         prior = before.filter(pl.col(col) == team)
         n_games[side] = prior["game_id"].n_unique()
         season = _metrics(prior)
+        bands = _league_bands(before, col)
         for metric, (label, unit) in OFF_LABELS.items():
             if side == "off":
                 better = metric != "sack_rate"
@@ -253,6 +285,8 @@ def _efficiency(off: pl.DataFrame, team: str, before: pl.DataFrame, gid: str) ->
                     game=_round_metric(metric, game[metric]),
                     season=_round_metric(metric, season[metric]),
                     league=_round_metric(metric, league[metric]),
+                    league_lo=bands[metric][0],
+                    league_hi=bands[metric][1],
                     season_games=n_games[side],
                 )
             )
@@ -704,12 +738,17 @@ def retro_path(paths: Paths, season: int, game_id: str) -> Path:
 
 
 def _stamped(path: Path) -> dict | None:
-    """The stored record's staleness stamps (pbp_hash, expectations_version), None if unreadable."""
+    """The stored record's staleness stamps (pbp_hash, expectations_version, schema_version), None
+    if unreadable."""
     try:
         d = json.loads(path.read_text())
     except OSError, ValueError:
         return None
-    return {"pbp_hash": d.get("pbp_hash"), "expectations_version": d.get("expectations_version")}
+    return {
+        "pbp_hash": d.get("pbp_hash"),
+        "expectations_version": d.get("expectations_version"),
+        "schema_version": d.get("schema_version"),
+    }
 
 
 HASH_COLS = [c for c in PLAY_COLS if c != "raw_snapshot_ts"]
@@ -843,6 +882,7 @@ def build(
             stamped is None
             or stamped["pbp_hash"] != hashes[gid]
             or stamped["expectations_version"] != E.version
+            or stamped["schema_version"] != SCHEMA_VERSION
         )
         if force or stale:
             todo.append((g, snap))

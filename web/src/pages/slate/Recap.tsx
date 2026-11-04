@@ -1,10 +1,12 @@
-/** Compact week recap above the slate grid (ADR 0016): which approach had the week, and the games that stood out. */
+/** Week recap above the slate grid (ADR 0016, 0017): a summary strip first, the full model table and lists behind a disclosure. */
 import { Link } from 'react-router'
 import { Help } from '../../components/Help'
-import { Card, ErrorBox, ModelBadge, Section, TableScroll, td, th } from '../../components/ui'
+import { SummaryStrip, Tile } from '../../components/SummaryStrip'
+import { Card, ErrorBox, ModelBadge, TableScroll, td, th } from '../../components/ui'
 import { isNotFound, useRecap } from '../../data/api'
 import type { WeekRecap } from '../../data/contract'
 import { dash } from '../../lib/format'
+import { recapTiles } from './recapTiles'
 
 export function Recap({ season, week }: { season: number; week: number }) {
   const q = useRecap(season, week)
@@ -21,16 +23,15 @@ function vsMarket(v: number | null | undefined): string {
 }
 
 function RecapBlock({ r }: { r: WeekRecap }) {
-  const best = r.models.find((m) => m.model_id === r.best_model)
   const models = [...r.models].sort((a, b) => (a.rank || 99) - (b.rank || 99))
   return (
-    <div role="region" aria-label={`Week ${r.week} recap`}>
-      <Section
-        title="How the forecasts did this week"
-        help="How the forecasts did on this week's finished games, and which games stood out."
-        aside={best && <span className="text-[14px] text-ink-2">Best approach: <b className="text-ink"><ModelBadge modelId={best.model_id} label={best.label} /></b></span>}
-      >
-        <Card>
+    <div role="region" aria-label={`Week ${r.week} recap`} className="flex flex-col gap-3">
+      <SummaryStrip label={`Week ${r.week} summary`}>
+        {recapTiles(r).map((t) => <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} modelId={t.modelId} />)}
+      </SummaryStrip>
+      <details className="text-[14px]">
+        <summary className="cursor-pointer text-[13px] text-ink-3 hover:text-ink">Full recap</summary>
+        <Card className="mt-2">
           <TableScroll>
             <table className="w-full border-collapse text-[14px]">
               <thead>
@@ -68,7 +69,7 @@ function RecapBlock({ r }: { r: WeekRecap }) {
           </div>
           {r.note && <p className="mt-3 text-[13px] text-ink-3">{r.note}</p>}
         </Card>
-      </Section>
+      </details>
     </div>
   )
 }

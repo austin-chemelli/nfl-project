@@ -7,7 +7,7 @@ export default function SlatePage() {
   const params = useParams()
   const meta = useMeta()
   return (
-    <Page title="Slate" lede="Every game of the week: what each approach picks, how far it sits from the betting market, and who is right once the game is final.">
+    <Page title="Slate" lede="What each approach picks this week, set against the betting market.">
       <Loaded q={meta} what="site info">
         {(m) => {
           const season = params.season ? Number(params.season) : m.season
