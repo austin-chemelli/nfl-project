@@ -128,6 +128,21 @@ def _canon_pos(col: str) -> pl.Expr:
 # ---------------------------------------------------------------------------------- loading
 
 
+def load_depth(paths: Paths) -> pl.DataFrame:
+    cols = ", ".join(
+        f'cast({c} as {"bigint" if t is pl.Int64 else "varchar"}) as "{c}"'
+        for c, t in _DEPTH_COLS.items()
+    )
+    table = f"{paths.curated_table('depth_charts').as_posix()}/*/*.parquet"
+    return (
+        duckdb.connect()
+        .sql(
+            f"select {cols} from read_parquet('{table}', hive_partitioning=true, union_by_name=true)"
+        )
+        .pl()
+    )
+
+
 def load_inputs(paths: Paths) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]:
     con = duckdb.connect()
 
@@ -140,14 +155,7 @@ def load_inputs(paths: Paths) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
         + glob("injuries")
         + "', hive_partitioning=true, union_by_name=true)"
     ).pl()
-    cols = ", ".join(
-        f'cast({c} as {"bigint" if t is pl.Int64 else "varchar"}) as "{c}"'
-        for c, t in _DEPTH_COLS.items()
-    )
-    depth = con.sql(
-        f"select {cols} from read_parquet('{glob('depth_charts')}', "
-        "hive_partitioning=true, union_by_name=true)"
-    ).pl()
+    depth = load_depth(paths)
     plays = con.sql(
         "select game_id, posteam, passer_player_id from read_parquet('"
         + glob("plays")
@@ -339,6 +347,18 @@ def _prev_passer(gt: pl.DataFrame, plays: pl.DataFrame) -> pl.DataFrame:
         allow_exact_matches=False,
         check_sortedness=False,
     ).select("game_id", "team", "prev_passer")
+
+
+def charted_qb1(games: pl.DataFrame, depth: pl.DataFrame, build_ts: datetime) -> pl.DataFrame:
+    """(game_id, team, qb1): each game-team's charted starter, the same lookup `compute` uses."""
+    gt = _game_teams(games, build_ts)
+    return (
+        _charts(gt, depth)
+        .filter(pl.col("pos") == "QB")
+        .sort("ord")
+        .group_by("game_id", "team", maintain_order=True)
+        .agg(pl.col("gsis_id").first().alias("qb1"))
+    )
 
 
 def compute(

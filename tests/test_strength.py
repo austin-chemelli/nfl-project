@@ -149,9 +149,10 @@ def test_no_leakage_from_target_or_later_games():
 
 def test_build_rows_through_store(tmp_path, monkeypatch):
     monkeypatch.setattr(strength, "load_plays_all", lambda paths, min_season: plays_frame())
+    monkeypatch.setattr(strength, "named_starters", lambda paths, games, build_ts: None)
     rows = strength.build(None, games_frame(), BUILD)  # type: ignore[arg-type]
     assert rows.height == 5 * 2 * 22
-    assert set(rows["source"]) == {"pbp"} and set(rows["version"]) == {"2"}
+    assert set(rows["source"]) == {"pbp"} and set(rows["version"]) == {"3"}
     store.validate(rows)
     g5 = rows.filter(pl.col("game_id") == "g5")
     assert set(g5["known_as_of"]) == {BUILD}  # upcoming game stamped at build time

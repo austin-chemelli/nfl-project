@@ -87,7 +87,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
 | ui | `ui-next` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | planned 2026-11-04, decisions in; starting at U1; parallel to model-wave2 (§8) | |
-| model-wave2 | `model-wave2` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: QB fix, line-move cap, scheme groups zeroed, special-teams group, ensemble demoted; one `model_version` for the Week 10 Thursday lock. Runs parallel to ui (§8) | started 2026-11-04 | |
+| model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version` for the Week 10 Thursday lock. Runs parallel to ui (§8) | started 2026-11-04 | |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
@@ -132,7 +132,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 ## Known issues and risks
 
-- **The quarterback group nets to about zero in JAX @ BAL** (0.0 pp in the four approaches and the ensemble, +1.0 toward Baltimore in Global) with a third-string starter. Its members cancel: `availability.qb_change` is offset by stats that rate Baltimore's starter above Jacksonville's. First item of model wave 2 (`.notes/ui-round2.md` §2, §6).
+- **Upcoming games priced the previous starter, not the named one** (Baltimore on Lamar Jackson's career with Tyler Huntley charted; Arizona likewise). Fixed on `qb-charted-starter`: upcoming games follow the depth chart's QB1. Not live until that PR merges and its image builds. Huntley missed Wednesday's practice, so the chart may change again; the lock follows whatever nflverse has at 09:00.
 - **First live locks** Thu 2026-11-05 09:00 and Sat 2026-11-07 12:00: watch the executions and the lock commits; the laptop fallback is `uv run nfl lock --slot thu` in the primary checkout. Thursday's is the first push from the cloud: dry runs don't push, so the deploy key's write access is confirmed but the push itself is untested.
 - **First desktop pass** 2026-11-04 18:00 ET: the task's environment is tested (entry `desktop setup test` in Cloud Logging), a full scheduled run isn't. The 08:30 check on 2026-11-05 emails if it didn't upload.
 - **Production retros are v1 until the 07:00 run on 2026-11-05** rebuilds all 2026 retros with the league bands, the Elo fix and the Week 8 backfill rows. Until then 28 Week 8 retros show a graded Elo that differs from the game page.
