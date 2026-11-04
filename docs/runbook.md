@@ -88,14 +88,17 @@ cd ~/dev/nfl-project && uv sync
 # .env: LLM_BASE_URL=http://<desktop-tailscale-ip>:11434/v1, SEARX_URL=http://<desktop-tailscale-ip>:8080, LLM_MODEL=qwen3.5:9b
 # gcloud CLI (https://cloud.google.com/sdk/docs/install#deb), then:
 gcloud auth login && gcloud config set project nfl-project-prod
-uv run nfl llm ping && uv run nfl narrative week                   # model reachable; prints "<season> <week>" after the first pass's download
+uv run nfl llm ping                                                # model reachable
+for t in games lines; do gcloud storage rsync -r gs://nfl-project-prod-data/curated/$t data/curated/$t -q; done
+uv run nfl narrative week                                          # prints "<season> <week>"
 ```
-Then register the task from an admin PowerShell. Times are the desktop's local time: 18:00 and 07:00 ET are 17:00 and 06:00 Central.
+Then register the task from an admin PowerShell. Times are the desktop's local time (`Get-TimeZone`): 18:00 and 07:00 ET are 17:00 and 06:00 Central. Set `$distro` to the Ubuntu distro's name from `wsl -l -v`.
 ```
-$a = New-ScheduledTaskAction -Execute "wsl.exe" -Argument '-d Ubuntu -- bash -lc "~/dev/nfl-project/scripts/desktop-narrative.sh"'
+$distro = "Ubuntu"
+$a = New-ScheduledTaskAction -Execute "wsl.exe" -Argument "-d $distro -- bash -lc 'bash ~/dev/nfl-project/scripts/desktop-narrative.sh'"
 $t = @((New-ScheduledTaskTrigger -Weekly -DaysOfWeek Wednesday -At 5:00PM), (New-ScheduledTaskTrigger -Weekly -DaysOfWeek Saturday -At 6:00AM))
 $s = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 8)
 Register-ScheduledTask -TaskName "nfl-narrative" -Action $a -Trigger $t -Settings $s
 ```
-The task runs when Austin is signed in, which Ollama needs anyway (docs/desktop-llm-setup.md §6). Run a pass by hand: `Start-ScheduledTask nfl-narrative`, or `scripts/desktop-narrative.sh` in WSL. Logs: `data/raw/narrative_local/passes/` on the desktop, and `gcloud logging read 'logName="projects/nfl-project-prod/logs/nfl-desktop-narrative"' --limit 20`.
+The task runs when Austin is signed in, which Ollama needs anyway (docs/desktop-llm-setup.md §6). Check the task's environment without a full pass (uv and gcloud on the login shell's PATH): `wsl -d <distro> -- bash -lc "cd ~/dev/nfl-project && uv run nfl narrative week && echo OK"`. Run a pass by hand: `Start-ScheduledTask nfl-narrative`, or `bash scripts/desktop-narrative.sh` in WSL. Logs: `data/raw/narrative_local/passes/` on the desktop, and `gcloud logging read 'logName="projects/nfl-project-prod/logs/nfl-desktop-narrative"' --limit 20`.
 
