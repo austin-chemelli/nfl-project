@@ -112,14 +112,14 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D1 | Keep the production number audit (`.notes/audit_site.py`, uncommitted) as a CI or post-publish check? | (a) a step after `nfl publish` that fails the job; (b) a CI check against the public bucket; (c) leave it manual | Austin's call; a chat can build (a) in a day | 2026-11-03 |
 | D2 | Tendencies on the league band too (`RangeRow` over `tendencies.parquet`), the follow-up ADR 0017 left out? | (a) next UI round; (b) not worth it | the next UI look | 2026-11-03 |
 | D3 | A better knowledge-base tool for cross-chat tracking than `.notes/board.md`? | later; revisit when the board stops being enough | nothing yet | 2026-11-04 |
-| D4 | Game page Preview tab: scale the approach-free bars by the Global fit or by equal weights? (`.notes/ui-round2.md` P1) | (a) Global fit, recommended; (b) equal weights | Austin | 2026-11-04 |
-| D5 | Keep the Student as a public line ("data only") or drop it from the headline lineup? | keep with clear copy / drop | Austin | 2026-11-04 |
-| D6 | The Sharp's `market.line_move_pts` swung JAX @ BAL by 24 pp; winsorize or cap it in the next model wave, or only explain it? | winsorize ±2 SD / cap a group at its budget share / explain only | Austin; lands as a new `model_version` | 2026-11-04 |
-| D7 | Scheme groups: zero their weights in the next wave, or wait for the interaction research (offense style × defense style) before touching weights? | zero now / wait | Austin | 2026-11-04 |
+| D6 | Model wave 2 scope (Austin 2026-11-04: cap `market.line_move_pts`, not too hard; give the Student and maybe others a capped line-move input; zero the scheme groups' weights but keep them in previews; fix the quarterback group). Exact caps, which approaches get line move, whether `coaching` counts as scheme | plan in `.notes/ui-round2.md` §6 | Austin's confirmation, then a `model-wave2` track; lands as one `model_version` at the Week 10 Thursday lock | 2026-11-04 |
 | D8 | Retro copy: "swings" for the net of all factors, "pure luck" for the coin flips? | yes / other names | Austin | 2026-11-04 |
-| D4 | A third narrative pass on Monday for the Monday night game? | (a) add it (a `PASSES` entry, a check time, a task trigger); (b) keep two passes | how stale Saturday's research looks by Monday night in Week 9 | 2026-11-03 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
+
+- D4 Preview bars are scaled by the Global fit (Austin, 2026-11-04).
+- D5 The Student stays as the data-only public line; the ensemble is demoted to a diagnostic like Global and leaves the site, README and tiles (Austin, 2026-11-04). Its lock rows keep being written until wave 2 drops it.
+- D7 folded into D6 (scheme groups zeroed in wave 2, kept in previews).
 
 - Who locks Week 9: the cloud (`locks_paused = false`, PR #6, merged 2026-11-04), without the planned shadow week, to find the problems on the first live weekend. The laptop is the fallback.
 - Narrative timing: two passes, Wednesday evening for every game and Saturday morning for the Sunday and Monday games; the newer record supersedes with no reconciliation code (journal 2026-11-03).
