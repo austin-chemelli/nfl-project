@@ -113,6 +113,44 @@ def test_starter_hurt_early_is_still_the_projected_starter():
     assert st.filter((pl.col("game_id") == "g1") & (pl.col("team") == "A"))["qb"][0] == "X"
 
 
+def named_qb(game, team, qb1):
+    return pl.DataFrame({"game_id": [game], "team": [team], "qb1": [qb1]})
+
+
+def test_upcoming_game_follows_the_charted_starter_not_last_weeks():
+    """2026 W9: Baltimore's feature was Lamar Jackson's career (last game's starter) with Tyler
+    Huntley on the depth chart. A game without plays takes the charted QB1."""
+    _, tg = run()
+    rows = [r for r in ROWS if r["game_id"] != "g4"]
+    plays = make_plays(rows)
+    assert qb.projected_starters(tg, plays).filter(
+        (pl.col("game_id") == "g4") & (pl.col("team") == "A")
+    )["qb"][0] == "Y"  # fmt: skip
+    st = qb.projected_starters(tg, plays, named_qb("g4", "A", "X"))
+    assert st.filter((pl.col("game_id") == "g4") & (pl.col("team") == "A"))["qb"][0] == "X"
+    # the other team and a game with no chart keep the previous starter
+    assert st.filter((pl.col("game_id") == "g4") & (pl.col("team") == "B"))["qb"][0] == "X"
+
+
+def test_a_played_game_keeps_its_actual_starter_whatever_the_chart_said():
+    """Backtest rows must not move: the chart only fills games without plays."""
+    _, tg = run()
+    st = qb.projected_starters(tg, make_plays([*ROWS]), named_qb("g1", "A", "Z"))
+    assert st.filter((pl.col("game_id") == "g1") & (pl.col("team") == "A"))["qb"][0] == "X"
+
+
+def test_charted_starter_with_no_history_sits_at_replacement():
+    _, tg = run()
+    rows = [r for r in ROWS if r["game_id"] != "g4"]
+
+    def epa(starter):
+        vals = qb.compute(tg, make_plays(rows), named_qb("g4", "A", starter))
+        return feat(vals, "g4", "A", "strength.qb_epa")
+
+    assert epa("ROOKIE") == pytest.approx(epa("ANOTHER_ROOKIE"))  # no history: replacement level
+    assert epa("ROOKIE") < epa("X")
+
+
 def test_replacement_level_pools_only_low_career_qbs_from_earlier_seasons():
     def row(q, season, n_db, sx_e, n_e, sx_c, n_c):
         return (q, season, float(n_db), sx_e, float(n_e), sx_c, float(n_c))

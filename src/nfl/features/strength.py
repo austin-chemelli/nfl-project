@@ -32,11 +32,11 @@ import numpy as np
 import polars as pl
 
 from nfl.config import Paths
-from nfl.features import qb, store
+from nfl.features import availability, qb, store
 from nfl.models.elo import TEAM_ALIASES, pregame_ratings
 
 SOURCE = "pbp"
-VERSION = "2"
+VERSION = "3"
 
 N0_PLAYS = 300.0
 N0_GAMES = 4.0
@@ -466,7 +466,9 @@ def _adjusted(games: pl.DataFrame, base: pl.DataFrame, lam: float = RIDGE_LAMBDA
     )
 
 
-def compute(games: pl.DataFrame, plays: pl.DataFrame) -> pl.DataFrame:
+def compute(
+    games: pl.DataFrame, plays: pl.DataFrame, named_qb: pl.DataFrame | None = None
+) -> pl.DataFrame:
     """Long (game_id, team, feature, value) for every team-game in `games`.
 
     `plays`: every play with posteam and defteam (see `load_plays_all`).
@@ -529,11 +531,18 @@ def compute(games: pl.DataFrame, plays: pl.DataFrame) -> pl.DataFrame:
     long = tg.select("game_id", "team", *feats).unpivot(
         feats, index=["game_id", "team"], variable_name="feature", value_name="value"
     )
-    qb_long = qb.compute(tg.select("game_id", "team", "ckey", "season", "kickoff_utc"), plays)
+    qb_long = qb.compute(
+        tg.select("game_id", "team", "ckey", "season", "kickoff_utc"), plays, named_qb
+    )
     return pl.concat([elo_long.select(long.columns), long, qb_long.select(long.columns)])
+
+
+def named_starters(paths: Paths, games: pl.DataFrame, build_ts: datetime) -> pl.DataFrame:
+    """Charted QB1 per game-team, for the games that have no plays yet (`nfl.features.qb`)."""
+    return availability.charted_qb1(games, availability.load_depth(paths), build_ts)
 
 
 def build(paths: Paths, games: pl.DataFrame, build_ts: datetime) -> pl.DataFrame:
     plays = load_plays_all(paths, int(games["season"].min()))
-    values = compute(games, plays)
+    values = compute(games, plays, named_starters(paths, games, build_ts))
     return store.from_team_values(values, games, source=SOURCE, version=VERSION, build_ts=build_ts)

@@ -303,3 +303,15 @@ The v4 comparison was per job, so Austin chose to split jobs between models inst
 **Findings.** The script had been committed as 100644, so the runbook's task, which ran it by path, would have failed with "Permission denied" on its first real run. The checklist ran it through `bash`, and the task on the desktop does too. A cloud dry run of the Thursday lock passed on 2026-11-04 (execution `nfl-lock-thu-5mqhw`). JAX @ BAL's market number looked wrong at 19% for the home team but is right: the books had JAX -10 and BAL +400. The hooks PRs changed `scripts/` after that run; the deployed image was rebuilt from `0fe3ddc`, and job code hasn't changed since, so the lock's image check still passes. Three small things went to the hub's known issues: README CI digits that move between runs despite a seeded RNG, a flaky Build page test, and gcsfuse write errors in a job that still succeeded.
 
 **Lesson.** This is the same missing executable bit that silently stopped the hooks. Scheduled entry points should be called through their interpreter, so the file mode can't matter. Dry runs don't cover the last step: Thursday's lock is the first real push from the cloud.
+
+## 2026-11-04: upcoming games priced last week's quarterback (`qb-charted-starter`)
+
+**Why.** Austin asked why the Sharp sat so far from the other approaches in JAX @ BAL, with Baltimore down to its backups. Checking that showed the quarterback group netting to zero in every approach: the "new starter" penalty was cancelled by stats rating Baltimore's quarterback above Trevor Lawrence.
+
+**What was wrong.** For a game without plays, `strength.qb_epa` and `strength.qb_cpoe` used the starter of the team's previous game. Lamar Jackson started Week 8 (one dropback before leaving), so Week 9 priced Baltimore on his career while the depth chart had Tyler Huntley, and `availability.qb_change` flagged a new starter on top of the wrong stats. My first diagnosis, a composite collapsing on null stats, was wrong; the published values were real numbers for the wrong player.
+
+**What changed.** Upcoming games take the depth chart's QB1 as of the build (`availability.charted_qb1`), then the previous starter. A played game always keeps its actual first passer. `strength` VERSION 3.
+
+**Findings.** Old and new logic on identical data, all 7,548 games 1999-2026: 0 differences in played games, so no fit, backtest or grade moves. Only Baltimore and Arizona change, from Week 9 on. Dry-run Week 9 locks on a copy of production: 2 of 15 games moved. JAX @ BAL home win chance (market 19.1%): Traditionalist 31.1 to 28.6, Analyst 38.1 to 32.4, Student 35.2 to 30.5, Sharp 17.4 to 13.1. Baltimore's QB EPA goes from 0.100 to -0.116 and CPOE from +1.50 to -0.66.
+
+**Lesson.** Comparing feature files needs a noise baseline: two identical runs differed in 30,765 rows at exact equality and in none at 1e-9, and joining live rows without `known_as_of` crosses snapshots.

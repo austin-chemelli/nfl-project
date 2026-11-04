@@ -6,7 +6,9 @@ These follow the quarterback, not the team. For every (game, team):
   with a dropback), i.e. the starter, which is known before kickoff. (v1 used the passer with the
   most dropbacks; that leaked in-game injuries and benchings into a pregame feature in ~3% of
   team-games, and made the Sharp look better than the market. Found 2026-10-27.) Upcoming games
-  (and completed ones without play data): the starter of the team's previous game.
+  (and completed ones without play data): the depth chart's QB1 as of the build, else the starter
+  of the team's previous game. (Before 2026-11-04 it was always the previous starter, so 2026 W9
+  priced Baltimore on Lamar Jackson's career with Tyler Huntley named to start.)
 * Career rate before the game, strictly earlier games only, across any team he played for. Seasons
   are weighted 0.75 ** seasons_ago (the current season counts 1), applied to sums and counts:
       value = (sum w*x + n0 * replacement) / (sum w*n + n0),   n0 = 250 dropbacks
@@ -71,8 +73,13 @@ def _per_game(plays: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def projected_starters(tg: pl.DataFrame, plays: pl.DataFrame) -> pl.DataFrame:
-    """(game_id, team, ckey, qb, qb_name) per team-game; qb null when the team has no history."""
+def projected_starters(
+    tg: pl.DataFrame, plays: pl.DataFrame, named: pl.DataFrame | None = None
+) -> pl.DataFrame:
+    """(game_id, team, ckey, qb, qb_name) per team-game; qb null when the team has no history.
+
+    `named`: (game_id, team, qb1), the charted starter known before the game. It only fills games
+    without plays, so a completed game always keeps its actual starter."""
     # the starter: the team's first dropback of the game (pregame knowledge, not in-game outcome)
     if "play_id" not in plays.columns:  # synthetic frames: rows are already in play order
         plays = plays.with_row_index("play_id")
@@ -88,13 +95,16 @@ def projected_starters(tg: pl.DataFrame, plays: pl.DataFrame) -> pl.DataFrame:
         .group_by(pl.col("passer_player_id").alias("qb"))
         .agg(pl.col("passer_player_name").drop_nulls().last().alias("qb_name"))
     )
+    if named is None:
+        named = pl.DataFrame(schema={"game_id": pl.Utf8, "team": pl.Utf8, "qb1": pl.Utf8})
     out = (
         tg.sort("ckey", "kickoff_utc", "game_id", nulls_last=True)
         .join(actual, on=["game_id", "ckey"], how="left")
+        .join(named.select("game_id", "team", "qb1"), on=["game_id", "team"], how="left")
         .with_columns(
-            pl.coalesce(pl.col("_act"), pl.col("_act").forward_fill().shift(1).over("ckey")).alias(
-                "qb"
-            )
+            pl.coalesce(
+                pl.col("_act"), pl.col("qb1"), pl.col("_act").forward_fill().shift(1).over("ckey")
+            ).alias("qb")
         )
         .join(names, on="qb", how="left")
     )
@@ -121,9 +131,11 @@ def _replacement(qs: pl.DataFrame, seasons: list[int]) -> pl.DataFrame:
     )
 
 
-def compute(tg: pl.DataFrame, plays: pl.DataFrame) -> pl.DataFrame:
+def compute(
+    tg: pl.DataFrame, plays: pl.DataFrame, named: pl.DataFrame | None = None
+) -> pl.DataFrame:
     """Long (game_id, team, feature, value). `tg`: game_id, team, ckey, season, kickoff_utc."""
-    st = projected_starters(tg, plays)
+    st = projected_starters(tg, plays, named)
     pg = _per_game(plays)
     gk = tg.select("game_id", "season", "kickoff_utc").unique("game_id")
     qg = pg.group_by("game_id", "qb").agg(pl.col(c).sum() for c in _STATS).join(gk, on="game_id")
