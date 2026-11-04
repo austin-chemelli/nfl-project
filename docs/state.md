@@ -86,7 +86,8 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| ui | `ui-next` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md`: game page Preview tab, retro reorder, slate cards, tracker) | planned 2026-11-04, waiting on D4–D8 | |
+| ui | `ui-next` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | planned 2026-11-04, decisions in; ready to build | |
+| model-wave2 | not started | not started | `.notes/ui-round2.md` §6: QB-group fix, line-move cap, scheme groups zeroed, special-teams group, ensemble demoted; one `model_version` for the Week 10 Thursday lock | planned 2026-11-04 | |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
@@ -112,14 +113,14 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D1 | Keep the production number audit (`.notes/audit_site.py`, uncommitted) as a CI or post-publish check? | (a) a step after `nfl publish` that fails the job; (b) a CI check against the public bucket; (c) leave it manual | Austin's call; a chat can build (a) in a day | 2026-11-03 |
 | D2 | Tendencies on the league band too (`RangeRow` over `tendencies.parquet`), the follow-up ADR 0017 left out? | (a) next UI round; (b) not worth it | the next UI look | 2026-11-03 |
 | D3 | A better knowledge-base tool for cross-chat tracking than `.notes/board.md`? | later; revisit when the board stops being enough | nothing yet | 2026-11-04 |
-| D6 | Model wave 2 scope (Austin 2026-11-04: cap `market.line_move_pts`, not too hard; give the Student and maybe others a capped line-move input; zero the scheme groups' weights but keep them in previews; fix the quarterback group). Exact caps, which approaches get line move, whether `coaching` counts as scheme | plan in `.notes/ui-round2.md` §6 | Austin's confirmation, then a `model-wave2` track; lands as one `model_version` at the Week 10 Thursday lock | 2026-11-04 |
-| D8 | Retro copy: "swings" for the net of all factors, "pure luck" for the coin flips? | yes / other names | Austin | 2026-11-04 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
 - D4 Preview bars are scaled by the Global fit (Austin, 2026-11-04).
 - D5 The Student stays as the data-only public line; the ensemble is demoted to a diagnostic like Global and leaves the site, README and tiles (Austin, 2026-11-04). Its lock rows keep being written until wave 2 drops it.
-- D7 folded into D6 (scheme groups zeroed in wave 2, kept in previews).
+- D6 Model wave 2 scoped (Austin, 2026-11-04; `.notes/ui-round2.md` §6): quarterback-group fix, line move winsorized and given to the Student and Analyst, coaching and both scheme groups zeroed in every line, special teams promoted to its own group, ensemble stops locking. One `model_version` at the Week 10 Thursday lock.
+- D7 folded into D6.
+- D8 Retro names: "Swing plays" and "Pure luck" (Austin, 2026-11-04).
 
 - Who locks Week 9: the cloud (`locks_paused = false`, PR #6, merged 2026-11-04), without the planned shadow week, to find the problems on the first live weekend. The laptop is the fallback.
 - Narrative timing: two passes, Wednesday evening for every game and Saturday morning for the Sunday and Monday games; the newer record supersedes with no reconciliation code (journal 2026-11-03).
