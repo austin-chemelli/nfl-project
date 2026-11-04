@@ -87,7 +87,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
 | ui | `ui-next` | `~/dev/nfl-project-ui` | next round of site changes after v2 (tendencies on the league band; whatever Austin's next look finds) | idle, waiting for direction (2026-11-04) | |
-| project-state | `project-state` | `~/dev/nfl-project-state` | this hub, the board, the state skill, hooks and CI guard | in PR (2026-11-04) | |
+| project-state | `project-state` | `~/dev/nfl-project-state` | this hub, the board, the state skill, hooks and CI guard | in PR (2026-11-04) | #7 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix` | `~/dev/nfl-project-narrative`, `~/dev/nfl-project-desktop-fix` | desktop narrative schedule and the desktop task fixes | merged (#1, #5); worktrees still present, that chat cleans up (2026-11-04) | #1, #5 |
 
 ## Milestones
