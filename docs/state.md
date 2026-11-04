@@ -88,7 +88,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 |---|---|---|---|---|---|
 | ui | `ui-next` | `~/dev/nfl-project-ui` | next round of site changes after v2 (tendencies on the league band; whatever Austin's next look finds) | idle, waiting for direction (2026-11-04) | |
 | project-state | `project-state` | `~/dev/nfl-project-state` | this hub, the board, the state skill, hooks and CI guard | in PR (2026-11-04) | #7 |
-| narrative | `narrative-m6.2u`, `desktop-task-fix` | `~/dev/nfl-project-narrative`, `~/dev/nfl-project-desktop-fix` | desktop narrative schedule and the desktop task fixes | merged (#1, #5); worktrees still present, that chat cleans up (2026-11-04) | #1, #5 |
+| narrative | `narrative-m6.2u`, `desktop-task-fix` | `~/dev/nfl-project-narrative`, `~/dev/nfl-project-desktop-fix` | desktop narrative schedule and the desktop task fixes | merged (#1, #5, #6 locks live); worktrees still present, that chat cleans up (2026-11-04) | #1, #5, #6 |
 
 ## Milestones
 
@@ -114,7 +114,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
-- Who locks Week 9: the cloud (`locks_paused = false`, 2026-11-02). The laptop is the fallback.
+- Who locks Week 9: the cloud (`locks_paused = false`, PR #6, merged 2026-11-04). The laptop is the fallback.
 - Site layout: tabs plus a summary strip, thin team-color accent, matchup cards, retro as the default tab (ADR 0017, 2026-11-03).
 - Branch and worktree cleanup after a merge happens without asking (CLAUDE.md, 2026-11-04).
 - The live coordination board stays uncommitted in `.notes/` (journal 2026-11-04).
