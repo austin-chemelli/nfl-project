@@ -88,6 +88,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 |---|---|---|---|---|---|
 | ui | `ui-next` | `~/dev/nfl-project-ui` | next round of site changes after v2 (tendencies on the league band; whatever Austin's next look finds) | idle, waiting for direction (2026-11-04) | |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
+| hooks | `hooks-dev-folder` | `~/dev/nfl-project-hooks` | register the state hooks at the `~/dev` workspace level so they fire for sessions started there | in PR (2026-11-04) | |
 | narrative | `narrative-m6.2u`, `desktop-task-fix` | `~/dev/nfl-project-narrative`, `~/dev/nfl-project-desktop-fix` | desktop narrative schedule and the desktop task fixes | merged (#1, #5, #6 locks live); worktrees still present, that chat cleans up (2026-11-04) | #1, #5, #6 |
 
 ## Milestones
@@ -153,5 +154,5 @@ Current docs, what each is for, and when it was last verified against the code o
 ## Maintenance
 
 - Chats update this file at track boundaries and whenever a decision or finding changes direction; the checklist is [state-maintenance.md](state-maintenance.md). Austin never has to edit it by hand.
-- `scripts/state_check.py` runs at session start (`scripts/hooks/session-start.sh`, which also injects this file, the board and the journal tail), before `gh pr create` / `git push` (`scripts/hooks/pr-guard.sh`) and in CI (`docs` job): links, the schedule table, workstream rows vs worktrees and PRs, docs-map dates, the bottom line's age.
+- `scripts/state_check.py` runs at session start (`scripts/hooks/session-start.sh`, which also injects this file, the board and the journal tail), before `gh pr create` / `git push` (`scripts/hooks/pr-guard.sh`) and in CI (`docs` job). The hooks are registered in the repo's `.claude/settings.json` and in `~/dev/.claude/settings.json` (sessions start in the `~/dev` workspace; `scripts/hooks/dev-folder-settings.json`): links, the schedule table, workstream rows vs worktrees and PRs, docs-map dates, the bottom line's age.
 - A code PR that changes neither this file nor the journal is blocked by the hook and by CI (label `docs-not-needed` to override).

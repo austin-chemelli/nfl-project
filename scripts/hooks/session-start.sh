@@ -1,11 +1,32 @@
 #!/usr/bin/env bash
-# Claude Code SessionStart hook (registered in .claude/settings.json): put the project's current
-# state in front of every chat, so no session starts uninformed (docs/state-maintenance.md).
-# Prints to stdout, which Claude Code adds to the conversation's context.
-cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
-[ -f docs/state.md ] || exit 0
+# Claude Code SessionStart hook: put the project's current state in front of every chat, so no
+# session starts uninformed (docs/state-maintenance.md). Prints to stdout, which Claude Code adds
+# to the conversation's context.
+#
+# Registered twice: in the repo's .claude/settings.json (sessions started inside a checkout) and in
+# ~/dev/.claude/settings.json (Austin's VS Code workspace is ~/dev, so most sessions start there;
+# scripts/hooks/dev-folder-settings.json is that file). Which checkout to read: the session's cwd
+# if it is inside one (stdin JSON), else $CLAUDE_PROJECT_DIR, else the primary checkout.
+input=$(cat 2>/dev/null)
+cwd=$(printf '%s' "$input" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("cwd", ""))' 2>/dev/null)
+PRIMARY="$HOME/dev/nfl-project"
 
-echo "# Project state (docs/state.md, injected by scripts/hooks/session-start.sh). Keep it current: docs/state-maintenance.md."
+root=""
+for candidate in "$cwd" "${CLAUDE_PROJECT_DIR:-}"; do
+  [ -n "$candidate" ] || continue
+  top=$(cd "$candidate" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null)
+  if [ -n "$top" ] && [ -f "$top/docs/state.md" ]; then root="$top"; break; fi
+done
+note=""
+if [ -z "$root" ]; then
+  [ -f "$PRIMARY/docs/state.md" ] || exit 0
+  root="$PRIMARY"
+  note="(This session started outside a checkout, so this is main's copy from $PRIMARY. Work in a worktree: CLAUDE.md, Parallel work. If this session is about another project, ignore this block.)"
+fi
+cd "$root" || exit 0
+
+echo "# Project state (docs/state.md in $root, injected by scripts/hooks/session-start.sh). Keep it current: docs/state-maintenance.md."
+[ -n "$note" ] && echo "$note"
 echo
 cat docs/state.md
 echo

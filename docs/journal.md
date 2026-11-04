@@ -285,3 +285,9 @@ The v4 comparison was per job, so Austin chose to split jobs between models inst
 **Decisions.** No weekly audit and nothing Austin runs by hand (Austin asked for it to happen as work happens). The board stays uncommitted: one laptop, several chats; a knowledge-base tool can replace it later (hub decision D3). Branch and worktree cleanup after a merge needs no asking (CLAUDE.md, earlier the same day).
 
 **Lesson.** The journal survived because appending is cheap and never conflicts; the hub copies that (each chat edits only its rows) and adds a check so the facts that can drift silently (schedules, links, dates) can't.
+
+## 2026-11-04 (later): the hooks must live where the session starts
+
+**Finding.** After the hooks were registered in the repo's `.claude/settings.json`, a reloaded session showed no injected state. Claude Code reads project settings from the folder the session starts in, and Austin's VS Code workspace is `~/dev`, the parent of every checkout, so the repo's settings never applied. The nested CLAUDE.md and skills do load for files under the repo; hooks don't.
+
+**What changed.** The same two hooks are also registered in `~/dev/.claude/settings.json` (`scripts/hooks/dev-folder-settings.json`, absolute paths to the primary checkout's scripts). The scripts now find the checkout from the session's `cwd` in the hook's stdin JSON (and a leading `cd <dir> &&` in the command for the PR guard), so they work for every worktree; a session with no checkout in its cwd gets main's copy from `~/dev/nfl-project` with a note saying so.

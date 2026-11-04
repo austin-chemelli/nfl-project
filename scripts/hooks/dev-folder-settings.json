@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          { "type": "command", "command": "/home/austi/dev/nfl-project/scripts/hooks/session-start.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "/home/austi/dev/nfl-project/scripts/hooks/pr-guard.sh" }
+        ]
+      }
+    ]
+  }
+}
