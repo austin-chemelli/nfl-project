@@ -4,7 +4,7 @@ Where the project is right now. Chats keep it current as they work ([state-maint
 
 ## Bottom line (as of 2026-11-04)
 
-The numeric pipeline, the public site and the desktop narrative passes run on schedules with nobody touching them; the first public lock is Thursday 2026-11-05 at 09:00 ET. This week shipped the site's v2 layout (one answer first, ADR 0017), fixed three number bugs a cross-check of production found (market consensus near even money, an Elo leak in after-the-fact scoring, Week 8 missing from the tracker), and put the desktop research on a Wednesday and Saturday schedule. Next: watch the first live locks, then the narrative's previews and evals (M6.3, M6.4).
+The numeric pipeline and the public site run on schedules with nobody touching them. Locks went live on 2026-11-04 (PR #6): the first public lock is Thursday 2026-11-05 at 09:00 ET. The desktop's scheduled task was registered the same day, and its first real pass is 2026-11-04 at 18:00 ET. This week shipped the site's v2 layout (one answer first, ADR 0017), fixed three number bugs a cross-check of production found (market consensus near even money, an Elo leak in after-the-fact scoring, Week 8 missing from the tracker), and put the desktop research on a Wednesday and Saturday schedule. Next: watch the first live locks, then the narrative's previews and evals (M6.3, M6.4).
 
 ## What runs where
 
@@ -89,7 +89,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | ui | `ui-next` | `~/dev/nfl-project-ui` | next round of site changes after v2 (tendencies on the league band; whatever Austin's next look finds) | idle, waiting for direction (2026-11-04) | |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
-| narrative | `narrative-m6.2u`, `desktop-task-fix` | `~/dev/nfl-project-narrative`, `~/dev/nfl-project-desktop-fix` | desktop narrative schedule and the desktop task fixes | merged (#1, #5, #6 locks live); worktrees still present, that chat cleans up (2026-11-04) | #1, #5, #6 |
+| narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
 
 ## Milestones
 
@@ -98,7 +98,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M0–M3 hygiene, feature store, approaches, odds + ledger | done 2026-10-27 |
 | M4 first public lock (`nfl lock`, refresh, runbook) | built 2026-10-27; first live cloud lock Thu 2026-11-05 |
 | M5 Streamlit pages, hypotheses, DIY, coaches | done 2026-10-28 (local explorer only) |
-| M6 LLM layer | M6.1, M6.1b, M6.2L (v1–v5), M6.2e, M6.2u done by 2026-11-03; **next: M6.3 previews + faithfulness, M6.4 evals, M6.5 Narrative approach in shadow** |
+| M6 LLM layer | M6.1, M6.1b, M6.2L (v1–v5), M6.2e, M6.2u done by 2026-11-03; desktop task registered 2026-11-04; **next: M6.3 previews + faithfulness, M6.4 evals, M6.5 Narrative approach in shadow**. After Week 9's passes: recompose the 9B-only matchup on the same facts to compare with v5 |
 | M7 hosting (container, Terraform, buckets, cloud locks, React site) | done 2026-10-29; locks live from Week 9 |
 | M8 observability | alerts done; uptime check on `meta.json` and a data-freshness alert still open |
 | M9 game retrospective (ADR 0016) | done 2026-11-02 |
@@ -112,10 +112,13 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D1 | Keep the production number audit (`.notes/audit_site.py`, uncommitted) as a CI or post-publish check? | (a) a step after `nfl publish` that fails the job; (b) a CI check against the public bucket; (c) leave it manual | Austin's call; a chat can build (a) in a day | 2026-11-03 |
 | D2 | Tendencies on the league band too (`RangeRow` over `tendencies.parquet`), the follow-up ADR 0017 left out? | (a) next UI round; (b) not worth it | the next UI look | 2026-11-03 |
 | D3 | A better knowledge-base tool for cross-chat tracking than `.notes/board.md`? | later; revisit when the board stops being enough | nothing yet | 2026-11-04 |
+| D4 | A third narrative pass on Monday for the Monday night game? | (a) add it (a `PASSES` entry, a check time, a task trigger); (b) keep two passes | how stale Saturday's research looks by Monday night in Week 9 | 2026-11-03 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
-- Who locks Week 9: the cloud (`locks_paused = false`, PR #6, merged 2026-11-04). The laptop is the fallback.
+- Who locks Week 9: the cloud (`locks_paused = false`, PR #6, merged 2026-11-04), without the planned shadow week, to find the problems on the first live weekend. The laptop is the fallback.
+- Narrative timing: two passes, Wednesday evening for every game and Saturday morning for the Sunday and Monday games; the newer record supersedes with no reconciliation code (journal 2026-11-03).
+- Narrative models: `qwen3.5:9b` plus `qwen3:14b` for the matchup job, thinking off; gemma4 and gpt-oss dropped (journal 2026-11-03).
 - Site layout: tabs plus a summary strip, thin team-color accent, matchup cards, retro as the default tab (ADR 0017, 2026-11-03).
 - Branch and worktree cleanup after a merge happens without asking (CLAUDE.md, 2026-11-04).
 - The live coordination board stays uncommitted in `.notes/` (journal 2026-11-04).
@@ -123,13 +126,16 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 ## Known issues and risks
 
-- **First live locks** Thu 2026-11-05 09:00 and Sat 2026-11-07 12:00: watch the executions and the lock commits; the laptop fallback is `uv run nfl lock --slot thu` in the primary checkout.
+- **First live locks** Thu 2026-11-05 09:00 and Sat 2026-11-07 12:00: watch the executions and the lock commits; the laptop fallback is `uv run nfl lock --slot thu` in the primary checkout. Thursday's is the first push from the cloud: dry runs don't push, so the deploy key's write access is confirmed but the push itself is untested.
+- **First desktop pass** 2026-11-04 18:00 ET: the task's environment is tested (entry `desktop setup test` in Cloud Logging), a full scheduled run isn't. The 08:30 check on 2026-11-05 emails if it didn't upload.
 - **Production retros are v1 until the 07:00 run on 2026-11-05** rebuilds all 2026 retros with the league bands, the Elo fix and the Week 8 backfill rows. Until then 28 Week 8 retros show a graded Elo that differs from the game page.
 - A correction to an earlier game doesn't mark later retros stale (accepted 2026-11-03; the daily job only rehashes each game's own inputs).
 - NO @ NYG Week 6: the books' spread and moneyline disagree on the favorite at a coin flip. Real market data, not a bug.
 - The GCP free trial ends about late January 2027: upgrade the billing account before then (`docs/hosting.md` §3.1).
 - M8 leftovers: no uptime check on `meta.json`, no data-freshness alert.
-- The other chat's two merged worktrees (`narrative`, `desktop-fix`) still exist; that chat removes them.
+- README scorecard CIs change between `nfl readme` runs: on 2026-11-03 only the bootstrap CI digits moved (point estimates and counts identical), although `grade.py` seeds its RNG. Cause unverified; that run's README change was discarded.
+- Flaky web test: `web/src/pages/build/build.test.tsx` ("Blank (equal weights)" button not found) failed once on PR #6, which doesn't touch `web/`, and passed on rerun. Not investigated; UI track.
+- gcsfuse logs ERROR `BufferedWriteHandler.OutOfOrderError` on curated parquet writes in cloud jobs (seen in dry run `nfl-lock-thu-5mqhw`, 2026-11-04). The job succeeded; the effect on the written files wasn't checked.
 
 ## Docs map
 
@@ -145,8 +151,8 @@ Current docs, what each is for, and when it was last verified against the code o
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-04 |
 | [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-04 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
-| [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-10-29 |
-| [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-03 |
+| [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-04 |
+| [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-04 |
 | [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona | 2026-10-28 |
 | [PROJECT_BRIEF.md](PROJECT_BRIEF.md) | the original scope; historical, ADRs win on conflict | 2026-10-27 |
 | `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `archive/` notes that were true once | 2026-11-04 |

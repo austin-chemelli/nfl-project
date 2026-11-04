@@ -2,7 +2,7 @@
 
 Status: current, verified 2026-11-04. The cloud runs the week (§In the cloud); the hand commands are the fallback.
 
-How to operate the live pipeline by hand until Cloud Scheduler runs it (step 5, M7.2). Every command runs from the repo root. Times are US Eastern (Daylight Time until Nov 1, 2026, then Standard). The Odds API free tier allows 500 credits a month; `nfl odds status` shows usage, and the code refuses past a soft cap of 400.
+How to operate the live pipeline by hand when a cloud job can't. Every command runs from the repo root. Times are US Eastern (Daylight Time until Nov 1, 2026, then Standard). The Odds API free tier allows 500 credits a month; `nfl odds status` shows usage, and the code refuses past a soft cap of 400.
 
 ## The week
 

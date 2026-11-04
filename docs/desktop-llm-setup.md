@@ -1,6 +1,6 @@
 # Desktop LLM setup (Windows 10)
 
-Status: current, verified 2026-10-29 (the production models are `qwen3.5:9b` plus `qwen3:14b` for the matchup job since 2026-11-03, `docs/local-llm-narrative.md`).
+Status: current, verified 2026-11-04 (the production models are `qwen3.5:9b` plus `qwen3:14b` for the matchup job since 2026-11-03, `docs/local-llm-narrative.md`).
 
 The spare desktop is the project's local LLM and search server (ADR 0014). This is what was actually set up on 2026-10-29 and how to check or redo it; the original plan was written 2026-10-28 and corrected where the hardware disagreed. Recheck the two version pins (driver, Ollama) if you redo this much later.
 
@@ -29,7 +29,7 @@ Ollama for Windows (0.40.12 here) is a **tray app, not a service**: `ollama app.
    - `OLLAMA_KEEP_ALIVE` = `30m`
 3. Quit Ollama from the tray and start it again **from the Start menu** so it picks up the variables. (Starting it from a WSL shell or a script gives it a wrong environment and it never starts serving.) `%LOCALAPPDATA%\Ollama\server.log` should show `Listening on [::]:11434` and a `server config` line with the values above.
 4. The first time it listens on the network, Windows shows its firewall prompt and creates per-app `ollama.exe` rules (Allow on Private, Block on Public). Delete those in the admin step of §5; the scoped port rule is the one we want.
-5. Pull the models: `ollama pull qwen3.5:9b` (6.6 GB on disk) and `ollama pull qwen3.5:4b` (3.3 GB).
+5. Pull the models: `ollama pull qwen3.5:9b` (6.6 GB on disk), `ollama pull qwen3:14b` (the matchup job) and `ollama pull qwen3.5:4b` (3.3 GB, fallback). `gemma4:26b`, `gpt-oss:20b` and `qwen3.5:27b` are also on the desktop from the model comparison; nothing uses them, so `ollama rm` frees the disk.
 6. Check GPU residency: `ollama run qwen3.5:9b --think=false "say hi"`, then `ollama ps` must say `100% GPU` with `CONTEXT 16384`.
 
 **Measured on the GTX 1070 (16k context, q8_0 KV, flash attention):**

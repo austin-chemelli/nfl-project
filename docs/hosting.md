@@ -92,7 +92,7 @@ Monthly cost estimate: storage ~$0.10, Cloud Run Jobs ~$0.50 (minutes of CPU per
 1. **Container** (M7.1): image, CI build, run a dry-run lock from the image on the laptop.
 2. **GCP bootstrap** (Austin, §3 items 1–3) and the Terraform skeleton with state in the bucket; plan/apply from Actions via WIF.
 3. **Buckets and data**: Terraform the buckets; upload `./data` once; first cloud `weekly refresh`; compare its marts with the laptop's (they should match byte for byte except timestamps).
-4. **Cloud locks**: Scheduler + the lock jobs + deploy key; **one shadow week** where the cloud and the laptop both lock (`--dry-run` on one side) and the artifacts are compared; then the cloud is primary and the laptop stops locking.
+4. **Cloud locks**: Scheduler + the lock jobs + deploy key; **one shadow week** where the cloud and the laptop both lock (`--dry-run` on one side) and the artifacts are compared; then the cloud is primary and the laptop stops locking. (Done differently: the shadow week was skipped. After dry runs on 2026-10-28 and 2026-11-04, the cloud went live for Week 9, PR #6.)
 5. **Site**: public bucket + publish step; the React site; Firebase deploy from Actions; domain.
 6. **Alerts** and the uptime check.
 7. **Desktop upload path** for narrative records and previews.

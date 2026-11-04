@@ -1,6 +1,6 @@
 # The local narrative model: results, limits, experiments
 
-Status: current, verified 2026-11-03 (through `local_v5`).
+Status: current, verified 2026-11-04 (through `local_v5`).
 
 How the project researches each game's narrative (injuries, QB status, scheme, matchups, betting action) with an open-weight model on a home desktop instead of a paid API, what the first results looked like next to a frontier model, where the limits come from, and what moved the needle. Decisions: [ADR 0014](adr/) (local model, no paid API). Code: `src/nfl/llm/research.py`; prompts: `src/nfl/llm/prompts/`.
 
