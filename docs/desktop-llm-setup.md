@@ -1,5 +1,7 @@
 # Desktop LLM setup (Windows 10)
 
+Status: current, verified 2026-10-29 (the production models are `qwen3.5:9b` plus `qwen3:14b` for the matchup job since 2026-11-03, `docs/local-llm-narrative.md`).
+
 The spare desktop is the project's local LLM and search server (ADR 0014). This is what was actually set up on 2026-10-29 and how to check or redo it; the original plan was written 2026-10-28 and corrected where the hardware disagreed. Recheck the two version pins (driver, Ollama) if you redo this much later.
 
 **What you end up with:** Ollama serving Qwen3.5-9B (and -4B as a fallback) and SearXNG serving JSON search results, both reachable only from your own devices over Tailscale. The pipeline calls them over the network from the laptop, or from the desktop's own WSL.

@@ -1,5 +1,7 @@
 # Architecture
 
+Status: current, verified 2026-11-02 (sections 3.6c and 8 updated with the retrospective); the live state is [state.md](state.md).
+
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
 ## 1. Overview

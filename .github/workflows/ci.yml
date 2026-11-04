@@ -41,6 +41,26 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  docs:
+    # A code PR records itself: docs/journal.md or docs/state.md must change with it, and the hub
+    # must stay consistent (scripts/state_check.py). Label docs-not-needed to skip the first rule.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/state_check.py --strict
+      - if: "!contains(github.event.pull_request.labels.*.name, 'docs-not-needed')"
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files="$(git diff --name-only "$BASE" "$GITHUB_SHA")"
+          if grep -qE '^(src|web|infra|scripts|tests)/' <<<"$files" && ! grep -qE '^docs/(journal|state)\.md$' <<<"$files"; then
+            echo "::error::this PR changes code but neither docs/journal.md nor docs/state.md (docs/state-maintenance.md); label docs-not-needed to skip"
+            exit 1
+          fi
+
   changes:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
