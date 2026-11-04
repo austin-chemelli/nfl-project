@@ -1,5 +1,7 @@
 # Feature groups
 
+Status: current, verified 2026-10-28 (registry v2).
+
 The two-level feature design is ADR 0012. This file is the group registry in prose; the code registry is `src/nfl/features/groups.py` (M2.8). Chosen 2026-10-27 (option B of `.notes/feature-group-options.md`, with the scheme group split three ways). Signs are the declared default direction *for the team* (positive = good for the home team when home − away is positive); the fitted inner weights may disagree, and the Hypotheses page reports when they do. "Exists" means built as of 2026-10-27; everything else has a task in `docs/tasks.md`. Members marked *adv* are hidden behind "more" in the UI but always part of the composite once built.
 
 Fifteen groups (registry v3, 2026-10-27: every member also carries a label, a one-line description used as hover help, and a unit; see `src/nfl/features/groups.py`). The UI may show them under six collapsible headings (Who's better / Who's playing / The moment / The setup / The sidelines / The outside world); the headings carry no weights.

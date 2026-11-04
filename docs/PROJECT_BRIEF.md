@@ -1,5 +1,7 @@
 # NFL Matchup Predictor — Project Brief
 
+Status: historical (October 2026 handoff). Where it conflicts with an ADR, the ADR wins; the current state is [state.md](state.md).
+
 Handoff from planning conversations (Oct 2026). Source of truth for scope and goals. Decisions are recorded in [adr/](adr/) and the plan in [architecture.md](architecture.md) and [tasks.md](tasks.md); where this brief and an ADR disagree, the ADR records the resolution.
 
 **Reframed 2026-10-25 (ADR 0003):** educational preview tool first, betting as a scoring lens. "Model philosophies" became a shared feature store plus persona-style *approaches* (Traditionalist, Analyst, Sharp; later Matchup, Narrative), each with a persona and a fitted flavor, plus an ensemble, odds-weighted paper bets, divergence-from-market analysis, and a Hypotheses page.

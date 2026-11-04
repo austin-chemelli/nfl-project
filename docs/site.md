@@ -1,4 +1,6 @@
-# The public site (M7.4, M7.5)
+# The public site (M7.4, M7.5; v2 layout M10)
+
+Status: current, verified 2026-11-04 against `web/` after PR #4.
 
 A static React app on Firebase Hosting that reads the published site JSON from the public bucket. Decisions: ADR 0009 (static site, no API), ADR 0015 (data from a public bucket, so data changes never need a deploy). The Streamlit app stays as the local explorer; this replaces it as the public face.
 
@@ -56,6 +58,23 @@ Decided 2026-11-03 after the retrospective made the game page 21 sections long. 
 | `/method` | none | `how`, `limits`, `data` |
 
 Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
+
+## The design language (decided 2026-11-03, ADR 0017; the rules every page follows)
+
+Why: with the retrospective added, a finished game's page was 21 stacked sections, each with a paragraph, hover help, a chart and a table; the slate was a 10-column table; charts auto-scaled so a small gap could fill a row and nothing said whether a value was good. Three flows were weighed (tabs plus a summary strip; a guided one-frame-at-a-time story; a dashboard of tiles with drill-down panels) and the first won: every section reachable in one click and shareable by URL, with the story's discipline inside each tab.
+
+1. **One answer first.** Every page opens with a summary strip of up to five tiles. A tile is a statement (an upset or not, how many approaches were right, the biggest surprise), never a restated number; its sub-line is six words; it links to the tab that explains it. Tile values are pure functions of the site JSON in `pages/*/summary.ts` and `slate/recapTiles.ts`, unit-tested.
+2. **Detail behind URL-synced tabs** (`?tab=`, history replaced, not pushed). A finished game opens on its retro; a pregame game on its forecast.
+3. **Text budget.** One lede sentence per section (what you're looking at, not how to read it); help on hover for the method; caveats in one `FinePrint` per tab or page, not per section; a legend once per chart kind.
+4. **Every number gets a frame.** A value sits on the league's p10–p90 band for that metric (`RangeRow`), with the average as a tick and the value printed at the row end; nothing requires hover. For the retro's efficiency rows the band is the 32 teams' season-to-date values (`league_lo`/`league_hi`, additive contract fields, null when fewer than 8 teams; the chart falls back to auto-scale when missing).
+5. **Visual before table.** Tables live behind "show the numbers"; the injury report is the one table-first section.
+6. **Status and meta are quiet.** Kickoff, stadium, QBs and lock status are one muted line under the title; the final score is the only loud element.
+7. **Team identity without logos** (ADR 0011): a thin team-color bar (`TeamAccent`, from nflverse `teams`, with a ring for dark colors) under each code; approach colors stay the chart colors.
+8. **Calls are honest about noise.** Within 5 points of even a result or a played-like is a toss-up; log-loss gaps under 0.005 are "about the same"; a line older than 3 days says so ("line from Oct 27").
+9. **Slate as matchup cards** on every screen size, one computed sentence each, sorted by `?sort=`; `?view=table` keeps the grid for power users.
+10. **Phone first for the slate and the game page**; the tracker and build-your-own may lean desktop.
+
+Kit: `Tabs`, `SummaryStrip`/`Tile`, `FinePrint`, `TeamAccent`, `RangeRow`, `ProbStrip` (in `web/src/components/` and `web/src/charts/`), colors from CSS tokens. Still open: the tendencies dumbbells on the same league band (hub decision D2).
 
 ## Out of scope for now
 

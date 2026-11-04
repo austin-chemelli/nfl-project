@@ -10,6 +10,7 @@ Public portfolio project. The goal is a **live, shipped** system with real measu
 
 ## Docs (read these first)
 
+- [docs/state.md](docs/state.md): **where the project is right now**: what runs where and when, links, workstreams, milestones, open decisions, known issues, the docs map. Injected into every session by the SessionStart hook; kept current by every chat as it works ([docs/state-maintenance.md](docs/state-maintenance.md)).
 - [docs/architecture.md](docs/architecture.md): components, data model (feature store, approach configs, prediction and bet rows, site JSON contract), flows, point-in-time rules, deployment path.
 - [docs/adr/](docs/adr/): one ADR per decision, with the reasons. Don't re-open an accepted ADR without new information; propose a new ADR instead.
 - [docs/tasks.md](docs/tasks.md): the work sequence, progress, and agent-sized tasks with acceptance criteria. Work from it; update it when scope changes.
@@ -21,7 +22,7 @@ Public portfolio project. The goal is a **live, shipped** system with real measu
 
 ## Status
 
-2026-10-27: sequence decided (top of docs/tasks.md); ADR 0012 adds two-level features (groups with fitted inner weights). 2026-10-26: plan written (architecture, ADRs 0001–0011, tasks). M0, M1 (feature store, 7 families), M2 (approaches, fitting, backfill 2015–2025, grading v2) and M3 (Odds API snapshots, live market features, paper ledger with CLV) are built but uncommitted; progress table at the top of docs/tasks.md, backtest findings in `.notes/backtest-2025.md`. Step 1 done 2026-10-27. Step 2 (`nfl lock`, weekly refresh, runbook, README scorecard) and step 3 (Streamlit UI on the site JSON contract) built 2026-10-27. Next: dry-run week (Week 8), first public locks (Week 9), then step 4 (LLM API path). Repo is public. The first public lock waits for the approaches (ADR 0010); there are no calendar targets, only the sequence.
+In [docs/state.md](docs/state.md) (bottom line, milestones, workstreams), updated as work happens. The story is [docs/journal.md](docs/journal.md). Repo is public; locks are live from 2026 Week 9; there are no calendar targets, only the sequence at the top of docs/tasks.md.
 
 ## Non-negotiable principles
 
@@ -70,6 +71,7 @@ uv run nfl diy-matrix        # group composites per game for the build-your-own 
 uv run nfl run-all           # full historical rebuild (POC-era; prefer the individual commands)
 uv run nfl ui                # Streamlit app: slate, game, tracker, hypotheses, build your own, method
 uv run pytest -q             # unit tests + leakage guards (guards skip without local data)
+python3 scripts/state_check.py   # is docs/state.md consistent (links, schedule vs infra, worktrees, doc dates); --strict in hooks and CI
 uv run ruff check src tests && uv run ruff format src tests
 ```
 
@@ -106,6 +108,7 @@ python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI 
 
 ## Working conventions
 
+- **Every session starts informed.** The SessionStart hook (`scripts/hooks/session-start.sh`) injects `docs/state.md`, `.notes/board.md`, the last two journal entries and `scripts/state_check.py`'s findings. Run `git fetch` before starting work. Keep those files current as you work, at the boundaries in [docs/state-maintenance.md](docs/state-maintenance.md) (track start, checkpoint before a PR or when a decision or finding changes direction, close after the merge). Austin never maintains them by hand.
 - Work from `docs/tasks.md`; tasks are sized for the `implementer` agent. Run siblings marked **P** in parallel, then review the diffs.
 - Tests for anything touching time boundaries (as-of joins, walk-forward splits, ledger immutability). Leakage guards run in CI.
 - Prefer small, verifiable steps that move toward the live pipeline. In-season work is only what needs live games; everything else can wait for the offseason.
@@ -116,5 +119,6 @@ python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI 
 
 - **One worktree per track.** `~/dev/nfl-project` is the primary checkout and stays on a clean `main`: lock commits (`nfl lock --commit --push`) and job runs happen there, nothing else. Every other chat works in its own `git worktree` on its own branch, in a sibling folder (`~/dev/nfl-project-<track>`, e.g. `nfl-project-ui` on `ui-next`). Never `git checkout` another branch in a folder a different chat is using.
 - **New worktree setup:** `git worktree add ../nfl-project-<track> -b <branch>`, then in it `ln -s ../nfl-project/{data,.env,.notes} .`, `cp ../nfl-project/.claude/settings.local.json .claude/` (if one exists), `uv sync --group dev`, `cd web && npm ci`. The `data` and `.notes` symlinks are ignored through `.git/info/exclude` (shared by all worktrees; the `.gitignore` patterns end in `/` and don't match symlinks). `data/` is shared and unversioned: a rebuild in one worktree changes what the others' dev servers read.
-- **PRs for code.** Anything under `src/`, `web/`, `infra/`, `scripts/` or `tests/` merges to `main` through a PR after CI is green (merging deploys). Rebase onto `origin/main` first; lock commits land there several times a week. Direct commits to `main` are for lock artifacts and docs-only changes.
-- **Finish a track:** Austin merges the PR. Once it is merged, the chat that owns the track cleans up without asking: check the branch is in `git branch --merged origin/main` and the worktree is clean, then `git worktree remove ../nfl-project-<track>`, `git branch -d <branch>`, `git push origin --delete <branch>`. Keep a worktree that will be reused soon (e.g. `nfl-project-ui`): `git switch -c <new-branch> origin/main && git branch --unset-upstream` instead of removing it. Don't touch another chat's worktree while it may be in use; report what was removed.
+- **The board.** `.notes/board.md` (uncommitted, one file for every worktree through the symlink) has one row per active track: branch, worktree, areas claimed, what it is doing now. Add your row when a track starts, delete it after the cleanup. Don't edit an area another row claims; ask Austin. The durable version is the Workstreams table in `docs/state.md`.
+- **PRs for code.** Anything under `src/`, `web/`, `infra/`, `scripts/` or `tests/` merges to `main` through a PR after CI is green (merging deploys). A code PR also changes `docs/journal.md` or `docs/state.md` (the checkpoint in docs/state-maintenance.md): the PreToolUse hook `scripts/hooks/pr-guard.sh` blocks `gh pr create` and `git push` otherwise, and CI's `docs` job fails (label `docs-not-needed` to skip). Rebase onto `origin/main` first; lock commits land there several times a week. Direct commits to `main` are for lock artifacts and docs-only changes.
+- **Finish a track:** Austin merges the PR. Once it is merged, the chat that owns the track cleans up without asking: check the branch is in `git branch --merged origin/main` and the worktree is clean, then `git worktree remove ../nfl-project-<track>`, `git branch -d <branch>`, `git push origin --delete <branch>`. Keep a worktree that will be reused soon (e.g. `nfl-project-ui`): `git switch -c <new-branch> origin/main && git branch --unset-upstream` instead of removing it. Don't touch another chat's worktree while it may be in use; report what was removed. Then the close step in docs/state-maintenance.md: board row deleted, workstream row marked merged on `main`.

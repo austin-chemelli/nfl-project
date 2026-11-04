@@ -21,6 +21,8 @@ Steps 3, 4 and 5 touch different directories and can run as parallel implementer
 
 ## Progress
 
+Frozen 2026-11-04. Where things stand is [state.md](state.md) (milestones, workstreams); what happened is [journal.md](journal.md). New rows are not added here.
+
 | Status | Tasks |
 |---|---|
 | Done (2026-10-26, uncommitted) | M0.2, M0.3, M1.1–M1.9, M2.1–M2.6, M3.1–M3.4; M2.7 report in `.notes/backtest-2025.md` |

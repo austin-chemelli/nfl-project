@@ -1,6 +1,8 @@
 # Hosting plan (step 5)
 
-How the project runs once it leaves the laptop, what Austin sets up by hand, and in what order. Decisions: ADR 0008 (cloud-first, Terraform, Firebase), ADR 0009 (static React site), ADR 0014 (LLM on the desktop), ADR 0015 (two runners, one bucket). Nothing here is built yet.
+Status: current, verified 2026-11-04. Everything in §1–§2 is built and running (locks live from 2026 Week 9); §3 is the by-hand setup record, §4 the order it was built in. The live schedule, links and known issues are in [state.md](state.md).
+
+How the project runs once it leaves the laptop, what Austin sets up by hand, and in what order. Decisions: ADR 0008 (cloud-first, Terraform, Firebase), ADR 0009 (static React site), ADR 0014 (LLM on the desktop), ADR 0015 (two runners, one bucket). Written before the build (2026-10-28); the status line above says what is live.
 
 ## 1. The shape
 
