@@ -50,7 +50,7 @@ Takes about 30 seconds.
 
 ## In the cloud (step 5, from 2026-10-28)
 
-The same commands run as Cloud Run jobs in `nfl-project-prod` (`docs/hosting.md`), on the schedule above, with the data root at `gs://nfl-project-prod-data`. The lock schedules are paused until the shadow week passes (`infra/variables.tf`, `locks_paused`).
+The same commands run as Cloud Run jobs in `nfl-project-prod` (`docs/hosting.md`), on the schedule above, with the data root at `gs://nfl-project-prod-data`. The lock schedules are live from 2026 Week 9 (Thursday 2026-11-05): `nfl-lock-thu` and `nfl-lock-sat` lock, commit and push the artifact with the `nfl-jobs` deploy key. To pause them, set `locks_paused = true` in `infra/prod.auto.tfvars` (a PR; merging applies it).
 
 ```
 gcloud run jobs list --region us-central1                      # the five jobs
@@ -66,7 +66,7 @@ gcloud storage rsync -r gs://nfl-project-prod-data ./data       # pull the cloud
 - `nfl readme` is laptop-only (a README commit from the cloud would be a non-lock commit).
 - `uv run nfl publish --bucket nfl-project-prod-site` pushes the laptop's `marts/site/*.json` and `public/predictions/` to the public bucket (5-minute cache); the cloud jobs do this themselves.
 - Infra changes: edit `infra/*.tf`, open a PR (the `infra` workflow posts the plan in the run summary), merge to apply.
-- Go live: set `locks_paused = false` in `infra/terraform.tfvars`, `terraform apply`, and stop locking from the laptop.
+- Locks run in the cloud; don't also lock from the laptop. If a cloud lock fails, rerun the job by hand (`gcloud run jobs execute nfl-lock-thu --region us-central1 --wait`) before kickoff, or lock from the laptop as a fallback. Pull `main` in the primary checkout afterwards: the lock commit lands from the cloud.
 
 ## Narrative on the desktop (M6.2u, from Week 9)
 
