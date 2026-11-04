@@ -5,7 +5,7 @@ import { StatusBadge } from '../../components/ui'
 import { TeamAccent } from '../../components/TeamAccent'
 import type { GameRow } from '../../data/contract'
 import { kickoffEt, pct, spreadLabel } from '../../lib/format'
-import { LINES, SHORT } from '../../lib/models'
+import { APPROACHES, SHORT } from '../../lib/models'
 import { teamInfo } from '../../lib/teams'
 import { cardSentence, gameStatus } from './helpers'
 
@@ -37,7 +37,7 @@ function FinalScore({ g }: { g: GameRow }) {
 export function GameCard({ g, showStatus }: { g: GameRow; showStatus: boolean }) {
   const { status } = gameStatus(g)
   const mk = g.market?.p_home ?? null
-  const models = LINES.flatMap((id) => {
+  const models = APPROACHES.flatMap((id) => {
     const p = g.models[id]?.p_home
     return p == null ? [] : [{ id, label: SHORT[id], p }]
   })

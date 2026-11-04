@@ -46,7 +46,7 @@ function Headlines({ r }: { r: RetroGame }) {
 
 // ------------------------------------------------------------------------------------ forecasts
 
-const isRef = (p: GradedPick) => p.kind !== 'approach' && p.kind !== 'ensemble'
+const isRef = (p: GradedPick) => p.kind !== 'approach'
 
 function Forecasts({ r }: { r: RetroGame }) {
   return (

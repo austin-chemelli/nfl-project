@@ -315,3 +315,14 @@ The v4 comparison was per job, so Austin chose to split jobs between models inst
 **Findings.** Old and new logic on identical data, all 7,548 games 1999-2026: 0 differences in played games, so no fit, backtest or grade moves. Only Baltimore and Arizona change, from Week 9 on. Dry-run Week 9 locks on a copy of production: 2 of 15 games moved. JAX @ BAL home win chance (market 19.1%): Traditionalist 31.1 to 28.6, Analyst 38.1 to 32.4, Student 35.2 to 30.5, Sharp 17.4 to 13.1. Baltimore's QB EPA goes from 0.100 to -0.116 and CPOE from +1.50 to -0.66.
 
 **Lesson.** Comparing feature files needs a noise baseline: two identical runs differed in 30,765 rows at exact equality and in none at 1e-9, and joining live rows without `known_as_of` crosses snapshots.
+
+## 2026-11-04: the ensemble leaves the site, the Student is the headline (U1)
+
+**Why.** D5: the Student stays as the public line and the ensemble becomes a diagnostic. The backend can't stop locking the ensemble until the site no longer needs it (H1 in `.notes/ui-round2.md` §8).
+
+**What changed.** Web only, so it can merge during a lock window. `web/src/data/hideEnsemble.ts` runs in the zod contract on the slate, game, retro, recap and tracker files, so no page sees the ensemble whether or not the data has it. `HEADLINE` in `lib/models.ts` names the Student, and the pick tile, vs-the-market tile, biggest factor, recap's picks right and the tracker's tiles read it. `gameStatus` no longer falls back to the first key of `models`: Student, the other approaches, then the references. The tracker's headline sentence moves from the Analyst to the Student.
+
+**Findings.** Retros and recaps are ranked with the ensemble in them: in the dev copy it is the best read of 1 retro of 121 and none of the 8 recaps, so the filter hands the flag to the best approach and closes the ranks. "Most misread" in the recap is built on the ensemble in `retro/week.py`, and its sentences say so, so those rows are hidden until the retro rebuild moves them to the Student. That is a job-code change that needs a schema bump to reach weeks 1 to 8 (only stale weeks are rewritten), so it goes with U3 rather than in a PR that would be blocked by tonight's lock window.
+
+**Lesson.** A display rule that has to hold across every page belongs at the data boundary: 13 routes rendered against the dev copy with no mention of it, and rendered again from a copy with the ensemble deleted from the files.
+

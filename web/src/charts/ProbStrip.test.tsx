@@ -7,7 +7,7 @@ const models: ProbModel[] = [
   { id: 'analyst', label: 'Analyst', p: 0.62 },
   { id: 'sharp', label: 'Sharp', p: 0.7 },
   { id: 'student', label: 'Student', p: 0.48 },
-  { id: 'ensemble', label: 'Ensemble', p: 0.59 },
+  { id: 'market_baseline', label: 'Market', p: 0.59 },
   { id: 'elo_v0', label: 'Elo', p: 0.6, reference: true },
 ]
 

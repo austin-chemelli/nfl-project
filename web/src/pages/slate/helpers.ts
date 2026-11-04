@@ -1,6 +1,6 @@
 /** Pure helpers for the Slate page (port of nfl.ui.slate_helpers). */
 import type { GameRow, Meta } from '../../data/contract'
-import { APPROACHES, SHORT } from '../../lib/models'
+import { APPROACHES, HEADLINE, REFERENCES, SHORT } from '../../lib/models'
 import { pct } from '../../lib/format'
 
 /** |model − market| in probability at which a cell is highlighted. */
@@ -28,8 +28,9 @@ export function correct(game: GameRow, mid: string): boolean | null {
   return pk == null || won == null ? null : pk.home === won
 }
 
+/** The game's status from its headline line, else in a fixed order, so it never depends on key order. */
 export function gameStatus(game: GameRow): { status: string; lockTs: string | null } {
-  const m = game.models.ensemble ?? Object.values(game.models)[0]
+  const m = [HEADLINE, ...APPROACHES, ...REFERENCES].map((id) => game.models[id]).find((x) => x != null)
   return m ? { status: m.status, lockTs: m.lock_ts } : { status: 'none', lockTs: null }
 }
 

@@ -11,7 +11,7 @@
 import type { Efficiency, Game, Meta, RetroGame, TeamRetro } from '../../data/contract'
 import { pct } from '../../lib/format'
 import { groupOf } from '../../lib/meta'
-import { APPROACHES, SHORT } from '../../lib/models'
+import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { injuryRank, sortInjuries } from './helpers'
 
 export type TabId = 'retro' | 'forecast' | 'matchup' | 'news'
@@ -80,9 +80,9 @@ function pregameTiles(g: Game, meta: Meta): TileSpec[] {
 }
 
 function pickTile(g: Game): TileSpec {
-  const ens = g.models.ensemble?.p_home
-  if (ens == null) return { id: 'pick', label: 'The pick', value: '–', sub: 'not scored yet', tab: 'forecast' }
-  return { id: 'pick', label: 'The pick', value: `${fav(ens, g.home, g.away)} ${favPct(ens)}`, sub: 'the four approaches averaged', tab: 'forecast', modelId: 'ensemble' }
+  const p = g.models[HEADLINE]?.p_home
+  if (p == null) return { id: 'pick', label: 'The pick', value: '–', sub: 'not scored yet', tab: 'forecast' }
+  return { id: 'pick', label: 'The pick', value: `${fav(p, g.home, g.away)} ${favPct(p)}`, sub: `the ${SHORT[HEADLINE]}'s line`, tab: 'forecast', modelId: HEADLINE }
 }
 
 /** The line's date when it is more than 3 days older than the site data (lines for later weeks lag). */
@@ -95,14 +95,14 @@ function lineAge(asOf: string | null | undefined, now: string): string {
 
 function marketTile(g: Game, now: string): TileSpec {
   const mk = marketP(g)
-  const ens = g.models.ensemble?.p_home
+  const p = g.models[HEADLINE]?.p_home
   const line = g.market?.spread_home
   const mkText = mk == null
     ? 'no market line yet'
     : `market ${fav(mk, g.home, g.away)} ${favPct(mk)}${line != null && Math.abs(line) >= 0.25 ? `, ${line > 0 ? g.home : g.away} −${Math.abs(line)}` : ''}${lineAge(g.market?.as_of, now)}`
-  if (mk == null || ens == null) return { id: 'market', label: 'vs the market', value: '–', sub: mkText, tab: 'forecast' }
-  const d = Math.round(100 * (ens - mk))
-  if (fav(ens, g.home, g.away) !== fav(mk, g.home, g.away)) return { id: 'market', label: 'vs the market', value: 'Other side', sub: mkText, tab: 'forecast' }
+  if (mk == null || p == null) return { id: 'market', label: 'vs the market', value: '–', sub: mkText, tab: 'forecast' }
+  const d = Math.round(100 * (p - mk))
+  if (fav(p, g.home, g.away) !== fav(mk, g.home, g.away)) return { id: 'market', label: 'vs the market', value: 'Other side', sub: mkText, tab: 'forecast' }
   if (Math.abs(d) < 3) return { id: 'market', label: 'vs the market', value: 'In line', sub: mkText, tab: 'forecast' }
   return { id: 'market', label: 'vs the market', value: `${Math.abs(d)} pts more on ${d > 0 ? g.home : g.away}`, sub: mkText, tab: 'forecast' }
 }
@@ -121,9 +121,9 @@ function splitTile(g: Game): TileSpec {
   }
 }
 
-/** The group (or home field) that moves the ensemble most. */
+/** The group (or home field) that moves the headline line most. */
 function factorTile(g: Game, meta: Meta): TileSpec {
-  const c = g.contributions.ensemble
+  const c = g.contributions[HEADLINE]
   if (!c) return { id: 'factor', label: 'Biggest factor', value: '–', sub: 'no breakdown', tab: 'forecast' }
   const items = [
     { name: 'Home field', pp: c.home_field_pp ?? 0 },

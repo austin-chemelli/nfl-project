@@ -15,11 +15,11 @@ export function ordinal(n: number): string {
 
 /** Row order for the approach picker / dot strip. */
 export const contribOrder = (contrib: Record<string, Contribution>) =>
-  [...APPROACHES, 'ensemble'].filter((m) => m in contrib)
+  APPROACHES.filter((m) => m in contrib)
 
-/** References, ensemble, then the four approaches (global is diagnostic, hidden). */
+/** References, then the four approaches (global is diagnostic, hidden). */
 export function dotModels(models: Game['models']): string[] {
-  return ['market_baseline', 'elo_v0', 'ensemble', ...APPROACHES].filter((m) => models[m]?.p_home != null)
+  return ['market_baseline', 'elo_v0', ...APPROACHES].filter((m) => models[m]?.p_home != null)
 }
 
 // ------------------------------------------------------------------------------ contributions
