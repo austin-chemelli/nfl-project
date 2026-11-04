@@ -20,6 +20,7 @@ from scipy.special import expit
 from scipy.stats import norm
 
 from nfl.approaches.schema import Approach
+from nfl.features.groups import FEATURE_CAPS
 
 SD_MARGIN = 13.5
 P_CLIP = 1e-6
@@ -66,6 +67,8 @@ class Scaler:
         for f, m, s in zip(self.features, self.mean, self.sd, strict=True):
             if f in wide.columns:
                 x = wide.get_column(f).cast(pl.Float64).to_numpy()
+                if f in FEATURE_CAPS:
+                    x = np.clip(x, -FEATURE_CAPS[f], FEATURE_CAPS[f])
                 z = (x - m) / s
                 cols.append(np.where(np.isnan(z), 0.0, z))
             else:

@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 # v5 2026-10-28: ml_spread_gap removed from Market behavior (it carried the line's level, review
 # finding); live-only scale priors. v4: scheme priors built. v3: Market behavior, labels, units.
-REGISTRY_VERSION = "5"
+REGISTRY_VERSION = "6"
 
 # How the UI formats a value of each unit.
 UNITS = {
@@ -61,6 +61,9 @@ class Group:
     description: str
     members: tuple[Member, ...]
     game_level: bool = False
+    # context only: shown in previews, carries no weight in any public line until research earns
+    # it one (model wave 2, ADR 0018). The schema rejects these groups in an approach.
+    context_only: bool = False
 
     @property
     def features(self) -> list[str]:
@@ -92,7 +95,6 @@ _GROUPS = [
               M("strength.sos", 1, "Strength of schedule", "rating", "Average Elo of the opponents faced so far this season."),
               M("strength.luck", -1, "Luck", "prob_diff", "Actual win rate minus expected win rate from points; teams that win more than their points say tend to come back down."),
               M("decisions.turnover_margin_pg", 1, "Turnover margin per game", "count", "Takeaways minus giveaways per game; partly skill, partly luck that regresses."),
-              M("strength.st_epa_pg", 1, "Special teams value", "epa", "Expected points added per game by kickoffs, punts, field goals and returns.", adv=True),
           )),
     Group("offense", "Offense", "Who's better", "Efficiency moving the ball",
           "How efficiently each offense moves the ball, per play.",
@@ -118,6 +120,15 @@ _GROUPS = [
               M("strength.epa_rush_def", -1, "Rush EPA allowed per play", "epa", "Expected points allowed per opponent designed run."),
               M("strength.sack_rate_def", 1, "Sack rate", "pct", "Share of opponent dropbacks that end in a sack."),
               M("strength.epa_def_adj", -1, "Opponent-adjusted EPA allowed", "epa", "EPA allowed per play after accounting for the offenses faced.", adv=True),
+              M("scheme.def_pressure_rate_prior", 1, "Pressure rate (coordinator history)", "pct", "Pressure rate in the play-caller's past defenses, relative to each season's league average (participation 2016+)."),
+          )),
+    Group("special_teams", "Special teams", "Who's better", "Kicking and field position",
+          "What each team's kicking, punting and kickoff units have been worth, per game.",
+          (
+              M("strength.st_epa_pg", 1, "Special teams value", "epa", "Expected points added per game by kickoffs, punts, field goals and returns.", adv=True),
+              M("strength.st_kicking_epa_pg", 1, "Kicking value", "epa", "Expected points added per game on field goals and extra points, against the league's average kick."),
+              M("strength.st_punt_epa_pg", 1, "Punt unit value", "epa", "Expected points added per game on punts, net of the punts it returned."),
+              M("strength.st_kickoff_epa_pg", 1, "Kickoff unit value", "epa", "Expected points added per game on kickoffs, net of the kickoffs it returned."),
           )),
     Group("quarterback", "Quarterback", "Who's playing", "Who is throwing, and is it the real guy",
           "The projected starting quarterback's track record, and whether he is the usual starter.",
@@ -194,7 +205,7 @@ _GROUPS = [
               M("decisions.pace", 1, "Pace", "seconds", "Seconds per offensive play in neutral situations (planned).", adv=True),
               M("decisions.penalty_yds_pg", -1, "Penalty yards per game", "yards", "Penalty yards against per game (planned).", adv=True),
               M("decisions.hc_ats_career", 1, "Head coach vs the spread", "pct", "The head coach's career rate of covering the betting spread (planned).", adv=True),
-          )),
+          ), context_only=True),
     Group("off_scheme", "Offensive scheme", "The sidelines", "How the offense is built (style; history decides what helps)",
           "How the offense is built: motion, play-action, formations, personnel. Style, not quality; history decides what helps.",
           (
@@ -207,7 +218,7 @@ _GROUPS = [
               M("scheme.off_11_rate_prior", 1, "Three-receiver sets (coordinator history)", "pct", "How often the offensive play-caller has used 11 personnel in past seasons, relative to each season's league average (participation 2016+; coverage 2018+)."),
               M("scheme.off_heavy_rate_prior", -1, "Heavy sets (coordinator history)", "pct", "How often the play-caller has used two-plus tight ends or backs in past seasons, relative to each season's league average (participation 2016+; coverage 2018+)."),
               M("scheme.off_time_to_throw_prior", -1, "Time to throw (coordinator history)", "seconds", "Average time to throw in the play-caller's past offenses, relative to each season's league average (participation 2016+)."),
-          )),
+          ), context_only=True),
     Group("def_scheme", "Defensive scheme", "The sidelines", "How the defense is built",
           "How the defense is built: blitzes, boxes, coverage habits. Style, not quality.",
           (
@@ -216,8 +227,7 @@ _GROUPS = [
               M("front.pass_rushers_5plus_rate", 1, "Five-plus rushers", "pct", "Share of dropbacks with five or more pass rushers (FTN, 2022+; planned)."),
               M("scheme.def_man_rate_prior", 1, "Man coverage (coordinator history)", "pct", "How often the defensive play-caller has played man coverage in past seasons, relative to each season's league average (participation 2016+; coverage 2018+)."),
               M("scheme.def_two_high_rate_prior", -1, "Two-high shells (coordinator history)", "pct", "How often the play-caller has played two-deep safety shells in past seasons, relative to each season's league average (participation 2016+; coverage 2018+)."),
-              M("scheme.def_pressure_rate_prior", 1, "Pressure rate (coordinator history)", "pct", "Pressure rate in the play-caller's past defenses, relative to each season's league average (participation 2016+)."),
-          )),
+          ), context_only=True),
     Group("matchups", "Matchups", "The sidelines", "This offense against this defense",
           "This offense's habits against this defense's habits (planned).",
           (
@@ -228,7 +238,7 @@ _GROUPS = [
               M("matchup.off_vs_man", 1, "Offense vs man coverage", "index", "Offense's results against man coverage times the defense's man rate (planned)."),
               M("matchup.off_vs_pressure", 1, "Offense vs pressure", "index", "Offense's results under pressure times the defense's pressure rate (planned)."),
               M("matchup.off_11_vs_def_11", 1, "Three-receiver sets vs the defense", "index", "Offense's 11-personnel results against the defense's results versus 11 personnel (planned)."),
-          )),
+          ), context_only=True),
     Group("market", "Market behavior", "The outside world", "How the betting market is behaving (not what it predicts)",
           "How the betting market is behaving: line movement and where the public is. Never the line itself (ADR 0013); live only, so it contributes nothing to backtests.",
           (
@@ -272,6 +282,11 @@ LIVE_PRIORS: dict[str, tuple[float, float]] = {
     "narrative.lookahead": (0.05, 0.2),
     "narrative.weather_concern": (0.15, 0.25),
 }
+# Hard limits on a feature's raw value, applied before standardizing. Line moves run a median of
+# 0.5 points and 2.5 at the 95th percentile (44 games, 2026); a QB injury moved JAX @ BAL 12.5, which
+# entered at -8.3 SD and swung the Sharp by 24 points. The stored feature stays raw (ADR 0018).
+FEATURE_CAPS: dict[str, float] = {"market.line_move_pts": 4.5}
+
 MARKET_GROUP_CAP = 0.20  # max share of a persona's attention budget on Market behavior
 
 

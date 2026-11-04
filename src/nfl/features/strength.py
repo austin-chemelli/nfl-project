@@ -16,6 +16,8 @@ Extras (M1.11), same strictly-earlier rule:
   luck            n / (n + 4) * (raw win% - raw pythag), i.e. the gap shrunk toward 0 (ties = 0.5).
   sos             mean pre-game Elo of opponents already faced this season (1505 before any).
   st_epa_pg       special-teams EPA per game, zero-sum (see `_special_teams`), n0 = 4 games.
+  st_{kicking,punt,kickoff}_epa_pg   its parts, same rule: field goals and extra points; punts net
+                  of punt returns; kickoffs net of kick returns.
   epa_{pass,rush}_{off,def}, epa_early_off (downs 1-2), epa_nongarbage_off (pre-snap wp in
                   [0.1, 0.9]): same shrinkage as epa_off with n0 = 180 / 120 / 300 / 300 plays.
   sack_rate_{off,def}  sacks / dropbacks, n0 = 150 dropbacks, same previous-season prior blend.
@@ -36,7 +38,7 @@ from nfl.features import availability, qb, store
 from nfl.models.elo import TEAM_ALIASES, pregame_ratings
 
 SOURCE = "pbp"
-VERSION = "3"
+VERSION = "4"
 
 N0_PLAYS = 300.0
 N0_GAMES = 4.0
@@ -353,12 +355,21 @@ def _special_teams(tg: pl.DataFrame, plays: pl.DataFrame, games: pl.DataFrame) -
                 (pl.col("_c").cum_sum().over(grp) - pl.col("_c")).alias("_cc"),
             )
         )
-        total = total + (pl.col("_cx") - pl.col(f"_m_{t}") * pl.col("_cc"))
-        out = out.with_columns(total.alias("_tot")).drop("_x", "_c", "_cx", "_cc", f"_m_{t}")
+        part = pl.col("_cx") - pl.col(f"_m_{t}") * pl.col("_cc")
+        total = total + part
+        out = out.with_columns(total.alias("_tot"), part.alias(f"_st_{t}")).drop(
+            "_x", "_c", "_cx", "_cc", f"_m_{t}"
+        )
         total = pl.col("_tot")
+    per_game = pl.col("_gp") + N0_GAMES
     return out.with_columns(
-        (pl.col("_tot") / (pl.col("_gp") + N0_GAMES)).alias("strength.st_epa_pg")
-    ).drop("_tot")
+        (pl.col("_tot") / per_game).alias("strength.st_epa_pg"),
+        ((pl.col("_st_field_goal") + pl.col("_st_extra_point")) / per_game).alias(
+            "strength.st_kicking_epa_pg"
+        ),
+        (pl.col("_st_punt") / per_game).alias("strength.st_punt_epa_pg"),
+        (pl.col("_st_kickoff") / per_game).alias("strength.st_kickoff_epa_pg"),
+    ).drop("_tot", *[f"_st_{t}" for t in ST_TYPES])
 
 
 def _solve_spd(A: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -512,6 +523,9 @@ def compute(
         "strength.luck",
         "strength.sos",
         "strength.st_epa_pg",
+        "strength.st_kicking_epa_pg",
+        "strength.st_punt_epa_pg",
+        "strength.st_kickoff_epa_pg",
         "strength.epa_off_adj",
         "strength.epa_def_adj",
     ]

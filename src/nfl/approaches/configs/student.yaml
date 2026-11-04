@@ -1,11 +1,13 @@
 # The data-only baseline (Austin, 2026-10-27): starts with every non-market group weighted equally
 # and lets history move the weights. Its persona flavor is the "no opinion" starting point; its
-# fitted flavor is what the data alone makes of the groups. Market and Buzz are excluded so the
-# Student answers "what do the football features say", like the global fit.
+# fitted flavor is what the data alone makes of the groups. Buzz is excluded, and so are the
+# context-only groups (ADR 0018). Its one declared input is line movement: it exists live only, so
+# there is no history to learn it from, and its weight stays where this file sets it.
 id: student
 name: The Student
 blurb: >-
-  Has no opinions. Starts by weighting everything equally and learns only from results.
+  Has no opinions. Starts by weighting everything equally and learns from results. The one thing it
+  takes on trust is a big line move, which has no history to learn from.
 emphasis: []
 calibration: platt
 public: fitted  # its identity is what the data says; the equal-weight start is shown as its persona
@@ -20,7 +22,7 @@ groups:
   stakes:        {w: 0.1, why: "Equal start"}
   rest_travel:   {w: 0.1, why: "Equal start"}
   venue_weather: {w: 0.1, why: "Equal start"}
-  coaching:      {w: 0.1, why: "Equal start"}
-  off_scheme:    {w: 0.1, why: "Equal start"}
-  def_scheme:    {w: 0.1, why: "Equal start"}
-  matchups:      {w: 0.1, why: "Equal start"}
+  special_teams: {w: 0.1, why: "Equal start"}
+  market:        {w: 0.065, why: "Declared, not learned: line moves have no history"}
+overrides:
+  market: {market.line_move_pts: 1.0}

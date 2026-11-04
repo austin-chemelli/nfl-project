@@ -19,6 +19,7 @@ groups:
   health:      {w: 0.10, why: "Injury news is often priced late"}
   form:        {w: -0.08, why: "Fade recency: the public overreacts to streaks"}
   buzz:        {w: -0.06, why: "Fade the hype"}
+  special_teams: {w: 0.05, why: "Kicking and field position are quietly mispriced"}
 overrides:
   # His read of the market: moves toward a team are information; a crowded public side is not.
   market: {market.line_move_pts: 1.0, narrative.public_bet_pct_home: -1.0}

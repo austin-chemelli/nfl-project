@@ -16,11 +16,8 @@ groups:
   venue_weather: {w: 0.15, why: "Crowds, domes and weather decide games"}
   stakes:        {w: 0.15, why: "Teams play to what's on the line"}
   defense:       {w: 0.12, why: "Defense wins championships"}
-  coaching:      {w: 0.10, why: "Take the points, establish the run"}
   health:        {w: 0.10, why: "You play who's healthy"}
   quarterback:   {w: 0.10, why: "Good to have a QB, but it's a team game"}
   offense:       {w: 0.05, why: "Has heard of EPA, doesn't really trust it"}
   buzz:          {w: 0.05, why: "Listens to the talk shows"}
-overrides:
-  # His idea of good coaching, not the data's: 4th-down gambles and pass-happy play-calling are bad.
-  coaching: {decisions.fourth_go_rate_oe: -1.0, decisions.pass_rate_oe: -1.0}
+  special_teams: {w: 0.10, why: "Field position and a kicker you can trust win close games"}

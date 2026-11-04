@@ -84,6 +84,9 @@ class Approach(BaseModel):
         unknown = sorted(set(v) - set(GROUPS))
         if unknown:
             raise ValueError(f"unknown groups: {unknown}")
+        context = sorted(g for g in v if GROUPS[g].context_only)
+        if context:
+            raise ValueError(f"context-only groups carry no weight (ADR 0018): {context}")
         return v
 
     @model_validator(mode="after")

@@ -151,8 +151,8 @@ def test_build_rows_through_store(tmp_path, monkeypatch):
     monkeypatch.setattr(strength, "load_plays_all", lambda paths, min_season: plays_frame())
     monkeypatch.setattr(strength, "named_starters", lambda paths, games, build_ts: None)
     rows = strength.build(None, games_frame(), BUILD)  # type: ignore[arg-type]
-    assert rows.height == 5 * 2 * 22
-    assert set(rows["source"]) == {"pbp"} and set(rows["version"]) == {"3"}
+    assert rows.height == 5 * 2 * 25
+    assert set(rows["source"]) == {"pbp"} and set(rows["version"]) == {"4"}
     store.validate(rows)
     g5 = rows.filter(pl.col("game_id") == "g5")
     assert set(g5["known_as_of"]) == {BUILD}  # upcoming game stamped at build time
@@ -283,6 +283,29 @@ def test_pass_rush_splits_early_nongarbage_and_sack_rate():
     assert f("B", "strength.sack_rate_off") == pytest.approx((0 + 150 * 0.065) / (1 + 150))
     # splits are components of epa_off: with no previous season the plain feature uses n0 = 300
     assert f("A", "strength.epa_off") == pytest.approx(0.9 / (3 + 300))
+
+
+def test_special_teams_parts_add_up_and_stay_strictly_earlier():
+    kick = {"special_teams_play": 1.0, "is_pass": 0.0, "qb_dropback": 0.0}
+    rows = [
+        play("g1", "A", "B", 1.5, play_type="field_goal", **kick),
+        play("g1", "B", "A", -0.5, play_type="field_goal", **kick),
+        play("g1", "A", "B", 0.4, play_type="punt", **kick),
+        play("g1", "B", "A", -0.2, play_type="punt", **kick),
+        play("g1", "B", "A", 0.3, play_type="kickoff", **kick),
+    ]
+    vals = strength.compute(games_frame(), make_plays(rows))
+    for team in ("A", "B"):
+        parts = sum(
+            feat(vals, "g2", team, f"strength.st_{p}_epa_pg")
+            for p in ("kicking", "punt", "kickoff")
+        )
+        assert parts == pytest.approx(feat(vals, "g2", team, "strength.st_epa_pg"))
+    assert feat(vals, "g2", "A", "strength.st_kicking_epa_pg") != 0  # g1's kicks count from g2 on
+    assert feat(vals, "g1", "A", "strength.st_kicking_epa_pg") == pytest.approx(0.0)  # not its own
+    assert feat(vals, "g2", "A", "strength.st_punt_epa_pg") == pytest.approx(
+        -feat(vals, "g2", "B", "strength.st_punt_epa_pg")
+    )  # return vs coverage, zero-sum
 
 
 def test_special_teams_epa_is_zero_sum_and_demeaned():
