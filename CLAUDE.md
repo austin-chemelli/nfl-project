@@ -108,7 +108,7 @@ python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI 
 
 ## Working conventions
 
-- **Every session starts informed.** The SessionStart hook (`scripts/hooks/session-start.sh`) injects `docs/state.md`, `.notes/board.md`, the last two journal entries and `scripts/state_check.py`'s findings. Run `git fetch` before starting work. Keep those files current as you work, at the boundaries in [docs/state-maintenance.md](docs/state-maintenance.md) (track start, checkpoint before a PR or when a decision or finding changes direction, close after the merge). Austin never maintains them by hand.
+- **Every session starts informed.** The SessionStart hook (`scripts/hooks/session-start.sh`, registered in the repo's `.claude/settings.json` and in `~/dev/.claude/settings.json` since sessions start in the `~/dev` workspace) injects `docs/state.md`, `.notes/board.md`, the last two journal entries and `scripts/state_check.py`'s findings. Run `git fetch` before starting work. Keep those files current as you work, at the boundaries in [docs/state-maintenance.md](docs/state-maintenance.md) (track start, checkpoint before a PR or when a decision or finding changes direction, close after the merge). Austin never maintains them by hand.
 - Work from `docs/tasks.md`; tasks are sized for the `implementer` agent. Run siblings marked **P** in parallel, then review the diffs.
 - Tests for anything touching time boundaries (as-of joins, walk-forward splits, ledger immutability). Leakage guards run in CI.
 - Prefer small, verifiable steps that move toward the live pipeline. In-season work is only what needs live games; everything else can wait for the offseason.
