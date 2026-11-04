@@ -183,3 +183,23 @@ Plan: ADR 0017; working notes and wireframes in `.notes/ui-direction.md` (local)
 ## Offseason backlog (unsized; participation data lands each February)
 
 Matchup approach (tendency interactions, shrunk hard; its features are M1.13/M1.16); tendency discontinuities (coordinator/QB change); Monte Carlo drive sim emitting the same prediction rows; totals modeling; fractional Kelly ledger variant; ensemble weights by validation; Approach C (auth, user predictions, leaderboard; Postgres); self-hosting on the desktop (hybrid, ADR 0008); Langfuse if a trace UI is wanted.
+
+## M11: Model wave 2 (decided 2026-11-04; one `model_version`, Week 10 Thursday lock)
+
+Scope and reasons: journal 2026-11-04; parallel rules with the UI round: `.notes/ui-round2.md` §8. Worktree `~/dev/nfl-project-model`, branch `model-wave2`. Every task adds tests. Nothing here merges before the cutover window (M11.12).
+
+| Id | Goal | Files | Depends on | Done when |
+|---|---|---|---|---|
+| M11.1 | Cap the line move inside the model | `approaches/engine.py`, `features/groups.py` | | `market.line_move_pts` is clipped at the agreed z in `Scaler.transform`; the stored feature and `features[...]` in site JSON stay raw points; test on a 12.5-point move |
+| M11.2 | Line move for the Student and the Analyst | `approaches/configs/`, `approaches/fit.py` | M11.1 | Each has a `market` group holding line move only, at half the Sharp's weight; a test proves the declared weight survives fitting with no history; the public split stays Sharp-only; the Student's blurb is rewritten |
+| M11.3 | Zero `coaching`, `off_scheme`, `def_scheme`, `matchups` in every approach | `approaches/configs/` | | No public line carries them; Global keeps them so the Hypotheses page keeps its verdicts |
+| M11.4 | Pressure rate into Defense | `features/groups.py` | | `scheme.def_pressure_rate_prior` is a Defense member; `REGISTRY_VERSION` bumped; coverage by season checked and noted |
+| M11.5 | Special teams group | `features/groups.py`, `features/strength.py` or a new family | | `special_teams` group holds `strength.st_epa_pg` (moved from Quality) plus kicking points over expectation by distance, return and coverage EPA, punting EPA; season-to-date, strictly before kickoff, with leakage tests; each member gets a hypotheses row |
+| M11.6 | Re-propose persona budgets | `approaches/configs/` | M11.2–M11.5 | Budgets without the zeroed groups and with special teams; Austin signs off the table |
+| M11.7 | `context_only` groups | `features/groups.py`, one line in `site.py` | M11.3 | `meta.groups` carries the flag; flagged on the board first, since `site.py` is the UI's |
+| M11.8 | Judge the unjudged | `hypotheses.py` | | Find why 13 of the 26 coaching and scheme features have no hypotheses row, and run them; `decisions.penalty_yds_pg` moves to Quality if its verdict earns it |
+| M11.9 | Write it down | `docs/adr/0018-*.md`, `docs/feature-groups.md`, `docs/architecture.md` | M11.6 | ADR 0018 records the wave and amends ADR 0013's note on who may read the market's behavior |
+| M11.10 | Build-your-own | `web/src/diy/`, `web/src/test/fixtures/diy/` | M11.5 | `GROUP_IDS` has `special_teams`, parity test green; web deploys before the new matrix publishes (H2) |
+| M11.11 | Stop locking the ensemble | `lock.py`, `readme.py`, `src/nfl/ui/` | U1 deployed (H1) | Lock writes no ensemble row, old rows stay, Streamlit test green, the ledger's headline line is the Student |
+| M11.12 | Refit, regrade, cutover | `marts/fits/` | all above | Between the Sat 2026-11-07 12:00 lock and Thu 2026-11-12 09:00: PR merged, image built, fits uploaded, dry-run lock from the new image passes |
+
