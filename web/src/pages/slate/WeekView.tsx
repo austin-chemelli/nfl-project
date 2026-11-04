@@ -6,12 +6,10 @@ import { isNotFound, useSlate } from '../../data/api'
 import type { GameRow, Meta } from '../../data/contract'
 import { ago, kickoffEt, spreadLabel } from '../../lib/format'
 import { approachOf } from '../../lib/meta'
-import { colorVar } from '../../lib/models'
+import { APPROACHES, colorVar } from '../../lib/models'
 import { GameCard } from './GameCard'
 import { Recap } from './Recap'
 import { correct, divergenceText, DIVERGE, gameStatus, neighbours, parseSort, pickOf, scoreText, SORTS, sortGames, weekHref, type SortKey } from './helpers'
-
-const COLS = ['traditionalist', 'analyst', 'sharp', 'student', 'ensemble'] as const
 
 export function WeekView({ meta, season, week }: { meta: Meta; season: number; week: number }) {
   const q = useSlate(season, week)
@@ -142,7 +140,7 @@ function mode(xs: string[]): string {
 function CardKey() {
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1">
-      {COLS.map((c) => <ModelBadge key={c} modelId={c} />)}
+      {APPROACHES.map((c) => <ModelBadge key={c} modelId={c} />)}
       <span className="inline-flex items-center gap-1.5">
         <span aria-hidden className="inline-block h-3 w-0.5 bg-[var(--series-market)] opacity-60" /> Market
       </span>
@@ -217,9 +215,9 @@ function GameTable({ meta, games }: { meta: Meta; games: GameRow[] }) {
           <th className={th}>Game</th>
           <th className={th}><Help text="The betting market's spread: the favorite and how many points it is favored by.">Line</Help></th>
           <th className={th}><Help text="The market's favorite and its win chance, with the bookmaker's margin removed.">Market pick</Help></th>
-          {COLS.map((c) => (
+          {APPROACHES.map((c) => (
             <th key={c} className={th}>
-              <Help text={c === 'ensemble' ? 'The average of the four approaches.' : approachOf(meta, c)?.blurb}>
+              <Help text={approachOf(meta, c)?.blurb}>
                 <ModelBadge modelId={c} />
               </Help>
             </th>
@@ -239,7 +237,7 @@ function GameTable({ meta, games }: { meta: Meta; games: GameRow[] }) {
             </td>
             <td className={`${td} whitespace-nowrap`}><MarketCell g={g} /></td>
             <td className={td}><ProbCell pHome={g.market?.p_home} home={g.home} away={g.away} /></td>
-            {COLS.map((c) => (
+            {APPROACHES.map((c) => (
               <td key={c} className={`${td} whitespace-nowrap`}><PickCell g={g} mid={c} /></td>
             ))}
             <td className={td}><StatusCell g={g} /></td>

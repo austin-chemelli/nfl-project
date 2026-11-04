@@ -6,7 +6,7 @@ const pick = (p: number, div: number | null = null) => ({ p_home: p, spread_home
 const game = (over: Partial<GameRow> = {}): GameRow => ({
   game_id: 'g', season: 2026, week: 8, kickoff_utc: '2026-10-30T00:15:00Z', away: 'CAR', home: 'GB', stadium: null, roof: null,
   neutral_site: false, away_qb: null, home_qb: null, result: null, market: null,
-  models: { traditionalist: pick(0.7), analyst: pick(0.4), sharp: pick(0.55), student: pick(0.5), ensemble: pick(0.54) },
+  models: { traditionalist: pick(0.7), analyst: pick(0.4), sharp: pick(0.55), student: pick(0.5) },
   ...over,
 })
 
@@ -50,7 +50,7 @@ describe('slate helpers', () => {
 
 const mk = (p: number) => ({ p_home: p, spread_home: null, total: null, as_of: null, source: null }) as unknown as GameRow['market']
 const finalOf = (margin: number) => ({ home_score: margin > 0 ? 24 : 17, away_score: margin > 0 ? 17 : 24, margin })
-const models = (a: number, s: number, t = a, st = a) => ({ traditionalist: pick(t), analyst: pick(a), sharp: pick(s), student: pick(st), ensemble: pick((a + s) / 2) })
+const models = (a: number, s: number, t = a, st = a) => ({ traditionalist: pick(t), analyst: pick(a), sharp: pick(s), student: pick(st) })
 
 describe('cardSentence', () => {
   it('pregame: names the approach furthest from the market', () => {
@@ -102,5 +102,18 @@ describe('sortGames', () => {
     expect(winnerMarketP(c)).toBeNull()
     expect(parseSort('upset')).toBe('upset')
     expect(parseSort('nope')).toBe('kickoff')
+  })
+})
+
+describe('gameStatus', () => {
+  const m = (status: string) => ({ ...pick(0.5), status: status as 'locked', lock_ts: status })
+  const row = (models: GameRow['models']) => game({ models })
+  it('reads the Student, whatever else the row carries and in whatever order', () => {
+    expect(gameStatus(row({ market_baseline: m('preview'), student: m('locked') }))).toEqual({ status: 'locked', lockTs: 'locked' })
+  })
+  it('falls back to an approach, then a reference, never to the key order', () => {
+    expect(gameStatus(row({ global: m('pregame'), elo_v0: m('backfill'), sharp: m('locked') })).status).toBe('locked')
+    expect(gameStatus(row({ global: m('pregame'), elo_v0: m('backfill') })).status).toBe('backfill')
+    expect(gameStatus(row({})).status).toBe('none')
   })
 })

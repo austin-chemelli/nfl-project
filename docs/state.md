@@ -86,7 +86,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| ui | `ui-next` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | planned 2026-11-04, decisions in; starting at U1; parallel to model-wave2 (§8) | |
+| ui | `ui-next` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | U1 (ensemble off the site, Student headline) built 2026-11-04, web-only; U2 game page next; parallel to model-wave2 (§8) | |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version` for the Week 10 Thursday lock. Runs parallel to ui (§8) | started 2026-11-04 | |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
@@ -141,6 +141,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 - The GCP free trial ends about late January 2027: upgrade the billing account before then (`docs/hosting.md` §3.1).
 - M8 leftovers: no uptime check on `meta.json`, no data-freshness alert.
 - README scorecard CIs change between `nfl readme` runs: on 2026-11-03 only the bootstrap CI digits moved (point estimates and counts identical), although `grade.py` seeds its RNG. Cause unverified; that run's README change was discarded.
+- "Most misread" is hidden in the week recaps: it is built on the ensemble in `retro/week.py`. Moves to the Student with U3's retro schema bump; wave 2's ensemble stop would leave it empty for new weeks until then.
 - Flaky web test: `web/src/pages/build/build.test.tsx` ("Blank (equal weights)" button not found) failed once on PR #6, which doesn't touch `web/`, and passed on rerun. Not investigated; UI track.
 - gcsfuse logs ERROR `BufferedWriteHandler.OutOfOrderError` on curated parquet writes in cloud jobs (seen in dry run `nfl-lock-thu-5mqhw`, 2026-11-04). The job succeeded; the effect on the written files wasn't checked.
 

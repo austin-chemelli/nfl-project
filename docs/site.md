@@ -53,11 +53,11 @@ Decided 2026-11-03 after the retrospective made the game page 21 sections long. 
 |---|---|---|
 | `/`, `/week/:season/:week` | week recap: best approach, vs the market, picks right, biggest upset, luckiest team (finished weeks) | none; cards sort by `?sort=kickoff\|disagreement\|upset`, `?view=table` for the grid |
 | `/game/:id` | pregame: the pick, vs the market, the approaches' split, biggest factor, key absence or biggest edge; finished: result, approaches right, played like, swing plays, biggest surprise | `retro` (finished games with a retro; default), `forecast`, `matchup`, `news` |
-| `/tracker` | ensemble vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest`, `calibration`, `disagreements`, `bets` |
+| `/tracker` | the Student vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest`, `calibration`, `disagreements`, `bets` |
 | `/hypotheses` | none | `effects`, `time` (`?item=` picks the feature) |
 | `/method` | none | `how`, `limits`, `data` |
 
-Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
+The Student is the headline line (`HEADLINE` in `lib/models.ts`; D5): the pick, the slate's status, the recap's picks right and the tracker's tiles read it. The ensemble is a diagnostic: `data/hideEnsemble.ts` strips it from every file at load, so pages never see it, and it is a no-op once the data has none. Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
 
 ## The design language (decided 2026-11-03, ADR 0017; the rules every page follows)
 

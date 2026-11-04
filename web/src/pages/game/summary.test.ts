@@ -16,7 +16,7 @@ describe('summaryTiles', () => {
     const t = summaryTiles(game, meta, null)
     expect(t.map((x) => x.id)).toEqual(['pick', 'market', 'split', 'factor', 'edge'])
     expect(t.every((x) => x.tab === 'forecast')).toBe(true)
-    expect(t[0]).toMatchObject({ value: expect.stringMatching(/^GB \d+%$/), modelId: 'ensemble' })
+    expect(t[0]).toMatchObject({ value: expect.stringMatching(/^GB \d+%$/), sub: "the Student's line", modelId: 'student' })
     // every approach leans further toward GB than the market (divergence +5 to +8 pts)
     expect(t[1].value).toMatch(/pts more on GB|In line/)
     expect(t[2]).toMatchObject({ value: 'All on GB', sub: '4 of 4 agree' })

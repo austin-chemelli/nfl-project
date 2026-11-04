@@ -47,7 +47,7 @@ function RecapBlock({ r }: { r: WeekRecap }) {
               </thead>
               <tbody>
                 {models.map((m) => {
-                  const ref = m.kind !== 'approach' && m.kind !== 'ensemble'
+                  const ref = m.kind !== 'approach'
                   return (
                     <tr key={m.model_id} className={ref ? 'text-ink-3' : m.model_id === r.best_model ? 'bg-surface-2' : undefined}>
                       <td className={`${td} tabular`}>{m.rank || dash}</td>

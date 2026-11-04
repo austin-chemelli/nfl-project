@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { DataTable, ModelBadge, Section, StatTile, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
-import { colorVar, dashArray } from '../../lib/models'
+import { colorVar, dashArray, HEADLINE } from '../../lib/models'
 import { currentSummary, headlineSentence } from './helpers'
 import { KEY_LINES, label, sentenceName } from './names'
 
@@ -24,7 +24,7 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
     )
   }
 
-  const focus = summary.rows.find((r) => r.model_id === 'analyst') ?? summary.rows.find((r) => r.model_id !== 'market_baseline')
+  const focus = summary.rows.find((r) => r.model_id === HEADLINE) ?? summary.rows.find((r) => r.model_id !== 'market_baseline')
   const weeks = [...new Set(cur.map((r) => r.week))].sort((a, b) => a - b)
   const firstLive = cur.filter((r) => r.live).map((r) => r.week).sort((a, b) => a - b)[0]
   const backEnd = (firstLive ?? Math.max(...weeks) + 1) - 0.5
@@ -50,7 +50,7 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
           : `${summary.liveGames} live ${summary.liveGames === 1 ? 'game has' : 'games have'} been graded (${summary.liveWeeks} ${summary.liveWeeks === 1 ? 'week' : 'weeks'}); the rest is backfill.`}
       </p>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {rows.filter((r) => (KEY_LINES as readonly string[]).includes(r.model_id)).map((r) => (
           <StatTile
             key={r.model_id}

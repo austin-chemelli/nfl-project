@@ -2,7 +2,7 @@ import { DotWhisker } from '../../charts'
 import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
 import { llVsMarket } from '../../lib/format'
-import { colorVar, LINES } from '../../lib/models'
+import { APPROACHES, colorVar } from '../../lib/models'
 import { label } from './names'
 
 const signed = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(3)}`
@@ -37,7 +37,7 @@ export function Backtest({ t }: { t: Tracker; meta: Meta }) {
         Log loss minus the market&apos;s, {first} to {last} ({seasons} seasons, up to {games.toLocaleString('en-US')} games per line).
       </p>
       <ul className="mt-2 list-disc pl-5 text-[14px]">
-        {LINES.filter((m) => rows.some((r) => r.model_id === m)).map((m) => {
+        {APPROACHES.filter((m) => rows.some((r) => r.model_id === m)).map((m) => {
           const r = rows.find((x) => x.model_id === m)!
           return (
             <li key={m}>

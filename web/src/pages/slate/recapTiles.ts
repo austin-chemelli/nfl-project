@@ -1,7 +1,7 @@
 /** The week recap's summary tiles, built from the recap alone (pure, unit-tested). */
 import type { WeekRecap } from '../../data/contract'
 import { dash, pct } from '../../lib/format'
-import { APPROACHES, SHORT } from '../../lib/models'
+import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 
 export type RecapTile = { id: string; label: string; value: string; sub: string; modelId?: string }
 
@@ -28,9 +28,10 @@ export function recapTiles(r: WeekRecap): RecapTile[] {
     const avg = Math.abs(gap) < NOISE ? 'about even on average' : `${Math.abs(gap).toFixed(3)} log loss ${gap < 0 ? 'better' : 'worse'} on average`
     tiles.push({ id: 'market', label: 'vs the market', value, sub: `${ahead} of ${ap.length} ahead; ${avg}` })
   }
-  const ens = r.models.find((m) => m.kind === 'ensemble')
+  const line = r.models.find((m) => m.model_id === HEADLINE)
   const mk = r.models.find((m) => m.model_id === 'market_baseline')
-  if (ens) tiles.push({ id: 'right', label: 'Picks right', value: `${ens.right} of ${ens.n}`, sub: mk ? `ensemble; market ${mk.right} of ${mk.n}` : 'ensemble', modelId: 'ensemble' })
+  const name = SHORT[HEADLINE]
+  if (line) tiles.push({ id: 'right', label: 'Picks right', value: `${line.right} of ${line.n}`, sub: mk ? `${name}; market ${mk.right} of ${mk.n}` : name, modelId: HEADLINE })
   const up = r.upsets[0]
   tiles.push(
     up && up.value < UPSET_BELOW

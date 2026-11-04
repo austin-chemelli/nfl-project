@@ -50,7 +50,7 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
               return (
                 <tr key={m}>
                   <td className={td}>
-                    <Help text={m === 'ensemble' ? 'The average of the four approaches.' : approachOf(meta, m)?.blurb}>
+                    <Help text={approachOf(meta, m)?.blurb}>
                       <ModelBadge modelId={m} label={label(m)} />
                     </Help>
                   </td>
