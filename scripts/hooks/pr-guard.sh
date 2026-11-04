@@ -17,6 +17,7 @@ d = json.load(sys.stdin)
 print(d.get("cwd", ""), json.dumps(d.get("tool_input", {}).get("command", "")))
 ' 2>/dev/null)
 cmd=$(printf '%s' "$cmd" | python3 -c 'import sys, json; print(json.load(sys.stdin))' 2>/dev/null)
+echo "$(date -Is) ${0##*/} cmd=${cmd:0:40} cwd=${cwd:-?} project=${CLAUDE_PROJECT_DIR:-?}" >> "$HOME/.claude/nfl-hooks.log" 2>/dev/null
 case "$cmd" in
   *"gh pr create"*|*"git push"*) ;;
   *) exit 0 ;;

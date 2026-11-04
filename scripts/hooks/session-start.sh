@@ -10,6 +10,8 @@
 input=$(cat 2>/dev/null)
 cwd=$(printf '%s' "$input" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("cwd", ""))' 2>/dev/null)
 PRIMARY="$HOME/dev/nfl-project"
+# One line per run in ~/.claude/nfl-hooks.log, so "did the hook fire?" has an answer.
+echo "$(date -Is) ${0##*/} cwd=${cwd:-?} project=${CLAUDE_PROJECT_DIR:-?}" >> "$HOME/.claude/nfl-hooks.log" 2>/dev/null
 
 root=""
 for candidate in "$cwd" "${CLAUDE_PROJECT_DIR:-}"; do
