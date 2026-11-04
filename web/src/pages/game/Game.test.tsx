@@ -11,17 +11,18 @@ describe('Game page', () => {
     renderRoute('/game/2026_08_CAR_GB')
     expect(await screen.findByText(/Lambeau Field/)).toBeInTheDocument()
     expect(screen.getAllByText(/Bryce Young/).length).toBeGreaterThan(0)
-    // summary strip, then the forecast tab (the default before kickoff)
+    // summary strip, then the matchup with no approach in it (the default before kickoff)
     expect(screen.getByRole('group', { name: 'Game summary' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Forecast' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Preview' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('heading', { name: /^Who has the edge/ })).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /Home win chance for GB: market/ })).toBeNull()
+    // the approaches, one tab over
+    await userEvent.click(screen.getByRole('tab', { name: 'Approaches' }))
     expect(screen.getByRole('img', { name: /Home win chance for GB: market/ })).toBeInTheDocument()
-    // why: home field +6.2 pts for the analyst, shown in the chart title and group list
     expect(screen.getByText(/Inside each group/)).toBeInTheDocument()
     expect(screen.getAllByText(/toward GB/).length).toBeGreaterThan(0)
-    // edges as percentile sentences
-    expect(screen.getByText(/edge is in the 88th percentile of matchups/)).toBeInTheDocument()
-    // tendencies, on the matchup tab
-    await userEvent.click(screen.getByRole('tab', { name: 'Matchup' }))
+    // tendencies have their own tab
+    await userEvent.click(screen.getByRole('tab', { name: 'Tendencies' }))
     expect(screen.getByText('CAR offense vs GB defense')).toBeInTheDocument()
     expect(screen.getByText('Defensive habits')).toBeInTheDocument()
     // narrative, on the news tab
@@ -35,16 +36,33 @@ describe('Game page', () => {
   it('switches approach and situation', async () => {
     renderRoute('/game/2026_08_CAR_GB')
     await screen.findByText(/Lambeau Field/)
+    await userEvent.click(screen.getByRole('tab', { name: 'Approaches' }))
     await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Approach' })).getByRole('radio', { name: 'Analyst' }))
     expect(screen.getByText(/Analyst says: GB win chance 71.2%/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Matchup' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Tendencies' }))
     await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Situation' })).getByRole('radio', { name: 'Third down' }))
     expect(screen.getByRole('radio', { name: 'Third down' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('labels a game scored without a lock as not locked', async () => {
-    renderRoute('/game/2026_08_ARI_DAL')
+    renderRoute('/game/2026_08_ARI_DAL?tab=approaches')
     expect(await screen.findByText(/Not locked: no lock was recorded/)).toBeInTheDocument()
+  })
+
+  it('overlays an approach on the Preview bars and keeps the fit unnamed', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB')
+    await screen.findByRole('heading', { name: /^Who has the edge/ })
+    expect(container.querySelector('[data-testid="overlay"]')).toBeNull()
+    await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Overlay an approach' })).getByRole('radio', { name: 'Analyst' }))
+    expect(screen.getByText(/how the Analyst reads each part/)).toBeInTheDocument()
+    expect(container.querySelectorAll('[data-testid="overlay"]').length).toBeGreaterThan(0)
+    expect(container.textContent).not.toMatch(/Global/)
+  })
+
+  it('draws the tape on league bands and says how many gaps stand out', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB?tab=details')
+    expect(await screen.findByText(/of these \d+ gaps stands? out/)).toBeInTheDocument()
+    expect(container.querySelectorAll('[data-testid="band"]').length).toBeGreaterThan(0)
   })
 
   it('shows "no narrative" for a game without one', async () => {
@@ -77,9 +95,9 @@ describe('Game page', () => {
       const strip = screen.getByRole('group', { name: 'Game summary' })
       expect(within(strip).getByText('Approaches right')).toBeInTheDocument()
       expect(within(strip).getByText('0 of 4')).toBeInTheDocument()
-      // the pregame forecast is one tab over
+      // what the approaches said is two tabs over
       expect(screen.queryByRole('img', { name: /Home win chance for GB/ })).toBeNull()
-      await userEvent.click(screen.getByRole('tab', { name: 'Pregame forecast' }))
+      await userEvent.click(screen.getByRole('tab', { name: 'Approaches' }))
       expect(screen.getByRole('img', { name: /Home win chance for GB: market/ })).toBeInTheDocument()
     })
 
@@ -96,12 +114,12 @@ describe('Game page', () => {
       expect(await screen.findByText(/Lambeau Field/)).toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: /^How the forecasts did/ })).toBeNull()
       expect(screen.queryByRole('tab', { name: 'What happened' })).toBeNull()
-      expect(screen.getByRole('tab', { name: 'Pregame forecast' })).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getByRole('tab', { name: 'Preview' })).toHaveAttribute('aria-selected', 'true')
       expect(screen.queryByRole('alert')).toBeNull()
     })
 
     it('does not ask for a retro on a game without a result', async () => {
-      renderRoute('/game/2026_08_ARI_DAL')
+      renderRoute('/game/2026_08_ARI_DAL?tab=approaches')
       expect(await screen.findByText(/Not locked: no lock was recorded/)).toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: /^How the forecasts did/ })).toBeNull()
     })

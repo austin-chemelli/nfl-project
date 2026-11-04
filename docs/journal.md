@@ -337,3 +337,14 @@ The v4 comparison was per job, so Austin chose to split jobs between models inst
 The 13 coaching and scheme features with no hypotheses row were never built, and neither was any matchup feature, so those groups carried weight on nothing. Special teams came out weaker once split: the overall feature falls from "matters" (+0.033) to "weak" (+0.023) because its parts share its credit; kickoff unit +0.028 weak, punt unit +0.015 weak, kicking -0.004 no evidence.
 
 **Lesson.** Scale a live-only feature from what it does, not from a guess: the declared SD of 1.5 was fine for a normal week and useless for the one game that mattered.
+
+## 2026-11-04: the game page leads with the game (U2)
+
+**Why.** Austin's feedback F2 to F4: everything above the fold was the approaches, the tale of the tape gave no way to tell whether a gap was big, and Tendencies was buried. D4 scales the bars by the Global fit.
+
+**What changed.** Tabs are now Preview, Approaches, Tendencies, Details, Injuries & news, with What happened still first on finished games. Preview (`pages/game/Preview.tsx`) is one bar per group sized by the Global fit, with the edge percentile under each name and a picker that outlines one approach on the same rows. Selecting the Sharp adds a chip with the raw line move. Details draws both teams on the league's band (`charts/MatchupBand.tsx`), with right always the better side. Gaps wider than the league's interquartile range stand out and the rest are muted. `site.py` adds `feature_bands` to `meta.json`: additive, and older files fall back to plain tables. The approaches tile left the pregame strip. Coaching and the scheme groups are out of the bars, the edge list and the Biggest edge tile through one helper, `isContextOnly`, until `context_only` ships from wave 2.
+
+**Findings.** One scale for every overlay, the rule on the Approaches tab, doesn't work here: the Sharp's −23 market row flattened every other bar to slivers on a phone, so the scale fits what's on screen. JAX @ BAL's "Who's better" reads 7 of 22 gaps standing out. Bands are one per feature for the season, on today's league, so an old game sits on the current range; that's display only, and the fine print says so. The hub's flaky Build test was never about Build: under full CPU load, whole page suites failed at random (41 tests in one run) because `findBy*`'s 1 second default raced the lazily loaded routes. Raising it to 5 seconds exposed vitest's own 5 second test limit, now 15. After that, 775 tests passed in three runs under 16 busy loops on 12 cores.
+
+**Lesson.** Regenerating fixtures from the dev copy broke the tests that need Week 8 to be pregame, so `scripts/web_fixtures.py` depends on the week it runs in; `feature_bands` went into `fixtures/site/meta.json` by hand. Screenshots from a headless browser found five problems in a page whose tests all passed.
+

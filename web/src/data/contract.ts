@@ -37,6 +37,7 @@ export const Group = z.looseObject({
   meaning: z.string(),
   description: z.string(),
   game_level: z.boolean(),
+  context_only: z.boolean().default(false), // shown as context, carries no weight in a public line
   members: z.array(Member),
 })
 
@@ -82,6 +83,8 @@ export const Meta = z.looseObject({
   // added in site.py after the first publish; older meta.json files lack them (labels fall back to ids)
   tendency_metrics: z.record(z.string(), TendencyMetric).default({}),
   tendency_situations: z.record(z.string(), z.string()).default({}),
+  // the league's spread per team-level feature (Details tab); older files lack it and the rows go plain
+  feature_bands: z.record(z.string(), z.looseObject({ lo: num, hi: num, iqr: num })).default({}),
   last_lock: z.looseObject({ lock_ts: z.string(), season: num, week: num, slot: nstr }).nullable(),
 })
 

@@ -49,6 +49,35 @@ def test_best_rows_prefers_last_lock_before_kickoff_over_backfill(tmp_path):
 @pytest.mark.skipif(
     not (DATA.site / "meta.json").exists(), reason="needs marts/site (run nfl site)"
 )
+def _band_inputs(n_teams: int) -> tuple[pl.DataFrame, pl.DataFrame]:
+    """Two weeks of `n_teams` teams, paired off; team i's week-2 value is i."""
+    known = datetime(2026, 10, 1)
+    games, feats = [], []
+    for week, kick in ((1, datetime(2026, 10, 2)), (2, datetime(2026, 10, 9))):
+        for i in range(0, n_teams, 2):
+            gid = f"{week}_{i}"
+            games.append({"game_id": gid, "kickoff_utc": kick, "home_team": f"T{i}", "away_team": f"T{i + 1}"})  # fmt: skip
+            for side, v in (("home", i), ("away", i + 1)):
+                value = float(v) if week == 2 else -100.0  # week 1 must lose to the later game
+                feats.append({"game_id": gid, "feature": "f.x", "side": side, "value": value, "known_as_of": known})  # fmt: skip
+    feats.append({"game_id": "2_0", "feature": "f.game", "side": "game", "value": 1.0, "known_as_of": known})  # fmt: skip
+    return pl.DataFrame(games), pl.DataFrame(feats)
+
+
+def test_feature_bands_use_each_teams_latest_value_and_skip_game_features():
+    games, feats = _band_inputs(32)
+    bands = site.feature_bands(feats, games, datetime(2026, 10, 20))
+    assert list(bands) == ["f.x"]
+    assert bands["f.x"] == {"lo": 3.1, "hi": 27.9, "iqr": 15.5}  # team values 0..31
+
+
+def test_feature_bands_ignore_rows_not_known_yet_and_thin_features():
+    games, feats = _band_inputs(32)
+    assert site.feature_bands(feats, games, datetime(2026, 9, 1)) == {}
+    games, feats = _band_inputs(10)
+    assert site.feature_bands(feats, games, datetime(2026, 10, 20)) == {}
+
+
 def test_real_contract_shape():
     meta = json.loads((DATA.site / "meta.json").read_text())
     assert meta["schema_version"] == site.SCHEMA_VERSION

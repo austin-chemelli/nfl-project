@@ -52,12 +52,12 @@ Decided 2026-11-03 after the retrospective made the game page 21 sections long. 
 | Route | Summary strip | Tabs (`?tab=`) |
 |---|---|---|
 | `/`, `/week/:season/:week` | week recap: best approach, vs the market, picks right, biggest upset, luckiest team (finished weeks) | none; cards sort by `?sort=kickoff\|disagreement\|upset`, `?view=table` for the grid |
-| `/game/:id` | pregame: the pick, vs the market, the approaches' split, biggest factor, key absence or biggest edge; finished: result, approaches right, played like, swing plays, biggest surprise | `retro` (finished games with a retro; default), `forecast`, `matchup`, `news` |
+| `/game/:id` | pregame: the pick, vs the market, biggest factor, key absence or biggest edge; finished: result, approaches right, played like, swing plays, biggest surprise | `retro` (finished games with a retro; default), `preview` (default otherwise), `approaches`, `tendencies`, `details`, `news` |
 | `/tracker` | the Student vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest`, `calibration`, `disagreements`, `bets` |
 | `/hypotheses` | none | `effects`, `time` (`?item=` picks the feature) |
 | `/method` | none | `how`, `limits`, `data` |
 
-The Student is the headline line (`HEADLINE` in `lib/models.ts`; D5): the pick, the slate's status, the recap's picks right and the tracker's tiles read it. The ensemble is a diagnostic: `data/hideEnsemble.ts` strips it from every file at load, so pages never see it, and it is a no-op once the data has none. Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
+The Student is the headline line (`HEADLINE` in `lib/models.ts`; D5): the pick, the slate's status, the recap's picks right and the tracker's tiles read it. The ensemble is a diagnostic: `data/hideEnsemble.ts` strips it from every file at load, so pages never see it, and it is a no-op once the data has none. The game page is built around the game (round 2): `preview` is approach-free, one bar per group sized by the Global fit, with an approach picker that outlines that approach's reading on the same rows. The name "Global" never appears there. Groups come from `meta.groups`, and a group in neither the fit nor the overlay is no row; `isContextOnly` in `lib/meta.ts` keeps `coaching`, `off_scheme`, `def_scheme` and `matchups` out of the bars, the edges and the Biggest edge tile, reading `context_only` from meta plus a fallback set to delete once that field ships. `details` draws both teams on the league's p10–p90 band (`MatchupBand`, `meta.feature_bands`), further right is better, and a gap wider than the league's interquartile range stands out while the rest are muted. Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
 
 ## The design language (decided 2026-11-03, ADR 0017; the rules every page follows)
 
@@ -74,7 +74,7 @@ Why: with the retrospective added, a finished game's page was 21 stacked section
 9. **Slate as matchup cards** on every screen size, one computed sentence each, sorted by `?sort=`; `?view=table` keeps the grid for power users.
 10. **Phone first for the slate and the game page**; the tracker and build-your-own may lean desktop.
 
-Kit: `Tabs`, `SummaryStrip`/`Tile`, `FinePrint`, `TeamAccent`, `RangeRow`, `ProbStrip` (in `web/src/components/` and `web/src/charts/`), colors from CSS tokens. Still open: the tendencies dumbbells on the same league band (hub decision D2).
+Kit: `Tabs`, `SummaryStrip`/`Tile`, `FinePrint`, `TeamAccent`, `RangeRow`, `MatchupBand`, `ProbStrip` (in `web/src/components/` and `web/src/charts/`), colors from CSS tokens. Still open: the tendencies dumbbells on the same league band (hub decision D2).
 
 ## Out of scope for now
 

@@ -1,5 +1,5 @@
 /** The one-answer-first row of tiles at the top of a page or tab (ADR 0017). */
-import type { ReactNode } from 'react'
+import { Children, type ReactNode } from 'react'
 import { Swatch } from './ui'
 import { useSetTab } from './Tabs'
 
@@ -39,7 +39,7 @@ export function Tile({ label, value, sub, tab, modelId }: {
 
 export function SummaryStrip({ children, label = 'Summary' }: { children: ReactNode; label?: string }) {
   return (
-    <div role="group" aria-label={label} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+    <div role="group" aria-label={label} className={`grid grid-cols-2 gap-2 sm:grid-cols-3 ${Children.count(children) === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-5'}`}>
       {children}
     </div>
   )

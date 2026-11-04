@@ -136,7 +136,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
           role="radio"
           aria-checked={o.value === value}
           onClick={() => onChange(o.value)}
-          className={`rounded px-2.5 py-1 ${o.value === value ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
+          className={`whitespace-nowrap rounded px-2.5 py-1 ${o.value === value ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
         >
           {o.label}
         </button>

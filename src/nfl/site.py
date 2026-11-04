@@ -52,6 +52,7 @@ PREGAME_LEAD = timedelta(hours=1)  # same offset as a synthetic backfill lock
 REFERENCE = {"market_baseline": "Market", "elo_v0": "Elo", "home_naive": "Home team 57%"}
 SPECIAL = {"ensemble": "Ensemble", "global": "Global fit (all features)"}
 TENDENCY_SITUATIONS = ["all", "early_down", "third_down", "red_zone"]
+FEATURE_BAND_MIN_TEAMS = 20  # below this a percentile of team values says little
 
 # Labels for the tendency metrics (contract v2.1, 2026-10-28; previously hard-coded in the Streamlit
 # page). `pair` links an offense metric to the defense metric it faces, for side-by-side charts.
@@ -463,6 +464,7 @@ def build(paths: Paths, season: int | None = None) -> dict:
             "groups": groups_meta(),
             "tendency_metrics": TENDENCY_METRICS,
             "tendency_situations": TENDENCY_SITUATION_LABELS,
+            "feature_bands": feature_bands(feats, games, now),
             "last_lock": _last_lock(paths),
         },
     )
@@ -473,6 +475,37 @@ def build(paths: Paths, season: int | None = None) -> dict:
     except Exception as e:  # noqa: BLE001  retros must never break the site build
         print(f"site: write_retro failed, continuing: {e!r}")
     return {"weeks": n_weeks, "games": games.height, "seconds": round(time.perf_counter() - t0, 1)}
+
+
+def feature_bands(feats: pl.DataFrame, games: pl.DataFrame, now: datetime) -> dict[str, dict]:
+    """League spread per team-level feature for the game page's Details tab: p10, p90 and the
+    interquartile width of each team's latest value known now. One band per feature for the whole
+    season, so an old game's values sit on today's league, which is fine for display only."""
+    import numpy as np
+
+    if feats.is_empty() or games.is_empty():
+        return {}
+    teams = games.select("game_id", "kickoff_utc", "home_team", "away_team")
+    latest = (
+        store.as_of(feats, now)
+        .filter(pl.col("side").is_in(["home", "away"]) & pl.col("value").is_finite())
+        .join(teams, on="game_id")
+        .with_columns(
+            pl.when(pl.col("side") == "home")
+            .then(pl.col("home_team"))
+            .otherwise(pl.col("away_team"))
+            .alias("team")
+        )
+        .sort("kickoff_utc")
+        .group_by("feature", "team", maintain_order=True)
+        .last()
+    )
+    out: dict[str, dict] = {}
+    for (feature,), part in latest.group_by(["feature"]):
+        if part.height >= FEATURE_BAND_MIN_TEAMS:
+            p10, p25, p75, p90 = np.percentile(part["value"].to_numpy(), (10, 25, 75, 90))
+            out[feature] = {"lo": _r(p10), "hi": _r(p90), "iqr": _r(p75 - p25)}
+    return dict(sorted(out.items()))
 
 
 def group_edges(

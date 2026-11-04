@@ -1,7 +1,7 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
 import type { Contribution, Game, Meta, Tendency } from '../../data/contract'
 import { fmtUnit } from '../../lib/format'
-import { groupOf, helpFor, memberOf } from '../../lib/meta'
+import { groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
 import { APPROACHES } from '../../lib/models'
 
 export const QB_STATUS: Record<number, string> = { 0: 'healthy starter', 1: 'questionable / limited / new', 2: 'backup or unknown' }
@@ -51,12 +51,55 @@ export function featureLabel(meta: Meta, feature: string): string {
   return memberOf(meta, feature)?.label ?? feature.split('.').slice(1).join('.').replace(/_/g, ' ') ?? feature
 }
 
+// -------------------------------------------------------------------------------------- preview
+
+export type PreviewRow = { id: string; name: string; help: string; edge: string; pp: number | null; overlay: number | null }
+
+/** "JAX, 90th pct"; a matchup in the bottom tenth of all edges reads as even, whichever way it leans. */
+function edgeLabel(e: Game['edges'][string] | undefined): string {
+  if (!e) return ''
+  return !e.favors || e.strength_pct == null || e.strength_pct < 10 ? 'about even' : `${e.favors}, ${ordinal(e.strength_pct)} pct`
+}
+
+/**
+ * Home field, then the groups in registry order. `pp` is the Global fit (what history says the edge
+ * is worth); `overlay` is the chosen approach on the same row. A group neither side has is no row,
+ * so `meta.groups` decides what appears: new groups show up and zeroed ones go with no change here.
+ */
+export function previewRows(g: Game, meta: Meta, approach: string | null): PreviewRow[] {
+  const base = g.contributions.global
+  const over = approach ? g.contributions[approach] : undefined
+  if (!base) return []
+  const rows: PreviewRow[] = [{
+    id: 'home_field', name: 'Home field', help: 'The built-in edge the home team gets before anything else is considered.',
+    edge: g.neutral_site ? 'neutral site' : `${g.home} at home`, pp: base.home_field_pp ?? 0, overlay: over?.home_field_pp ?? null,
+  }]
+  for (const { id, name } of meta.groups.groups) {
+    if (isContextOnly(meta, id)) continue
+    const pp = base.groups[id]?.pp ?? null
+    const overlay = over?.groups[id]?.pp ?? null
+    if (pp == null && !overlay) continue
+    rows.push({ id, name, help: helpFor(meta, id), edge: edgeLabel(g.edges[id]), pp, overlay })
+  }
+  return rows
+}
+
+/** "Followed a 12.5-point line move toward JAX": the Sharp's market read, in raw points; null when the line barely moved. */
+export function lineMoveChip(g: Game): string | null {
+  const v = g.features['market.line_move_pts']?.game
+  if (v == null || Math.abs(v) < 1) return null
+  const n = Math.abs(v)
+  const article = /^(8|11|18)(\.|$)/.test(String(n)) ? 'an' : 'a'
+  return `Followed ${article} ${n}-point line move toward ${v > 0 ? g.home : g.away}`
+}
+
 // ---------------------------------------------------------------------------------------- edges
 
 export function edgeRows(edges: Game['edges'], meta: Meta) {
   const rows = []
   const none: string[] = []
   for (const [id, e] of Object.entries(edges)) {
+    if (isContextOnly(meta, id)) continue
     const name = groupOf(meta, id)?.name ?? id
     if (!e.favors || e.strength_pct == null) {
       none.push(name)
@@ -72,8 +115,20 @@ export function edgeRows(edges: Game['edges'], meta: Meta) {
 
 // ------------------------------------------------------------------------------- tale of the tape
 
-export type TapeRow = { feature: string; label: string; help: string; home: string; away: string }
+/** `band` is set only when the row can be drawn on the league's range: a team feature with two values and a real spread. */
+export type TapeBand = { lo: number; hi: number; homeV: number; awayV: number; stands: boolean; flip: boolean }
+export type TapeRow = { feature: string; label: string; help: string; home: string; away: string; unit: string | undefined; band: TapeBand | null }
 export type TapeGroup = { id: string; name: string; help: string; rows: TapeRow[] }
+
+/** The two teams on the league's band; `stands` when their gap is wider than the league's middle half. */
+function tapeBand(f: string, d: Game['features'][string], meta: Meta): TapeBand | null {
+  const b = meta.feature_bands[f]
+  const m = memberOf(meta, f)
+  const unit = m?.unit
+  const { home, away } = d
+  if (!b || home == null || away == null || unit === 'flag' || !(b.iqr > 0) || !(b.hi > b.lo)) return null
+  return { lo: b.lo, hi: b.hi, homeV: home, awayV: away, stands: Math.abs(home - away) > b.iqr, flip: (m?.sign ?? 1) < 0 }
+}
 
 /** heading -> groups -> formatted rows, registry order; features with no values are skipped. */
 export function tape(features: Game['features'], meta: Meta): { heading: string; groups: TapeGroup[] }[] {
@@ -86,7 +141,7 @@ export function tape(features: Game['features'], meta: Meta): { heading: string;
     const rows = byGroup.get(gid) ?? []
     rows.push({
       feature: f, label: featureLabel(meta, f), help: helpFor(meta, f),
-      home: fmtUnit(home ?? game, unit), away: fmtUnit(away ?? game, unit),
+      home: fmtUnit(home ?? game, unit), away: fmtUnit(away ?? game, unit), unit, band: tapeBand(f, d, meta),
     })
     byGroup.set(gid, rows)
   }
