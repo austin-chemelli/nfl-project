@@ -86,7 +86,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| ui | `ui-next` | `~/dev/nfl-project-ui` | next round of site changes after v2 (tendencies on the league band; whatever Austin's next look finds) | idle, waiting for direction (2026-11-04) | |
+| ui | `ui-next` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md`: game page Preview tab, retro reorder, slate cards, tracker) | planned 2026-11-04, waiting on D4–D8 | |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
@@ -112,6 +112,11 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D1 | Keep the production number audit (`.notes/audit_site.py`, uncommitted) as a CI or post-publish check? | (a) a step after `nfl publish` that fails the job; (b) a CI check against the public bucket; (c) leave it manual | Austin's call; a chat can build (a) in a day | 2026-11-03 |
 | D2 | Tendencies on the league band too (`RangeRow` over `tendencies.parquet`), the follow-up ADR 0017 left out? | (a) next UI round; (b) not worth it | the next UI look | 2026-11-03 |
 | D3 | A better knowledge-base tool for cross-chat tracking than `.notes/board.md`? | later; revisit when the board stops being enough | nothing yet | 2026-11-04 |
+| D4 | Game page Preview tab: scale the approach-free bars by the Global fit or by equal weights? (`.notes/ui-round2.md` P1) | (a) Global fit, recommended; (b) equal weights | Austin | 2026-11-04 |
+| D5 | Keep the Student as a public line ("data only") or drop it from the headline lineup? | keep with clear copy / drop | Austin | 2026-11-04 |
+| D6 | The Sharp's `market.line_move_pts` swung JAX @ BAL by 24 pp; winsorize or cap it in the next model wave, or only explain it? | winsorize ±2 SD / cap a group at its budget share / explain only | Austin; lands as a new `model_version` | 2026-11-04 |
+| D7 | Scheme groups: zero their weights in the next wave, or wait for the interaction research (offense style × defense style) before touching weights? | zero now / wait | Austin | 2026-11-04 |
+| D8 | Retro copy: "swings" for the net of all factors, "pure luck" for the coin flips? | yes / other names | Austin | 2026-11-04 |
 | D4 | A third narrative pass on Monday for the Monday night game? | (a) add it (a `PASSES` entry, a check time, a task trigger); (b) keep two passes | how stale Saturday's research looks by Monday night in Week 9 | 2026-11-03 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
@@ -126,6 +131,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 ## Known issues and risks
 
+- **The quarterback group contributes exactly 0.0 pp in JAX @ BAL for every approach**, although `availability.qb_change` is −1.5 to −3.4 inside it and Baltimore starts its third quarterback. Likely a composite collapsing when the backup's QB stats are null. Investigate first (`.notes/ui-round2.md` §4, item 1); it may need a `model_version`.
 - **First live locks** Thu 2026-11-05 09:00 and Sat 2026-11-07 12:00: watch the executions and the lock commits; the laptop fallback is `uv run nfl lock --slot thu` in the primary checkout. Thursday's is the first push from the cloud: dry runs don't push, so the deploy key's write access is confirmed but the push itself is untested.
 - **First desktop pass** 2026-11-04 18:00 ET: the task's environment is tested (entry `desktop setup test` in Cloud Logging), a full scheduled run isn't. The 08:30 check on 2026-11-05 emails if it didn't upload.
 - **Production retros are v1 until the 07:00 run on 2026-11-05** rebuilds all 2026 retros with the league bands, the Elo fix and the Week 8 backfill rows. Until then 28 Week 8 retros show a graded Elo that differs from the game page.
