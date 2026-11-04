@@ -213,7 +213,7 @@ if not ss.empty:
     sel = st.multiselect(
         "Models",
         sorted(ss["model_id"].unique()),
-        default=[m for m in ["market_baseline", "sharp", "analyst", "ensemble"] if m in ALL],
+        default=[m for m in ["market_baseline", "sharp", "analyst", "student"] if m in ALL],
         format_func=LABEL,
         key="season_models",
         help="Seasons are noisy (about 285 games each); the gaps between lines matter more than the wiggle.",

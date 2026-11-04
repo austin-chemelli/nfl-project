@@ -3,7 +3,7 @@
 fit_all     selects λ and writes walk-forward artifacts for every approach config and the global fit.
 backfill    scores every completed game in the scored seasons with the models trained through the
             previous season, at the synthetic lock (kickoff − 1h, is_backfill=true), plus the
-            ensemble. Backfill rows are derived, not the public record: re-running replaces the
+            Backfill rows are derived, not the public record: re-running replaces the
             backfill rows of the same model_ids. Live rows (is_backfill=false) are never touched.
 """
 
@@ -63,17 +63,19 @@ def backfill(paths: Paths, scored: tuple[int, int] | None = None) -> int:
         pl.col("season").is_between(*scored) & pl.col("result").is_not_null()
     )
     new, model_ids = _score(paths, games)
-    # also drop backfill rows of retired ids (<approach>.persona / .fitted before 2026-10-27)
+    # also drop backfill rows of retired ids (<approach>.persona / .fitted before 2026-10-27, the
+    # ensemble after ADR 0018); its live rows are the record and stay
     retired = {f"{a}.{f}" for a in model_ids for f in ("persona", "fitted")}
+    retired.add(ensemble.ENSEMBLE_ID)
     return append_rows(paths, new, replace_backfill_for=model_ids | retired)
 
 
 def fill_unscored(paths: Paths, season: int | None = None) -> int:
-    """Backfill rows for the season's finished games that have no ensemble prediction at all (no
+    """Backfill rows for the season's finished games that have no headline prediction at all (no
     lock and no backfill): a week played before locks began, or a missed lock. Append-only: rows
     already there, live or backfill, are untouched, and a second run writes nothing."""
     season = season or current_season()
-    have = existing(paths).filter(pl.col("model_id") == ensemble.ENSEMBLE_ID).get_column("game_id")
+    have = existing(paths).filter(pl.col("model_id") == ensemble.HEADLINE_ID).get_column("game_id")
     games = store.games_frame(paths).filter(
         (pl.col("season") == season)
         & pl.col("result").is_not_null()
@@ -87,14 +89,13 @@ def fill_unscored(paths: Paths, season: int | None = None) -> int:
 
 def _score(paths: Paths, games: pl.DataFrame) -> tuple[pl.DataFrame, set[str]]:
     """Backfill rows (synthetic lock, kickoff − 1h) for `games`: every approach with its fit trained
-    through the season before, plus the ensemble."""
+    through the season before."""
     approaches = scored_approaches(paths)
     sha = git_sha()
     rows = []
     model_ids: set[str] = set()
     for season in sorted(games.get_column("season").unique().to_list()):
         g = games.filter(pl.col("season") == season)
-        members = []
         # every completed game, ties included (grading drops ties); features as of the lock
         locks = g.select("game_id", (pl.col("kickoff_utc") - fit.SYNTHETIC_LOCK).alias("lock_ts"))
         vec = store.game_vectors(store.as_of(store.read_features(paths, (season, season)), locks))
@@ -107,14 +108,9 @@ def _score(paths: Paths, games: pl.DataFrame) -> tuple[pl.DataFrame, set[str]]:
                 store.to_wide(vec, model.features), on="game_id", how="left"
             )
             scored_df = model.score(wide)
-            if a.id != ensemble.GLOBAL_ID and not a.shadow:
-                members.append(scored_df)
             version = f"{sha}+{model.meta.get('config_hash', '')}"
             rows.append(_rows(g, scored_df, mid, version))
             model_ids.add(mid)
-        if members:
-            rows.append(_rows(g, ensemble.combine(members), ensemble.ENSEMBLE_ID, sha))
-            model_ids.add(ensemble.ENSEMBLE_ID)
     new = pl.concat(rows) if rows else pl.DataFrame(schema=PRED_SCHEMA)
     return new, model_ids
 

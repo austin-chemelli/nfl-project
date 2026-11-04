@@ -75,13 +75,13 @@ def test_scoring_uses_only_rows_strictly_before_the_lock():
     slate = GAMES.filter(pl.col("game_id") == "G_SUN")
     known = toy_store(SAT_LOCK - timedelta(hours=1))
     same = toy_store(SAT_LOCK)  # stamped exactly at the lock: must be invisible
-    models = [("toy.fitted", toy_model(), True)]
+    models = [("toy.fitted", toy_model())]
     p_known = lock.score_approaches(models, known, slate, SAT_LOCK)[0].frame["p_home"][0]
     p_same = lock.score_approaches(models, same, slate, SAT_LOCK)[0].frame["p_home"][0]
     assert p_known > 0.6  # +100 Elo -> +1 SD -> logit 0.5
     assert p_same == pytest.approx(0.5)  # no features -> league average
-    ens = lock.score_approaches(models, known, slate, SAT_LOCK)
-    assert [s.model_id for s in ens] == ["toy.fitted", "ensemble"]
+    scored = lock.score_approaches(models, known, slate, SAT_LOCK)
+    assert [s.model_id for s in scored] == ["toy.fitted"]  # the ensemble is retired (ADR 0018)
     mk = lock.market_at(known, slate, SAT_LOCK)
     assert mk["p_home"][0] == pytest.approx(0.6) and mk["source"][0] == "odds_api"
     assert lock.market_at(same, slate, SAT_LOCK).is_empty()
@@ -128,7 +128,7 @@ def test_artifact_is_deterministic_and_hash_matches(tmp_path):
     known = toy_store(SAT_LOCK - timedelta(hours=1))
     res = lock.LockResult(2026, 9, "sat", SAT_LOCK, slate)
     res.market = lock.market_at(known, slate, SAT_LOCK)
-    res.scored = lock.score_approaches([("toy.fitted", toy_model(), True)], known, slate, SAT_LOCK)
+    res.scored = lock.score_approaches([("toy.fitted", toy_model())], known, slate, SAT_LOCK)
     art = lock.build_artifact(res, "deadbee", "20261107T160000Z", "20261107T165900Z")
     p1, d1 = lock.write_artifact(tmp_path / "a", art)
     _p2, d2 = lock.write_artifact(tmp_path / "b", json.loads(json.dumps(art)))
@@ -140,7 +140,7 @@ def test_artifact_is_deterministic_and_hash_matches(tmp_path):
     g = art["games"][0]
     assert g["market"]["p_home_vigfree"] == 0.6 and "toy.fitted" in g["models"]
     rows = lock.prediction_rows(res, "snap", "deadbee")
-    assert set(rows["model_id"]) == {"toy.fitted", "ensemble"}
+    assert set(rows["model_id"]) == {"toy.fitted"}
     assert not rows["is_backfill"].any() and set(rows["slot"]) == {"sat"}
 
 

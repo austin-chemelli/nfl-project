@@ -315,3 +315,15 @@ The v4 comparison was per job, so Austin chose to split jobs between models inst
 **Findings.** Old and new logic on identical data, all 7,548 games 1999-2026: 0 differences in played games, so no fit, backtest or grade moves. Only Baltimore and Arizona change, from Week 9 on. Dry-run Week 9 locks on a copy of production: 2 of 15 games moved. JAX @ BAL home win chance (market 19.1%): Traditionalist 31.1 to 28.6, Analyst 38.1 to 32.4, Student 35.2 to 30.5, Sharp 17.4 to 13.1. Baltimore's QB EPA goes from 0.100 to -0.116 and CPOE from +1.50 to -0.66.
 
 **Lesson.** Comparing feature files needs a noise baseline: two identical runs differed in 30,765 rows at exact equality and in none at 1e-9, and joining live rows without `known_as_of` crosses snapshots.
+
+## 2026-11-04: model wave 2 built (M11, ADR 0018), waiting for cutover
+
+**Why.** Austin's first week with the live site: scheme and coaching moved predictions with no evidence, one line move swung the Sharp 24 points, and the ensemble and the Student were hard to tell apart.
+
+**What changed.** `coaching`, `off_scheme`, `def_scheme` and `matchups` are context-only: shown, never weighted, and the schema refuses them. Line moves are capped at ±4.5 points inside the model; the stored feature stays raw. The Student and the Analyst read line moves at half the Sharp's weight, declared rather than learned, because the feature exists live only. Special teams is a group (overall, kicking, punt unit, kickoff unit). Pressure rate moved to Defense. The ensemble stops locking and its backfill rows go; `fill_unscored` now keys on the Student.
+
+**Findings.** Backtest 2005-2026, 5,804 games, log loss: Analyst 0.6278 to 0.6250, Student 0.6256 to 0.6247, Traditionalist 0.6303 to 0.6294, Sharp unchanged at 0.6288, market 0.6095. Nothing got worse and nothing got near the market. Line moves barely appear in that backtest because they exist only for recent weeks, so it says nothing about the cap. The retired ensemble was 0.6239, so the Student as headline gives up 0.0008. JAX @ BAL (market 19.1%): Sharp 13.1 to 24.2, Student 30.5 to 26.3, Analyst 32.4 to 28.8, Traditionalist 28.6 to 28.0.
+
+The 13 coaching and scheme features with no hypotheses row were never built, and neither was any matchup feature, so those groups carried weight on nothing. Special teams came out weaker once split: the overall feature falls from "matters" (+0.033) to "weak" (+0.023) because its parts share its credit; kickoff unit +0.028 weak, punt unit +0.015 weak, kicking -0.004 no evidence.
+
+**Lesson.** Scale a live-only feature from what it does, not from a guess: the declared SD of 1.5 was fine for a normal week and useless for the one game that mattered.
