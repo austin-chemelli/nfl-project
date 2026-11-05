@@ -130,7 +130,7 @@ export function currentSummary(cur: Tracker['current_season']): { rows: CurrentR
   const ref = anyLive.some((r) => r.model_id === 'market_baseline') ? 'market_baseline' : anyLive[0]?.model_id
   return {
     rows,
-    liveGames: anyLive.filter((r) => r.model_id === ref).reduce((s, r) => s + r.n, 0),
+    liveGames: anyLive.filter((r) => r.model_id === ref).reduce((s, r) => s + (r.n_live ?? r.n), 0),
     liveWeeks: new Set(anyLive.map((r) => r.week)).size,
   }
 }
@@ -141,4 +141,44 @@ export function headlineSentence(row: CurrentRow, name: string): string {
   if (row.delta == null) return `${base}the reference.`
   if (Math.abs(row.delta) < NOISE) return `${base}about the same as the market (within ${NOISE} log loss, which is noise at this sample size).`
   return `${base}${Math.abs(row.delta).toFixed(3)} ${row.delta > 0 ? 'worse' : 'better'} than the market (log loss; lower is better).`
+}
+
+export type GapRow = { week: number } & Record<string, number>
+
+/** A signed gap with a true minus: "+0.012" / "−0.008". */
+export function signedGap(v: number): string {
+  const r = Number(v.toFixed(3))
+  return r === 0 ? '0.000' : `${r > 0 ? '+' : '−'}${Math.abs(r).toFixed(3)}`
+}
+
+/**
+ * Per week, each line's gap to the market: market cumulative log loss minus the line's, so above
+ * zero is ahead. A week with no market row is skipped; a line with no row that week has no key.
+ */
+/**
+ * Half-width of the season chart's too-close-to-call band. A paired bootstrap over the first 120
+ * games of 2026 put every line's 90% range across zero, about ±0.025 wide. NOISE (0.005) is what
+ * words call noise; this is what a chart can claim. It narrows with games: re-measure by Week 14.
+ */
+export const GAP_BAND = 0.025
+
+export function gapRows(cur: Tracker['current_season']): GapRow[] {
+  const market = new Map<number, number>()
+  for (const r of cur) if (r.model_id === 'market_baseline') market.set(r.week, r.cum_log_loss)
+  const out = new Map<number, GapRow>()
+  for (const r of cur) {
+    const m = market.get(r.week)
+    if (m == null || r.model_id === 'market_baseline') continue
+    const row = out.get(r.week) ?? ({ week: r.week } as GapRow)
+    row[r.model_id] = m - r.cum_log_loss
+    out.set(r.week, row)
+  }
+  return [...out.values()].sort((a, b) => a.week - b.week)
+}
+
+/** Symmetric y limit for the gap chart: the largest shown gap, rounded up, never below twice the noise band. */
+export function gapLimit(rows: GapRow[], shown: string[]): number {
+  let max = 0
+  for (const r of rows) for (const m of shown) if (r[m] != null) max = Math.max(max, Math.abs(r[m]))
+  return Math.max(0.04, Math.ceil(max * 100 - 1e-9) / 100)
 }

@@ -218,3 +218,46 @@ Scope and reasons: journal 2026-11-04; parallel rules with the UI round: `.notes
 | M11.11 | Stop locking the ensemble | `lock.py`, `readme.py`, `src/nfl/ui/` | U1 deployed (H1) | Lock writes no ensemble row, old rows stay, Streamlit test green, the ledger's headline line is the Student |
 | M11.12 | Refit, regrade, cutover | `marts/` | all above | Steps in `docs/runbook.md` (Model wave cutover), the evening of 2026-11-04, before the first public lock: PR merged, image built, marts uploaded, dry-run lock from the new image passes |
 
+## M12: Round 2 finish, the tracker (U5; planned 2026-11-05 on Fable)
+
+Austin's F5, F7 and F8 (`.notes/ui-round2.md` P4), plus what's left of P5. About two hours: three parallel tasks, then one integration and review pass. One PR. Nothing here touches a model or a lock, so the only merge limit is the usual one (`docs/runbook.md`, Merging job code).
+
+Checked against production on 2026-11-05: the market and every line score the same games in all 8 weeks, so a gap is a fair comparison. Gaps are small (±0.03) and move week to week, so the noise band below isn't optional. In Week 8 all four approaches share the same best and worst call, so bold calls are per week, not per approach. The ensemble survives only in `tracker.json`'s ledger and `meta.models`, and `Ledger.tsx` already filters it.
+
+Not in scope: the paper bets rework (trigger: two weeks of live bets), D2 (tendencies on the league band), comparing tendencies across situations, D9 (backup lock), Streamlit, removing `ensemble` from `SPECIAL` in `site.py` (`model_registry` feeds the retro builder too; not worth the risk here).
+
+**Parallel:** M12.1, M12.2 and M12.3 share no files. M12.4 follows all three.
+
+- **M12.1 Tracker: one clear season view, four tabs.** *P.* Files: `web/src/pages/Tracker.tsx`, `web/src/pages/tracker/*`. Only these.
+  - `CurrentSeason.tsx`: replace the cumulative log loss chart with each line's **gap to the market**, market cumulative log loss minus the line's, so above zero is ahead. Pure helper `gapRows(current_season)` in `tracker/helpers.ts`, skipping a week with no market row. The market is the zero line and leaves the toggle list. Y axis symmetric around zero, labeled `ahead of the market ↑` and `behind ↓`. A gray band from −`GAP_BAND` to +`GAP_BAND` (0.025, widened from `NOISE` in review) labeled `too close to call`, a faint `--good` tint above it. Replace the backfill `ReferenceArea` with a dashed vertical line at the first live week, labeled `live from week N`, and no line while nothing is live; keep the live diamonds. Tooltip prints signed gaps.
+  - Drop the `StatTile` row: the summary strip and "Show the numbers" already carry those values. `lede` and help text say direction once. Add to `HELP_LL`: the score is on win probability and pays for confidence both ways.
+  - `Divergence.tsx`: replace the bar chart and bullet list with one table for the selected approach, default the Student: Disagreement, Games, Its side won (`wins of n` from `lean_win_rate`), Market expected, Log loss vs market. Above it one computed sentence from `marketWinsWhenApart`. Remove the Recharts imports.
+  - `Tracker.tsx`: four tabs: This season, Backtest, Calibration, Paper bets. Move "Log loss by season" and `Divergence` to Backtest: both span every season since 2005. Their fine print moves with them. `TabId` in `summary.ts` drops `disagreements`.
+  - `Backtest.tsx`: leave `global` out of the rows; it's a diagnostic.
+  - Acceptance: `gapRows` unit tests (sign, missing market week, a line missing a week); a page test for the axis label and the band; the Backtest tab shows both moved sections; `?tab=disagreements` falls back to the default without error; no `BarChart` left in `Divergence.tsx`; `npm run typecheck`, `lint`, `test`, `build` green.
+
+- **M12.2 Bold calls in the recap, and retire `hideEnsemble`.** *P.* Files: `src/nfl/retro/schema.py`, `src/nfl/retro/week.py`, `tests/test_retro_week.py`, `tests/test_retro_schema.py`, `tests/test_retro_game.py`, `tests/fixtures/retro/*`, `web/src/data/contract.ts`, `web/src/data/contract.test.ts`, `web/src/data/hideEnsemble*`, `web/src/pages/slate/Recap.tsx`, `web/src/pages/slate/Recap.test.tsx`, `web/src/test/fixtures/site/recap_*`, `web/src/test/fixtures/site/retro/2026_08_CAR_GB.json`.
+  - Add `BoldCall` (`game_id`, `away`, `home`, `model_id`, `label`, `pick`, `p_pick`, `log_loss`, `earned`, `sentence`) and `best_call` and `costliest_call`, both `BoldCall | None` with a default of None, on `WeekRecap`. `earned` = ln 2 − `log_loss`, rounded to 3: what the call scored against a coin flip.
+  - `week.py`: over every `kind == "approach"` pick in the week, `best_call` is the lowest `log_loss` with `right` true, `costliest_call` the highest with `right` false. A tie (`right` null) is neither. Ties break on `game_id`, then `model_id`. Template sentences, no LLM, in the style of `_misread`: `The Sharp gave Cincinnati Bengals 91% and they won: 0.60 better than a coin flip.`
+  - `SCHEMA_VERSION` to `"4"`, so the next daily run rebuilds every retro and recap. Update the literal in `tests/test_retro_game.py:479`, and hand-add both fields to the example recap so the two fixture copies stay equal (`test_web_fixtures_match`).
+  - `contract.ts`: `best_call` and `costliest_call` nullable with a default of null. `Recap.tsx`: a "Bold calls" list inside Full recap, with one line above it: `The score pays for confidence both ways: a right 90% call earns about three times a right 60% call, and a wrong one costs about seven times as much.` (0.588 against 0.182; 1.609 against 0.223.)
+  - Delete `web/src/data/hideEnsemble.ts` and its test, and the `.transform` steps in `contract.ts`. Retros, recaps, slates and game files on production have no ensemble left, and the one ledger row is filtered by `Ledger.tsx`. Keep `'ensemble'` in `RetroKind`: old rows must still parse.
+  - Acceptance: tests for right and wrong picks, a week with no wrong pick, a tie excluded, a reference line excluded, both tie-breaks; a recap with neither field still parses and renders; `uv run pytest -q` with no data green; web checks green.
+
+- **M12.3 History default and reference styling.** *P.* Files: `web/src/pages/Hypotheses.tsx`, `web/src/pages/hypotheses/*`, `web/src/components/ui.tsx`, `web/src/components/ui.test.tsx`, `web/src/lib/models.ts`, `web/src/pages/Method.tsx`, `web/src/pages/method/*`.
+  - `Hypotheses.tsx`: `Over time` comes first and is the default; `Each feature` second. `resolveItem` already handles a missing `?item=`.
+  - `ui.tsx`: `Swatch` draws a reference (`REFERENCES`) as a hollow dashed ring, so references read differently everywhere with no call-site change. `ModelBadge` gains an optional `reference` prop that appends a small uppercase `reference` tag, in the style of `PickRow` in `Retro.tsx`; M12.4 turns it on in tables.
+  - `models.ts`: `dashArray` dashes `market_baseline` too.
+  - `Method.tsx`: one plain line each. The Student: the line every headline number uses, built from results rather than a persona; don't say "data only", which wave 2 made untrue. Market, Elo and the home-team baseline: references, scored alongside but never entrants. Global: a diagnostic, the source of the Preview's bars, not scored.
+  - Acceptance: `/hypotheses` opens on Over time; `?item=` still works; a Swatch test for a reference; web checks green.
+
+- **M12.4 Integrate, review, ship.** Main session. Depends on M12.1 to M12.3.
+  - Turn on `reference` in the tracker tables and the game page's Approaches table. Check `hideEnsemble`'s removal against `.data-prod` refreshed from production.
+  - Rebuild the dev copy (`nfl retro build --season 2026 --force`, `nfl site`) and look at real pages in both themes and at phone width: the gap chart, the Backtest tab, the recap, History.
+  - One `reviewer` agent on the whole diff with real data. Ask it to attack claims: does every sentence and label hold on all 8 weeks?
+  - Update `docs/site.md` (tracker row, History, reference styling), the `recap` line in `docs/architecture.md`, journal, hub. PR; Austin merges. After the merge run `nfl-retro` by hand rather than wait for 07:00, then check production.
+- **M12.5 Paper bets you can read.** Main session, added 2026-11-05 at Austin's request, ahead of the "two weeks of live bets" trigger, because the backtest already has 21 seasons to draw. Files: `src/nfl/ledger.py`, `src/nfl/site.py`, `tests/test_ledger.py`, `web/src/charts/DotWhisker.tsx`, `web/src/data/contract.ts`, `web/src/pages/Tracker.tsx`, `web/src/pages/tracker/*`, `web/src/test/fixtures/site/tracker.json`.
+  - A headline, a bankroll curve, return per bet with a 90% range, and a season grid, each read against a no-edge reference.
+  - `tracker.json` reads `bets_settled` directly; `ledger` rows gain the range, no-edge return and won/needed rates; `ledger_seasons` is new. Additive.
+  - CLV is live moneyline bets only. An open-bets list waits for live bets to exist.
+

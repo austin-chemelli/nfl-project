@@ -76,3 +76,21 @@ describe('contract: checked-in fixtures', () => {
 describe.skipIf(!fs.existsSync(REAL))('contract: local data/marts/site', () => {
   for (const rel of files(REAL)) it(rel, () => check(REAL, rel))
 })
+
+describe('contract: recap bold calls', () => {
+  const raw = () => JSON.parse(fs.readFileSync(path.join(FIX, 'recap_2026_08.json'), 'utf8'))
+  it('defaults both calls to null for a recap built before they existed', () => {
+    const r = raw()
+    delete r.best_call
+    delete r.costliest_call
+    const out = C.WeekRecap.parse(r)
+    expect(out.best_call).toBeNull()
+    expect(out.costliest_call).toBeNull()
+  })
+  it('parses a call, and keeps the ensemble kind readable', () => {
+    expect(C.WeekRecap.parse(raw()).costliest_call).toMatchObject({ model_id: 'student', earned: -0.591 })
+    const r = raw()
+    r.models.push({ model_id: 'ensemble', label: 'Ensemble', kind: 'ensemble', n: 13, right: 9, log_loss: 0.6, vs_market: -0.02, rank: 1 })
+    expect(C.WeekRecap.parse(r).models.some((m: { kind: string }) => m.kind === 'ensemble')).toBe(true)
+  })
+})

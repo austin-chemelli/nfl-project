@@ -21,7 +21,7 @@ export default function TrackerPage() {
   const tracker = useTracker()
   const meta = useMeta()
   return (
-    <Page title="Season tracker" lede="How the forecasts are scoring against the market, with paper bets second (log loss: lower is better; 0.693 is a coin flip).">
+    <Page title="Season tracker" lede="How the forecasts are scoring against the market (log loss: lower is better; 0.693 is a coin flip).">
       <Loaded q={tracker} what="tracker">
         {(t) => (
           <Loaded q={meta} what="tracker">
@@ -42,13 +42,10 @@ export default function TrackerPage() {
                       content: (
                         <TabBody>
                           <CurrentSeason t={t} meta={m} />
-                          <Section title="Log loss by season" help="Seasons are noisy (about 285 games each); the gaps between lines matter more than the wiggle.">
-                            <SeasonTable t={t} />
-                          </Section>
                           <FinePrint>
                             <p>About 180 live games a season cannot rank models, and in the 2005 to 2025 backtest nothing beats the market. Treat everything here as a measurement, not a verdict.</p>
-                            <p>Shaded weeks are backfill: models frozen before the season, scored after the fact. Diamonds mark live weeks, graded from locks made before kickoff. A handful of 16-game weeks is very noisy; lines crossing early means little, and differences under 0.005 log loss are noise.</p>
-                            <p>The cumulative chart is a running average since week 1; compare every line with the gray Market line. The season table shows mean log loss per season (0.693 is a coin flip); read each cell against the Market column.</p>
+                            <p>{t.current_season.some((r) => r.live) ? 'Before the dashed vertical line, weeks are backfill: models frozen before the season, scored after the fact. A week with any live lock counts from there, with diamonds marking it.' : 'Every week so far is backfill: models frozen before the season, scored after the fact. A dashed vertical line will mark the first week with a graded lock.'} The gray band is roughly the 90% range of a gap at this sample size, so a line inside it can't be told from the market. A handful of 16-game weeks is very noisy, so lines crossing early means little.</p>
+                            <p>The chart is a running average since week 1, so early weeks swing and later ones settle. &quot;Show the numbers&quot; lists the raw log loss for every line, the market included.</p>
                           </FinePrint>
                         </TabBody>
                       ),
@@ -60,9 +57,15 @@ export default function TrackerPage() {
                         <TabBody>
                           <Backtest t={t} meta={m} />
                           <PersonaHistory meta={m} />
+                          <Section title="Log loss by season" help="Seasons are noisy (about 285 games each); the gaps between lines matter more than the wiggle.">
+                            <SeasonTable t={t} />
+                          </Section>
+                          <Divergence t={t} meta={m} />
                           <FinePrint>
                             <p>Whiskers are a 90% range from resampling whole seasons. The zero line is the market; an approach only beats it if its whole whisker sits left of the line.</p>
                             <p>For each group of evidence: what the persona believes, the public line (the persona after light fitting and calibration, which is what is scored above), and what history alone would choose. Bars are shares of the 100-point attention budget; a negative bar means history says the group points the other way.</p>
+                            <p>The season table shows mean log loss per season (0.693 is a coin flip); read each cell against the Market column.</p>
+                            <p>Disagreement is in points of win probability. If an approach saw something the market missed, its side would win more often than the market expected, so compare those two columns. An approach can lean the right way and still lose on log loss by moving too far: the columns test the direction, log loss tests the size.</p>
                           </FinePrint>
                         </TabBody>
                       ),
@@ -80,26 +83,15 @@ export default function TrackerPage() {
                       ),
                     },
                     {
-                      id: 'disagreements',
-                      label: 'Disagreements',
-                      content: (
-                        <TabBody>
-                          <Divergence t={t} meta={m} />
-                          <FinePrint>
-                            <p>If an approach saw something the market missed, its bar would sit above the market&apos;s. The side an approach leans toward is the underdog relative to the market, so bars below 50% are expected; what matters is the gap between the two bars.</p>
-                          </FinePrint>
-                        </TabBody>
-                      ),
-                    },
-                    {
                       id: 'bets',
                       label: 'Paper bets',
                       content: (
                         <TabBody>
-                          <Ledger t={t} />
+                          <Ledger t={t} meta={m} />
                           <FinePrint>
                             <p><strong className="text-ink">Not betting advice; small samples.</strong> Season profit and loss is mostly noise; closing-line value (CLV, whether the price you got beat the final price) is the better edge signal.</p>
                             <p>Backfill bets are priced at nflverse&apos;s closing-ish line, so their ROI is a harsh lower bound and their CLV is undefined. Backfill rows cover every graded season in the backtest, not just this one; live rows appear after the first graded locks. Losing a few percent into the market&apos;s price is what a model that trails the market looks like.</p>
+                            <p>No edge means the market&apos;s own win chance at the price paid, or a coin flip on a spread; what is left is the bookmaker&apos;s cut. In our price data the cut is under 3% through 2022, then about 4% on the moneyline and 4.5% on spreads from 2023, so older seasons are a little easier on every line. The 90% range is 1.645 standard errors of the profit per bet.</p>
                           </FinePrint>
                         </TabBody>
                       ),

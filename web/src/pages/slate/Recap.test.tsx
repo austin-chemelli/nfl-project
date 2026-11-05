@@ -8,7 +8,7 @@ import { recapTiles } from './recapTiles'
 const model = (id: string, kind: string, right: number, ll: number, vs: number | null, rank: number) =>
   ({ model_id: id, label: id, kind, n: 10, right, log_loss: ll, vs_market: vs, rank }) as WeekRecap['models'][number]
 const recap = (over: Partial<WeekRecap> = {}): WeekRecap => ({
-  schema_version: '2', season: 2026, week: 7, built_at: '', games: [], best_model: 'student', note: '',
+  schema_version: '4', season: 2026, week: 7, built_at: '', games: [], best_model: 'student', note: '', best_call: null, costliest_call: null,
   models: [
     model('student', 'approach', 7, 0.6, -0.018, 1), model('analyst', 'approach', 6, 0.64, 0.01, 2), model('sharp', 'approach', 6, 0.66, 0.03, 3),
     model('traditionalist', 'approach', 6, 0.65, -0.01, 4), model('market_baseline', 'reference', 6, 0.62, 0, 0),
@@ -56,6 +56,24 @@ describe('Recap', () => {
     expect(within(details).getAllByRole('link', { name: 'CAR @ GB' })[0]).toHaveAttribute('href', '/game/2026_08_CAR_GB')
     expect(within(details).getByRole('link', { name: 'GB' })).toHaveAttribute('href', '/game/2026_08_CAR_GB')
     expect(within(details).getByText(/rank here says almost nothing/)).toBeInTheDocument()
+  })
+
+  it('lists the bold calls under the confidence line, each linked to its game', async () => {
+    renderRoute('/week/2026/8')
+    const region = await screen.findByRole('region', { name: 'Week 8 recap' })
+    await userEvent.click(within(region).getByText('Full recap'))
+    expect(within(region).getByRole('heading', { name: 'Bold calls' })).toBeInTheDocument()
+    expect(within(region).getByText(/pays for confidence both ways/)).toBeInTheDocument()
+    expect(within(region).getByText(/The Sharp gave Arizona Cardinals 91% and they won: 0\.60 better/)).toBeInTheDocument()
+    expect(within(region).getByText(/The Student gave Green Bay Packers 72% and they lost: 0\.59 worse/)).toBeInTheDocument()
+    expect(within(region).getByRole('link', { name: 'ARI @ DAL' })).toHaveAttribute('href', '/game/2026_08_ARI_DAL')
+  })
+
+  it('renders a recap without bold calls (week 5 predates them) and hides the block', async () => {
+    renderRoute('/week/2026/5')
+    const region = await screen.findByRole('region', { name: 'Week 5 recap' })
+    await userEvent.click(within(region).getByText('Full recap'))
+    expect(within(region).queryByText('Bold calls')).toBeNull()
   })
 
   it('renders nothing for a week without a recap', async () => {

@@ -45,3 +45,12 @@ def test_unknown_fields_rejected():
     rec["teams"]["home"]["luck"][0]["swing"] = 1.0
     with pytest.raises(ValidationError):
         RetroGame.model_validate(rec)
+
+
+def test_recap_bold_calls_optional():
+    rec = _load("recap_2026_08.json")
+    assert WeekRecap.model_validate(rec).best_call is not None
+    for k in ("best_call", "costliest_call"):
+        del rec[k]
+    r = WeekRecap.model_validate(rec)
+    assert r.best_call is None and r.costliest_call is None

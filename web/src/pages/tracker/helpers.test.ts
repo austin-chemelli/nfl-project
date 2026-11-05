@@ -1,7 +1,8 @@
+import { isPublicLine } from '../../lib/models'
 import { describe, expect, it } from 'vitest'
 import {
-  calibrationScaleSentence, calibrationVerdict, currentSummary, divergenceSentence, foldReliability,
-  headlineSentence, marketWinsWhenApart, personaHistoryHeadline, shortName,
+  calibrationScaleSentence, calibrationVerdict, currentSummary, divergenceSentence, foldReliability, GAP_BAND, gapLimit, gapRows,
+  headlineSentence, marketWinsWhenApart, personaHistoryHeadline, shortName, signedGap,
 } from './helpers'
 
 const rel = (mean_p: number, hit_rate: number, n: number) => ({ model_id: 'x', bin: 0, mean_p, hit_rate, n })
@@ -71,3 +72,61 @@ describe('headline', () => {
     expect(headlineSentence(row, 'the Analyst')).toBe('After 30 games, the Analyst is 0.040 worse than the market (log loss; lower is better).')
   })
 })
+
+describe('gapRows', () => {
+  const r = (model_id: string, week: number, cum_log_loss: number) => ({ model_id, week, n: 16, cum_log_loss, live: false })
+  it('is market minus line, so positive means ahead', () => {
+    const rows = gapRows([r('market_baseline', 1, 0.6), r('analyst', 1, 0.65), r('sharp', 1, 0.58)])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].analyst).toBeCloseTo(-0.05)
+    expect(rows[0].sharp).toBeCloseTo(0.02)
+    expect(rows[0]).not.toHaveProperty('market_baseline')
+  })
+  it('skips a week with no market row', () => {
+    const rows = gapRows([r('market_baseline', 2, 0.6), r('analyst', 1, 0.65), r('analyst', 2, 0.61)])
+    expect(rows.map((x) => x.week)).toEqual([2])
+  })
+  it('leaves a key out when a line is missing a week, and sorts by week', () => {
+    const rows = gapRows([r('market_baseline', 2, 0.6), r('market_baseline', 1, 0.62), r('analyst', 2, 0.61), r('sharp', 1, 0.6), r('sharp', 2, 0.6)])
+    expect(rows.map((x) => x.week)).toEqual([1, 2])
+    expect(rows[0]).not.toHaveProperty('analyst')
+    expect(rows[1].analyst).toBeCloseTo(-0.01)
+  })
+})
+
+describe('gapLimit', () => {
+  it('is symmetric, rounds up to clean ticks, and always shows the band', () => {
+    expect(gapLimit([{ week: 1, a: 0.001 }], ['a'])).toBeCloseTo(0.04)
+    expect(gapLimit([{ week: 1, a: -0.051, b: 0.5 }], ['a'])).toBeCloseTo(0.06)
+    expect(gapLimit([], [])).toBeCloseTo(0.04)
+    expect(gapLimit([{ week: 1, a: 0.04 }], ['a'])).toBeCloseTo(0.04)
+    expect(gapLimit([{ week: 1, a: 0.001 }], ['a'])).toBeGreaterThan(GAP_BAND)
+  })
+})
+
+describe('isPublicLine', () => {
+  it('takes approaches and references, not diagnostics a file may still carry', () => {
+    expect(['student', 'market_baseline', 'elo_v0'].every(isPublicLine)).toBe(true)
+    expect(['global', 'ensemble'].some(isPublicLine)).toBe(false)
+  })
+})
+
+describe('signedGap', () => {
+  it('signs a gap and never prints a negative zero', () => {
+    expect(signedGap(0.0123)).toBe('+0.012')
+    expect(signedGap(-0.0123)).toBe('−0.012')
+    expect(signedGap(-0.0002)).toBe('0.000')
+    expect(signedGap(0.0002)).toBe('0.000')
+  })
+})
+
+describe('currentSummary live games', () => {
+  const row = (week: number, n: number, n_live: number | undefined, live: boolean) => ({ model_id: 'market_baseline', week, n, n_live, cum_log_loss: 0.6, live })
+  it('counts live games, not whole weeks with one live game in them', () => {
+    expect(currentSummary([row(8, 14, 0, false), row(9, 14, 1, true)]).liveGames).toBe(1)
+  })
+  it('falls back to the week on a file from before n_live', () => {
+    expect(currentSummary([row(9, 14, undefined, true)]).liveGames).toBe(14)
+  })
+})
+

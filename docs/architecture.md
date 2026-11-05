@@ -213,7 +213,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | `site/hypotheses.json` | per feature: coefficient, CI, n, verdict, sentence, approaches that lean on it |
 | `site/audit.json` | null rates, freshness |
 | `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet |
-| `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, biggest upsets, luckiest/unluckiest teams, most misread games |
+| `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, best call and costliest miss, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.
 

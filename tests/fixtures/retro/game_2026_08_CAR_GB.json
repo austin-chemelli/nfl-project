@@ -1,5 +1,5 @@
 {
- "schema_version": "3",
+ "schema_version": "4",
  "game_id": "2026_08_CAR_GB",
  "season": 2026,
  "week": 8,
@@ -628,20 +628,6 @@
    "best": false
   },
   {
-   "model_id": "ensemble",
-   "label": "Ensemble",
-   "kind": "ensemble",
-   "status": "pregame",
-   "p_home": 0.7067,
-   "pick": "GB",
-   "p_pick": 0.7067,
-   "right": false,
-   "log_loss": 1.2266,
-   "spread_home": 7.3,
-   "spread_error": 10.3,
-   "best": false
-  },
-  {
    "model_id": "home_naive",
    "label": "Home team 57%",
    "kind": "reference",
@@ -976,97 +962,6 @@
      "label": "Form",
      "pp": 3.5,
      "value": -0.1067
-    }
-   ],
-   "most_valuable": "rest_travel"
-  },
-  {
-   "model_id": "ensemble",
-   "label": "Ensemble",
-   "groups": [
-    {
-     "group": "rest_travel",
-     "label": "Rest & travel",
-     "pp": -0.6,
-     "value": 0.0207
-    },
-    {
-     "group": "off_scheme",
-     "label": "Offensive scheme",
-     "pp": -0.1,
-     "value": 0.0034
-    },
-    {
-     "group": "market",
-     "label": "Market behavior",
-     "pp": -0.0,
-     "value": 0.0
-    },
-    {
-     "group": "buzz",
-     "label": "Buzz",
-     "pp": 0.0,
-     "value": 0.0
-    },
-    {
-     "group": "stakes",
-     "label": "Stakes",
-     "pp": -0.0,
-     "value": 0.0
-    },
-    {
-     "group": "coaching",
-     "label": "Coaching",
-     "pp": 0.1,
-     "value": -0.0034
-    },
-    {
-     "group": "offense",
-     "label": "Offense",
-     "pp": 0.3,
-     "value": -0.0102
-    },
-    {
-     "group": "health",
-     "label": "Health",
-     "pp": 0.7,
-     "value": -0.0236
-    },
-    {
-     "group": "venue_weather",
-     "label": "Venue & weather",
-     "pp": 1.0,
-     "value": -0.0335
-    },
-    {
-     "group": "def_scheme",
-     "label": "Defensive scheme",
-     "pp": 1.0,
-     "value": -0.0335
-    },
-    {
-     "group": "form",
-     "label": "Form",
-     "pp": 1.4,
-     "value": -0.0466
-    },
-    {
-     "group": "quality",
-     "label": "Quality",
-     "pp": 1.7,
-     "value": -0.0563
-    },
-    {
-     "group": "defense",
-     "label": "Defense",
-     "pp": 2.4,
-     "value": -0.0787
-    },
-    {
-     "group": "quarterback",
-     "label": "Quarterback",
-     "pp": 4.7,
-     "value": -0.1486
     }
    ],
    "most_valuable": "rest_travel"

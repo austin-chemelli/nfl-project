@@ -1,9 +1,12 @@
 """Grading v2 on toy graded frames: reliability/ECE, season-bootstrap summary, divergence."""
 
+from datetime import datetime, timedelta
+
 import polars as pl
 import pytest
 
 from nfl import grade
+from nfl.config import Paths
 
 
 def graded(rows):
@@ -55,3 +58,57 @@ def test_summary_paired_delta_vs_market():
     assert sm["good"]["d_vs_market"] < 0  # beat the market on every game
     assert sm["good"]["d_lo"] <= sm["good"]["d_vs_market"] <= sm["good"]["d_hi"]
     assert sm["good"]["seasons"] == 3
+
+
+def _preds(rows):
+    from nfl.predict import PRED_SCHEMA
+
+    base = {"season": 2026, "week": 9, "model_version": "v", "data_snapshot_ts": "s", "spread_home": 1.0,
+            "total": 44.0, "sd_margin": 13.5, "slot": None, "contributions": None}  # fmt: skip
+    return pl.DataFrame([base | r for r in rows], schema=PRED_SCHEMA)
+
+
+def test_graded_frame_keeps_the_live_lock_over_a_later_backfill_row(tmp_path, monkeypatch):
+    kick = datetime(2026, 11, 6, 1, 15)
+    locked = {"game_id": "G", "model_id": "market_baseline", "lock_ts": datetime(2026, 11, 5, 14),
+              "is_backfill": False, "p_home": 0.55}  # fmt: skip
+    backfill = locked | {"lock_ts": kick - timedelta(hours=1), "is_backfill": True, "p_home": 0.59}
+    other = {"game_id": "H", "model_id": "market_baseline", "lock_ts": kick - timedelta(hours=1),
+             "is_backfill": True, "p_home": 0.4}  # fmt: skip
+    too_late = locked | {"lock_ts": kick + timedelta(hours=1), "p_home": 0.9}
+    paths = Paths(tmp_path)
+    paths.marts.mkdir(parents=True)
+    _preds([locked, backfill, other, too_late]).write_parquet(paths.marts / "predictions.parquet")
+    games = pl.DataFrame({
+        "game_id": ["G", "H"], "kickoff_utc": [kick, kick], "result": [3, -3], "total": [40, 40],
+        "spread_line": [1.0, 1.0], "total_line": [44.0, 44.0], "home_team": ["A", "B"], "away_team": ["C", "D"],
+    })  # fmt: skip
+    monkeypatch.setattr(grade, "load_games", lambda p: games)
+    monkeypatch.setattr(
+        grade, "_market_p", lambda p: pl.DataFrame({"game_id": ["G", "H"], "market_p": [0.5, 0.5]})
+    )
+    by = {r["game_id"]: r for r in grade.graded_frame(paths).iter_rows(named=True)}
+    assert by["G"]["p_home"] == 0.55 and by["G"]["is_backfill"] is False
+    assert by["H"]["p_home"] == 0.4 and by["H"]["is_backfill"] is True  # no lock: backfill stands
+
+
+def test_predict_adds_no_backfill_row_for_a_game_with_a_live_lock(tmp_path, monkeypatch):
+    from nfl import predict as P
+
+    kick = datetime(2026, 11, 6, 1, 15)
+    live = {"game_id": "G", "model_id": "market_baseline", "lock_ts": datetime(2026, 11, 5, 14),
+            "is_backfill": False, "p_home": 0.55}  # fmt: skip
+    paths = Paths(tmp_path)
+    paths.marts.mkdir(parents=True)
+    _preds([live]).write_parquet(paths.marts / "predictions.parquet")
+    row = {"season": 2026, "week": 9, "kickoff_utc": kick, "result": 3, "location": "Home",
+           "spread_line": 3.0, "total_line": 44.0, "home_moneyline": -150.0, "away_moneyline": 130.0,
+           "home_team": "A", "away_team": "B", "home_score": 24, "away_score": 21, "raw_snapshot_ts": "s"}  # fmt: skip
+    games = pl.DataFrame([row | {"game_id": "G"}, row | {"game_id": "H"}])
+    monkeypatch.setattr(P, "load_games", lambda p: games)
+    P.predict(paths, (2026, 2026))
+    out = pl.read_parquet(paths.marts / "predictions.parquet")
+    g = out.filter((pl.col("game_id") == "G") & (pl.col("model_id") == "market_baseline"))
+    assert g.height == 1 and g["is_backfill"].to_list() == [False]  # the live lock stands alone
+    assert out.filter(pl.col("game_id") == "G")["model_id"].n_unique() == 3  # others still fill in
+    assert out.filter(pl.col("game_id") == "H")["model_id"].n_unique() == 3

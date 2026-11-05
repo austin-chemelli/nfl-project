@@ -9,10 +9,12 @@ recap's `luck_net` carries that pure-luck sum.
 from __future__ import annotations
 
 import json
+import math
 
 from nfl.config import Paths, now_utc
 from nfl.retro.game import _names, _sig, pure_luck, retro_path
 from nfl.retro.schema import (
+    BoldCall,
     RecapGame,
     RecapModel,
     RecapTeam,
@@ -104,6 +106,42 @@ def _misread(games: list[RetroGame], names: dict[str, str]) -> list[RecapGame]:
     return out
 
 
+def _bold_calls(
+    games: list[RetroGame], names: dict[str, str]
+) -> tuple[BoldCall | None, BoldCall | None]:
+    """The week's best right call and costliest wrong call across approaches (not per approach)."""
+    rows = [
+        (p, g) for g in games for p in g.predictions if p.kind == "approach" and p.right is not None
+    ]
+
+    def call(p, g: RetroGame) -> BoldCall:
+        earned = math.log(2) - p.log_loss
+        pct = round(100 * p.p_pick)
+        who = f"{p.label} gave {names.get(p.pick, p.pick)} {pct}%"
+        if p.right:
+            tail = f"and they won: {earned:.2f} better than a coin flip."
+        else:
+            tail = f"and they lost: {-earned:.2f} worse than a coin flip."
+        return BoldCall(
+            game_id=g.game_id,
+            away=g.away,
+            home=g.home,
+            model_id=p.model_id,
+            label=p.label,
+            pick=p.pick,
+            p_pick=p.p_pick,
+            log_loss=p.log_loss,
+            earned=round(earned, 3),
+            sentence=f"{who} {tail}",
+        )
+
+    right = [r for r in rows if r[0].right]
+    wrong = [r for r in rows if not r[0].right]
+    best = min(right, key=lambda r: (r[0].log_loss, r[1].game_id, r[0].model_id), default=None)
+    worst = min(wrong, key=lambda r: (-r[0].log_loss, r[1].game_id, r[0].model_id), default=None)
+    return (call(*best) if best else None, call(*worst) if worst else None)
+
+
 def _luck_rows(games: list[RetroGame], names: dict[str, str]):
     rows = []
     for g in games:
@@ -190,6 +228,7 @@ def build_recap(paths: Paths, season: int, week: int) -> WeekRecap:
     lucky = sorted(luck, key=lambda r: (-r[0], r[2].game_id, r[1].team))
     unlucky = sorted(luck, key=lambda r: (r[0], r[2].game_id, r[1].team))
     best = next((m.model_id for m in models if m.rank == 1), None)
+    best_call, costliest_call = _bold_calls(games, names)
     return WeekRecap(
         season=season,
         week=week,
@@ -203,6 +242,8 @@ def build_recap(paths: Paths, season: int, week: int) -> WeekRecap:
         unluckiest=[_recap_team(v, t, g, names) for v, t, g in unlucky[:N_TOP] if v < 0],
         note=f"One week is {len(games)} games; a model's rank here says almost nothing about "
         f"its skill.",
+        best_call=best_call,
+        costliest_call=costliest_call,
     )
 
 

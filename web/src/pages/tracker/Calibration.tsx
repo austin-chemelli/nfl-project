@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
-import { colorVar } from '../../lib/models'
+import { colorVar, isReference } from '../../lib/models'
 import { calibrationVerdict, foldReliability } from './helpers'
 import { KEY_LINES, label, sentenceName } from './names'
 
@@ -73,7 +73,7 @@ export function Calibration({ t, meta }: { t: Tracker; meta: Meta }) {
             {sel.flatMap((m) =>
               folded(m).map((b) => (
                 <tr key={`${m}-${b.mean_p}`}>
-                  <td className={td}><ModelBadge modelId={m} /></td>
+                  <td className={td}><ModelBadge modelId={m} reference={isReference(m)} /></td>
                   <td className={`${td} tabular`}>{PC(b.mean_p)}</td>
                   <td className={`${td} tabular`}>{PC(b.hit_rate)}</td>
                   <td className={`${td} tabular`}>{b.n.toLocaleString('en-US')}</td>

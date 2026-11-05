@@ -935,7 +935,7 @@ def tracker(paths: Paths, season: int, reg: dict) -> dict:
     summ = _read(paths, "summary")
     rel = _read(paths, "reliability")
     div = _read(paths, "divergence")
-    led = _read(paths, "ledger_summary")
+    settled = _read(paths, "bets_settled")
     out: dict = {"schema_version": SCHEMA_VERSION, "season": season}
     if not sc.is_empty():
         s = sc.filter((pl.col("scope") == "season") & pl.col("model_id").is_in(list(reg)))
@@ -948,12 +948,13 @@ def tracker(paths: Paths, season: int, reg: dict) -> dict:
         cur = graded.filter((pl.col("season") == season) & pl.col("model_id").is_in(list(reg)))
         wk = (
             cur.group_by("model_id", "week").agg(pl.col("log_loss").sum().alias("s"), pl.len().alias("n"),
-                                                 (~pl.col("is_backfill")).any().alias("live"))
+                                                 (~pl.col("is_backfill")).any().alias("live"),
+                                                 (~pl.col("is_backfill")).sum().alias("n_live"))
             .sort("model_id", "week")
             .with_columns((pl.col("s").cum_sum() / pl.col("n").cum_sum()).over("model_id").alias("cum"))
         )  # fmt: skip
         out["current_season"] = [
-            {"model_id": r["model_id"], "week": r["week"], "n": r["n"], "cum_log_loss": _r(r["cum"]), "live": r["live"]}
+            {"model_id": r["model_id"], "week": r["week"], "n": r["n"], "cum_log_loss": _r(r["cum"]), "live": r["live"], "n_live": r["n_live"]}
             for r in wk.iter_rows(named=True)
         ]  # fmt: skip
         live = graded.filter(~pl.col("is_backfill"))
@@ -983,20 +984,23 @@ def tracker(paths: Paths, season: int, reg: dict) -> dict:
             {k: (_r(v) if isinstance(v, float) else v) for k, v in r.items()}
             for r in div.filter(pl.col("model_id").is_in(list(reg))).iter_rows(named=True)
         ]
-    if not led.is_empty():
-        agg = (
-            led.group_by("model_id", "is_backfill")
-            .agg(pl.col("bets").sum(), pl.col("wins").sum(), pl.col("losses").sum(), pl.col("pushes").sum(),
-                 pl.col("units").sum(), (pl.col("mean_clv") * pl.col("n_clv")).sum().alias("clv_sum"),
-                 pl.col("n_clv").sum())
-            .with_columns((pl.col("units") / pl.col("bets")).alias("roi"),
-                          pl.when(pl.col("n_clv") > 0).then(pl.col("clv_sum") / pl.col("n_clv")).alias("clv"))
-        )  # fmt: skip
+    out["ledger"] = []  # the contract requires the key, so an empty ledger can't error the page
+    if not settled.is_empty():
+        from nfl import ledger
+
+        keep = pl.col("model_id").is_in(list(reg))
         out["ledger"] = [
             {"model_id": r["model_id"], "kind": BACKFILL if r["is_backfill"] else "live", "bets": r["bets"],
              "wins": r["wins"], "losses": r["losses"], "pushes": r["pushes"], "units": _r(r["units"], 2),
-             "roi": _r(r["roi"]), "clv": _r(r["clv"])}
-            for r in agg.filter(pl.col("model_id").is_in(list(reg))).iter_rows(named=True)
+             "roi": _r(r["roi"]), "roi_lo": _r(r["roi_lo"]), "roi_hi": _r(r["roi_hi"]),
+             "no_edge_roi": _r(r["no_edge_roi"]), "win_rate": _r(r["win_rate"]),
+             "need_rate": _r(r["need_rate"]), "clv": _r(r["clv"])}
+            for r in ledger.line_stats(settled).filter(keep).iter_rows(named=True)
+        ]  # fmt: skip
+        out["ledger_seasons"] = [
+            {"model_id": r["model_id"], "season": r["season"], "bets": r["bets"], "live_bets": r["live_bets"],
+             "units": _r(r["units"], 2), "no_edge_units": _r(r["no_edge_units"], 2)}
+            for r in ledger.season_stats(settled).filter(keep).iter_rows(named=True)
         ]  # fmt: skip
     return out
 

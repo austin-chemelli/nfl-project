@@ -37,9 +37,8 @@ export default function HypothesesPage() {
             </FinePrint>
             <Tabs
               label="Views"
-              default={params.has('item') ? 'time' : 'effects'}
+              default="time"
               tabs={[
-                { id: 'effects', label: 'Each feature', content: <Effects h={h} groupName={groupName} /> },
                 {
                   id: 'time',
                   label: 'Over time',
@@ -51,6 +50,7 @@ export default function HypothesesPage() {
                     />
                   ),
                 },
+                { id: 'effects', label: 'Each feature', content: <Effects h={h} groupName={groupName} /> },
               ]}
             />
           </>
