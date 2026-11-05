@@ -76,7 +76,7 @@ export function previewRows(g: Game, meta: Meta, approach: string | null): Previ
   const homeField = (c: Contribution | undefined) => (c?.home_field_pp == null ? null : c.home_field_pp + discount(c))
   const rows: PreviewRow[] = [{
     id: 'home_field', name: 'Home field',
-    help: g.neutral_site ? 'A neutral site: what is left of the listed home team\'s usual edge.' : 'The built-in edge the home team gets before anything else is considered.',
+    help: g.neutral_site ? 'A neutral site: the usual home edge after the neutral-site discount, as each reading prices it.' : 'The built-in edge the home team gets before anything else is considered.',
     edge: g.neutral_site ? 'neutral site' : `${g.home} at home`, pct: null, pp: homeField(base) ?? 0, overlay: homeField(over),
   }]
   for (const { id, name } of meta.groups.groups) {

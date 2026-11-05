@@ -40,7 +40,10 @@ function check(root: string, rel: string) {
   const parsed = schema.safeParse(raw)
   // GameRow forgives a bad card at runtime, so drift has to fail here
   for (const row of rel.startsWith('game/') ? [raw] : (raw.games ?? [])) {
-    if (row.card != null) expect(C.CardData.safeParse(row.card).error?.issues).toBeUndefined()
+    if (row.card == null) continue
+    expect(C.CardData.safeParse(row.card).error?.issues).toBeUndefined()
+    // these default to false, so a renamed flag would parse and quietly empty every card
+    for (const i of row.card.injuries ?? []) expect(i).toEqual(expect.objectContaining({ starter: expect.any(Boolean), new: expect.any(Boolean) }))
   }
   if (!parsed.success) {
     const issues = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`)

@@ -252,6 +252,9 @@ def test_contrast_maps_aliased_codes_back_to_the_games_codes():
     assert (c["offense"], c["defense"], c["off_rank"], c["def_rank"]) == ("OAK", "STL", 1, 1)
 
 
+NO_DEPTH = {"starters": {}, "listed": set(), "prev_game": {}}
+
+
 def test_card_injuries_keep_out_and_doubtful_for_this_week_and_teams_only():
     def inj(team, status, week=8, player="P"):
         return {"week": week, "team": team, "player": player, "pos": "WR", "status": status,
@@ -261,7 +264,9 @@ def test_card_injuries_keep_out_and_doubtful_for_this_week_and_teams_only():
                 inj("BAL", "Questionable"), inj("BAL", "Out", week=7), inj("NYJ", "Out"),
                 inj("KC", None)]  # fmt: skip
     g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    card = site._card(g, {}, injuries, datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {})
+    card = site._card(
+        g, {}, injuries, datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {}, **NO_DEPTH
+    )
     assert card["injuries"] == [
         {"team": "BAL", "player": "a", "pos": "WR", "status": "Out", "starter": False, "new": True},
         {
@@ -277,7 +282,7 @@ def test_card_injuries_keep_out_and_doubtful_for_this_week_and_teams_only():
 
 def test_card_with_no_data_has_empty_values():
     g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    card = site._card(g, {}, [], datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {})
+    card = site._card(g, {}, [], datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {}, **NO_DEPTH)
     assert card == {"edges": {}, "injuries": [], "usual_qb": {"home": None, "away": None},
                     "last_qb": {"home": None, "away": None}, "charted_qb": {"home": None, "away": None},
                     "weather_concern": None, "contrast": None}  # fmt: skip
@@ -291,9 +296,15 @@ def test_card_weather_concern_is_cut_at_min_kickoff_now():
                         datetime(2026, 10, 26)],  # the last is after kickoff: never seen
     })  # fmt: skip
     g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    assert site._card(g, {}, [], datetime(2026, 10, 20), {}, {}, wx, {})["weather_concern"] == 0.5  # fmt: skip
-    assert site._card(g, {}, [], datetime(2026, 11, 20), {}, {}, wx, {})["weather_concern"] == 1.0
-    assert site._card(g, {}, [], datetime(2026, 9, 20), {}, {}, wx, {})["weather_concern"] is None
+    assert site._card(g, {}, [], datetime(2026, 10, 20), {}, {}, wx, {}, **NO_DEPTH)["weather_concern"] == 0.5  # fmt: skip
+    assert (
+        site._card(g, {}, [], datetime(2026, 11, 20), {}, {}, wx, {}, **NO_DEPTH)["weather_concern"]
+        == 1.0
+    )
+    assert (
+        site._card(g, {}, [], datetime(2026, 9, 20), {}, {}, wx, {}, **NO_DEPTH)["weather_concern"]
+        is None
+    )
 
 
 def test_card_puts_each_input_on_the_right_side():
@@ -304,7 +315,7 @@ def test_card_puts_each_input_on_the_right_side():
     ranks = {("off", "pass_rate", True): {"BAL": 1}, ("def", "blitz_rate", True): {"KC": 2}}
     charted = {("G", "BAL"): "Home Charted", ("G", "KC"): "Away Charted"}
     card = site._card(_g("G", kick, "BAL", "KC"), edges, [], datetime(2026, 10, 20), starts, ranks,
-                      pl.DataFrame(), charted)  # fmt: skip
+                      pl.DataFrame(), charted, **NO_DEPTH)  # fmt: skip
     assert card["usual_qb"] == {"home": "Home Usual", "away": "Away Usual"}
     assert card["last_qb"] == {"home": "Home Usual", "away": "Away Usual"}
     assert card["charted_qb"] == {"home": "Home Charted", "away": "Away Charted"}
@@ -316,7 +327,7 @@ def test_card_usual_qb_counts_only_games_already_played():
     played = [(datetime(2026, 9, d), "Played") for d in (1, 8, 15)]
     projected = [(datetime(2026, 10, d), "Projected") for d in (11, 12, 13, 18)]
     g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    card = site._card(g, {}, [], datetime(2026, 10, 5), {"BAL": played + projected}, {}, pl.DataFrame(), {})  # fmt: skip
+    card = site._card(g, {}, [], datetime(2026, 10, 5), {"BAL": played + projected}, {}, pl.DataFrame(), {}, **NO_DEPTH)  # fmt: skip
     assert card["usual_qb"]["home"] == "Played"
     assert card["last_qb"]["home"] == "Played"
 
@@ -346,14 +357,14 @@ def test_a_bye_does_not_make_a_long_absence_look_new():
     i = {"week": 7, "team": "BAL", "gsis_id": "x", "player": "P", "pos": "WR", "status": "Out"}
     g = _g("G", datetime(2026, 11, 1, 17), "BAL", "KC", week=7)
     card = site._card(g, {}, [i], datetime(2026, 10, 30), {}, {}, pl.DataFrame(), {},
-                      listed={("BAL", "P", 5)}, prev_game=prev)  # fmt: skip
+                      starters={}, listed={("BAL", "P", 5)}, prev_game=prev)  # fmt: skip
     assert card["injuries"][0]["new"] is False
 
 
 def test_card_skips_an_injury_with_no_player_name():
     row = {"week": 8, "team": "BAL", "player": None, "pos": "WR", "status": "Out"}
     g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    assert site._card(g, {}, [row], datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {})["injuries"] == []  # fmt: skip
+    assert site._card(g, {}, [row], datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {}, **NO_DEPTH)["injuries"] == []  # fmt: skip
 
 
 def test_named_qbs_turns_ids_into_names_and_drops_unknown_ids():
@@ -408,19 +419,25 @@ def test_build_puts_a_card_on_every_slate_row(tmp_path, monkeypatch):
 
     kick = datetime(2099, 10, 25, 17)
     row = _g("G", kick, "BAL", "KC", "Lamar Jackson", "Patrick Mahomes", week=8) | {"season": 2099}
-    games = pl.DataFrame([row])
+    earlier = _g("F", datetime(2099, 10, 18, 17), "BAL", "KC", "Lamar Jackson", "Patrick Mahomes", week=7)  # fmt: skip
+    games = pl.DataFrame([earlier | {"season": 2099}, row])
     feats = pl.DataFrame(schema={"game_id": pl.Utf8, "feature": pl.Utf8, "side": pl.Utf8,
                                  "value": pl.Float64, "known_as_of": pl.Datetime("us"),
                                  "season": pl.Int64, "week": pl.Int64})  # fmt: skip
     edge = {"quality": {"favors": "BAL", "strength_pct": 90.0}}
-    hurt = {"week": 8, "team": "BAL", "gsis_id": "00-1", "player": "P", "pos": "WR", "status": "Out",
-            "practice": None, "injury": None}  # fmt: skip
+
+    def out(player, week):
+        return {"week": week, "team": "BAL", "gsis_id": "00-1", "player": player, "pos": "WR",
+                "status": "Out", "practice": None, "injury": None}  # fmt: skip
+
     monkeypatch.setattr(site.store, "games_frame", lambda p: games)
     monkeypatch.setattr(site.store, "read_features", lambda p, seasons: feats)
     monkeypatch.setattr(site, "display_rows", lambda p, g, n: pl.DataFrame())
     monkeypatch.setattr(site, "_market_by_game", lambda p, g, n: pl.DataFrame())
     monkeypatch.setattr(site, "group_edges", lambda p, g, f, s, n: {"G": edge})
-    monkeypatch.setattr(site, "_injuries", lambda p, s: [hurt])
+    monkeypatch.setattr(
+        site, "_injuries", lambda p, s: [out("New", 8), out("Still", 8), out("Still", 7)]
+    )
     monkeypatch.setattr(site, "tracker", lambda p, s, r: {})
     monkeypatch.setattr(site, "audit", lambda p: {})
     monkeypatch.setattr(site, "write_retro", lambda p, s: [])
@@ -433,7 +450,9 @@ def test_build_puts_a_card_on_every_slate_row(tmp_path, monkeypatch):
     card = json.loads((paths.site / "slate_2099_08.json").read_text())["games"][0]["card"]
     assert card["edges"] == edge
     assert card["charted_qb"] == {"home": "Charted Guy", "away": None}
-    assert card["injuries"][0]["starter"] and card["injuries"][0]["new"]
+    by = {i["player"]: i for i in card["injuries"]}
+    assert by["New"]["starter"] and by["New"]["new"]
+    assert not by["Still"]["new"]  # listed in Week 7: needs `listed` and `prev_game` both wired
 
 
 def test_qb_starts_sorts_by_kickoff_whatever_the_input_order():

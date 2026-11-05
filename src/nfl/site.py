@@ -767,17 +767,7 @@ def _prev_game_weeks(games: pl.DataFrame) -> dict[tuple[str, int], int]:
 
 
 def _card(
-    g,
-    edges,
-    injuries,
-    now,
-    starts,
-    ranks,
-    weather,
-    charted,
-    starters=None,
-    listed=(),
-    prev_game=None,
+    g, edges, injuries, now, starts, ranks, weather, charted, *, starters, listed, prev_game
 ) -> dict:
     """The slate card block (U4): why-this-game data, as known at the same cut `_game_detail` uses."""
     gid, teams = g["game_id"], (g["home_team"], g["away_team"])
@@ -795,10 +785,10 @@ def _card(
                 "player": i["player"],
                 "pos": i["pos"],
                 "status": i["status"],
-                "starter": i.get("gsis_id") in (starters or {}).get((gid, i["team"]), ()),
+                "starter": i.get("gsis_id") in starters.get((gid, i["team"]), ()),
                 # against the team's last game, not the calendar: a bye isn't a return, and a
                 # player back for a week and hurt again is news
-                "new": (i["team"], i["player"], (prev_game or {}).get((i["team"], i["week"])))
+                "new": (i["team"], i["player"], prev_game.get((i["team"], i["week"])))
                 not in listed,
             }
             for i in injuries
