@@ -1,7 +1,7 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
 import type { Contribution, Game, Meta, RetroGame, Tendency } from '../../data/contract'
 import { fmtUnit, pct } from '../../lib/format'
-import { groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
+import { countsAsEdge, edgePct, groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
 import { APPROACHES } from '../../lib/models'
 
 export const QB_STATUS: Record<number, string> = { 0: 'healthy starter', 1: 'questionable / limited / new', 2: 'backup or unknown' }
@@ -58,7 +58,7 @@ export type PreviewRow = { id: string; name: string; help: string; edge: string;
 /** "JAX, 90th pct"; a matchup in the bottom tenth of all edges reads as even, whichever way it leans. */
 function edgeLabel(e: Game['edges'][string] | undefined): string {
   if (!e) return ''
-  return !e.favors || e.strength_pct == null || e.strength_pct < 10 ? 'about even' : `${e.favors}, ${ordinal(e.strength_pct)} pct`
+  return !e.favors || e.strength_pct == null || e.strength_pct < 10 ? 'about even' : `${e.favors}, ${ordinal(edgePct(e.strength_pct))} pct`
 }
 
 /**
@@ -70,16 +70,23 @@ export function previewRows(g: Game, meta: Meta, approach: string | null): Previ
   const base = g.contributions.global
   const over = approach ? g.contributions[approach] : undefined
   if (!base) return []
+  // The fit's home bonus is a constant, and the neutral-site discount sits in Venue & weather. Read
+  // apart, a neutral game shows a full home edge; so that discount moves onto the home field row.
+  const discount = (c: Contribution | undefined) => (g.neutral_site ? (c?.groups.venue_weather?.features['environment.neutral_site'] ?? 0) : 0)
+  const homeField = (c: Contribution | undefined) => (c?.home_field_pp == null ? null : c.home_field_pp + discount(c))
   const rows: PreviewRow[] = [{
-    id: 'home_field', name: 'Home field', help: 'The built-in edge the home team gets before anything else is considered.',
-    edge: g.neutral_site ? 'neutral site' : `${g.home} at home`, pct: null, pp: base.home_field_pp ?? 0, overlay: over?.home_field_pp ?? null,
+    id: 'home_field', name: 'Home field',
+    help: g.neutral_site ? 'A neutral site: the usual home edge after the neutral-site discount, as each reading prices it.' : 'The built-in edge the home team gets before anything else is considered.',
+    edge: g.neutral_site ? 'neutral site' : `${g.home} at home`, pct: null, pp: homeField(base) ?? 0, overlay: homeField(over),
   }]
   for (const { id, name } of meta.groups.groups) {
     if (isContextOnly(meta, id)) continue
-    const pp = base.groups[id]?.pp ?? null
-    const overlay = over?.groups[id]?.pp ?? null
+    const venue = id === 'venue_weather'
+    const pp = base.groups[id]?.pp == null ? null : (base.groups[id].pp as number) - (venue ? discount(base) : 0)
+    const overlay = over?.groups[id]?.pp == null ? null : (over.groups[id].pp as number) - (venue ? discount(over) : 0)
     if (pp == null && !overlay) continue
-    rows.push({ id, name, help: helpFor(meta, id), edge: edgeLabel(g.edges[id]), pct: g.edges[id]?.strength_pct ?? null, pp, overlay })
+    const edge = countsAsEdge(meta, id, g.neutral_site) ? g.edges[id] : undefined
+    rows.push({ id, name, help: helpFor(meta, id), edge: edgeLabel(edge), pct: edge?.strength_pct ?? null, pp, overlay })
   }
   return rows
 }
@@ -143,11 +150,11 @@ export function playedLikeSteps(r: RetroGame) {
 
 // ---------------------------------------------------------------------------------------- edges
 
-export function edgeRows(edges: Game['edges'], meta: Meta) {
+export function edgeRows(edges: Game['edges'], meta: Meta, neutral = false) {
   const rows = []
   const none: string[] = []
   for (const [id, e] of Object.entries(edges)) {
-    if (isContextOnly(meta, id)) continue
+    if (!countsAsEdge(meta, id, neutral)) continue
     const name = groupOf(meta, id)?.name ?? id
     if (!e.favors || e.strength_pct == null) {
       none.push(name)
@@ -155,7 +162,7 @@ export function edgeRows(edges: Game['edges'], meta: Meta) {
     }
     rows.push({
       id, name, help: helpFor(meta, id), favors: e.favors, pct: e.strength_pct,
-      sentence: `${e.favors}'s ${name} edge is in the ${ordinal(e.strength_pct)} percentile of matchups`,
+      sentence: `${e.favors}'s ${name} edge is in the ${ordinal(edgePct(e.strength_pct))} percentile of matchups`,
     })
   }
   return { rows: rows.sort((a, b) => b.pct - a.pct), none }

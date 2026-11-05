@@ -428,6 +428,16 @@ def build(paths: Paths, season: int | None = None) -> dict:
 
     narr = {r.game_id: r for r in load_records(paths, (season, season))}
     edges = group_edges(paths, games, feats, season, now)
+    charted, starters = _depth_context(paths, games, season, now)
+    card_ctx = {
+        "starts": _qb_starts(games),
+        "charted": charted,
+        "starters": starters,
+        "listed": _listed(injuries),
+        "prev_game": _prev_game_weeks(games),
+        "ranks": _contrast_ranks(tend, season),
+        "weather": feats.filter(pl.col("feature") == WEATHER_FEATURE) if not feats.is_empty() else feats,
+    }  # fmt: skip
 
     n_weeks = 0
     for (week,), wk in games.group_by(["week"], maintain_order=True):
@@ -435,6 +445,7 @@ def build(paths: Paths, season: int | None = None) -> dict:
         slate_games = []
         for g in wk.iter_rows(named=True):
             row = _game_row(g, allrows, market, reg)
+            row["card"] = _card(g, edges, injuries, now, **card_ctx)
             slate_games.append(row)
             detail = row | _game_detail(g, allrows, feats, tend, injuries, narr, now, edges)
             _write(site / "game" / f"{g['game_id']}.json", detail)
@@ -613,6 +624,193 @@ def _game_row(g: dict, allrows: pl.DataFrame, market: pl.DataFrame, reg: dict) -
     }  # fmt: skip
 
 
+# (offense metric, offense label, high rate is the extreme?, defense metric, defense label)
+CONTRASTS = [
+    ("pass_rate", "pass-heavy", True, "blitz_rate", "blitz-heavy"),
+    ("screen_rate", "screen-heavy", True, "blitz_rate", "blitz-heavy"),
+    ("pass_rate", "run-heavy", False, "box_8plus_vs_run_rate", "box-stacking"),
+    ("play_action_rate", "play-action-heavy", True, "box_8plus_vs_run_rate", "box-stacking"),
+    ("no_huddle_rate", "up-tempo", True, "blitz_rate", "blitz-heavy"),
+]
+CONTRAST_TOP = 5  # both sides must rank this high among the league's teams
+CONTRAST_MIN_TEAMS = 24
+WEATHER_FEATURE = "narrative.weather_concern"
+USUAL_QB_MIN_STARTS = 3  # fewer, or a tie, and "usually" would name whoever filled in
+
+
+def _contrast_ranks(tend: pl.DataFrame, season: int) -> dict[tuple[str, str, bool], dict[str, int]]:
+    """(side, metric, high is extreme) -> {canonical team: rank, 1 = most extreme}. Metrics with
+    fewer than CONTRAST_MIN_TEAMS teams are left out. Computed once per build."""
+    from nfl.models.elo import TEAM_ALIASES
+
+    if tend.is_empty():
+        return {}
+    t = tend.filter(
+        (pl.col("season") == season) & (pl.col("situation") == "all") & pl.col("rate").is_not_null()
+    )
+    wanted = {("off", m, hi) for m, _, hi, _, _ in CONTRASTS}
+    wanted |= {("def", dm, True) for _, _, _, dm, _ in CONTRASTS}
+    ranks: dict[tuple[str, str, bool], dict[str, int]] = {}
+    for side, metric, high in wanted:
+        x = t.filter((pl.col("side") == side) & (pl.col("metric") == metric))
+        rates = {TEAM_ALIASES.get(r["team"], r["team"]): r["rate"] for r in x.iter_rows(named=True)}
+        if len(rates) < CONTRAST_MIN_TEAMS:
+            continue
+        order = sorted(rates, key=lambda k: (-rates[k] if high else rates[k], k))
+        ranks[(side, metric, high)] = {k: i + 1 for i, k in enumerate(order)}
+    return ranks
+
+
+def _contrast(ranks: dict, g: dict) -> dict | None:
+    """The starkest (offense, defense) pair in this game, or None. Lowest rank sum wins; ties go
+    to the earlier CONTRASTS entry, then away offense first."""
+    from nfl.models.elo import TEAM_ALIASES
+
+    best = None
+    for i, (om, ol, high, dm, dl) in enumerate(CONTRASTS):
+        o_ranks, d_ranks = ranks.get(("off", om, high)), ranks.get(("def", dm, True))
+        if not o_ranks or not d_ranks:
+            continue
+        for j, (off, dfn) in enumerate(((g["away_team"], g["home_team"]), (g["home_team"], g["away_team"]))):  # fmt: skip
+            ro = o_ranks.get(TEAM_ALIASES.get(off, off))
+            rd = d_ranks.get(TEAM_ALIASES.get(dfn, dfn))
+            if ro is None or rd is None or ro > CONTRAST_TOP or rd > CONTRAST_TOP:
+                continue
+            key = (ro + rd, i, j)
+            if best is None or key < best[0]:
+                best = (key, {"offense": off, "defense": dfn, "off_label": ol, "def_label": dl,
+                              "off_rank": ro, "def_rank": rd})  # fmt: skip
+    return None if best is None else best[1]
+
+
+def _qb_starts(games: pl.DataFrame) -> dict[str, list[tuple[datetime, str]]]:
+    """team -> [(kickoff, starting QB name)] in kickoff order, home and away starts together."""
+    starts: dict[str, list[tuple[datetime, str]]] = {}
+    for g in games.sort("kickoff_utc", "game_id").iter_rows(named=True):
+        for team, qb in ((g["home_team"], g.get("home_qb_name")), (g["away_team"], g.get("away_qb_name"))):  # fmt: skip
+            if qb:
+                starts.setdefault(team, []).append((g["kickoff_utc"], qb))
+    return starts
+
+
+def _depth_context(
+    paths: Paths, games: pl.DataFrame, season: int, now: datetime
+) -> tuple[dict[tuple[str, str], str], dict[tuple[str, str], set[str]]]:
+    """From the model's own depth-chart lookup: (game_id, team) -> charted QB1 by name for games
+    not yet kicked off, and (game_id, team) -> the ids of everyone listed first at a position,
+    special teams excluded. Both empty without depth charts, so the card claims nothing."""
+    import duckdb
+
+    from nfl.features import availability
+
+    chart_dir = paths.curated_table("depth_charts") / f"season={season}"
+    if games.is_empty() or not any(chart_dir.glob("*.parquet")):
+        return {}, {}
+    depth = availability.load_depth(paths)
+    starters: dict[tuple[str, str], set[str]] = {}
+    for r in availability.charted_starters(games, depth, now).iter_rows(named=True):
+        starters.setdefault((r["game_id"], r["team"]), set()).add(r["gsis_id"])
+    upcoming = games.filter(pl.col("kickoff_utc") > now)
+    if upcoming.is_empty():
+        return {}, starters
+    # oldest first, so the latest spelling of a name wins whatever the file order
+    ids = duckdb.sql(
+        f"select gsis_id, player_name from read_parquet('{chart_dir.as_posix()}/*.parquet') "
+        "where gsis_id is not null and player_name is not null order by dt nulls first"
+    ).fetchall()
+    return _named_qbs(availability.charted_qb1(upcoming, depth, now), dict(ids)), starters
+
+
+def _named_qbs(charted: pl.DataFrame, names: dict[str, str]) -> dict[tuple[str, str], str]:
+    """`charted_qb1`'s player ids as names; an id with no name is left out."""
+    return {
+        (r["game_id"], r["team"]): names[r["qb1"]]
+        for r in charted.iter_rows(named=True)
+        if r["qb1"] in names
+    }
+
+
+def _usual_qb(starts: dict, team: str, cut: datetime) -> str | None:
+    """The team's clear regular before `cut`: the most starts, at least USUAL_QB_MIN_STARTS and
+    more than anyone else, or None. Pass min(kickoff, now): an unplayed game's name is a projection."""
+    count: dict[str, int] = {}
+    for ts, qb in starts.get(team, []):
+        if ts < cut:
+            count[qb] = count.get(qb, 0) + 1
+    top = max(count.values(), default=0)
+    leaders = [q for q, n in count.items() if n == top]
+    return leaders[0] if top >= USUAL_QB_MIN_STARTS and len(leaders) == 1 else None
+
+
+def _last_qb(starts: dict, team: str, cut: datetime) -> str | None:
+    """The team's most recent starter before `cut`: a QB already in the job isn't news."""
+    played = [qb for ts, qb in starts.get(team, []) if ts < cut]
+    return played[-1] if played else None
+
+
+def _missing(i: dict) -> bool:
+    return bool(i["player"]) and any(k in (i["status"] or "").lower() for k in ("out", "doubtful"))
+
+
+def _listed(injuries: list[dict]) -> set[tuple[str, str, int]]:
+    """(team, player, week) for every Out or Doubtful row."""
+    return {(i["team"], i["player"], i["week"]) for i in injuries if _missing(i)}
+
+
+def _prev_game_weeks(games: pl.DataFrame) -> dict[tuple[str, int], int]:
+    """(team, week) -> the week of that team's previous game, so a bye doesn't look like a gap."""
+    weeks: dict[str, list[int]] = {}
+    for g in games.sort("week").iter_rows(named=True):
+        for t in (g["home_team"], g["away_team"]):
+            weeks.setdefault(t, []).append(int(g["week"]))
+    return {(t, w): ws[i - 1] for t, ws in weeks.items() for i, w in enumerate(ws) if i}
+
+
+def _card(
+    g, edges, injuries, now, starts, ranks, weather, charted, *, starters, listed, prev_game
+) -> dict:
+    """The slate card block (U4): why-this-game data, as known at the same cut `_game_detail` uses."""
+    gid, teams = g["game_id"], (g["home_team"], g["away_team"])
+    cut = min(g["kickoff_utc"], now)
+    wx = None
+    if not weather.is_empty():
+        fv = store.as_of(weather.filter(pl.col("game_id") == gid), cut)
+        if fv.height:
+            wx = _r(fv["value"][0])
+    return {
+        "edges": (edges or {}).get(gid, {}),
+        "injuries": [
+            {
+                "team": i["team"],
+                "player": i["player"],
+                "pos": i["pos"],
+                "status": i["status"],
+                "starter": i.get("gsis_id") in starters.get((gid, i["team"]), ()),
+                # against the team's last game, not the calendar: a bye isn't a return, and a
+                # player back for a week and hurt again is news
+                "new": (i["team"], i["player"], prev_game.get((i["team"], i["week"])))
+                not in listed,
+            }
+            for i in injuries
+            if i["week"] == g["week"] and i["team"] in teams and _missing(i)
+        ],
+        "usual_qb": {
+            "home": _usual_qb(starts, g["home_team"], cut),
+            "away": _usual_qb(starts, g["away_team"], cut),
+        },
+        "last_qb": {
+            "home": _last_qb(starts, g["home_team"], cut),
+            "away": _last_qb(starts, g["away_team"], cut),
+        },
+        "charted_qb": {
+            "home": charted.get((gid, g["home_team"])),
+            "away": charted.get((gid, g["away_team"])),
+        },
+        "weather_concern": wx,
+        "contrast": _contrast(ranks, g),
+    }
+
+
 def _pp(total_logit: float, piece: float) -> float:
     """Points of home win probability this piece is worth: p(with it) − p(without it), ×100."""
     from scipy.special import expit
@@ -718,11 +916,11 @@ def _injuries(paths: Paths, season: int) -> list[dict]:
     if not d.exists():
         return []
     df = duckdb.sql(
-        f"select week, team, full_name, position, report_status, practice_status, report_primary_injury "
+        f"select week, team, gsis_id, full_name, position, report_status, practice_status, report_primary_injury "
         f"from read_parquet('{d.as_posix()}/*.parquet') where report_status is not null"
     ).pl()
     return [
-        {"week": r["week"], "team": r["team"], "player": r["full_name"], "pos": r["position"],
+        {"week": r["week"], "team": r["team"], "gsis_id": r["gsis_id"], "player": r["full_name"], "pos": r["position"],
          "status": r["report_status"], "practice": r["practice_status"], "injury": r["report_primary_injury"]}
         for r in df.iter_rows(named=True)
     ]  # fmt: skip

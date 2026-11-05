@@ -1,7 +1,10 @@
 /** Pure helpers for the Slate page (port of nfl.ui.slate_helpers). */
-import type { GameRow, Meta } from '../../data/contract'
+import type { CardData, GameRow, Meta } from '../../data/contract'
 import { APPROACHES, HEADLINE, REFERENCES, SHORT } from '../../lib/models'
 import { pct } from '../../lib/format'
+import { edgePct, groupOf } from '../../lib/meta'
+import { injuryRank, ordinal } from '../game/helpers'
+import { topAbsence, topEdge } from '../game/summary'
 
 /** |model − market| in probability at which a cell is highlighted. */
 export const DIVERGE = 0.05
@@ -165,4 +168,81 @@ function finishedSentence(g: GameRow, ps: { id: string; p: number }[], won: bool
   if (right.length === 0) return `${n} picked ${loser}; ${winner} won`
   if (right.length <= ps.length / 2) return `${names(right)} called it`
   return `${names(ps.filter((x) => !right.includes(x.id)).map((x) => x.id))} missed it`
+}
+
+// ------------------------------------------------------------------- why this game (U4)
+
+/** An edge must beat this share of matchups to be worth a card's line. */
+const EDGE_MIN_PCT = 75
+const WEATHER_MIN = 0.5
+
+/** Names compare without suffixes or punctuation: the depth chart has `Gardner Minshew II`, the schedule `Gardner Minshew`. */
+const sameQb = (a: string, b: string) => {
+  const key = (s: string) => s.toLowerCase().replace(/[.'’]/g, '').replace(/\s+(jr|sr|ii|iii|iv)$/, '').trim()
+  return key(a) === key(b)
+}
+
+/**
+ * The QB news for one team, or null. Neither source is reliable alone: replayed days out, the
+ * schedule's projected name and the depth chart each named the wrong man in about a third of the
+ * lines they would have printed. So this needs both. It says "listed" when they agree and "unclear"
+ * when they don't, and nothing once the game kicks off, when the chart is no longer read. A hurt
+ * player is out of the running: his absence says that better, and the other source may have the
+ * real story. `usual` comes back when the line names him, so the absence doesn't repeat it.
+ */
+function qbPiece(team: string, schedule: string | null, charted: string | null, usual: string | null, last: string | null, injuries: CardData['injuries']): { text: string; namesUsual: boolean } | null {
+  if (!schedule || !charted) return null
+  const hurt = (name: string) => injuries.some((i) => i.team === team && sameQb(i.player, name))
+  const names = [charted, schedule].filter((n) => !hurt(n))
+  if (names.length === 2 && !sameQb(charted, schedule)) return { text: `${team} starter unclear: ${charted} on the depth chart, ${schedule} on the schedule`, namesUsual: false }
+  const listed = names[0]
+  if (!listed || !usual || sameQb(listed, usual) || (last && sameQb(listed, last))) return null
+  return { text: `${listed} listed to start for ${team} (usually ${usual})`, namesUsual: true }
+}
+
+/** One line on why a pregame matchup is worth a look, from `g.card`: up to two pieces, most newsworthy first. */
+export function whyLine(g: GameRow, meta: Meta): string | null {
+  const c = g.card
+  if (g.result != null || c == null) return null
+  const pieces: string[] = []
+
+  // 1. QB news, this week only: a name further out is a guess
+  const named = new Set<string>()
+  if (g.week === meta.current_week) {
+    for (const [team, schedule, side] of [[g.away, g.away_qb, 'away'], [g.home, g.home_qb, 'home']] as const) {
+      const piece = qbPiece(team, schedule, c.charted_qb[side], c.usual_qb[side], c.last_qb[side], c.injuries)
+      if (piece) pieces.push(piece.text)
+      if (piece?.namesUsual && c.usual_qb[side]) named.add(c.usual_qb[side])
+    }
+  }
+
+  // 2. A starter newly out: not a backup, and not someone gone for weeks
+  const absence = topAbsence(c.injuries.filter((i) => i.starter && i.new && !named.has(i.player)))
+  if (absence) {
+    const i = absence.top
+    pieces.push(injuryRank(i.status) === 0 ? `${i.team} without ${i.player}${i.pos ? ` (${i.pos})` : ''}` : `${i.team}'s ${i.player} doubtful`)
+  }
+
+  // 3. A game away from either home
+  if (g.neutral_site) pieces.push(g.stadium ? `Neutral site: ${g.stadium}` : 'Neutral site')
+
+  // 4. The biggest edge, when it is big
+  const edge = topEdge(c.edges, meta, g.neutral_site)
+  if (edge && edge.strength_pct >= EDGE_MIN_PCT) {
+    pieces.push(`${edge.favors} ${groupOf(meta, edge.id)?.name ?? edge.id} edge, bigger than ${edgePct(edge.strength_pct)}% of matchups`)
+  }
+
+  // 5. Weather, only where it can matter
+  if ((g.roof === 'outdoors' || g.roof === 'open') && (c.weather_concern ?? 0) >= WEATHER_MIN) pieces.push('Weather could be a factor')
+
+  if (pieces.length > 0) return pieces.slice(0, 2).join(' · ')
+  return edge ? 'No standout edge' : null
+}
+
+/** `The league's 3rd-most pass-heavy offense (JAX) faces its most blitz-heavy defense (BAL)`; null when nothing is stark. */
+export function contrastLine(g: GameRow): string | null {
+  const x = g.card?.contrast
+  if (g.result != null || !x) return null
+  const rank = (n: number) => (n === 1 ? 'most' : `${ordinal(n)}-most`)
+  return `The league's ${rank(x.off_rank)} ${x.off_label} offense (${x.offense}) faces its ${rank(x.def_rank)} ${x.def_label} defense (${x.defense})`
 }

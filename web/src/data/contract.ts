@@ -106,6 +106,24 @@ export const MarketLine = z.looseObject({
   source: nstr,
 })
 
+const qbSides = z.looseObject({ home: nstr.default(null), away: nstr.default(null) }).default({ home: null, away: null })
+
+/** What a slate card needs beyond the row (U4). Absent from files built before it, so the whole block is optional. */
+export const CardData = z.looseObject({
+  edges: z.record(z.string(), z.looseObject({ favors: nstr, strength_pct: nnum })).default({}),
+  injuries: z
+    .array(z.looseObject({ team: z.string(), player: z.string(), pos: nstr, status: z.string(), starter: z.boolean().default(false), new: z.boolean().default(false) }))
+    .default([]),
+  usual_qb: qbSides,
+  last_qb: qbSides,
+  charted_qb: qbSides,
+  weather_concern: nnum.default(null),
+  contrast: z
+    .looseObject({ offense: z.string(), defense: z.string(), off_label: z.string(), def_label: z.string(), off_rank: num, def_rank: num })
+    .nullable()
+    .default(null),
+})
+
 export const GameRow = z.looseObject({
   game_id: z.string(),
   season: num,
@@ -121,6 +139,11 @@ export const GameRow = z.looseObject({
   result: z.looseObject({ home_score: nnum, away_score: nnum, margin: num }).nullable(),
   market: MarketLine.nullable(),
   models: z.record(z.string(), ModelPick),
+  // a bad card costs that game its why line, not the week its slate; contract.test.ts checks them
+  card: CardData.nullable().default(null).catch((ctx) => {
+    console.warn('slate card dropped', ctx.error.issues.slice(0, 3))
+    return null
+  }),
 })
 
 export const Slate = z.looseObject({
@@ -515,6 +538,7 @@ export type Approach = z.infer<typeof Approach>
 export type Group = z.infer<typeof Group>
 export type Member = z.infer<typeof Member>
 export type Slate = z.infer<typeof Slate>
+export type CardData = z.infer<typeof CardData>
 export type GameRow = z.infer<typeof GameRow>
 export type ModelPick = z.infer<typeof ModelPick>
 export type Game = z.infer<typeof Game>

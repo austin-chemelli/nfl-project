@@ -381,3 +381,24 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 **Findings.** SearXNG answers 200 with an empty list when its engines are blocked, so nothing flagged it. `qwen3:14b` was still loaded after the failure, which showed games 9 to 15 never reached the model. Reproducing it from the laptop gave 0 pages in 11 seconds, with Brave and Google CSE on "too many requests". Brave blocked after about 5 test queries over a few minutes, so spacing alone wouldn't have been enough. The desktop's own log wasn't available, so the 7 errors are inferred. In a live check, 29 of 30 teams had injury items in their feeds.
 
 **Lesson.** A self-hosted metasearch has no quota, which also means no promise. Questions with a known home shouldn't go through search, and a status code of 200 doesn't mean a search worked.
+
+## 2026-11-04 (later): slate cards lead with the game (U4)
+
+**Why.** Austin's F1: the approaches strip is great, but the card says nothing about the game itself.
+
+**What changed.** Each card now gives the line and total, a "why this game" line, a tendencies contrast when it's stark, then the approaches strip, smaller. Slate rows had no edges, injuries or tendencies, so `site.py` adds an additive `card` block, which makes this job code rather than the web-only change first assumed. Built by two implementer agents in parallel from one spec with a fixed contract, then checked on production data and reviewed by reviewer agents in three rounds. The third found that the first round's fix stopped working at kickoff.
+
+**Findings.** Every line on a card is a public claim, and most of the problems were claims rather than crashes. Neither QB source is reliable alone: replayed days out, 2 of 6 schedule lines named the wrong player (Tyler Huntley days before Lamar Jackson started in Week 8), and depth charts three days out had 20 of 242 game-teams wrong, 2 of 5 lines. So the card needs both, says "listed" when they agree and "starter unclear" when they don't. In Week 9 they disagree for BAL, CLE, PHI and SEA; which is right isn't known. Neutral sites read as large edges for the nominal away team in Venue & weather and Rest & travel (9 of 9 in 2026; the cause wasn't traced through the composites), so `countsAsEdge` excludes them and the card names the stadium. "Usually" named stand-ins on one start or a tie, so it now needs three starts and a clear lead. Absences fired on 119 of 121 games and named backups and long snappers, so a card names only a charted starter, matched by player id, who wasn't Out or Doubtful at the team's last game: 140 of 550 rows in Weeks 1 to 8. That check compares game to game, because two calendar weeks would have hidden Lamar Jackson, out in Week 7 and back in Week 8. Temperature and wind are empty for all of 2026, so the weather note rests on the narrative's score. `blitz_rate` and `pass_rushers_5plus_rate` correlate 0.99998 in 2026 against about 0.9 before, so they count as one stat in the contrasts. Mutation testing was the reviewers' sharpest tool: 9 of 13 data mutants survived the first pass's tests, all of them green.
+
+**Lesson.** Reviewers given real data and told to attack claims rather than code found what a spec-following build couldn't. The spec itself said "starts for". Season test timeouts also came back after the earlier fix: role queries over a 284-row table take about 2 seconds alone, so that file now has its own limit.
+
+## 2026-11-04 (later): job code can merge almost anytime (U4)
+
+**Why.** Austin asked why merges felt so restricted, with a lock most of a day away. The round 2 plan said no job-code merges from Wednesday evening until Thursday's lock, and every chat kept repeating it.
+
+**Findings.** Nothing enforced that. `check_image_matches` in `scripts/cloud-job.sh` only refuses a lock when the image is behind `main` at run time, and an image builds in 3 to 4 minutes, so the rule was about 10 hours wider than the mechanism. A refused lock emails and reruns safely, with 11 hours to spare on Thursday.
+
+**What changed.** The rule is now the real one, in `docs/runbook.md` and the hub: merge job code anytime except the last 10 minutes before a lock. Dry-runs are for risky changes, not every merge. Model changes still ship with their refit, because the lock checks each fit against its config. A backup lock run is open as D9.
+
+**Lesson.** Check what a process rule enforces before repeating it. A cautious line in a plan turned into a freeze because nobody tested it against the code.
+

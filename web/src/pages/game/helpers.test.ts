@@ -197,3 +197,46 @@ describe('phaseSummary', () => {
     expect(phaseSummary(r('home', 'away', null))).toBe('CAR and GB split the phases 1–1')
   })
 })
+
+describe('edges that are not edges', () => {
+  it('keeps the bar but not the label on a venue row, and on a neutral site a rest row too', () => {
+    const pp = (v: number) => ({ pp: v, features: {} })
+    const g = {
+      ...game, neutral_site: true,
+      edges: { venue_weather: { favors: 'CAR', strength_pct: 98 }, rest_travel: { favors: 'CAR', strength_pct: 93 }, quality: { favors: 'GB', strength_pct: 90 } },
+      contributions: { global: { p_home: 0.5, home_field_pp: 0, groups: { venue_weather: pp(-4), rest_travel: pp(-1), quality: pp(7) } } },
+    } as unknown as Game
+    const rows = Object.fromEntries(previewRows(g, meta, null).map((r) => [r.id, r]))
+    expect(rows.venue_weather).toMatchObject({ edge: '', pct: null, pp: -4 })
+    expect(rows.rest_travel).toMatchObject({ edge: '', pct: null, pp: -1 })
+    expect(rows.quality.edge).toBe('GB, 90th pct')
+    expect(previewRows({ ...g, neutral_site: false }, meta, null).find((r) => r.id === 'rest_travel')?.edge).toBe('CAR, 93rd pct')
+  })
+  it('leaves them out of the edge list', () => {
+    const edges = { venue_weather: { favors: 'CAR', strength_pct: 98 }, rest_travel: { favors: 'CAR', strength_pct: 93 }, quality: { favors: 'GB', strength_pct: 100 } }
+    expect(edgeRows(edges, meta, true).rows.map((r) => r.id)).toEqual(['quality'])
+    expect(edgeRows(edges, meta).rows.map((r) => r.id)).toEqual(['quality', 'rest_travel'])
+    expect(edgeRows(edges, meta).rows[0].sentence).toContain('99th percentile')
+  })
+})
+
+describe('home field on a neutral site', () => {
+  const venue = (pp: number, n: number) => ({ pp, features: { 'environment.neutral_site': n, 'environment.is_turf': pp - n } })
+  const c = (hf: number, pp: number, n: number) => ({ p_home: 0.5, home_field_pp: hf, groups: { venue_weather: venue(pp, n) } })
+  const g = (neutral: boolean) => ({ ...game, neutral_site: neutral, edges: {}, contributions: { global: c(6, -3.2, -3.8), student: c(6.3, -4, -4.6) } }) as unknown as Game
+
+  it('moves the neutral-site discount from Venue & weather onto the home field row', () => {
+    const rows = Object.fromEntries(previewRows(g(true), meta, 'student').map((r) => [r.id, r]))
+    expect(rows.home_field.pp).toBeCloseTo(2.2)
+    expect(rows.home_field.overlay).toBeCloseTo(1.7)
+    expect(rows.venue_weather.pp).toBeCloseTo(0.6)
+    expect(rows.venue_weather.overlay).toBeCloseTo(0.6)
+    expect(rows.home_field.edge).toBe('neutral site')
+  })
+  it('leaves a home game alone', () => {
+    const rows = Object.fromEntries(previewRows(g(false), meta, 'student').map((r) => [r.id, r]))
+    expect(rows.home_field).toMatchObject({ pp: 6, overlay: 6.3 })
+    expect(rows.venue_weather.pp).toBeCloseTo(-3.2)
+  })
+})
+

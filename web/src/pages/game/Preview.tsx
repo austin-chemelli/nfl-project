@@ -8,7 +8,7 @@ import { DivergingBars, TipNote, TipRow, TipTitle } from '../../charts'
 import { DataTable, Section, Segmented, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
 import { pct, ptsFor, ptsToward } from '../../lib/format'
-import { approachOf } from '../../lib/meta'
+import { approachOf, edgePct } from '../../lib/meta'
 import { SHORT } from '../../lib/models'
 import { contribOrder, lineMoveChip, previewRows } from './helpers'
 import { Edges } from './Sections'
@@ -76,7 +76,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
               <TipTitle note={r.help}>{r.name}</TipTitle>
               {r.pp != null && <TipRow color={side(r.pp)} value={ptsFor(r.pp)} label={`toward ${r.pp >= 0 ? g.home : g.away}, by history`} />}
               {r.overlay != null && <TipRow color="var(--text-primary)" value={ptsFor(r.overlay)} label={`toward ${r.overlay >= 0 ? g.home : g.away}, the ${name}`} />}
-              {r.pct != null && r.edge !== 'about even' && <TipNote>Bigger than {Math.round(r.pct)}% of matchups since 2005.</TipNote>}
+              {r.pct != null && r.edge !== 'about even' && <TipNote>Bigger than {edgePct(r.pct)}% of matchups since 2005.</TipNote>}
             </>
           ),
         }))}
