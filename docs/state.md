@@ -90,7 +90,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
-| narrative-sources | `narrative-sources` | `~/dev/nfl-project-sources` | fix the 2026-11-04 pass failures: feeds and Tavily before search, resumable passes, failure detail, reset instead of pull | PR open 2026-11-05; must merge before the Sat 2026-11-07 07:00 ET pass | see the board |
+| narrative-sources | `narrative-sources` | `~/dev/nfl-project-sources` | fix the 2026-11-04 pass failures: feeds and Tavily before search, resumable passes, failure detail, reset instead of pull | PR open 2026-11-05; merge after the Thu 09:00 lock, before the Sat 2026-11-07 07:00 ET pass | #15 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
 
 ## Milestones
