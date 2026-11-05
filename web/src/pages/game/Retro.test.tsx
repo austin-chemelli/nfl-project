@@ -13,7 +13,7 @@ describe('Retro', () => {
   it('renders headlines and the forecast table with the best model highlighted', () => {
     const { container } = render(<Retro r={r} />)
     expect(screen.getAllByText(/Green Bay lost 3 of its 3 fumbles/, { selector: 'li' }).length).toBeGreaterThan(0)
-    expect(screen.getByText(/The Traditionalist came closest/)).toBeInTheDocument()
+    expect(screen.queryByText(/came closest/)).toBeNull()
     const best = container.querySelectorAll('tr[data-best]')
     expect(best).toHaveLength(1)
     expect(within(best[0] as HTMLElement).getByText('The Traditionalist')).toBeInTheDocument()
@@ -22,13 +22,43 @@ describe('Retro', () => {
     expect(within(market).getByText('reference')).toBeInTheDocument()
   })
 
-  it('shows played-like, a luck sentence, net luck and the most valuable group', () => {
-    render(<Retro r={r} />)
+  it('shows played-like with what goes into it, and leaves it out on a record from before schema 3', () => {
+    const { unmount } = render(<Retro r={r} />)
     expect(screen.getByRole('img', { name: /Played like: GB 61%, CAR 39%/ })).toBeInTheDocument()
     expect(screen.getByText('✓ won')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /GB: net swing −9\.6 pts/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /CAR: net swing \+5\.3 pts/ })).toBeInTheDocument()
+    expect(screen.getByText('decides it')).toBeInTheDocument()
+    expect(screen.getByText('context')).toBeInTheDocument()
+    expect(screen.getByText(/Before any plays, the home side wins 59% of the time\. GB's edge of 0\.009 EPA a play moves GB to 61%\./)).toBeInTheDocument()
+    unmount()
+    const old = structuredClone(r)
+    Object.assign(old.played_like, { home_epa: null, away_epa: null, home_success: null, away_success: null, p_base: null })
+    render(<Retro r={old} />)
+    expect(screen.queryByText('decides it')).toBeNull()
+  })
+
+  it('splits the swing plays into variance and pure luck, and hides Global', () => {
+    render(<Retro r={r} />)
+    expect(screen.getByRole('heading', { name: /^Swing plays/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Variance' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Pure luck' })).toBeInTheDocument()
+    expect(screen.getByText('CAR +14.9')).toBeInTheDocument() // GB net −9.6, CAR +5.3
     expect(screen.getAllByText(/lost 3 of its 3 fumbles; about 1\.6/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Global fit/)).toBeNull()
+  })
+
+  it('shows who won each phase, and nothing on a record without them', () => {
+    const { container, unmount } = render(<Retro r={r} />)
+    expect(screen.getByRole('heading', { name: /^Phase by phase/ })).toBeInTheDocument()
+    expect(screen.getByText('CAR won 4 of 8 phases')).toBeInTheDocument() // GB 3, one even
+    expect(container.querySelectorAll('[data-won]')).toHaveLength(7)
+    expect(screen.getByText('2 of 4')).toBeInTheDocument()
+    unmount()
+    render(<Retro r={{ ...r, phases: [] }} />)
+    expect(screen.queryByRole('heading', { name: /^Phase by phase/ })).toBeNull()
+  })
+
+  it('names the most valuable group', () => {
+    render(<Retro r={r} />)
     // defaults to the best model (Traditionalist); its most valuable group is labeled
     expect(screen.getByText(/Most valuable for The Traditionalist/)).toBeInTheDocument()
     expect(screen.getByText(/read their order, not their size/)).toBeInTheDocument()
@@ -45,6 +75,6 @@ describe('Retro', () => {
     const w1 = structuredClone(r)
     for (const t of [w1.teams.home, w1.teams.away]) for (const e of t.efficiency) Object.assign(e, { season: null, league: null, season_games: 0 })
     render(<Retro r={w1} />)
-    expect(screen.getAllByRole('heading', { name: /net swing/ })).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: 'Variance' })).toBeInTheDocument()
   })
 })

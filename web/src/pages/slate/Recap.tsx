@@ -23,7 +23,7 @@ function vsMarket(v: number | null | undefined): string {
 }
 
 function RecapBlock({ r }: { r: WeekRecap }) {
-  const models = [...r.models].sort((a, b) => (a.rank || 99) - (b.rank || 99))
+  const models = r.models.filter((m) => m.kind !== 'global').sort((a, b) => (a.rank || 99) - (b.rank || 99))
   return (
     <div role="region" aria-label={`Week ${r.week} recap`} className="flex flex-col gap-3">
       <SummaryStrip label={`Week ${r.week} summary`}>

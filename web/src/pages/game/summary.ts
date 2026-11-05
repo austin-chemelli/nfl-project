@@ -155,14 +155,14 @@ function finishedTiles(g: Game, r: RetroGame): TileSpec[] {
   const pl = r.played_like
   const plP = pl.favored === r.home ? pl.p_home : 1 - pl.p_home
   const tie = winnerOf(g) == null
+  const right_ = {
+    id: 'right', label: 'Approaches right', tab: 'retro' as const,
+    value: tie || approaches.length === 0 ? '–' : `${right.length} of ${approaches.length}`,
+    sub: [tie ? 'a tie' : null, best ? `best read: ${best.label.replace(/^The /, '')}` : 'no approach forecasts'].filter(Boolean).join(' · '),
+    modelId: best?.model_id,
+  }
   const tiles: TileSpec[] = [
     resultTile(g, 'retro'),
-    {
-      id: 'right', label: 'Approaches right', tab: 'retro',
-      value: tie || approaches.length === 0 ? '–' : `${right.length} of ${approaches.length}`,
-      sub: [tie ? 'a tie' : null, best ? `best read: ${best.label.replace(/^The /, '')}` : 'no approach forecasts'].filter(Boolean).join(' · '),
-      modelId: best?.model_id,
-    },
     plP - 0.5 < TOSS_UP
       ? { id: 'played', label: 'Played like', tab: 'retro', value: 'About even', sub: `${pl.favored} ${pct(plP)} by efficiency` }
       : {
@@ -174,18 +174,20 @@ function finishedTiles(g: Game, r: RetroGame): TileSpec[] {
   ]
   const s = surpriseTile(r)
   if (s) tiles.push(s)
+  tiles.push(right_) // the game first, the approaches last
   return tiles
 }
 
-/** Which way the swing plays went (net), with the pure-luck part. */
+/** Which way the swing plays went, split into the two parts that add up to it. */
 function swingTile(r: RetroGame): TileSpec {
   const net = r.teams.home.luck_net - r.teams.away.luck_net
   const pure = pureLuck(r.teams.home) - pureLuck(r.teams.away)
   const side = (x: number) => (x >= 0 ? r.home : r.away)
+  const part = (x: number) => (Math.abs(x) < 1 ? 'even' : `${side(x)} +${one(x)}`)
   return {
     id: 'swing', label: 'Swing plays', tab: 'retro', team: Math.abs(net) < 1 ? undefined : side(net),
     value: Math.abs(net) < 1 ? 'Even' : `${side(net)} +${one(net)} pts`,
-    sub: Math.abs(pure) < 1 ? 'pure luck about even' : `pure luck ${side(pure)} +${one(pure)}`,
+    sub: `variance ${part(net - pure)} · pure luck ${part(pure)}`,
   }
 }
 

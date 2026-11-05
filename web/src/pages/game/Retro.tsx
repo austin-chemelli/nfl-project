@@ -7,22 +7,25 @@ import { FinePrint } from '../../components/FinePrint'
 import { Help } from '../../components/Help'
 import { Card, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Efficiency, GradedPick, RetroGame, TeamRetro } from '../../data/contract'
-import { DivergingBars, RangeRow, type RangeRowData } from '../../charts'
-import { dash, fmtEff, pct, pts } from '../../lib/format'
+import { DivergingBars, RangeRow, TipNote, TipRow, TipTitle, type RangeRowData } from '../../charts'
+import { dash, fmtEff, pct, pts, ptsFor, ptsSide } from '../../lib/format'
+import { phaseSummary, playedLikeSteps, swingRows, type SwingRow } from './helpers'
 
 export function Retro({ r }: { r: RetroGame }) {
   return (
     <div className="flex flex-col gap-8">
       <Headlines r={r} />
       <PlayedLike r={r} />
+      <Phases r={r} />
       <EfficiencySection r={r} />
-      <LuckSection r={r} />
+      <SwingSection r={r} />
       <Forecasts r={r} />
       <Groups key={r.game_id} r={r} />
       <FinePrint>
         <p>The retrospective describes the game; it does not prove why it went that way. Every number is computed from play-by-play, and every sentence is filled in from those numbers.</p>
-        <p>"Expected" comes from league rates in the same situations (2015–2025), and swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played.</p>
+        <p>"Expected" comes from league rates in the same situations (2015–2025), and swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played, so they are variance rather than luck.</p>
         <p>In the forecast table, dimmed rows are references (the market and simple baselines), not entrants, and cannot be "best". One game is a very noisy score for any model.</p>
+        <p>Phases are a count, not a score: they aren't worth the same as each other, and none of them feeds the played-like verdict. Some overlap with the swing plays below.</p>
         <p>Group values overlap and do not add up to anything: read their order, not their size.</p>
       </FinePrint>
     </div>
@@ -47,6 +50,8 @@ function Headlines({ r }: { r: RetroGame }) {
 // ------------------------------------------------------------------------------------ forecasts
 
 const isRef = (p: GradedPick) => p.kind !== 'approach'
+/** Global is a diagnostic, not a line anyone follows, so it isn't on the game page. */
+const shown = (p: GradedPick) => p.kind !== 'global'
 
 function Forecasts({ r }: { r: RetroGame }) {
   return (
@@ -70,7 +75,7 @@ function Forecasts({ r }: { r: RetroGame }) {
             </tr>
           </thead>
           <tbody>
-            {r.predictions.map((p) => (
+            {r.predictions.filter(shown).map((p) => (
               <PickRow key={p.model_id} p={p} />
             ))}
           </tbody>
@@ -135,10 +140,88 @@ function PlayedLike({ r }: { r: RetroGame }) {
           role="img"
           aria-label={`Played like: ${r.home} ${homeW}%, ${r.away} ${100 - homeW}%`}
         >
-          <div style={{ width: `${100 - homeW}%`, background: 'var(--text-muted)' }} />
-          <div style={{ width: `${homeW}%`, background: 'var(--text-secondary)' }} />
+          <div style={{ width: `${100 - homeW}%`, background: 'var(--team-away)' }} />
+          <div style={{ width: `${homeW}%`, background: 'var(--team-home)' }} />
         </div>
         <p className="mt-3 text-[14px] text-ink-2">{pl.sentence}</p>
+        <PlayedLikeInputs r={r} />
+      </Card>
+    </Section>
+  )
+}
+
+/** What went into the verdict. Absent on retros built before schema 3. */
+function PlayedLikeInputs({ r }: { r: RetroGame }) {
+  const steps = playedLikeSteps(r)
+  if (!steps) return null
+  return (
+    <div className="mt-3 border-t border-line pt-3">
+      <h3 className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-3">What goes into it</h3>
+      <TableScroll>
+        <table className="w-full border-collapse text-[14px]">
+          <thead>
+            <tr><th className={th}>Turnovers aside</th><th className={th}>{r.away}</th><th className={th}>{r.home}</th><th className={th}>Role</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className={td}><Help text="Expected points added per play, leaving out interceptions and lost fumbles. This is the one number the verdict is built on.">EPA per play</Help></td>
+              <td className={`${td} tabular`}>{steps.awayEpa}</td>
+              <td className={`${td} tabular`}>{steps.homeEpa}</td>
+              <td className={`${td} text-ink-2`}>decides it</td>
+            </tr>
+            <tr className="text-ink-3">
+              <td className={td}><Help text="Share of plays that improved the scoring outlook. It tracks EPA so closely that it adds nothing once EPA is counted, so it carries no weight here.">Success rate</Help></td>
+              <td className={`${td} tabular`}>{steps.awaySuccess}</td>
+              <td className={`${td} tabular`}>{steps.homeSuccess}</td>
+              <td className={td}>context</td>
+            </tr>
+          </tbody>
+        </table>
+      </TableScroll>
+      <p className="mt-2 text-[13px] text-ink-2">{steps.sentence}</p>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------------------- phases
+
+function Phases({ r }: { r: RetroGame }) {
+  if (r.phases.length === 0) return null
+  const cell = (side: 'home' | 'away', p: RetroGame['phases'][number]) => {
+    const won = p.leader === side
+    const text = side === 'home' ? p.home_text : p.away_text
+    return (
+      <td className={`${td} tabular whitespace-nowrap`}>
+        <span
+          data-won={won || undefined}
+          className={`inline-block min-w-16 rounded px-2 py-0.5 ${won ? 'font-semibold text-ink' : 'text-ink-3'}`}
+          style={won ? { background: `color-mix(in srgb, var(--team-${side}) 32%, transparent)` } : undefined}
+        >
+          {text}
+        </span>
+      </td>
+    )
+  }
+  return (
+    <Section title="Phase by phase" help="Who won each part of the game. It's a description of how the game went, not a score: phases aren't worth the same, and none of them feeds the played-like verdict.">
+      <Card>
+        <p className="mb-2 text-[15px] font-semibold">{phaseSummary(r)}</p>
+        <TableScroll>
+          <table className="w-full border-collapse text-[14px]">
+            <thead>
+              <tr><th className={th}>Phase</th><th className={th}>{r.away}</th><th className={th}>{r.home}</th></tr>
+            </thead>
+            <tbody>
+              {r.phases.map((p) => (
+                <tr key={p.phase}>
+                  <td className={td}><Help text={p.note}>{p.label}</Help></td>
+                  {cell('away', p)}
+                  {cell('home', p)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
       </Card>
     </Section>
   )
@@ -202,7 +285,7 @@ function RangeLegend() {
       <span className={item}><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--good)]" /> This game, better</span>
       <span className={item}><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--critical)]" /> worse</span>
       <span className={item}><span className="inline-block h-3 w-0.5 bg-[var(--text-muted)]" /> League average</span>
-      <span className={item}><span className="inline-block h-2.5 w-5 rounded-sm bg-[var(--div-mid)]" /> Typical range</span>
+      <span className={item}><span className="inline-block h-2.5 w-5 rounded-sm bg-[var(--band-strong)]" /> Typical range</span>
     </div>
   )
 }
@@ -231,7 +314,14 @@ function TeamEfficiency({ t }: { t: TeamRetro }) {
                   lo: e.league_lo,
                   hi: e.league_hi,
                   verdict: v,
-                  title: `${e.label}: this game ${fmtEff(e.game, u)}, season to date ${fmtEff(e.season, u)} (${e.season_games} games), league ${fmtEff(e.league, u)}${e.league_lo != null && e.league_hi != null ? `, typical team ${fmtEff(e.league_lo, u)} to ${fmtEff(e.league_hi, u)}` : ''}. ${VERDICT_TEXT[v]}`,
+                  tip: (
+                    <>
+                      <TipTitle note={VERDICT_TEXT[v]}>{e.label}</TipTitle>
+                      <TipRow color={v === 'better' ? 'var(--good)' : v === 'worse' ? 'var(--critical)' : undefined} value={fmtEff(e.game, u)} label="this game" />
+                      <TipRow color="var(--text-secondary)" value={fmtEff(e.season, u)} label={`season to date (${e.season_games} games)`} />
+                      <TipNote>League average {fmtEff(e.league, u)}{e.league_lo != null && e.league_hi != null ? `; most teams ${fmtEff(e.league_lo, u)} to ${fmtEff(e.league_hi, u)}` : ''}.</TipNote>
+                    </>
+                  ),
                 }
               })
               return <RangeRow key={u} rows={rows} format={(x) => fmtEff(x, u)} formatDelta={(d) => effDelta(d, u)} legend={false} labelWidth={150} />
@@ -243,70 +333,65 @@ function TeamEfficiency({ t }: { t: TeamRetro }) {
   )
 }
 
-// ------------------------------------------------------------------------------------ luck
+// ----------------------------------------------------------------------------------- swing plays
 
-function LuckSection({ r }: { r: RetroGame }) {
+function SwingSection({ r }: { r: RetroGame }) {
+  const { variance, pure, net } = swingRows(r)
+  // one scale for both charts: a 2-point swing must look smaller than a 12-point one wherever it sits
+  const domain = Math.max(1, ...[...variance, ...pure].map((x) => Math.abs(x.value))) * 1.1
   return (
     <Section
-      title="Luck and swing plays"
-      help="Events that swing games, each compared with what was expected (league rates in the same situations; for 3rd and 4th downs, adjusted for both teams' form this season) and priced in points by what such events are worth on average. Positive helped that team. Fumble recoveries, kicks and return plays are mostly luck; the ones marked partly skill also reflect how the team played."
+      title="Swing plays"
+      help="Events that swing games, each compared with what was expected (league rates in the same situations; for 3rd and 4th downs, adjusted for both teams' form this season) and priced in points by what such events are worth on average. One team's missed kick is the other's gain, so each bar shows the net between the two."
     >
-      <div className="grid gap-4 lg:grid-cols-2">
-        <TeamLuck t={r.teams.away} />
-        <TeamLuck t={r.teams.home} />
-      </div>
+      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
+        Efficiency says how well each team played; this says how the swings fell. The two overlap on purpose: a third down counts in both, asked a different way.
+      </p>
+      <Card>
+        <p className="mb-3 text-[15px] font-semibold">
+          {Math.abs(net) < 0.05 ? 'The swing plays came out even' : <>Swing plays: <span className="tabular">{ptsSide(net, r.home, r.away)}</span></>}
+        </p>
+        <SwingChart r={r} title="Variance" note="Conversions, interceptions and penalties: they went a team's way, but how it played had a hand in it." rows={variance} domain={domain} />
+        <SwingChart r={r} title="Pure luck" note="Fumble bounces, kicks and return plays." rows={pure} domain={domain} />
+        <details className="mt-3 border-t border-line pt-2 text-[13px] text-ink-2">
+          <summary className="cursor-pointer text-ink-3 hover:text-ink">What each swing was</summary>
+          <ul className="mt-2 space-y-1.5">
+            {[...variance, ...pure].flatMap((x) => x.teams.filter((t) => t.swing !== 0).map((t) => (
+              <li key={`${x.key}-${t.team}`}><span className="font-medium text-ink">{t.team}, {x.label}</span>: {t.sentence}</li>
+            )))}
+          </ul>
+        </details>
+      </Card>
     </Section>
   )
 }
 
-function TeamLuck({ t }: { t: TeamRetro }) {
-  const rows = [
-    ...t.luck.map((f) => ({
-      key: f.factor,
-      label: f.partly_skill ? `${f.label} *` : f.label,
-      value: f.swing_pts,
-      title: f.sentence,
-    })),
-    { key: 'net', label: 'Net swing', value: t.luck_net, title: `Net swing for ${t.team}: ${pts(t.luck_net)}`, color: 'var(--text-secondary)' },
-  ]
-  const hasPartly = t.luck.some((f) => f.partly_skill)
-  const pure = Math.round(t.luck.filter((f) => !f.partly_skill).reduce((a, f) => a + f.swing_pts, 0) * 10) / 10
+function SwingChart({ r, title, note, rows, domain }: { r: RetroGame; title: string; note: string; rows: SwingRow[]; domain: number }) {
+  if (rows.length === 0) return null
   return (
-    <Card>
-      <h3 className="text-[15px] font-semibold">
-        {t.team}: net swing <span className="tabular">{pts(t.luck_net)}</span>
-      </h3>
-      <p className="mb-2 text-[13px] text-ink-2">
-        Pure luck (fumble recoveries, kicks, return plays): <span className="tabular font-medium text-ink">{pts(pure)}</span>
-      </p>
+    <div className="mb-4">
+      <h3 className="text-[14px] font-semibold">{title}</h3>
+      <p className="mb-1 text-[13px] text-ink-3">{note}</p>
       <DivergingBars
-        rows={rows.map((x) => ({ ...x, label: x.key === 'net' ? <b>{x.label}</b> : x.label }))}
-        leftLabel="hurt"
-        rightLabel="helped"
-        format={(v) => pts(v)}
-        labelWidth={150}
+        leftLabel={`toward ${r.away}`}
+        rightLabel={`toward ${r.home}`}
+        leftColor="var(--team-away)"
+        rightColor="var(--team-home)"
+        format={ptsFor}
+        domain={domain}
+        labelWidth={210}
+        rows={rows.map((x) => ({
+          key: x.key, label: x.label, value: x.value,
+          tip: (
+            <>
+              <TipTitle>{x.label}</TipTitle>
+              {x.teams.map((t) => <TipRow key={t.team} color={t.team === r.home ? 'var(--team-home)' : 'var(--team-away)'} value={pts(t.swing)} label={t.team} />)}
+              <TipNote>{x.teams.find((t) => t.swing !== 0)?.sentence}</TipNote>
+            </>
+          ),
+        }))}
       />
-      <details className="mt-3 border-t border-line pt-2 text-[13px] text-ink-2">
-        <summary className="cursor-pointer text-ink-3 hover:text-ink">What each swing was</summary>
-      <ul className="mt-2 space-y-1.5">
-        {t.luck.map((f) => (
-          <li key={f.factor}>
-            <span className="font-medium text-ink">{f.label}</span>
-            {f.partly_skill && (
-              <>
-                {' '}
-                <Help text="Part of this swing is skill (the team's own play), so it is not all luck.">
-                  <span className="text-ink-3">partly skill</span>
-                </Help>
-              </>
-            )}
-            : {f.sentence}
-          </li>
-        ))}
-      </ul>
-      </details>
-      {hasPartly && <p className="mt-2 text-[12px] text-ink-3">* partly skill, not pure luck.</p>}
-    </Card>
+    </div>
   )
 }
 

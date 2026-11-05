@@ -1,6 +1,6 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
-import type { Contribution, Game, Meta, Tendency } from '../../data/contract'
-import { fmtUnit } from '../../lib/format'
+import type { Contribution, Game, Meta, RetroGame, Tendency } from '../../data/contract'
+import { fmtUnit, pct } from '../../lib/format'
 import { groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
 import { APPROACHES } from '../../lib/models'
 
@@ -91,6 +91,54 @@ export function lineMoveChip(g: Game): string | null {
   const n = Math.abs(v)
   const article = /^(8|11|18)(\.|$)/.test(String(n)) ? 'an' : 'a'
   return `Followed ${article} ${n}-point line move toward ${v > 0 ? g.home : g.away}`
+}
+
+// -------------------------------------------------------------------------------------- retro
+
+export type SwingRow = { key: string; label: string; value: number; teams: { team: string; swing: number; sentence: string }[] }
+
+/**
+ * The swing factors with both teams on one bar, so the opponent's missed kick reads as your gain:
+ * value = home's swing minus away's, toward home when positive. Split as the record flags them:
+ * variance also reflects how a team played, pure luck doesn't. Factors nobody moved are left out.
+ */
+export function swingRows(r: RetroGame): { variance: SwingRow[]; pure: SwingRow[]; net: number } {
+  const { home, away } = r.teams
+  const rows = home.luck.flatMap((h) => {
+    const a = away.luck.find((x) => x.factor === h.factor)
+    const swing = a?.swing_pts ?? 0
+    if (h.swing_pts === 0 && swing === 0) return []
+    const row: SwingRow = {
+      key: h.factor, label: h.label, value: Math.round((h.swing_pts - swing) * 10) / 10,
+      teams: [{ team: away.team, swing, sentence: a?.sentence ?? '' }, { team: home.team, swing: h.swing_pts, sentence: h.sentence }],
+    }
+    return [{ row, skill: h.partly_skill }]
+  })
+  return {
+    variance: rows.filter((x) => x.skill).map((x) => x.row),
+    pure: rows.filter((x) => !x.skill).map((x) => x.row),
+    net: Math.round((home.luck_net - away.luck_net) * 10) / 10,
+  }
+}
+
+/** "GB won 5 of 8 phases" over the ones with a winner; a tie between the teams says so. */
+export function phaseSummary(r: RetroGame): string {
+  const home = r.phases.filter((p) => p.leader === 'home').length
+  const away = r.phases.filter((p) => p.leader === 'away').length
+  if (home === away) return `${r.away} and ${r.home} split the phases ${home}–${away}`
+  return `${home > away ? r.home : r.away} won ${Math.max(home, away)} of ${r.phases.length} phases`
+}
+
+/** The played-like verdict step by step, in win chances; null on a retro from before schema 3. */
+export function playedLikeSteps(r: RetroGame) {
+  const { home_epa: h, away_epa: a, home_success: hs, away_success: as, p_base: base, p_home: p } = r.played_like
+  if (h == null || a == null || hs == null || as == null || base == null) return null
+  const leader = h >= a ? r.home : r.away
+  const gap = Math.abs(h - a)
+  return {
+    homeEpa: fmtUnit(h, 'epa'), awayEpa: fmtUnit(a, 'epa'), homeSuccess: pct(hs), awaySuccess: pct(as),
+    sentence: `Before any plays, the home side wins ${pct(base)} of the time. ${leader}'s edge of ${gap.toFixed(3)} EPA a play moves ${r.home} to ${pct(p)}.`,
+  }
 }
 
 // ---------------------------------------------------------------------------------------- edges

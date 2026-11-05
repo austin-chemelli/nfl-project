@@ -14,7 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"  # v3 2026-11-04: played-like inputs, the phase scorecard; game-only headlines
 
 Side = Literal["home", "away"]
 Unit = Literal["epa", "pct", "pp", "count", "yards", "points"]
@@ -124,6 +124,27 @@ class PlayedLike(_Model):
     favored: str  # team code the efficiency favored
     matches_result: bool | None  # None for a tie
     sentence: str
+    # What went in (None on records from before v3). Interceptions and lost fumbles are out of both
+    # rates. EPA is the fit's one input; success rate is context (see expectations.py).
+    home_epa: float | None = None
+    away_epa: float | None = None
+    home_success: float | None = None
+    away_success: float | None = None
+    p_base: float | None = None  # the home side's win chance before any plays: the fit's intercept
+
+
+class Phase(_Model):
+    """One part of the game, both teams side by side. Descriptive: a phase carries no weight in
+    the played-like verdict, and phases aren't worth the same as each other."""
+
+    phase: str  # passing, rushing, explosive, third_down, red_zone, special_teams, field_position, turnovers
+    label: str
+    note: str
+    home: float | None  # None when the phase didn't come up (no red-zone trip)
+    away: float | None
+    home_text: str
+    away_text: str
+    leader: Side | None  # None when even, or when one side has nothing to compare
 
 
 class GradedPick(_Model):
@@ -170,6 +191,7 @@ class RetroGame(_Model):
     expectations_version: str
     headlines: list[str] = Field(min_length=1, max_length=6)
     played_like: PlayedLike
+    phases: list[Phase] = []
     teams: dict[Side, TeamRetro]
     predictions: list[GradedPick]
     best_model: str | None

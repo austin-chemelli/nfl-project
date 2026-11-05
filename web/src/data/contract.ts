@@ -285,6 +285,11 @@ export const Attribution = z.looseObject({
   most_valuable: nstr,
 })
 
+export const Phase = z.looseObject({
+  phase: z.string(), label: z.string(), note: z.string(), home: nnum, away: nnum,
+  home_text: z.string(), away_text: z.string(), leader: z.enum(['home', 'away']).nullable(),
+})
+
 export const RetroGame = z.looseObject({
   schema_version: z.string(),
   game_id: z.string(),
@@ -298,7 +303,12 @@ export const RetroGame = z.looseObject({
   pbp_snapshot_ts: z.string(),
   expectations_version: z.string(),
   headlines: z.array(z.string()),
-  played_like: z.looseObject({ p_home: num, favored: z.string(), matches_result: z.boolean().nullable(), sentence: z.string() }),
+  played_like: z.looseObject({
+    p_home: num, favored: z.string(), matches_result: z.boolean().nullable(), sentence: z.string(),
+    // what went in; retros from before schema 3 lack them
+    home_epa: nnum.default(null), away_epa: nnum.default(null), home_success: nnum.default(null), away_success: nnum.default(null), p_base: nnum.default(null),
+  }),
+  phases: z.array(Phase).default([]), // retros from before schema 3 lack it
   teams: z.looseObject({ home: TeamRetro, away: TeamRetro }),
   predictions: z.array(GradedPick),
   best_model: nstr,

@@ -47,6 +47,7 @@ from nfl.retro.schema import (
     GradedPick,
     GroupValue,
     LuckFactor,
+    Phase,
     PlayedLike,
     Result,
     RetroGame,
@@ -66,7 +67,7 @@ PLAY_COLS = [
     "special_teams_play", "down", "ydstogo", "third_down_converted", "third_down_failed",
     "fourth_down_converted", "fourth_down_failed", "field_goal_attempt", "field_goal_result",
     "kick_distance", "extra_point_attempt", "extra_point_result", "penalty_team", "penalty_yards",
-    "return_touchdown", "td_team", "punt_blocked",
+    "return_touchdown", "td_team", "punt_blocked", "drive", "yardline_100", "touchdown",
 ]  # fmt: skip
 
 OFF_LABELS = {
@@ -574,7 +575,12 @@ def _played_like(
         f"Teams that played as efficiently as {nm} did here (turnovers aside) win "
         f"{round(100 * p_fav):d}% of the time; {nm} {tail}."
     )
-    return PlayedLike(p_home=p_home, favored=fav, matches_result=matches, sentence=sentence)
+    return PlayedLike(
+        p_home=p_home, favored=fav, matches_result=matches, sentence=sentence,
+        home_epa=round(h_e, 3), away_epa=round(a_e, 3),
+        home_success=round(h_s, 3), away_success=round(a_s, 3),
+        p_base=round(_expit(fit.intercept), 4),
+    )  # fmt: skip
 
 
 # ----------------------------------------------------------------------------------- predictions
@@ -658,6 +664,129 @@ def _attribution(r: dict, meta: dict, y: float, feature_group: dict, groups: dic
     )
 
 
+# ------------------------------------------------------------------------------------------ phases
+
+KICK_TYPES = ["kickoff", "punt", "field_goal", "extra_point"]
+
+
+def _phase(
+    phase: str, label: str, note: str, vals: dict[str, float | None], text: dict[str, str],
+    higher_is_better: bool = True,
+) -> Phase:  # fmt: skip
+    """`vals` and `text` are keyed home and away. Two values that print the same are even."""
+    h, a = vals["home"], vals["away"]
+    leader = None
+    if h is not None and a is not None and text["home"] != text["away"]:
+        leader = "home" if (h > a) == higher_is_better else "away"
+    return Phase(
+        phase=phase, label=label, note=note, home=h, away=a,
+        home_text=text["home"], away_text=text["away"], leader=leader,
+    )  # fmt: skip
+
+
+def _yard_line(y: float) -> str:
+    r = round(y)
+    return "midfield" if r == 50 else f"own {r}" if r < 50 else f"opp {100 - r}"
+
+
+def _phases(game: pl.DataFrame, teams: dict[str, TeamRetro], home: str, away: str) -> list[Phase]:
+    """Who won each part of the game. The first three reuse the efficiency rows, so the page shows
+    one number for each; `game` is this game's plays, `home` and `away` the site's team codes."""
+    sides = {"home": _alias(home), "away": _alias(away)}
+    scrimmage = game.filter(
+        pl.col("play_type").is_in(["pass", "run"]) & pl.col("posteam").is_not_null()
+    )
+
+    def efficiency(metric: str) -> dict[str, float | None]:
+        return {s: next(e.game for e in teams[s].efficiency if e.metric == metric) for s in sides}
+
+    def epa_text(v: float | None) -> str:
+        return "–" if v is None else f"{v:+.2f}".replace("-", "−")
+
+    pas, rush, big = (efficiency(m) for m in ("off_epa_dropback", "off_epa_rush", "off_explosive"))
+
+    # the swing plays' own count (turnovers on the play left out), so the page says one number
+    third_vals, third_text = {}, {}
+    for s in sides:
+        f = next((x for x in teams[s].luck if x.factor == "third_down"), None)
+        made, tries = (int(f.actual), f.attempts or 0) if f else (0, 0)
+        third_vals[s] = made / tries if tries else None
+        third_text[s] = f"{made} of {tries}"
+
+    zone_vals, zone_text = {}, {}
+    for s, t in sides.items():
+        inside = scrimmage.filter(
+            (pl.col("posteam") == t)
+            & (pl.col("yardline_100") <= 20)
+            & pl.col("drive").is_not_null()
+        )
+        trips = inside["drive"].n_unique()
+        scored = inside.filter((pl.col("touchdown") == 1) & (pl.col("td_team") == t))
+        tds = scored["drive"].n_unique()
+        zone_vals[s] = tds / trips if trips else None
+        zone_text[s] = f"{tds} of {trips}" if trips else "no trips"
+
+    # as `strength.st_epa_pg` counts it: kickoffs and punts both ways (returns against coverage),
+    # field goals and extra points for the kicker alone. EPA is from the posteam's view.
+    kicks = game.filter(
+        ((pl.col("special_teams_play") == 1) | pl.col("play_type").is_in(KICK_TYPES))
+        & pl.col("epa").is_not_null()
+        & ~pl.col("play_type").is_in(["pass", "run"])
+    )
+    both_ways = kicks.filter(pl.col("play_type").is_in(["kickoff", "punt"]))
+    st = {
+        s: round(
+            float(kicks.filter(pl.col("posteam") == t)["epa"].sum())
+            - float(both_ways.filter(pl.col("defteam") == t)["epa"].sum()),
+            2,
+        )
+        for s, t in sides.items()
+    }
+
+    # a drive's first scrimmage play, leaving out drives right after a turnover: otherwise this
+    # row mostly repeats the turnovers row (.notes/ui/played-like-factors.md)
+    drives = (
+        scrimmage.filter(pl.col("drive").is_not_null() & pl.col("yardline_100").is_not_null())
+        .sort("play_id")
+        .group_by("drive", maintain_order=True)
+        .agg(
+            pl.col("posteam").first(),
+            pl.col("yardline_100").first(),
+            (pl.col("interception").fill_null(0) + pl.col("fumble_lost").fill_null(0))
+            .sum()
+            .alias("lost"),
+        )
+        .with_columns((pl.col("lost").shift(1).fill_null(0) > 0).alias("after_turnover"))
+        .filter(~pl.col("after_turnover"))
+    )
+    field_vals, field_text = {}, {}
+    for s, t in sides.items():
+        starts = drives.filter(pl.col("posteam") == t)["yardline_100"]
+        field_vals[s] = round(100 - float(starts.mean()), 1) if len(starts) else None
+        field_text[s] = "–" if field_vals[s] is None else _yard_line(field_vals[s])
+
+    lost = {}
+    for s, t in sides.items():
+        mine = scrimmage.filter(pl.col("posteam") == t)
+        lost[s] = float(
+            mine["interception"].fill_null(0).sum() + mine["fumble_lost"].fill_null(0).sum()
+        )
+
+    def pct_text(v: float | None) -> str:
+        return "–" if v is None else f"{100 * v:.1f}%"
+
+    return [
+        _phase("passing", "Passing", "Expected points added per dropback.", pas, {s: epa_text(v) for s, v in pas.items()}),
+        _phase("rushing", "Rushing", "Expected points added per rush.", rush, {s: epa_text(v) for s, v in rush.items()}),
+        _phase("explosive", "Explosive plays", "Share of plays gaining 20+ yards passing or 10+ rushing.", big, {s: pct_text(v) for s, v in big.items()}),
+        _phase("third_down", "Third downs", "Third downs converted, leaving out plays with a turnover.", third_vals, third_text),
+        _phase("red_zone", "Red zone", "Touchdowns on drives that reached the opponent's 20.", zone_vals, zone_text),
+        _phase("special_teams", "Special teams", "Expected points on kicks, punts and returns: kickoffs and punts for and against, field goals and extra points for the kicker.", st, {s: f"{v:+.1f}".replace("-", "−") for s, v in st.items()}),
+        _phase("field_position", "Field position", "Average drive start, leaving out drives right after a turnover.", field_vals, field_text),
+        _phase("turnovers", "Turnovers", "Interceptions and lost fumbles on offense. A fumbled return counts under special teams.", lost, {s: f"{v:.0f}" for s, v in lost.items()}, higher_is_better=False),
+    ]  # fmt: skip
+
+
 # ---------------------------------------------------------------------------------------- headlines
 
 
@@ -667,9 +796,8 @@ def pure_luck(t: TeamRetro) -> float:
 
 
 def _headlines(
-    g: dict, names: dict[str, str], teams: dict[str, TeamRetro], pl_: PlayedLike,
-    picks: list[GradedPick], best_id: str | None, attribution: list[Attribution],
-) -> list[str]:  # fmt: skip
+    g: dict, names: dict[str, str], teams: dict[str, TeamRetro], pl_: PlayedLike
+) -> list[str]:
     out = []
     home, away = g["home_team"], g["away_team"]
     nm = lambda c: names.get(c, c)
@@ -711,14 +839,6 @@ def _headlines(
             f"this season."
         )
 
-    if best_id:
-        bp = next(p for p in picks if p.model_id == best_id)
-        s = f"{bp.label} came closest ({bp.log_loss:.2f} log loss)"
-        at = next((x for x in attribution if x.model_id == best_id), None)
-        if at and at.most_valuable:
-            lab = next(x.label for x in at.groups if x.group == at.most_valuable)
-            s += f"; its {lab} group helped most"
-        out.append(s + ".")
     return out[:6]
 
 
@@ -797,7 +917,7 @@ def build_game(
     played = _played_like(E, off_all.filter(in_game), g, names)
     reg = ctx["registry"]
     picks, best_id, attribution = _predictions(rows, gid, margin, g, reg, ctx["groups"])
-    headlines = _headlines(g, names, teams, played, picks, best_id, attribution)
+    headlines = _headlines(g, names, teams, played)
     return RetroGame(
         game_id=gid,
         season=int(g["season"]),
@@ -812,6 +932,7 @@ def build_game(
         expectations_version=E.version,
         headlines=headlines,
         played_like=played,
+        phases=_phases(game_plays, teams, home, away),
         teams=teams,  # type: ignore[arg-type]
         predictions=picks,
         best_model=best_id,
