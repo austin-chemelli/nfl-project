@@ -3,7 +3,7 @@ import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, Responsiv
 import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
 import { colorVar, dashArray, HEADLINE, isPublicLine, isReference } from '../../lib/models'
-import { currentSummary, gapLimit, gapRows, headlineSentence, NOISE, signedGap } from './helpers'
+import { currentSummary, gapLimit, gapRows, headlineSentence, GAP_BAND, signedGap } from './helpers'
 import { KEY_LINES, label, sentenceName } from './names'
 
 const HELP_LL =
@@ -70,15 +70,15 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 320 }}>
           <LineChart data={chart} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
             <CartesianGrid stroke="var(--border)" strokeDasharray="2 3" />
-            <ReferenceArea y1={NOISE} y2={lim} fill="var(--good)" fillOpacity={0.07} stroke="none" label={{ value: 'ahead of the market ↑', position: 'insideTopLeft', fill: 'var(--text-muted)', fontSize: 12 }} />
-            <ReferenceArea y1={-NOISE} y2={NOISE} fill="var(--border)" fillOpacity={0.6} stroke="none" label={{ value: 'too close to call', position: 'insideTopRight', fill: 'var(--text-muted)', fontSize: 12 }} />
-            <ReferenceArea y1={-lim} y2={-NOISE} fillOpacity={0} stroke="none" label={{ value: 'behind ↓', position: 'insideBottomLeft', fill: 'var(--text-muted)', fontSize: 12 }} />
+            <ReferenceArea y1={GAP_BAND} y2={lim} fill="var(--good)" fillOpacity={0.07} stroke="none" label={{ value: 'ahead of the market ↑', position: 'insideTopLeft', fill: 'var(--text-muted)', fontSize: 12 }} />
+            <ReferenceArea y1={-GAP_BAND} y2={GAP_BAND} fill="var(--border)" fillOpacity={0.6} stroke="none" label={{ value: 'too close to call', position: 'insideTopRight', fill: 'var(--text-muted)', fontSize: 12 }} />
+            <ReferenceArea y1={-lim} y2={-GAP_BAND} fillOpacity={0} stroke="none" label={{ value: 'behind ↓', position: 'insideBottomLeft', fill: 'var(--text-muted)', fontSize: 12 }} />
             <ReferenceLine y={0} stroke="var(--text-muted)" strokeWidth={1.5} />
             {firstLive != null && (
               <ReferenceLine x={firstLive} stroke="var(--text-muted)" strokeDasharray="5 4" label={{ value: `live from week ${firstLive}`, position: 'insideTopRight', fill: 'var(--text-muted)', fontSize: 12 }} />
             )}
             <XAxis dataKey="week" type="number" domain={[Math.min(...weeks) - 0.5, Math.max(...weeks) + 0.5]} allowDecimals={false} stroke="var(--text-muted)" tick={{ fontSize: 12 }} label={{ value: 'Week', position: 'insideBottom', offset: -2, fill: 'var(--text-muted)', fontSize: 12 }} />
-            <YAxis domain={[-lim, lim]} allowDataOverflow tickFormatter={(v: number) => (v === 0 ? '0' : signedGap(v).replace(/0+$/, ''))} stroke="var(--text-muted)" tick={{ fontSize: 12 }} width={58} />
+            <YAxis domain={[-lim, lim]} ticks={[-lim, -lim / 2, 0, lim / 2, lim]} allowDataOverflow tickFormatter={(v: number) => (v === 0 ? '0' : signedGap(v).replace(/0+$/, ''))} stroke="var(--text-muted)" tick={{ fontSize: 12 }} width={58} />
             <Tooltip formatter={(v, name) => [signedGap(Number(v)), label(String(name))]} labelFormatter={(w) => `Week ${w}${liveWeeks.has(Number(w)) ? ' (live)' : ''}`} contentStyle={{ background: 'var(--surface-1)', border: '1px solid var(--border)', fontSize: 13 }} />
             {shown.map((m) => (
               <Line

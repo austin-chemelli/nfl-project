@@ -1,8 +1,8 @@
 import { isPublicLine } from '../../lib/models'
 import { describe, expect, it } from 'vitest'
 import {
-  calibrationScaleSentence, calibrationVerdict, currentSummary, divergenceSentence, foldReliability, gapLimit, gapRows,
-  headlineSentence, NOISE, marketWinsWhenApart, personaHistoryHeadline, shortName,
+  calibrationScaleSentence, calibrationVerdict, currentSummary, divergenceSentence, foldReliability, GAP_BAND, gapLimit, gapRows,
+  headlineSentence, marketWinsWhenApart, personaHistoryHeadline, shortName, signedGap,
 } from './helpers'
 
 const rel = (mean_p: number, hit_rate: number, n: number) => ({ model_id: 'x', bin: 0, mean_p, hit_rate, n })
@@ -95,10 +95,12 @@ describe('gapRows', () => {
 })
 
 describe('gapLimit', () => {
-  it('is symmetric, rounds up, and keeps the noise band visible', () => {
-    expect(gapLimit([{ week: 1, a: 0.001 }], ['a'])).toBeCloseTo(2 * NOISE)
-    expect(gapLimit([{ week: 1, a: -0.021, b: 0.5 }], ['a'])).toBeCloseTo(0.025)
-    expect(gapLimit([], [])).toBeCloseTo(2 * NOISE)
+  it('is symmetric, rounds up to clean ticks, and always shows the band', () => {
+    expect(gapLimit([{ week: 1, a: 0.001 }], ['a'])).toBeCloseTo(0.04)
+    expect(gapLimit([{ week: 1, a: -0.051, b: 0.5 }], ['a'])).toBeCloseTo(0.06)
+    expect(gapLimit([], [])).toBeCloseTo(0.04)
+    expect(gapLimit([{ week: 1, a: 0.04 }], ['a'])).toBeCloseTo(0.04)
+    expect(gapLimit([{ week: 1, a: 0.001 }], ['a'])).toBeGreaterThan(GAP_BAND)
   })
 })
 
@@ -108,3 +110,23 @@ describe('isPublicLine', () => {
     expect(['global', 'ensemble'].some(isPublicLine)).toBe(false)
   })
 })
+
+describe('signedGap', () => {
+  it('signs a gap and never prints a negative zero', () => {
+    expect(signedGap(0.0123)).toBe('+0.012')
+    expect(signedGap(-0.0123)).toBe('−0.012')
+    expect(signedGap(-0.0002)).toBe('0.000')
+    expect(signedGap(0.0002)).toBe('0.000')
+  })
+})
+
+describe('currentSummary live games', () => {
+  const row = (week: number, n: number, n_live: number | undefined, live: boolean) => ({ model_id: 'market_baseline', week, n, n_live, cum_log_loss: 0.6, live })
+  it('counts live games, not whole weeks with one live game in them', () => {
+    expect(currentSummary([row(8, 14, 0, false), row(9, 14, 1, true)]).liveGames).toBe(1)
+  })
+  it('falls back to the week on a file from before n_live', () => {
+    expect(currentSummary([row(9, 14, undefined, true)]).liveGames).toBe(14)
+  })
+})
+

@@ -115,7 +115,7 @@ def _bold_calls(
     ]
 
     def call(p, g: RetroGame) -> BoldCall:
-        earned = round(math.log(2) - p.log_loss, 3)
+        earned = math.log(2) - p.log_loss
         pct = round(100 * p.p_pick)
         who = f"{p.label} gave {names.get(p.pick, p.pick)} {pct}%"
         if p.right:
@@ -131,7 +131,7 @@ def _bold_calls(
             pick=p.pick,
             p_pick=p.p_pick,
             log_loss=p.log_loss,
-            earned=earned,
+            earned=round(earned, 3),
             sentence=f"{who} {tail}",
         )
 

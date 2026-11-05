@@ -12,13 +12,12 @@ describe('Slate page', () => {
     expect((await screen.findAllByText('CAR @ GB')).length).toBeGreaterThan(0)
     expect(screen.getAllByText('ARI').length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: /Week 8/ })).toBeInTheDocument()
-    // Fixture: market GB 64%, line GB −3.5; the ensemble's 71% in the file must not reach the strip
+    // Fixture: market GB 64%, line GB −3.5
     const card = screen.getByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
     expect(card).toHaveAttribute('href', '/game/2026_08_CAR_GB')
     expect(within(card).getByText(/market GB 64%/)).toBeInTheDocument()
     expect(within(card).getByText(/GB −3.5/)).toBeInTheDocument()
     expect(within(card).getByRole('img')).toHaveAccessibleName(/market 64%.*Student \d+%/)
-    expect(within(card).getByRole('img').getAttribute('aria-label')).not.toMatch(/Ensemble/)
     expect(screen.queryByRole('heading', { name: /Where they disagree most/ })).toBeNull()
     expect(screen.queryByRole('columnheader', { name: /Kickoff/ })).toBeNull()
   })

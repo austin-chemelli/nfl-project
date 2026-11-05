@@ -44,7 +44,7 @@ export default function TrackerPage() {
                           <CurrentSeason t={t} meta={m} />
                           <FinePrint>
                             <p>About 180 live games a season cannot rank models, and in the 2005 to 2025 backtest nothing beats the market. Treat everything here as a measurement, not a verdict.</p>
-                            <p>Until the dashed line, weeks are backfill: models frozen before the season, scored after the fact. From it on, weeks are live, with diamonds marking graded locks made before kickoff. A handful of 16-game weeks is very noisy; lines crossing early means little, and gaps under 0.005 log loss are noise.</p>
+                            <p>{t.current_season.some((r) => r.live) ? 'Before the dashed vertical line, weeks are backfill: models frozen before the season, scored after the fact. A week with any live lock counts from there, with diamonds marking it.' : 'Every week so far is backfill: models frozen before the season, scored after the fact. A dashed vertical line will mark the first week with a graded lock.'} The gray band is roughly the 90% range of a gap at this sample size, so a line inside it can't be told from the market. A handful of 16-game weeks is very noisy, so lines crossing early means little.</p>
                             <p>The chart is a running average since week 1, so early weeks swing and later ones settle. &quot;Show the numbers&quot; lists the raw log loss for every line, the market included.</p>
                           </FinePrint>
                         </TabBody>
@@ -65,7 +65,7 @@ export default function TrackerPage() {
                             <p>Whiskers are a 90% range from resampling whole seasons. The zero line is the market; an approach only beats it if its whole whisker sits left of the line.</p>
                             <p>For each group of evidence: what the persona believes, the public line (the persona after light fitting and calibration, which is what is scored above), and what history alone would choose. Bars are shares of the 100-point attention budget; a negative bar means history says the group points the other way.</p>
                             <p>The season table shows mean log loss per season (0.693 is a coin flip); read each cell against the Market column.</p>
-                            <p>If an approach saw something the market missed, its side would win more often than the market expected. The side an approach leans toward is the underdog relative to the market, so win rates below 50% are expected; what matters is the gap between the two columns.</p>
+                            <p>Disagreement is in points of win probability. If an approach saw something the market missed, its side would win more often than the market expected, so compare those two columns. An approach can lean the right way and still lose on log loss by moving too far: the columns test the direction, log loss tests the size.</p>
                           </FinePrint>
                         </TabBody>
                       ),

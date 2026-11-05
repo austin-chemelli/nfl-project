@@ -2,7 +2,7 @@ import { DotWhisker } from '../../charts'
 import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
 import { llVsMarket } from '../../lib/format'
-import { APPROACHES, colorVar, isPublicLine } from '../../lib/models'
+import { APPROACHES, colorVar, isPublicLine, isReference } from '../../lib/models'
 import { label } from './names'
 
 const signed = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(3)}`
@@ -34,7 +34,7 @@ export function Backtest({ t }: { t: Tracker; meta: Meta }) {
         rightLabel="worse than the market"
       />
       <p className="mt-2 text-[13px] text-ink-2">
-        Log loss minus the market&apos;s, {first} to {last} ({seasons} seasons, up to {games.toLocaleString('en-US')} games per line).
+        Log loss minus the market&apos;s, so here plus is worse, the opposite of the season chart, {first} to {last} ({seasons} seasons, up to {games.toLocaleString('en-US')} games per line).
       </p>
       <ul className="mt-2 list-disc pl-5 text-[14px]">
         {APPROACHES.filter((m) => rows.some((r) => r.model_id === m)).map((m) => {
@@ -61,7 +61,7 @@ export function Backtest({ t }: { t: Tracker; meta: Meta }) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.model_id}>
-                <td className={td}><ModelBadge modelId={r.model_id} /></td>
+                <td className={td}><ModelBadge modelId={r.model_id} reference={isReference(r.model_id)} /></td>
                 <td className={`${td} tabular`}>{r.seasons}</td>
                 <td className={`${td} tabular`}>{r.n_games.toLocaleString('en-US')}</td>
                 <td className={`${td} tabular`}>{r.log_loss.toFixed(4)}</td>

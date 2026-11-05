@@ -16,7 +16,7 @@ export function colorVar(modelId: string): string {
 }
 
 export function dashArray(modelId: string): string | undefined {
-  return modelId === 'market_baseline' || modelId === 'elo_v0' || modelId === 'home_naive' || modelId === 'global' ? '4 3' : undefined
+  return modelId === 'elo_v0' || modelId === 'home_naive' || modelId === 'global' ? '4 3' : undefined
 }
 
 export const SHORT: Record<string, string> = {

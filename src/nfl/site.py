@@ -948,12 +948,13 @@ def tracker(paths: Paths, season: int, reg: dict) -> dict:
         cur = graded.filter((pl.col("season") == season) & pl.col("model_id").is_in(list(reg)))
         wk = (
             cur.group_by("model_id", "week").agg(pl.col("log_loss").sum().alias("s"), pl.len().alias("n"),
-                                                 (~pl.col("is_backfill")).any().alias("live"))
+                                                 (~pl.col("is_backfill")).any().alias("live"),
+                                                 (~pl.col("is_backfill")).sum().alias("n_live"))
             .sort("model_id", "week")
             .with_columns((pl.col("s").cum_sum() / pl.col("n").cum_sum()).over("model_id").alias("cum"))
         )  # fmt: skip
         out["current_season"] = [
-            {"model_id": r["model_id"], "week": r["week"], "n": r["n"], "cum_log_loss": _r(r["cum"]), "live": r["live"]}
+            {"model_id": r["model_id"], "week": r["week"], "n": r["n"], "cum_log_loss": _r(r["cum"]), "live": r["live"], "n_live": r["n_live"]}
             for r in wk.iter_rows(named=True)
         ]  # fmt: skip
         live = graded.filter(~pl.col("is_backfill"))

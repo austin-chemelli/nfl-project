@@ -120,7 +120,7 @@ function Approaches({ meta }: { meta: Meta }) {
       </div>
       <ul className="mt-4 max-w-3xl list-disc space-y-1 pl-5 text-[14px] text-ink-2">
         <li><strong>The Student</strong> is built from results rather than a persona&apos;s beliefs. It is the line every headline number uses. Its one declared input is the line move, which has no history to learn from.</li>
-        <li><strong>The market, Elo and the home-team baseline</strong> are references, drawn as dashed rings: scored alongside the approaches, never entrants.</li>
+        <li><strong>The market, Elo and the home-team baseline</strong> are references, marked with a dashed ring in tables: scored alongside the approaches, never entrants.</li>
         <li><strong>Global fit</strong> is a diagnostic, the source of the bars in the game page&apos;s Preview. It is not scored.</li>
       </ul>
       <p className="mt-3 text-[13px] text-ink-2">Bars are scaled to each approach&apos;s largest group. Hover a group name for what it covers.</p>

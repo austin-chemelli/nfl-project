@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderRoute } from '../../test/render'
+import type { Tracker } from '../../data/contract'
+import { Ledger } from './Ledger'
 
 describe('Tracker page', () => {
   it('shows the five-tile strip and the season tab by default', async () => {
@@ -102,6 +104,14 @@ describe('Tracker page', () => {
   it('the removed disagreements tab falls back to the default', async () => {
     renderRoute('/tracker?tab=disagreements')
     expect(await screen.findByText(/^After \d+ games, the Student is/)).toBeInTheDocument()
+  })
+
+  it('the ledger shows no diagnostic, though the file can carry one', () => {
+    const row = (model_id: string, bets: number) => ({ model_id, kind: 'backfill', bets, wins: 1, losses: 1, pushes: 0, units: 0, roi: 0, clv: 0 })
+    render(<Ledger t={{ ledger: [row('student', 11), row('ensemble', 22), row('global', 33)] } as unknown as Tracker} />)
+    expect(screen.getByText('11')).toBeInTheDocument()
+    expect(screen.queryByText('22')).toBeNull()
+    expect(screen.queryByText('33')).toBeNull()
   })
 
   it('bets tab: the ledger', async () => {

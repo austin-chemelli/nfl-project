@@ -378,7 +378,7 @@ export const Tracker = z.looseObject({
   schema_version: z.string(),
   season: num,
   seasons: z.array(z.looseObject({ season: num, model_id: z.string(), n: num, log_loss: num, brier: num, ece: nnum, spread_mae: nnum })),
-  current_season: z.array(z.looseObject({ model_id: z.string(), week: num, n: num, cum_log_loss: num, live: z.boolean() })),
+  current_season: z.array(z.looseObject({ model_id: z.string(), week: num, n: num, n_live: num.optional(), cum_log_loss: num, live: z.boolean() })),
   weeks_tracked: z.record(z.string(), num),
   backtest: z.array(
     z.looseObject({

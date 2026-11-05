@@ -29,8 +29,8 @@ flowchart LR
 |---|---|---|
 | `/` | Slate: the week's games × approaches, divergence markers, statuses, disagreement strip | meta, slate |
 | `/game/:id` | Game: approaches vs market, why (group contributions in win-probability points), edges by group, tale of the tape, tendency dumbbells vs league, injuries, narrative v2 | game |
-| `/tracker` | the Student vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest` (also log loss by season and disagreements, which span every season), `calibration`, `bets` |
-| `/hypotheses` | none | `time` (default; `?item=` picks the feature), `effects` |
+| `/tracker` | Season tracker: gap to the market by week, backtest Δ with CIs, log loss by season, disagreements, calibration, paper bets, persona vs history | tracker, meta |
+| `/hypotheses` | What history says per feature; one feature or group over time | hypotheses |
 | `/coaches` | Team view and coach view of coordinator scheme profiles | coaches |
 | `/build` | Build your own: group budget, donut by heading, results; shareable `?w=` | diy_matrix, meta |
 | `/season/:year` | Every game of a season under a weight set | season_<yyyy>, diy_matrix |
@@ -53,8 +53,8 @@ Decided 2026-11-03 after the retrospective made the game page 21 sections long. 
 |---|---|---|
 | `/`, `/week/:season/:week` | week recap: best approach, vs the market, picks right, biggest upset, luckiest team (finished weeks) | none; cards sort by `?sort=kickoff\|disagreement\|upset`, `?view=table` for the grid |
 | `/game/:id` | pregame: the pick, vs the market, biggest factor, key absence or biggest edge; finished: result, approaches right, played like, swing plays, biggest surprise | `retro` (finished games with a retro; default), `preview` (default otherwise), `approaches`, `tendencies`, `details`, `news` |
-| `/tracker` | the Student vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest`, `calibration`, `disagreements`, `bets` |
-| `/hypotheses` | none | `effects`, `time` (`?item=` picks the feature) |
+| `/tracker` | the Student vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest` (also log loss by season and disagreements, which span every season), `calibration`, `bets` |
+| `/hypotheses` | none | `time` (default; `?item=` picks the feature), `effects` |
 | `/method` | none | `how`, `limits`, `data` |
 
 The Student is the headline line (`HEADLINE` in `lib/models.ts`; D5): the pick, the slate's status, the recap's picks right and the tracker's tiles read it. The ensemble is a diagnostic: `data/hideEnsemble.ts` strips it from every file at load, so pages never see it, and it is a no-op once the data has none. The game page is built around the game (round 2): `preview` is approach-free, one bar per group sized by the Global fit, with an approach picker that outlines that approach's reading on the same rows. The name "Global" never appears there. Groups come from `meta.groups`, and a group in neither the fit nor the overlay is no row; `isContextOnly` in `lib/meta.ts` keeps `coaching`, `off_scheme`, `def_scheme` and `matchups` out of the bars, the edges and the Biggest edge tile, reading `context_only` from meta plus a fallback set to delete once that field ships. `details` draws both teams on the league's band (`MatchupBand`, `meta.feature_bands`): faint from p10 to p90, solid over the middle half, a tick at the median. Further right is better, and a gap wider than the league's middle half stands out while the rest are muted. A push toward a team is always a plus (`ptsFor`, `ptsSide`): the side says whose it is. The overlay's outline is one neutral ink, since color on those bars means a team. `useChartTip` is the hover card on `MatchupBand`, `DivergingBars`, `Dumbbell` and `RangeRow`, on hover and keyboard focus.
@@ -70,7 +70,7 @@ Slate cards lead with the game too: teams, the line and total, a **why this game
 - **Edges.** `countsAsEdge` in `lib/meta.ts`: not context groups, not Venue & weather (it only shifts home advantage), and not Rest & travel on a neutral site, where it favors the nominal away team. The Preview keeps their bars and drops their labels. On a neutral site the Preview moves the neutral-site discount onto the Home field row, which can go negative, and an approach without that feature (the Sharp) keeps its full value; the Approaches tab shows the raw pieces.
 - **Card contract.** A bad `card` costs that game its line, with a console warning, not the week its slate. `contract.test.ts` validates cards and the injury flags, so wrong types and a dropped flag fail there.
 
-The tracker's season chart plots each line's gap to the market (market cumulative log loss minus the line's, so above zero is ahead), with a band at ±0.005 for gaps too close to call. References (`REFERENCES` in `lib/models.ts`) draw as a dashed ring in `Swatch`, and `ModelBadge`'s `reference` prop adds a tag in tables. A list built from a data file filters with `isPublicLine`, so diagnostics never appear because the file carries them. The week recap's Full recap names the week's best call and costliest miss, from `best_call` and `costliest_call`.
+The tracker's season chart plots each line's gap to the market (market cumulative log loss minus the line's, so above zero is ahead), with a band at ±0.025 for gaps too close to call: `GAP_BAND`, the 90% range of a gap over 120 games, which narrows as games accumulate. References (`REFERENCES` in `lib/models.ts`) draw as a dashed ring in `Swatch`, so in tables and toggles, and `ModelBadge`'s `reference` prop adds a tag in tables. A list built from a data file filters with `isPublicLine`, so diagnostics never appear because the file carries them. The week recap's Full recap names the week's best call and costliest miss, from `best_call` and `costliest_call`.
 
 Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
 

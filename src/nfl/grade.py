@@ -54,9 +54,11 @@ def graded_frame(paths: Paths) -> pl.DataFrame:
     df = preds.join(games, on="game_id", how="inner").join(
         _market_p(paths), on="game_id", how="left"
     )
-    # latest lock strictly before kickoff (or any lock if kickoff unknown)
+    # the last lock strictly before kickoff (or any lock if kickoff unknown); a live lock always
+    # beats a backfill row, even one stamped later, as in site.best_rows
     df = df.filter(pl.col("kickoff_utc").is_null() | (pl.col("lock_ts") < pl.col("kickoff_utc")))
-    df = df.sort("lock_ts").group_by(["game_id", "model_id"]).last()
+    df = df.sort(["is_backfill", "lock_ts"], descending=[True, False])
+    df = df.group_by(["game_id", "model_id"], maintain_order=True).last()
     played = df.filter(pl.col("result").is_not_null() & (pl.col("result") != 0))
     home_win = (pl.col("result") > 0).cast(pl.Float64)
     p = pl.col("p_home").clip(EPS, 1 - EPS)

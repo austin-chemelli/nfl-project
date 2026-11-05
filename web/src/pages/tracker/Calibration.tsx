@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
-import { colorVar, dashArray, isReference } from '../../lib/models'
+import { colorVar, isReference } from '../../lib/models'
 import { calibrationVerdict, foldReliability } from './helpers'
 import { KEY_LINES, label, sentenceName } from './names'
 
@@ -54,7 +54,7 @@ export function Calibration({ t, meta }: { t: Tracker; meta: Meta }) {
             />
             <ReferenceLine segment={[{ x: 0.5, y: 0.5 }, { x: 1, y: 1 }]} stroke="var(--text-muted)" strokeDasharray="3 3" ifOverflow="visible" />
             {sel.map((m) => (
-              <Scatter key={m} name={label(m)} data={folded(m)} fill={colorVar(m)} stroke={colorVar(m)} line={{ strokeWidth: 2, strokeDasharray: dashArray(m) }} isAnimationActive={false} />
+              <Scatter key={m} name={label(m)} data={folded(m)} fill={colorVar(m)} stroke={colorVar(m)} line={{ strokeWidth: 2 }} isAnimationActive={false} />
             ))}
           </ScatterChart>
         </ResponsiveContainer>

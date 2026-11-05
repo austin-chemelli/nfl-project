@@ -77,11 +77,9 @@ def predict(paths: Paths, seasons: tuple[int, int] | None) -> int:
     lo, hi = seasons or (2025, 2026)
     games = load_games(paths)
     prev = existing(paths)
-    done_backfill = set(
-        prev.filter(pl.col("is_backfill"))
-        .select(pl.concat_str(["game_id", pl.lit("|"), "model_id"]))
-        .to_series()
-    )
+    # any row counts: a game with a live lock must not gain a backfill row, or grading and the
+    # record would have two answers for it
+    done = set(prev.select(pl.concat_str(["game_id", pl.lit("|"), "model_id"])).to_series())
     elo = elo_model.Elo()
     rows: list[dict] = []
 
@@ -107,7 +105,7 @@ def predict(paths: Paths, seasons: tuple[int, int] | None) -> int:
                 naive.MODEL_ID: (naive.MODEL_VERSION, naive.predict(g["total_line"])),
             }
             for model_id, (version, p) in preds.items():
-                if p is None or (played and f"{g['game_id']}|{model_id}" in done_backfill):
+                if p is None or (played and f"{g['game_id']}|{model_id}" in done):
                     continue
                 total = p["total"] if p["total"] is not None else g["total_line"]
                 rows.append(
