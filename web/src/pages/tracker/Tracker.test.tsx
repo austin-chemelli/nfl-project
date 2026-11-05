@@ -5,7 +5,7 @@ import path from 'node:path'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderRoute } from '../../test/render'
-import type { Tracker } from '../../data/contract'
+import type { Meta, Tracker } from '../../data/contract'
 import { Ledger } from './Ledger'
 
 describe('Tracker page', () => {
@@ -108,7 +108,7 @@ describe('Tracker page', () => {
 
   it('the ledger shows no diagnostic, though the file can carry one', () => {
     const row = (model_id: string, bets: number) => ({ model_id, kind: 'backfill', bets, wins: 1, losses: 1, pushes: 0, units: 0, roi: 0, clv: 0 })
-    render(<Ledger t={{ ledger: [row('student', 11), row('ensemble', 22), row('global', 33)] } as unknown as Tracker} />)
+    render(<Ledger t={{ ledger: [row('student', 11), row('ensemble', 22), row('global', 33)] } as unknown as Tracker} meta={{ approaches: [] } as unknown as Meta} />)
     expect(screen.getByText('11')).toBeInTheDocument()
     expect(screen.queryByText('22')).toBeNull()
     expect(screen.queryByText('33')).toBeNull()
@@ -118,5 +118,24 @@ describe('Tracker page', () => {
     renderRoute('/tracker?tab=bets')
     expect(await screen.findByRole('heading', { name: /Paper bets/ })).toBeInTheDocument()
     expect(screen.getByText(/Not betting advice; small samples/)).toBeInTheDocument()
+  })
+
+  it('bets tab: says how the lines did, with the bankroll, the returns and the seasons', async () => {
+    renderRoute('/tracker?tab=bets')
+    expect(await screen.findByText(/^Every approach has lost money\. The best, the Sharp/)).toBeInTheDocument()
+    for (const name of ['Bankroll over time', 'Return per bet', 'Season by season']) expect(screen.getByRole('heading', { name })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Lines to show' })).toBeInTheDocument()
+    expect(screen.getByRole('rowheader', { name: /Sharp/ })).toBeInTheDocument()
+  })
+
+  it('shows CLV only once a live bet has one', () => {
+    const row = (kind: string, clv: number | null) => ({ model_id: 'student', kind, bets: 1, wins: 1, losses: 0, pushes: 0, units: 1, roi: 1, clv })
+    const meta = { approaches: [] } as unknown as Meta
+    const { unmount } = render(<Ledger t={{ ledger: [row('backfill', null)] } as unknown as Tracker} meta={meta} />)
+    expect(screen.queryByText('CLV')).toBeNull()
+    unmount()
+    render(<Ledger t={{ ledger: [row('backfill', null), row('live', 0.012)] } as unknown as Tracker} meta={meta} />)
+    expect(screen.getByText('CLV')).toBeInTheDocument()
+    expect(screen.getByText('+1.20%')).toBeInTheDocument()
   })
 })

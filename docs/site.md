@@ -29,7 +29,7 @@ flowchart LR
 |---|---|---|
 | `/` | Slate: the week's games × approaches, divergence markers, statuses, disagreement strip | meta, slate |
 | `/game/:id` | Game: approaches vs market, why (group contributions in win-probability points), edges by group, tale of the tape, tendency dumbbells vs league, injuries, narrative v2 | game |
-| `/tracker` | Season tracker: gap to the market by week, backtest Δ with CIs, log loss by season, disagreements, calibration, paper bets, persona vs history | tracker, meta |
+| `/tracker` | Season tracker: gap to the market by week, backtest Δ with CIs, log loss by season, disagreements, calibration, paper bets (bankroll, return per bet, season grid), persona vs history | tracker, meta |
 | `/hypotheses` | What history says per feature; one feature or group over time | hypotheses |
 | `/coaches` | Team view and coach view of coordinator scheme profiles | coaches |
 | `/build` | Build your own: group budget, donut by heading, results; shareable `?w=` | diy_matrix, meta |

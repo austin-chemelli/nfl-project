@@ -87,10 +87,11 @@ export default function TrackerPage() {
                       label: 'Paper bets',
                       content: (
                         <TabBody>
-                          <Ledger t={t} />
+                          <Ledger t={t} meta={m} />
                           <FinePrint>
                             <p><strong className="text-ink">Not betting advice; small samples.</strong> Season profit and loss is mostly noise; closing-line value (CLV, whether the price you got beat the final price) is the better edge signal.</p>
                             <p>Backfill bets are priced at nflverse&apos;s closing-ish line, so their ROI is a harsh lower bound and their CLV is undefined. Backfill rows cover every graded season in the backtest, not just this one; live rows appear after the first graded locks. Losing a few percent into the market&apos;s price is what a model that trails the market looks like.</p>
+                            <p>No edge means the market&apos;s own win chance at the price paid, or a coin flip on a spread; what is left is the bookmaker&apos;s cut. In our price data the moneyline cut is under 3% through 2022 and about 4.3% from 2023, so older seasons are a little easier on every line. The 90% range is 1.645 standard errors of the profit per bet.</p>
                           </FinePrint>
                         </TabBody>
                       ),

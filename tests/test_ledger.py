@@ -109,3 +109,76 @@ def test_live_bets_are_immutable(tmp_path, monkeypatch):
     assert ledger.open_bets(paths) == (0, 0)  # same model × game: the first bet stands
     stored = ledger.load_bets(paths)
     assert stored.height == 1 and stored["side"][0] == "away"
+
+
+def _settled(**kw):
+    base = {
+        "model_id": "m",
+        "season": 2025,
+        "is_backfill": True,
+        "market": "h2h",
+        "price_american": 100.0,
+        "market_p_vigfree": 0.5,
+        "stake_units": 1.0,
+        "result": "win",
+        "units_net": 1.0,
+        "clv": None,
+    }
+    base.update(kw)
+    return base
+
+
+def _frame(rows):
+    return pl.DataFrame(rows, schema_overrides={"clv": pl.Float64, "result": pl.Utf8})
+
+
+def test_line_stats_compares_the_record_with_what_the_prices_needed():
+    df = _frame(
+        [
+            _settled(),
+            _settled(result="loss", units_net=-1.0),
+            _settled(result="push", units_net=0.0, price_american=-300.0),
+            _settled(result=None, units_net=None),  # unplayed: not counted
+        ]
+    )
+    r = ledger.line_stats(df).row(0, named=True)
+    assert (r["bets"], r["wins"], r["losses"], r["pushes"]) == (3, 1, 1, 1)
+    assert r["win_rate"] == 0.5
+    assert r["need_rate"] == 0.5  # a push needs nothing, so -300 stays out of it
+    assert r["roi"] == 0.0
+    assert r["roi_lo"] < 0 < r["roi_hi"]
+
+
+def test_no_edge_is_the_cut_the_price_takes():
+    # a coin flip at -110 loses 4.5 cents; the market's own 40% at +150 is a fair bet
+    spread = _settled(market="spreads", price_american=-110.0)
+    fair = _settled(price_american=150.0, market_p_vigfree=0.4, season=2024)
+    assert ledger.line_stats(_frame([spread])).item(0, "no_edge_roi") == pytest.approx(
+        -0.04545, abs=1e-4
+    )
+    s = ledger.season_stats(_frame([fair, spread])).sort("season")
+    assert s["no_edge_units"].to_list() == pytest.approx([0.0, -0.04545], abs=1e-4)
+
+
+def test_a_line_with_only_pushes_has_no_win_rate():
+    r = ledger.line_stats(_frame([_settled(result="push", units_net=0.0)])).row(0, named=True)
+    assert r["win_rate"] is None and r["need_rate"] is None
+
+
+def test_clv_is_live_moneyline_only():
+    # backfill has no real CLV, and a spread's is in points: neither can join a probability average
+    df = _frame(
+        [
+            _settled(is_backfill=False, clv=0.02),
+            _settled(is_backfill=False, market="spreads", clv=0.5),
+            _settled(clv=0.9),
+        ]
+    )
+    rows = ledger.line_stats(df).sort("is_backfill")
+    assert rows["clv"].to_list() == [0.02, None]
+
+
+def test_season_stats_counts_live_and_backfill_together():
+    df = _frame([_settled(), _settled(is_backfill=False, result="loss", units_net=-1.0)])
+    r = ledger.season_stats(df).row(0, named=True)
+    assert (r["bets"], r["live_bets"], r["units"]) == (2, 1, 0.0)

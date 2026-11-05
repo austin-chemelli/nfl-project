@@ -397,8 +397,13 @@ export const Tracker = z.looseObject({
     z.looseObject({
       model_id: z.string(), kind: z.string(), bets: num, wins: num, losses: num, pushes: num,
       units: nnum, roi: nnum, clv: nnum,
+      roi_lo: nnum.optional(), roi_hi: nnum.optional(), no_edge_roi: nnum.optional(),
+      win_rate: nnum.optional(), need_rate: nnum.optional(),
     }),
   ),
+  ledger_seasons: z.array(
+    z.looseObject({ model_id: z.string(), season: num, bets: num, live_bets: num, units: num, no_edge_units: num }),
+  ).optional(),
 })
 
 // --------------------------------------------------------------------------------- hypotheses

@@ -256,4 +256,8 @@ Not in scope: the paper bets rework (trigger: two weeks of live bets), D2 (tende
   - Rebuild the dev copy (`nfl retro build --season 2026 --force`, `nfl site`) and look at real pages in both themes and at phone width: the gap chart, the Backtest tab, the recap, History.
   - One `reviewer` agent on the whole diff with real data. Ask it to attack claims: does every sentence and label hold on all 8 weeks?
   - Update `docs/site.md` (tracker row, History, reference styling), the `recap` line in `docs/architecture.md`, journal, hub. PR; Austin merges. After the merge run `nfl-retro` by hand rather than wait for 07:00, then check production.
+- **M12.5 Paper bets you can read.** Main session, added 2026-11-05 at Austin's request, ahead of the "two weeks of live bets" trigger, because the backtest already has 21 seasons to draw. Files: `src/nfl/ledger.py`, `src/nfl/site.py`, `tests/test_ledger.py`, `web/src/charts/DotWhisker.tsx`, `web/src/data/contract.ts`, `web/src/pages/Tracker.tsx`, `web/src/pages/tracker/*`, `web/src/test/fixtures/site/tracker.json`.
+  - A headline, a bankroll curve, return per bet with a 90% range, and a season grid, each read against a no-edge reference.
+  - `tracker.json` reads `bets_settled` directly; `ledger` rows gain the range, no-edge return and won/needed rates; `ledger_seasons` is new. Additive.
+  - CLV is live moneyline bets only. An open-bets list waits for live bets to exist.
 

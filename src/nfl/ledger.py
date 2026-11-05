@@ -12,6 +12,8 @@ settle    Derived each run into marts/bets_settled.parquet: result, units, closi
           schedule line (the historical endpoint is paid-only). CLV is movement toward the bet:
           moneyline in vig-free probability points, spread in points. Null when bet and close are
           the same nflverse number (all backfill bets), since that is zero by construction.
+site      line_stats and season_stats shape settled bets for the tracker's Paper bets tab, each
+          read against no edge: what the same bets return if the market's price is exactly right.
 """
 
 from __future__ import annotations
@@ -52,6 +54,12 @@ BET_SCHEMA = {
     "line_source": pl.Utf8,  # 'odds_api' | 'nflverse'
     "line_snapshot_ts": pl.Datetime("us"),
 }
+
+
+def _win_units() -> pl.Expr:
+    """Profit on a winning 1-unit bet at its American price."""
+    price = pl.col("price_american")
+    return pl.when(price > 0).then(price / 100).otherwise(100 / -price)
 
 
 def _vigfree(home_ml: str, away_ml: str) -> pl.Expr:
@@ -255,8 +263,7 @@ def settle_frame(df: pl.DataFrame) -> pl.DataFrame:
         .then(pl.lit("loss"))
         .otherwise(pl.lit("push"))
     )
-    price = pl.col("price_american")
-    win_units = pl.when(price > 0).then(price / 100).otherwise(100 / -price) * pl.col("stake_units")
+    win_units = _win_units() * pl.col("stake_units")
     units = (
         pl.when(result == "win")
         .then(win_units)
@@ -309,4 +316,57 @@ def summary(settled: pl.DataFrame) -> pl.DataFrame:
             pl.col("clv").count().alias("n_clv"),
         )
         .sort("model_id", "is_backfill", "season", "market")
+    )
+
+
+def _no_edge_units() -> pl.Expr:
+    """What a bet is worth with no edge: the market's own win chance at the price paid, or a coin
+    flip on a spread. Always a small loss, the bookmaker's cut."""
+    p = pl.when(pl.col("market") == "h2h").then(pl.col("market_p_vigfree")).otherwise(0.5)
+    return (p * _win_units() - (1 - p)) * pl.col("stake_units")
+
+
+def line_stats(settled: pl.DataFrame) -> pl.DataFrame:
+    """Per (model, is_backfill), for the site: record, return with a 90% range, the win rate the
+    prices needed, and what the same bets return with no edge. CLV is live moneyline bets only:
+    backfill bets have none (see settle), and spread CLV is in points, not probability."""
+    won = pl.col("result") == "win"
+    decided = pl.col("result") != "push"
+    half = 1.645 * pl.col("units_net").std() / pl.len().sqrt()
+    live_ml = (~pl.col("is_backfill")) & (pl.col("market") == "h2h")
+    return (
+        settled.filter(pl.col("result").is_not_null())
+        .with_columns((1 / (1 + _win_units())).alias("need"), _no_edge_units().alias("no_edge"))
+        .group_by("model_id", "is_backfill")
+        .agg(
+            pl.len().alias("bets"),
+            won.sum().alias("wins"),
+            (pl.col("result") == "loss").sum().alias("losses"),
+            (pl.col("result") == "push").sum().alias("pushes"),
+            pl.col("units_net").sum().alias("units"),
+            pl.col("units_net").mean().alias("roi"),
+            (pl.col("units_net").mean() - half).alias("roi_lo"),
+            (pl.col("units_net").mean() + half).alias("roi_hi"),
+            pl.col("no_edge").mean().alias("no_edge_roi"),
+            pl.when(decided.any()).then(won.sum() / decided.sum()).alias("win_rate"),
+            pl.col("need").filter(decided).mean().alias("need_rate"),
+            pl.col("clv").filter(live_ml).mean().alias("clv"),
+        )
+        .sort("model_id", "is_backfill")
+    )
+
+
+def season_stats(settled: pl.DataFrame) -> pl.DataFrame:
+    """Per (model, season), live and backfill together: units won and what no edge would return."""
+    return (
+        settled.filter(pl.col("result").is_not_null())
+        .with_columns(_no_edge_units().alias("no_edge"))
+        .group_by("model_id", "season")
+        .agg(
+            pl.len().alias("bets"),
+            (~pl.col("is_backfill")).sum().alias("live_bets"),
+            pl.col("units_net").sum().alias("units"),
+            pl.col("no_edge").sum().alias("no_edge_units"),
+        )
+        .sort("model_id", "season")
     )
