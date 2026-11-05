@@ -86,7 +86,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| ui | `ui-u3-retro` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: retro reorder, slate cards, tracker) | U1 and U2 merged 2026-11-04 (#11, #13); U3 retro built 2026-11-04 with the phase scorecard; PR #14 open; job code, so it merges after the Thu 09:00 lock | #11, #13, #14 |
+| ui | `ui-u4-slate` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: slate cards, tracker) | U1, U2, U3 merged 2026-11-04 (#11, #13, #14), U3 ahead of the first lock at Austin's call; retros and recaps rebuilt on schema 3; U4 slate cards next | #11, #13, #14 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
@@ -143,7 +143,6 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 - The GCP free trial ends about late January 2027: upgrade the billing account before then (`docs/hosting.md` §3.1).
 - M8 leftovers: no uptime check on `meta.json`, no data-freshness alert.
 - README scorecard CIs change between `nfl readme` runs: on 2026-11-03 only the bootstrap CI digits moved (point estimates and counts identical), although `grade.py` seeds its RNG. Cause unverified; that run's README change was discarded.
-- "Most misread" is hidden in recaps built before wave 2 (their sentences name the ensemble). `ui-u3-retro` bumps the retro schema, so the next daily run after it merges rebuilds them on the Student.
 - gcsfuse logs ERROR `BufferedWriteHandler.OutOfOrderError` on curated parquet writes in cloud jobs (seen in dry run `nfl-lock-thu-5mqhw`, 2026-11-04). The job succeeded; the effect on the written files wasn't checked.
 
 ## Docs map
