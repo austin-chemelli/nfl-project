@@ -207,7 +207,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | File | Content |
 |---|---|
 | `site/meta.json` | data freshness per dataset, last lock, git sha, approach list with blurbs |
-| `site/slate_<season>_<week>.json` | per game: kickoff, teams, market line, every model's `p_home`/`spread`, divergence flags, ensemble |
+| `site/slate_<season>_<week>.json` | per game: kickoff, teams, market line, every model's `p_home`/`spread`, divergence flags, `card` (the slate card's edges, injuries, QB context, weather concern and tendencies contrast) |
 | `site/game_<game_id>.json` | everything the game page needs: per-approach contributions, tendency matchup rows, narrative claims + sentiment, preview text, injuries |
 | `site/scorecard.json`, `site/tracker.json` | scorecard rows; per model cumulative units, CLV, calibration bins, divergence buckets, weekly series |
 | `site/hypotheses.json` | per feature: coefficient, CI, n, verdict, sentence, approaches that lean on it |

@@ -1,4 +1,5 @@
-/** One matchup on the slate (ADR 0017): teams, kickoff or score, market line, the compact probability strip, one sentence. */
+/** One matchup on the slate (ADR 0017), game first: teams, kickoff or score, the line, why this game, a stark tendencies contrast, then the approaches. */
+import { useId } from 'react'
 import { Link } from 'react-router'
 import { ProbStrip } from '../../charts'
 import { StatusBadge } from '../../components/ui'
@@ -44,6 +45,7 @@ export function GameCard({ g, meta, showStatus }: { g: GameRow; meta: Meta; show
   })
   const fav = mk == null ? null : `${mk >= 0.5 ? g.home : g.away} ${pct(mk >= 0.5 ? mk : 1 - mk)}`
   const pregame = g.result == null
+  const id = useId()
   const why = whyLine(g, meta)
   const contrast = contrastLine(g)
   return (
@@ -51,10 +53,12 @@ export function GameCard({ g, meta, showStatus }: { g: GameRow; meta: Meta; show
       to={`/game/${g.game_id}`}
       data-matchup
       style={matchupVars(g.away, g.home)}
+      aria-labelledby={`${id}-head`}
+      aria-describedby={why ? `${id}-why` : undefined}
       className="relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-line bg-surface-1 p-3 pt-3.5 hover:bg-surface-2 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
     >
       <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'linear-gradient(90deg, var(--team-away) 50%, var(--team-home) 50%)' }} />
-      <div className="flex items-start justify-between gap-2">
+      <div id={`${id}-head`} className="flex items-start justify-between gap-2">
         <span className="inline-flex items-baseline gap-2 text-lg font-semibold text-ink">
           <TeamCode team={g.away} color="var(--team-away)" />
           <span className="text-ink-3">@</span>
@@ -70,7 +74,7 @@ export function GameCard({ g, meta, showStatus }: { g: GameRow; meta: Meta; show
         {g.market?.total != null && <span className="text-ink-3"> · total {g.market.total}</span>}
         {fav && <span className="text-ink-3"> · market {fav}</span>}
       </div>
-      {why && <div className="text-[14px] text-ink">{why}</div>}
+      {why && <div id={`${id}-why`} className="text-[14px] text-ink">{why}</div>}
       {contrast && <div className="text-[13px] text-ink-2">{contrast}</div>}
       <div className={`flex items-center gap-2 text-[11px] text-ink-3 ${pregame ? 'border-t border-line pt-2' : ''}`}>
         <span>{g.away}</span>

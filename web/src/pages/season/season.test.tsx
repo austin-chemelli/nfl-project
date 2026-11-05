@@ -1,7 +1,10 @@
 import { fireEvent, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { renderRoute } from '../../test/render'
 import { resultText } from './format'
+
+// role queries walk a 284-row table: about 2 s here alone, and past the usual limit with every file running on a busy machine
+vi.setConfig({ testTimeout: 40000 })
 
 // the games table is the last table on the page (the week table sits behind a disclosure)
 const gamesRows = () => {

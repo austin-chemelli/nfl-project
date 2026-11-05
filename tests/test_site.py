@@ -137,36 +137,40 @@ def _starts(rows):
     return site._qb_starts(pl.DataFrame(rows))
 
 
-def test_usual_qb_most_frequent_wins_and_both_home_and_away_count():
-    rows = [
-        _g("1", datetime(2026, 9, 10), "BAL", "KC", "Lamar", "Mahomes"),
-        _g("2", datetime(2026, 9, 17), "KC", "BAL", "Mahomes", "Lamar"),
-        _g("3", datetime(2026, 9, 24), "BAL", "KC", "Backup", "Mahomes"),
-    ]
-    st = _starts(rows)
-    assert site._usual_qb(st, "BAL", datetime(2026, 10, 1)) == "Lamar"  # 1 home + 1 away vs 1
-    assert site._usual_qb(st, "KC", datetime(2026, 10, 1)) == "Mahomes"
+def _day(d):
+    return datetime(2026, 10, d, 17)
 
 
-def test_usual_qb_tie_goes_to_most_recent():
-    rows = [
-        _g("1", datetime(2026, 9, 10), "BAL", "KC", "A", "X"),
-        _g("2", datetime(2026, 9, 17), "KC", "BAL", "X", "B"),
-    ]
-    assert site._usual_qb(_starts(rows), "BAL", datetime(2026, 10, 1)) == "B"
+def test_usual_qb_needs_three_starts_and_counts_home_and_away():
+    starts = _starts([
+        _g("a", _day(1), "BAL", "KC", "Regular", "A"),
+        _g("b", _day(8), "KC", "BAL", "B", "Regular"),
+        _g("c", _day(15), "BAL", "NE", "Regular", "C"),
+        _g("d", _day(22), "BAL", "NE", "Fill In", "D"),
+    ])  # fmt: skip
+    assert site._usual_qb(starts, "BAL", _day(25)) == "Regular"
+    assert site._usual_qb(starts, "BAL", _day(9)) is None  # two starts isn't a regular
 
 
-def test_usual_qb_ignores_the_game_itself_later_games_and_missing_names():
-    k = datetime(2026, 9, 24)
-    rows = [
-        _g("1", datetime(2026, 9, 10), "BAL", "KC", None, "X"),
-        _g("2", k, "BAL", "KC", "Now", "X"),
-        _g("3", datetime(2026, 10, 1), "BAL", "KC", "Later", "X"),
-    ]
-    st = _starts(rows)
-    assert site._usual_qb(st, "BAL", k) is None
-    assert site._usual_qb(st, "BAL", datetime(2026, 9, 25)) == "Now"
-    assert site._usual_qb(st, "NYJ", k) is None
+def test_usual_qb_is_none_on_a_tie():
+    starts = _starts([_g(f"g{d}", _day(d), "BAL", "KC", q, "A")
+                      for d, q in ((1, "A1"), (2, "A1"), (3, "A1"), (4, "B2"), (5, "B2"), (6, "B2"))])  # fmt: skip
+    assert site._usual_qb(starts, "BAL", _day(20)) is None
+
+
+def test_usual_qb_and_last_qb_ignore_the_game_itself_later_games_and_missing_names():
+    starts = _starts([
+        _g("a", _day(1), "BAL", "KC", "Regular", "A"),
+        _g("b", _day(2), "BAL", "KC", "Regular", "A"),
+        _g("c", _day(3), "BAL", "KC", "Regular", "A"),
+        _g("d", _day(4), "BAL", "KC", None, "A"),
+        _g("e", _day(20), "BAL", "KC", "Later", "A"),
+    ])  # fmt: skip
+    assert site._usual_qb(starts, "BAL", _day(3)) is None  # the start on the cut doesn't count
+    assert site._last_qb(starts, "BAL", _day(3)) == "Regular"
+    assert site._last_qb(starts, "BAL", _day(10)) == "Regular"  # no name on day 4: not a start
+    assert site._last_qb(starts, "BAL", _day(25)) == "Later"
+    assert site._last_qb(starts, "NOPE", _day(3)) is None
 
 
 def _tend(overrides: dict, n=32, season=2026, situation="all"):
@@ -197,7 +201,7 @@ def test_contrast_run_heavy_uses_low_pass_rate_as_extreme():
     tend = _tend({("off", "pass_rate", "T01"): 0.01, ("def", "box_8plus_vs_run_rate", "T00"): 0.9})
     c = site._contrast(site._contrast_ranks(tend, 2026), GAME)
     assert c["offense"] == "T01" and c["defense"] == "T00"
-    assert (c["off_label"], c["def_label"], c["off_rank"], c["def_rank"]) == ("run-heavy", "stacked-box", 1, 1)  # fmt: skip
+    assert (c["off_label"], c["def_label"], c["off_rank"], c["def_rank"]) == ("run-heavy", "box-stacking", 1, 1)  # fmt: skip
 
 
 def test_contrast_none_when_one_side_outside_top_five():
@@ -257,27 +261,125 @@ def test_card_injuries_keep_out_and_doubtful_for_this_week_and_teams_only():
                 inj("BAL", "Questionable"), inj("BAL", "Out", week=7), inj("NYJ", "Out"),
                 inj("KC", None)]  # fmt: skip
     g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    card = site._card(g, {}, injuries, datetime(2026, 10, 20), {}, {}, pl.DataFrame())
+    card = site._card(g, {}, injuries, datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {})
     assert card["injuries"] == [
-        {"team": "BAL", "player": "a", "pos": "WR", "status": "Out"},
-        {"team": "KC", "player": "b", "pos": "WR", "status": "DOUBTFUL"},
+        {"team": "BAL", "player": "a", "pos": "WR", "status": "Out", "starter": False, "new": True},
+        {
+            "team": "KC",
+            "player": "b",
+            "pos": "WR",
+            "status": "DOUBTFUL",
+            "starter": False,
+            "new": True,
+        },
     ]
 
 
 def test_card_with_no_data_has_empty_values():
     g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    card = site._card(g, {}, [], datetime(2026, 10, 20), {}, {}, pl.DataFrame())
+    card = site._card(g, {}, [], datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {})
     assert card == {"edges": {}, "injuries": [], "usual_qb": {"home": None, "away": None},
+                    "last_qb": {"home": None, "away": None}, "charted_qb": {"home": None, "away": None},
                     "weather_concern": None, "contrast": None}  # fmt: skip
 
 
 def test_card_weather_concern_is_cut_at_min_kickoff_now():
     wx = pl.DataFrame({
-        "game_id": ["G", "G", "G"], "feature": [site.WEATHER_FEATURE] * 3, "side": ["game"] * 3,
-        "value": [0.0, 0.5, 1.0],
-        "known_as_of": [datetime(2026, 10, 1), datetime(2026, 10, 18), datetime(2026, 10, 24)],
+        "game_id": ["G"] * 4, "feature": [site.WEATHER_FEATURE] * 4, "side": ["game"] * 4,
+        "value": [0.0, 0.5, 1.0, 0.2],
+        "known_as_of": [datetime(2026, 10, 1), datetime(2026, 10, 18), datetime(2026, 10, 24),
+                        datetime(2026, 10, 26)],  # the last is after kickoff: never seen
     })  # fmt: skip
     g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    assert site._card(g, {}, [], datetime(2026, 10, 20), {}, {}, wx)["weather_concern"] == 0.5  # fmt: skip
-    assert site._card(g, {}, [], datetime(2026, 11, 20), {}, {}, wx)["weather_concern"] == 1.0
-    assert site._card(g, {}, [], datetime(2026, 9, 20), {}, {}, wx)["weather_concern"] is None
+    assert site._card(g, {}, [], datetime(2026, 10, 20), {}, {}, wx, {})["weather_concern"] == 0.5  # fmt: skip
+    assert site._card(g, {}, [], datetime(2026, 11, 20), {}, {}, wx, {})["weather_concern"] == 1.0
+    assert site._card(g, {}, [], datetime(2026, 9, 20), {}, {}, wx, {})["weather_concern"] is None
+
+
+def test_card_puts_each_input_on_the_right_side():
+    kick = datetime(2026, 10, 25, 17)
+    prior = datetime(2026, 10, 10)
+    starts = {"BAL": [(prior, "Home Usual")] * 3, "KC": [(prior, "Away Usual")] * 3}
+    edges = {"G": {"quality": {"favors": "BAL", "strength_pct": 90.0}}}
+    ranks = {("off", "pass_rate", True): {"BAL": 1}, ("def", "blitz_rate", True): {"KC": 2}}
+    charted = {("G", "BAL"): "Home Charted", ("G", "KC"): "Away Charted"}
+    card = site._card(_g("G", kick, "BAL", "KC"), edges, [], datetime(2026, 10, 20), starts, ranks,
+                      pl.DataFrame(), charted)  # fmt: skip
+    assert card["usual_qb"] == {"home": "Home Usual", "away": "Away Usual"}
+    assert card["last_qb"] == {"home": "Home Usual", "away": "Away Usual"}
+    assert card["charted_qb"] == {"home": "Home Charted", "away": "Away Charted"}
+    assert card["edges"] == edges["G"]
+    assert card["contrast"]["offense"] == "BAL"
+
+
+def test_card_usual_qb_counts_only_games_already_played():
+    played = [(datetime(2026, 9, d), "Played") for d in (1, 8, 15)]
+    projected = [(datetime(2026, 10, d), "Projected") for d in (11, 12, 13, 18)]
+    g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
+    card = site._card(g, {}, [], datetime(2026, 10, 5), {"BAL": played + projected}, {}, pl.DataFrame(), {})  # fmt: skip
+    assert card["usual_qb"]["home"] == "Played"
+    assert card["last_qb"]["home"] == "Played"
+
+
+def test_card_marks_starters_and_absences_that_are_new():
+    def inj(player, week, status="Out"):
+        return {"week": week, "team": "BAL", "player": player, "pos": "WR", "status": status}
+
+    injuries = [inj("New Guy", 8), inj("Long Term", 8), inj("Long Term", 7), inj("Bye Week", 8),
+                inj("Bye Week", 6), inj("Back Up", 8), inj("Was Fine", 8), inj("Was Fine", 7, "Questionable")]  # fmt: skip
+    g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
+    card = site._card(g, {}, injuries, datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {},
+                      starters={("BAL", "new guy")}, listed=site._listed(injuries))  # fmt: skip
+    by = {i["player"]: i for i in card["injuries"]}
+    assert by["New Guy"]["starter"] and by["New Guy"]["new"]
+    assert not by["Back Up"]["starter"]
+    assert not by["Long Term"]["new"]
+    assert not by["Bye Week"]["new"]  # out, a bye, out again
+    assert by["Was Fine"]["new"]  # questionable last week isn't a missed game
+
+
+def test_card_skips_an_injury_with_no_player_name():
+    row = {"week": 8, "team": "BAL", "player": None, "pos": "WR", "status": "Out"}
+    g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
+    assert site._card(g, {}, [row], datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {})["injuries"] == []  # fmt: skip
+
+
+def test_named_qbs_turns_ids_into_names_and_drops_unknown_ids():
+    charted = pl.DataFrame({"game_id": ["G", "G"], "team": ["BAL", "KC"], "qb1": ["00-1", "00-2"]})
+    assert site._named_qbs(charted, {"00-1": "Tyler Huntley"}) == {("G", "BAL"): "Tyler Huntley"}
+
+
+def test_charted_qbs_is_empty_without_depth_charts_or_upcoming_games(tmp_path):
+    games = pl.DataFrame({"game_id": ["G"], "kickoff_utc": [datetime(2026, 10, 25, 17)]})
+    paths = Paths(tmp_path)
+    assert site._charted_qbs(paths, games, 2026, datetime(2026, 10, 20)) == {}
+    assert site._charted_qbs(paths, games, 2026, datetime(2026, 11, 20)) == {}
+
+
+def test_qb_starts_sorts_by_kickoff_whatever_the_input_order():
+    games = pl.DataFrame([
+        _g("B", datetime(2026, 10, 8), "BAL", "KC", "Later", "X"),
+        _g("A", datetime(2026, 10, 1), "BAL", "KC", "Earlier", "Y"),
+    ])  # fmt: skip
+    assert [q for _, q in site._qb_starts(games)["BAL"]] == ["Earlier", "Later"]
+
+
+def test_contrast_rank_sum_tie_goes_to_the_entry_before_the_side():
+    # entry 0 with home on offense against entry 1 with away on offense: the entry order decides
+    ranks = {
+        ("off", "pass_rate", True): {"T01": 1},
+        ("def", "blitz_rate", True): {"T00": 1, "T01": 1},
+        ("off", "screen_rate", True): {"T00": 1},
+    }
+    assert site._contrast(ranks, GAME)["off_label"] == "pass-heavy"
+
+
+def test_contrast_keeps_a_metric_at_exactly_the_minimum_teams():
+    t = _tend({}, n=site.CONTRAST_MIN_TEAMS)
+    assert site._contrast_ranks(t, 2026)
+
+
+def test_contrast_ranks_read_old_codes_in_tendencies_as_their_franchise():
+    t = _tend({}).with_columns(pl.col("team").replace({"T00": "OAK"}))
+    ranks = site._contrast_ranks(t, 2026)[("off", "pass_rate", True)]
+    assert "LV" in ranks and "OAK" not in ranks

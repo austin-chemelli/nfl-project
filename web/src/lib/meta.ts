@@ -22,6 +22,19 @@ export function isContextOnly(meta: Meta, id: string): boolean {
   return groupOf(meta, id)?.context_only === true
 }
 
+/**
+ * Whether a group's edge can be called one. Context groups carry no weight. Venue & weather only
+ * shifts home advantage, and on a neutral site Rest & travel reads against a nominal home team, so
+ * both show a lopsided "edge" for the away team that nobody earned: all 9 neutral games of 2026
+ * did. The points they move are real; the percentile isn't a matchup edge.
+ */
+export function countsAsEdge(meta: Meta, id: string, neutral = false): boolean {
+  return !isContextOnly(meta, id) && id !== 'venue_weather' && !(neutral && id === 'rest_travel')
+}
+
+/** A percentile as printed: "bigger than 100% of matchups" can't be true. */
+export const edgePct = (p: number) => Math.min(99, Math.round(p))
+
 /** Description for a feature id or a group id (hover help). */
 export function helpFor(meta: Meta, id: string): string {
   return memberOf(meta, id)?.description ?? groupOf(meta, id)?.description ?? ''

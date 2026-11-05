@@ -53,6 +53,15 @@ describe('contract: checked-in fixtures', () => {
     const parsed = C.RetroGame.parse(r)
     expect(parsed.teams.home.efficiency[0]).toMatchObject({ league_lo: null, league_hi: null })
   })
+  it('a slate row parses with no card, an empty one, a partial one, and loses only the card when it is bad', () => {
+    const row = JSON.parse(fs.readFileSync(path.join(FIX, 'slate_2026_08.json'), 'utf8')).games[0]
+    const { card: _drop, ...bare } = row
+    expect(C.GameRow.parse(bare).card).toBeNull()
+    expect(C.GameRow.parse({ ...bare, card: null }).card).toBeNull()
+    expect(C.GameRow.parse({ ...bare, card: {} }).card).toMatchObject({ edges: {}, injuries: [], usual_qb: { home: null, away: null }, charted_qb: { home: null, away: null }, contrast: null })
+    expect(C.GameRow.parse({ ...bare, card: { injuries: [{ team: 'GB', player: 'A', pos: null, status: 'Out' }] } }).card?.injuries[0]).toMatchObject({ starter: false, new: false })
+    expect(C.GameRow.parse({ ...bare, card: { injuries: null } }).card).toBeNull()
+  })
   for (const rel of fx) it(rel, () => check(FIX, rel))
 })
 

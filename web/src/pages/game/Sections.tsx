@@ -169,7 +169,7 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
 // ------------------------------------------------------------------------------ edges + tape
 
 export function Edges({ g, meta }: { g: Game; meta: Meta }) {
-  const { rows, none } = edgeRows(g.edges, meta)
+  const { rows, none } = edgeRows(g.edges, meta, g.neutral_site)
   if (rows.length === 0 && none.length === 0)
     return <Section title="Who has the edge, by group"><p className="text-ink-2">No group edges for this game yet.</p></Section>
   return (

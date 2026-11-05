@@ -10,7 +10,7 @@
  */
 import type { Efficiency, Game, Meta, RetroGame, TeamRetro } from '../../data/contract'
 import { pct } from '../../lib/format'
-import { groupOf, isContextOnly } from '../../lib/meta'
+import { countsAsEdge, edgePct, groupOf } from '../../lib/meta'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { injuryRank, sortInjuries } from './helpers'
 
@@ -146,22 +146,18 @@ function absenceTile(g: Game): TileSpec | null {
 
 type EdgeMap = Record<string, { favors: string | null; strength_pct: number | null }>
 
-/**
- * The strongest edge among scored groups; coaching and scheme groups are context, never an edge.
- * Venue & weather isn't either: it only shifts home advantage, so a neutral site reads as a huge
- * edge for the away team. Shared with the slate cards.
- */
-export function topEdge(edges: EdgeMap, meta: Meta): { id: string; favors: string; strength_pct: number } | null {
+/** The strongest edge that counts as one (`countsAsEdge`). Shared with the slate cards. */
+export function topEdge(edges: EdgeMap, meta: Meta, neutral = false): { id: string; favors: string; strength_pct: number } | null {
   const best = Object.entries(edges)
-    .filter(([id, e]) => e.favors && e.strength_pct != null && id !== 'venue_weather' && !isContextOnly(meta, id))
+    .filter(([id, e]) => e.favors && e.strength_pct != null && countsAsEdge(meta, id, neutral))
     .sort(([, a], [, b]) => (b.strength_pct ?? 0) - (a.strength_pct ?? 0))[0]
   return best ? { id: best[0], favors: best[1].favors as string, strength_pct: best[1].strength_pct as number } : null
 }
 
 function edgeTile(g: Game, meta: Meta): TileSpec | null {
-  const e = topEdge(g.edges, meta)
+  const e = topEdge(g.edges, meta, g.neutral_site)
   if (!e) return null
-  return { id: 'edge', label: 'Biggest edge', value: `${e.favors} ${groupOf(meta, e.id)?.name ?? e.id}`, sub: `bigger than ${Math.round(e.strength_pct)}% of matchups`, tab: 'preview', team: e.favors }
+  return { id: 'edge', label: 'Biggest edge', value: `${e.favors} ${groupOf(meta, e.id)?.name ?? e.id}`, sub: `bigger than ${edgePct(e.strength_pct)}% of matchups`, tab: 'preview', team: e.favors }
 }
 
 // ------------------------------------------------------------------------------------ finished

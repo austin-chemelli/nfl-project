@@ -77,10 +77,10 @@ describe('Slate page', () => {
     renderRoute('/')
     const card = await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
     expect(within(card).getByText('GB Quality edge, bigger than 92% of matchups')).toBeInTheDocument()
-    expect(within(card).getByText("GB's 3rd-most pass-heavy offense faces CAR's most blitz-heavy defense")).toBeInTheDocument()
+    expect(within(card).getByText("The league's 3rd-most pass-heavy offense (GB) faces its most blitz-heavy defense (CAR)")).toBeInTheDocument()
     expect(within(card).getByText(/total 47.5/)).toBeInTheDocument()
     const bal = screen.getByRole('link', { name: /^BAL\s*@\s*BUF\s*\S/ })
-    expect(within(bal).getByText('Tyler Huntley starts for BAL (usually Lamar Jackson) · BUF without A Receiver (WR)')).toBeInTheDocument()
+    expect(within(bal).getByText('Tyler Huntley listed to start for BAL (usually Lamar Jackson) · BUF without A Receiver (WR)')).toBeInTheDocument()
     expect(within(screen.getByRole('link', { name: /^MIN\s*@\s*DET\s*\S/ })).queryByText('Weather could be a factor')).toBeNull()
     expect(within(screen.getByRole('link', { name: /^KC\s*@\s*DEN\s*\S/ })).getByText('No standout edge')).toBeInTheDocument()
   })
@@ -88,7 +88,7 @@ describe('Slate page', () => {
   it('still renders a game with no card, and nothing nests inside the link', async () => {
     renderRoute('/')
     const card = await screen.findByRole('link', { name: /^ARI\s*@\s*DAL\s*\S/ })
-    expect(within(card).queryByText(/edge|without|starts for|No standout/)).toBeNull()
+    expect(within(card).queryByText(/edge|without|listed to start|No standout/)).toBeNull()
     expect(within(card).getByText(/total/)).toBeInTheDocument()
     for (const a of screen.getAllByRole('link', { name: /^[A-Z]+\s*@\s*[A-Z]+.*(ET|Final)/ })) {
       expect(a.querySelector('a, button')).toBeNull()

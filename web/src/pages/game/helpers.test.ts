@@ -197,3 +197,25 @@ describe('phaseSummary', () => {
     expect(phaseSummary(r('home', 'away', null))).toBe('CAR and GB split the phases 1–1')
   })
 })
+
+describe('edges that are not edges', () => {
+  it('keeps the bar but not the label on a venue row, and on a neutral site a rest row too', () => {
+    const pp = (v: number) => ({ pp: v, features: {} })
+    const g = {
+      ...game, neutral_site: true,
+      edges: { venue_weather: { favors: 'CAR', strength_pct: 98 }, rest_travel: { favors: 'CAR', strength_pct: 93 }, quality: { favors: 'GB', strength_pct: 90 } },
+      contributions: { global: { p_home: 0.5, home_field_pp: 0, groups: { venue_weather: pp(-4), rest_travel: pp(-1), quality: pp(7) } } },
+    } as unknown as Game
+    const rows = Object.fromEntries(previewRows(g, meta, null).map((r) => [r.id, r]))
+    expect(rows.venue_weather).toMatchObject({ edge: '', pct: null, pp: -4 })
+    expect(rows.rest_travel).toMatchObject({ edge: '', pct: null, pp: -1 })
+    expect(rows.quality.edge).toBe('GB, 90th pct')
+    expect(previewRows({ ...g, neutral_site: false }, meta, null).find((r) => r.id === 'rest_travel')?.edge).toBe('CAR, 93rd pct')
+  })
+  it('leaves them out of the edge list', () => {
+    const edges = { venue_weather: { favors: 'CAR', strength_pct: 98 }, rest_travel: { favors: 'CAR', strength_pct: 93 }, quality: { favors: 'GB', strength_pct: 100 } }
+    expect(edgeRows(edges, meta, true).rows.map((r) => r.id)).toEqual(['quality'])
+    expect(edgeRows(edges, meta).rows.map((r) => r.id)).toEqual(['quality', 'rest_travel'])
+    expect(edgeRows(edges, meta).rows[0].sentence).toContain('99th percentile')
+  })
+})

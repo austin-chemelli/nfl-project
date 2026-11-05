@@ -31,6 +31,12 @@ describe('summaryTiles', () => {
     expect(summaryTiles(g, meta, null).find((x) => x.id === 'edge')).toMatchObject({ value: 'GB Quality' })
   })
 
+  it('pregame: on a neutral site Rest & travel is not an edge either, and no edge says 100%', () => {
+    const edges = { rest_travel: { favors: 'CAR', strength_pct: 93 }, quality: { favors: 'GB', strength_pct: 99.7 } }
+    expect(summaryTiles({ ...game, neutral_site: true, edges: { ...edges, quality: { favors: 'GB', strength_pct: 60 } } }, meta, null).find((x) => x.id === 'edge')).toMatchObject({ value: 'GB Quality' })
+    expect(summaryTiles({ ...game, edges }, meta, null).find((x) => x.id === 'edge')).toMatchObject({ sub: 'bigger than 99% of matchups' })
+  })
+
   it('pregame: dates a market line more than 3 days old', () => {
     const g = { ...game, market: { ...game.market!, as_of: '2026-10-20T15:00:00Z' } }
     const m = { ...meta, generated_at: '2026-11-03T20:00:00Z' }

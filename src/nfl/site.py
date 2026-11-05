@@ -430,6 +430,9 @@ def build(paths: Paths, season: int | None = None) -> dict:
     edges = group_edges(paths, games, feats, season, now)
     card_ctx = {
         "starts": _qb_starts(games),
+        "charted": _charted_qbs(paths, games, season, now),
+        "starters": _depth_starters(paths, season),
+        "listed": _listed(injuries),
         "ranks": _contrast_ranks(tend, season),
         "weather": feats.filter(pl.col("feature") == WEATHER_FEATURE) if not feats.is_empty() else feats,
     }  # fmt: skip
@@ -623,13 +626,14 @@ def _game_row(g: dict, allrows: pl.DataFrame, market: pl.DataFrame, reg: dict) -
 CONTRASTS = [
     ("pass_rate", "pass-heavy", True, "blitz_rate", "blitz-heavy"),
     ("screen_rate", "screen-heavy", True, "blitz_rate", "blitz-heavy"),
-    ("pass_rate", "run-heavy", False, "box_8plus_vs_run_rate", "stacked-box"),
-    ("play_action_rate", "play-action-heavy", True, "box_8plus_vs_run_rate", "stacked-box"),
-    ("no_huddle_rate", "up-tempo", True, "pass_rushers_5plus_rate", "five-man-rush"),
+    ("pass_rate", "run-heavy", False, "box_8plus_vs_run_rate", "box-stacking"),
+    ("play_action_rate", "play-action-heavy", True, "box_8plus_vs_run_rate", "box-stacking"),
+    ("no_huddle_rate", "up-tempo", True, "blitz_rate", "blitz-heavy"),
 ]
 CONTRAST_TOP = 5  # both sides must rank this high among the league's teams
 CONTRAST_MIN_TEAMS = 24
 WEATHER_FEATURE = "narrative.weather_concern"
+USUAL_QB_MIN_STARTS = 3  # fewer, or a tie, and "usually" would name whoever filled in
 
 
 def _contrast_ranks(tend: pl.DataFrame, season: int) -> dict[tuple[str, str, bool], dict[str, int]]:
@@ -687,37 +691,117 @@ def _qb_starts(games: pl.DataFrame) -> dict[str, list[tuple[datetime, str]]]:
     return starts
 
 
-def _usual_qb(starts: dict, team: str, kickoff: datetime) -> str | None:
-    """Most frequent starter among starts strictly before `kickoff`; ties go to the most recent."""
+def _charted_qbs(
+    paths: Paths, games: pl.DataFrame, season: int, now: datetime
+) -> dict[tuple[str, str], str]:
+    """(game_id, team) -> the depth chart's QB1 by name, for games that haven't kicked off: the
+    starter the model prices. The schedule's name for an unplayed game is only a projection, and
+    has been wrong days out (Tyler Huntley for BAL in 2026 Week 8; Lamar Jackson started). Empty
+    without depth charts."""
+    import duckdb
+
+    from nfl.features import availability
+
+    chart_dir = paths.curated_table("depth_charts") / f"season={season}"
+    upcoming = games.filter(pl.col("kickoff_utc") > now)
+    if upcoming.is_empty() or not any(chart_dir.glob("*.parquet")):
+        return {}
+    ids = duckdb.sql(
+        f"select distinct gsis_id, player_name from read_parquet('{chart_dir.as_posix()}/*.parquet') "
+        "where gsis_id is not null and player_name is not null"
+    ).fetchall()
+    charted = availability.charted_qb1(upcoming, availability.load_depth(paths), now)
+    return _named_qbs(charted, dict(ids))
+
+
+def _named_qbs(charted: pl.DataFrame, names: dict[str, str]) -> dict[tuple[str, str], str]:
+    """`charted_qb1`'s player ids as names; an id with no name is left out."""
+    return {
+        (r["game_id"], r["team"]): names[r["qb1"]]
+        for r in charted.iter_rows(named=True)
+        if r["qb1"] in names
+    }
+
+
+def _usual_qb(starts: dict, team: str, cut: datetime) -> str | None:
+    """The team's clear regular before `cut`: the most starts, at least USUAL_QB_MIN_STARTS and
+    more than anyone else, or None. Pass min(kickoff, now): an unplayed game's name is a projection."""
     count: dict[str, int] = {}
-    last: dict[str, int] = {}
-    for i, (ts, qb) in enumerate(starts.get(team, [])):
-        if ts < kickoff:
+    for ts, qb in starts.get(team, []):
+        if ts < cut:
             count[qb] = count.get(qb, 0) + 1
-            last[qb] = i
-    return max(count, key=lambda q: (count[q], last[q])) if count else None
+    top = max(count.values(), default=0)
+    leaders = [q for q, n in count.items() if n == top]
+    return leaders[0] if top >= USUAL_QB_MIN_STARTS and len(leaders) == 1 else None
 
 
-def _card(g, edges, injuries, now, starts, ranks, weather) -> dict:
+def _last_qb(starts: dict, team: str, cut: datetime) -> str | None:
+    """The team's most recent starter before `cut`: a QB already in the job isn't news."""
+    played = [qb for ts, qb in starts.get(team, []) if ts < cut]
+    return played[-1] if played else None
+
+
+def _missing(i: dict) -> bool:
+    return bool(i["player"]) and any(k in (i["status"] or "").lower() for k in ("out", "doubtful"))
+
+
+def _listed(injuries: list[dict]) -> set[tuple[str, str, int]]:
+    """(team, player, week) for every Out or Doubtful row."""
+    return {(i["team"], i["player"], i["week"]) for i in injuries if _missing(i)}
+
+
+def _depth_starters(paths: Paths, season: int) -> set[tuple[str, str]]:
+    """(team, lowercase name) of everyone listed first at a position this season. Without depth
+    charts nobody is, so the card says nothing about absences rather than guessing."""
+    import duckdb
+
+    chart_dir = paths.curated_table("depth_charts") / f"season={season}"
+    if not any(chart_dir.glob("*.parquet")):
+        return set()
+    return {
+        (team, name)
+        for team, name in duckdb.sql(
+            f"select distinct team, lower(player_name) from read_parquet('{chart_dir.as_posix()}/*.parquet') "
+            "where pos_rank = 1 and player_name is not null"
+        ).fetchall()
+    }  # fmt: skip
+
+
+def _card(g, edges, injuries, now, starts, ranks, weather, charted, starters=(), listed=()) -> dict:
     """The slate card block (U4): why-this-game data, as known at the same cut `_game_detail` uses."""
     gid, teams = g["game_id"], (g["home_team"], g["away_team"])
+    cut = min(g["kickoff_utc"], now)
     wx = None
     if not weather.is_empty():
-        fv = store.as_of(weather.filter(pl.col("game_id") == gid), min(g["kickoff_utc"], now))
+        fv = store.as_of(weather.filter(pl.col("game_id") == gid), cut)
         if fv.height:
             wx = _r(fv["value"][0])
     return {
         "edges": (edges or {}).get(gid, {}),
         "injuries": [
-            {"team": i["team"], "player": i["player"], "pos": i["pos"], "status": i["status"]}
+            {
+                "team": i["team"],
+                "player": i["player"],
+                "pos": i["pos"],
+                "status": i["status"],
+                "starter": (i["team"], i["player"].lower()) in starters,
+                # two weeks back, so a bye doesn't make a long absence look new
+                "new": not any((i["team"], i["player"], i["week"] - k) in listed for k in (1, 2)),
+            }
             for i in injuries
-            if i["week"] == g["week"]
-            and i["team"] in teams
-            and any(k in (i["status"] or "").lower() for k in ("out", "doubtful"))
+            if i["week"] == g["week"] and i["team"] in teams and _missing(i)
         ],
         "usual_qb": {
-            "home": _usual_qb(starts, g["home_team"], g["kickoff_utc"]),
-            "away": _usual_qb(starts, g["away_team"], g["kickoff_utc"]),
+            "home": _usual_qb(starts, g["home_team"], cut),
+            "away": _usual_qb(starts, g["away_team"], cut),
+        },
+        "last_qb": {
+            "home": _last_qb(starts, g["home_team"], cut),
+            "away": _last_qb(starts, g["away_team"], cut),
+        },
+        "charted_qb": {
+            "home": charted.get((gid, g["home_team"])),
+            "away": charted.get((gid, g["away_team"])),
         },
         "weather_concern": wx,
         "contrast": _contrast(ranks, g),

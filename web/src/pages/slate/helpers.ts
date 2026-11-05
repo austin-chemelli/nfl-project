@@ -1,8 +1,8 @@
 /** Pure helpers for the Slate page (port of nfl.ui.slate_helpers). */
-import type { GameRow, Meta } from '../../data/contract'
+import type { CardData, GameRow, Meta } from '../../data/contract'
 import { APPROACHES, HEADLINE, REFERENCES, SHORT } from '../../lib/models'
 import { pct } from '../../lib/format'
-import { groupOf } from '../../lib/meta'
+import { edgePct, groupOf } from '../../lib/meta'
 import { injuryRank, ordinal } from '../game/helpers'
 import { topAbsence, topEdge } from '../game/summary'
 
@@ -176,27 +176,47 @@ function finishedSentence(g: GameRow, ps: { id: string; p: number }[], won: bool
 const EDGE_MIN_PCT = 75
 const WEATHER_MIN = 0.5
 
+/** Names compare without suffixes or punctuation: the depth chart has `Gardner Minshew II`, the schedule `Gardner Minshew`. */
+const sameQb = (a: string, b: string) => {
+  const key = (s: string) => s.toLowerCase().replace(/[.'’]/g, '').replace(/\s+(jr|sr|ii|iii|iv)$/, '').trim()
+  return key(a) === key(b)
+}
+
+/**
+ * The QB news for one team, or null. Nothing here is confirmed: for an unplayed game the schedule's
+ * name is a projection (it had Tyler Huntley days before Lamar Jackson started in 2026 Week 8), so
+ * the line says "listed", leads with the depth chart the model prices, and says so when the two
+ * sources disagree. No claim when the starter is the regular, already has the job, or is hurt
+ * (his absence says that better).
+ */
+function qbPiece(team: string, schedule: string | null, charted: string | null, usual: string | null, last: string | null, injuries: CardData['injuries']): string | null {
+  const listed = charted ?? schedule
+  if (!listed || !usual || sameQb(listed, usual) || (last && sameQb(listed, last))) return null
+  if (injuries.some((i) => i.team === team && sameQb(i.player, listed))) return null
+  if (charted && schedule && !sameQb(charted, schedule) && !sameQb(schedule, usual)) return `${team} starter unclear: ${charted} on the depth chart, ${schedule} on the schedule`
+  return `${listed} listed to start for ${team} (usually ${usual})`
+}
+
 /** One line on why a pregame matchup is worth a look, from `g.card`: up to two pieces, most newsworthy first. */
 export function whyLine(g: GameRow, meta: Meta): string | null {
   const c = g.card
   if (g.result != null || c == null) return null
   const pieces: string[] = []
 
-  // 1. A new starter, for each side
+  // 1. QB news, this week only: a name further out is a guess
   const named = new Set<string>()
-  for (const [team, starter, usual] of [
-    [g.away, g.away_qb, c.usual_qb.away],
-    [g.home, g.home_qb, c.usual_qb.home],
-  ] as const) {
-    if (starter && usual && starter !== usual) {
-      pieces.push(`${starter} starts for ${team} (usually ${usual})`)
-      named.add(starter)
-      named.add(usual)
+  if (g.week === meta.current_week) {
+    for (const [team, schedule, side] of [[g.away, g.away_qb, 'away'], [g.home, g.home_qb, 'home']] as const) {
+      const piece = qbPiece(team, schedule, c.charted_qb[side], c.usual_qb[side], c.last_qb[side], c.injuries)
+      if (piece) {
+        pieces.push(piece)
+        if (c.usual_qb[side]) named.add(c.usual_qb[side])
+      }
     }
   }
 
-  // 2. The key absence, unless a QB piece already names that player
-  const absence = topAbsence(c.injuries.filter((i) => !named.has(i.player)))
+  // 2. A starter newly out: not a backup, and not someone gone for weeks
+  const absence = topAbsence(c.injuries.filter((i) => i.starter && i.new && !named.has(i.player)))
   if (absence) {
     const i = absence.top
     pieces.push(injuryRank(i.status) === 0 ? `${i.team} without ${i.player}${i.pos ? ` (${i.pos})` : ''}` : `${i.team}'s ${i.player} doubtful`)
@@ -206,9 +226,9 @@ export function whyLine(g: GameRow, meta: Meta): string | null {
   if (g.neutral_site) pieces.push(g.stadium ? `Neutral site: ${g.stadium}` : 'Neutral site')
 
   // 4. The biggest edge, when it is big
-  const edge = topEdge(c.edges, meta)
+  const edge = topEdge(c.edges, meta, g.neutral_site)
   if (edge && edge.strength_pct >= EDGE_MIN_PCT) {
-    pieces.push(`${edge.favors} ${groupOf(meta, edge.id)?.name ?? edge.id} edge, bigger than ${Math.round(edge.strength_pct)}% of matchups`)
+    pieces.push(`${edge.favors} ${groupOf(meta, edge.id)?.name ?? edge.id} edge, bigger than ${edgePct(edge.strength_pct)}% of matchups`)
   }
 
   // 5. Weather, only where it can matter
@@ -223,5 +243,5 @@ export function contrastLine(g: GameRow): string | null {
   const x = g.card?.contrast
   if (g.result != null || !x) return null
   const rank = (n: number) => (n === 1 ? 'most' : `${ordinal(n)}-most`)
-  return `${x.offense}'s ${rank(x.off_rank)} ${x.off_label} offense faces ${x.defense}'s ${rank(x.def_rank)} ${x.def_label} defense`
+  return `The league's ${rank(x.off_rank)} ${x.off_label} offense (${x.offense}) faces its ${rank(x.def_rank)} ${x.def_label} defense (${x.defense})`
 }
