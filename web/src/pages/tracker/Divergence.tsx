@@ -1,25 +1,19 @@
 import { useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { DataTable, Section, Segmented, td, th } from '../../components/ui'
+import { Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
-import { APPROACHES, colorVar } from '../../lib/models'
-import { BUCKET_ORDER, divergenceSentence, marketWinsWhenApart } from './helpers'
-import { label, sentenceName } from './names'
+import { llVsMarket } from '../../lib/format'
+import { APPROACHES, HEADLINE } from '../../lib/models'
+import { BUCKET_ORDER, marketWinsWhenApart } from './helpers'
+import { label } from './names'
 
 const PC = (v: number | null) => (v == null ? '–' : `${Math.round(100 * v)}%`)
 
-export function Divergence({ t, meta }: { t: Tracker; meta: Meta }) {
+export function Divergence({ t }: { t: Tracker; meta: Meta }) {
   const ids = APPROACHES.filter((m) => t.divergence.some((r) => r.model_id === m))
-  const [sel, setSel] = useState<string>(ids[0])
+  const [sel, setSel] = useState<string>(ids.some((m) => m === HEADLINE) ? HEADLINE : ids[0])
   if (!ids.length) return null
   const [wins, total] = marketWinsWhenApart(t.divergence.filter((r) => (ids as string[]).includes(r.model_id)))
   const d = t.divergence.filter((r) => r.model_id === sel).sort((a, b) => BUCKET_ORDER.indexOf(a.bucket) - BUCKET_ORDER.indexOf(b.bucket))
-  const bars = d.map((r) => ({
-    name: `${r.bucket} pts apart`,
-    n: r.n,
-    market: r.market_expected_rate,
-    side: r.lean_win_rate,
-  }))
   return (
     <Section
       title="When an approach disagrees with the market"
@@ -38,50 +32,35 @@ export function Divergence({ t, meta }: { t: Tracker; meta: Meta }) {
         onChange={setSel}
         options={ids.map((m) => ({ value: m, label: label(m) }))}
       />
-      <ul className="mt-3 list-disc pl-5 text-[14px]">
-        {d.map((r) => (
-          <li key={r.bucket}>{divergenceSentence(r, sentenceName(meta, sel))}</li>
-        ))}
-      </ul>
-      <div className="mt-3 h-72 w-full">
-        <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 288 }}>
-          <BarChart data={bars} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="2 3" vertical={false} />
-            <XAxis dataKey="name" stroke="var(--text-muted)" tick={{ fontSize: 12 }} tickFormatter={(v: string, i: number) => `${v} (n = ${bars[i]?.n.toLocaleString('en-US')})`} interval={0} />
-            <YAxis domain={[0, 0.6]} tickFormatter={(v: number) => `${Math.round(100 * v)}%`} stroke="var(--text-muted)" tick={{ fontSize: 12 }} width={40} />
-            <Tooltip formatter={(v) => PC(Number(v))} contentStyle={{ background: 'var(--surface-1)', border: '1px solid var(--border)', fontSize: 13 }} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="market" name="Market expected" fill={colorVar('market_baseline')} isAnimationActive={false} />
-            <Bar dataKey="side" name={`${label(sel)}'s side won`} fill={colorVar(sel)} isAnimationActive={false} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <DataTable summary="Show the numbers: disagreement buckets">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr>
-              <th className={th}>Gap</th>
-              <th className={th}>Games</th>
-              <th className={th}>Its side won</th>
-              <th className={th}>Market expected</th>
-              <th className={th}>Its log loss</th>
-              <th className={th}>Market log loss</th>
-            </tr>
-          </thead>
-          <tbody>
-            {d.map((r) => (
-              <tr key={r.bucket}>
-                <td className={td}>{r.bucket} pts</td>
-                <td className={`${td} tabular`}>{r.n.toLocaleString('en-US')}</td>
-                <td className={`${td} tabular`}>{PC(r.lean_win_rate)}</td>
-                <td className={`${td} tabular`}>{PC(r.market_expected_rate)}</td>
-                <td className={`${td} tabular`}>{r.model_log_loss?.toFixed(3) ?? '–'}</td>
-                <td className={`${td} tabular`}>{r.market_log_loss?.toFixed(3) ?? '–'}</td>
+      <div className="mt-3">
+        <TableScroll>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr>
+                <th className={th}>Disagreement</th>
+                <th className={th}>Games</th>
+                <th className={th}>Its side won</th>
+                <th className={th}>Market expected</th>
+                <th className={th}>Log loss vs market</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </DataTable>
+            </thead>
+            <tbody>
+              {d.map((r) => (
+                <tr key={r.bucket}>
+                  <td className={td}>{r.bucket} pts</td>
+                  <td className={`${td} tabular`}>{r.n.toLocaleString('en-US')}</td>
+                  <td className={`${td} tabular`}>
+                    {PC(r.lean_win_rate)}
+                    {r.lean_win_rate != null && ` (${Math.round(r.lean_win_rate * r.n).toLocaleString('en-US')} of ${r.n.toLocaleString('en-US')})`}
+                  </td>
+                  <td className={`${td} tabular`}>{PC(r.market_expected_rate)}</td>
+                  <td className={`${td} tabular`}>{r.model_log_loss != null && r.market_log_loss != null ? llVsMarket(r.model_log_loss, r.market_log_loss) : '–'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
+      </div>
     </Section>
   )
 }

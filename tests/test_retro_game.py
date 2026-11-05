@@ -476,7 +476,7 @@ def test_league_bands_match_metrics_per_team():
 
 def test_schema_version_staleness(tree):
     build_games(tree, 2026)
-    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION == "3"
+    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION == "4"
     assert build_games(tree, 2026) == []  # same hash, expectations and schema: up to date
     f = retro_path(tree, 2026, "g2")
     d = json.loads(f.read_text())

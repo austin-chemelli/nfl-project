@@ -14,7 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "3"  # v3 2026-11-04: played-like inputs, the phase scorecard; game-only headlines
+SCHEMA_VERSION = "4"  # v4 2026-11-05: the recap's bold calls
+# v3 2026-11-04: played-like inputs, the phase scorecard; game-only headlines
 
 Side = Literal["home", "away"]
 Unit = Literal["epa", "pct", "pp", "count", "yards", "points"]
@@ -227,6 +228,19 @@ class RecapTeam(_Model):
     sentence: str
 
 
+class BoldCall(_Model):
+    game_id: str
+    away: str
+    home: str
+    model_id: str
+    label: str
+    pick: str  # team code
+    p_pick: float
+    log_loss: float
+    earned: float  # ln 2 - log_loss: what the call scored against a coin flip
+    sentence: str
+
+
 class WeekRecap(_Model):
     schema_version: str = SCHEMA_VERSION
     season: int
@@ -240,3 +254,5 @@ class WeekRecap(_Model):
     luckiest: list[RecapTeam]
     unluckiest: list[RecapTeam]
     note: str  # one week says little about a model
+    best_call: BoldCall | None = None  # one per week across approaches
+    costliest_call: BoldCall | None = None

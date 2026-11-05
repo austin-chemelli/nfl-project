@@ -1,7 +1,7 @@
 /** Small shared building blocks. Pages compose these; keep page-specific UI in the page. */
 import type { ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { colorVar, SHORT } from '../lib/models'
+import { colorVar, REFERENCES, SHORT } from '../lib/models'
 import { pct } from '../lib/format'
 import { Help } from './Help'
 import { DataError } from '../data/api'
@@ -48,14 +48,27 @@ export function StatTile({ label, value, sub, help }: { label: string; value: Re
 }
 
 export function Swatch({ modelId, size = 10 }: { modelId: string; size?: number }) {
-  return <span aria-hidden className="inline-block shrink-0 rounded-full" style={{ width: size, height: size, background: colorVar(modelId) }} />
+  const color = colorVar(modelId)
+  // A reference is a hollow dashed ring: it reads differently from an approach everywhere.
+  if ((REFERENCES as readonly string[]).includes(modelId)) {
+    return (
+      <span
+        aria-hidden
+        data-reference
+        className="inline-block shrink-0 rounded-full"
+        style={{ width: size, height: size, border: `1.5px dashed ${color}`, boxSizing: 'border-box' }}
+      />
+    )
+  }
+  return <span aria-hidden className="inline-block shrink-0 rounded-full" style={{ width: size, height: size, background: color }} />
 }
 
-export function ModelBadge({ modelId, label }: { modelId: string; label?: string }) {
+export function ModelBadge({ modelId, label, reference = false }: { modelId: string; label?: string; reference?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
       <Swatch modelId={modelId} />
       {label ?? SHORT[modelId] ?? modelId}
+      {reference && <span className="text-[11px] uppercase tracking-wide text-ink-3">reference</span>}
     </span>
   )
 }

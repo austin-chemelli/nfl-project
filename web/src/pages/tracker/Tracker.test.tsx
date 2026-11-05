@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderRoute } from '../../test/render'
@@ -10,8 +13,41 @@ describe('Tracker page', () => {
     expect(within(strip).getAllByRole('button')).toHaveLength(5)
     expect(await screen.findByText(/^After \d+ games, the Student is/)).toBeInTheDocument()
     expect(screen.getByText(/No live locks have been graded yet/)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Log loss by season/ })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Log loss by season/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /Backtest: how far/ })).not.toBeInTheDocument()
+  })
+
+  it('has exactly four tabs', async () => {
+    renderRoute('/tracker')
+    const tabs = await screen.findAllByRole('tab')
+    expect(tabs.map((x) => x.textContent)).toEqual(['This season', 'Backtest', 'Calibration', 'Paper bets'])
+  })
+
+  it('season tab: the gap chart says which way is good and draws the noise band', async () => {
+    renderRoute('/tracker')
+    expect(await screen.findByText('ahead of the market ↑')).toBeInTheDocument()
+    expect(screen.getByText('behind ↓')).toBeInTheDocument()
+    expect(screen.getByText('too close to call')).toBeInTheDocument()
+    expect(screen.queryByText(/live from week/)).not.toBeInTheDocument()
+    expect(screen.queryByText('backfill')).not.toBeInTheDocument()
+    // the market is the zero line, not a toggle
+    const toggles = screen.getByRole('group', { name: 'Lines to show' })
+    expect(within(toggles).queryByText('Market')).toBeNull()
+  })
+
+  it('season tab: a live week draws a dashed line labeled with its week', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tracker-live-'))
+    fs.cpSync(path.resolve(import.meta.dirname, '../../test/fixtures'), root, { recursive: true })
+    const file = path.join(root, 'site/tracker.json')
+    const t = JSON.parse(fs.readFileSync(file, 'utf8'))
+    for (const r of t.current_season) if (r.week >= 6) r.live = true
+    fs.writeFileSync(file, JSON.stringify(t))
+    try {
+      renderRoute('/tracker', root)
+      expect(await screen.findByText('live from week 6')).toBeInTheDocument()
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it('a strip tile opens the tab that explains it', async () => {
@@ -30,6 +66,8 @@ describe('Tracker page', () => {
     expect(within(section).getAllByText(/games and \d+ seasons/, { exact: false }).length).toBeGreaterThan(0)
     expect(screen.getAllByText('better than the market', { exact: false }).length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: /What history would change/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Log loss by season/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /When an approach disagrees with the market/ })).toBeInTheDocument()
     expect(screen.getByText(/History would move \d+ of the \w+'s 100 attention points/)).toBeInTheDocument()
   })
 
@@ -38,9 +76,32 @@ describe('Tracker page', () => {
     expect(await screen.findByText(/The Analyst: (well calibrated|overconfident by \d+ points|underconfident by \d+ points)/)).toBeInTheDocument()
   })
 
-  it('disagreements tab: divergence sentences', async () => {
+  it('backtest tab: the disagreement table for the selected approach, with no chart', async () => {
+    renderRoute('/tracker?tab=backtest')
+    const h = await screen.findByRole('heading', { name: /When an approach disagrees with the market/ })
+    const section = h.closest('section')!
+    expect(within(section).getByRole('columnheader', { name: 'Disagreement' })).toBeInTheDocument()
+    expect(within(section).getByRole('columnheader', { name: 'Log loss vs market' })).toBeInTheDocument()
+    expect(within(section).getAllByRole('row').length).toBeGreaterThan(1)
+    expect(section.querySelector('.recharts-wrapper')).toBeNull()
+  })
+
+  it('the disagreement table opens on the headline line', async () => {
+    renderRoute('/tracker?tab=backtest')
+    const h = await screen.findByRole('heading', { name: /When an approach disagrees with the market/ })
+    const group = within(h.closest('section')!).getByRole('radiogroup', { name: 'Approach' })
+    expect(within(group).getByRole('radio', { name: 'Student' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('backtest rows leave out the global diagnostic', async () => {
+    renderRoute('/tracker?tab=backtest')
+    const h = await screen.findByRole('heading', { name: /Backtest: how far/ })
+    expect(within(h.closest('section')!).queryByText(/^Global$/)).toBeNull()
+  })
+
+  it('the removed disagreements tab falls back to the default', async () => {
     renderRoute('/tracker?tab=disagreements')
-    expect(await screen.findByText(/In [\d,]+ games where the Traditionalist disagreed with the market by less than 2.5 points/)).toBeInTheDocument()
+    expect(await screen.findByText(/^After \d+ games, the Student is/)).toBeInTheDocument()
   })
 
   it('bets tab: the ledger', async () => {

@@ -29,8 +29,8 @@ flowchart LR
 |---|---|---|
 | `/` | Slate: the week's games × approaches, divergence markers, statuses, disagreement strip | meta, slate |
 | `/game/:id` | Game: approaches vs market, why (group contributions in win-probability points), edges by group, tale of the tape, tendency dumbbells vs league, injuries, narrative v2 | game |
-| `/tracker` | Season tracker: current-season curve, backtest Δ with CIs, calibration question, divergence sentences, paper bets, persona vs history | tracker, meta |
-| `/hypotheses` | What history says per feature; one feature or group over time | hypotheses |
+| `/tracker` | the Student vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest` (also log loss by season and disagreements, which span every season), `calibration`, `bets` |
+| `/hypotheses` | none | `time` (default; `?item=` picks the feature), `effects` |
 | `/coaches` | Team view and coach view of coordinator scheme profiles | coaches |
 | `/build` | Build your own: group budget, donut by heading, results; shareable `?w=` | diy_matrix, meta |
 | `/season/:year` | Every game of a season under a weight set | season_<yyyy>, diy_matrix |
@@ -69,6 +69,8 @@ Slate cards lead with the game too: teams, the line and total, a **why this game
 - **Absences.** Only a player listed first at a position on the chart for that game (special teams excluded, matched by player id), and not Out or Doubtful at the team's last game.
 - **Edges.** `countsAsEdge` in `lib/meta.ts`: not context groups, not Venue & weather (it only shifts home advantage), and not Rest & travel on a neutral site, where it favors the nominal away team. The Preview keeps their bars and drops their labels. On a neutral site the Preview moves the neutral-site discount onto the Home field row, which can go negative, and an approach without that feature (the Sharp) keeps its full value; the Approaches tab shows the raw pieces.
 - **Card contract.** A bad `card` costs that game its line, with a console warning, not the week its slate. `contract.test.ts` validates cards and the injury flags, so wrong types and a dropped flag fail there.
+
+The tracker's season chart plots each line's gap to the market (market cumulative log loss minus the line's, so above zero is ahead), with a band at ±0.005 for gaps too close to call. References (`REFERENCES` in `lib/models.ts`) draw as a dashed ring in `Swatch`, and `ModelBadge`'s `reference` prop adds a tag in tables. A list built from a data file filters with `isPublicLine`, so diagnostics never appear because the file carries them. The week recap's Full recap names the week's best call and costliest miss, from `best_call` and `costliest_call`.
 
 Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
 

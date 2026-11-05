@@ -5,6 +5,10 @@ export type ApproachId = (typeof APPROACHES)[number]
 export const HEADLINE = 'student'
 export const REFERENCES = ['market_baseline', 'elo_v0', 'home_naive'] as const
 
+export const isReference = (modelId: string) => (REFERENCES as readonly string[]).includes(modelId)
+/** A line the site shows: the data may carry diagnostics too, and a list built from the file would show them. */
+export const isPublicLine = (modelId: string) => (APPROACHES as readonly string[]).includes(modelId) || isReference(modelId)
+
 export function colorVar(modelId: string): string {
   if ((APPROACHES as readonly string[]).includes(modelId)) return `var(--series-${modelId})`
   if (modelId === 'market_baseline') return 'var(--series-market)'
@@ -12,7 +16,7 @@ export function colorVar(modelId: string): string {
 }
 
 export function dashArray(modelId: string): string | undefined {
-  return modelId === 'elo_v0' || modelId === 'home_naive' || modelId === 'global' ? '4 3' : undefined
+  return modelId === 'market_baseline' || modelId === 'elo_v0' || modelId === 'home_naive' || modelId === 'global' ? '4 3' : undefined
 }
 
 export const SHORT: Record<string, string> = {

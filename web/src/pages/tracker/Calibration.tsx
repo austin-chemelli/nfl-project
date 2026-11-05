@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
-import { colorVar } from '../../lib/models'
+import { colorVar, dashArray, isReference } from '../../lib/models'
 import { calibrationVerdict, foldReliability } from './helpers'
 import { KEY_LINES, label, sentenceName } from './names'
 
@@ -54,7 +54,7 @@ export function Calibration({ t, meta }: { t: Tracker; meta: Meta }) {
             />
             <ReferenceLine segment={[{ x: 0.5, y: 0.5 }, { x: 1, y: 1 }]} stroke="var(--text-muted)" strokeDasharray="3 3" ifOverflow="visible" />
             {sel.map((m) => (
-              <Scatter key={m} name={label(m)} data={folded(m)} fill={colorVar(m)} stroke={colorVar(m)} line={{ strokeWidth: 2 }} isAnimationActive={false} />
+              <Scatter key={m} name={label(m)} data={folded(m)} fill={colorVar(m)} stroke={colorVar(m)} line={{ strokeWidth: 2, strokeDasharray: dashArray(m) }} isAnimationActive={false} />
             ))}
           </ScatterChart>
         </ResponsiveContainer>
@@ -73,7 +73,7 @@ export function Calibration({ t, meta }: { t: Tracker; meta: Meta }) {
             {sel.flatMap((m) =>
               folded(m).map((b) => (
                 <tr key={`${m}-${b.mean_p}`}>
-                  <td className={td}><ModelBadge modelId={m} /></td>
+                  <td className={td}><ModelBadge modelId={m} reference={isReference(m)} /></td>
                   <td className={`${td} tabular`}>{PC(b.mean_p)}</td>
                   <td className={`${td} tabular`}>{PC(b.hit_rate)}</td>
                   <td className={`${td} tabular`}>{b.n.toLocaleString('en-US')}</td>

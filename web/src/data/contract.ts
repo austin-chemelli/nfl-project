@@ -4,7 +4,6 @@
  * blanks. Objects are "loose": extra fields are allowed, missing required ones are errors.
  */
 import { z } from 'zod'
-import { hideInGame, hideInRecap, hideInRetro, hideInSlate, hideInTracker } from './hideEnsemble'
 
 // zod's JIT probes `new Function`, which the site's CSP (no unsafe-eval) reports on every load.
 z.config({ jitless: true })
@@ -152,7 +151,7 @@ export const Slate = z.looseObject({
   week: num,
   generated_at: z.string(),
   games: z.array(GameRow),
-}).transform(hideInSlate)
+})
 
 // ---------------------------------------------------------------------------------------- game
 
@@ -241,7 +240,7 @@ export const Game = GameRow.extend({
   tendencies: z.array(Tendency),
   injuries: z.array(Injury),
   narrative: Narrative.nullable(),
-}).transform(hideInGame)
+})
 
 // --------------------------------------------------------------------------- retrospective
 // Mirrors src/nfl/retro/schema.py (ADR 0016). Separate files (site/retro/<id>.json,
@@ -336,7 +335,7 @@ export const RetroGame = z.looseObject({
   predictions: z.array(GradedPick),
   best_model: nstr,
   attribution: z.array(Attribution),
-}).transform(hideInRetro)
+})
 
 export const RecapModel = z.looseObject({
   model_id: z.string(),
@@ -350,6 +349,10 @@ export const RecapModel = z.looseObject({
 })
 
 const RecapGame = z.looseObject({ game_id: z.string(), away: z.string(), home: z.string(), value: num, sentence: z.string() })
+const BoldCall = z.looseObject({
+  game_id: z.string(), away: z.string(), home: z.string(), model_id: z.string(), label: z.string(), pick: z.string(),
+  p_pick: num, log_loss: num, earned: num, sentence: z.string(),
+})
 const RecapTeam = z.looseObject({ team: z.string(), game_id: z.string(), luck_net: num, sentence: z.string() })
 
 export const WeekRecap = z.looseObject({
@@ -365,7 +368,9 @@ export const WeekRecap = z.looseObject({
   luckiest: z.array(RecapTeam),
   unluckiest: z.array(RecapTeam),
   note: z.string(),
-}).transform(hideInRecap)
+  best_call: BoldCall.nullable().default(null),
+  costliest_call: BoldCall.nullable().default(null),
+})
 
 // ------------------------------------------------------------------------------------- tracker
 
@@ -394,7 +399,7 @@ export const Tracker = z.looseObject({
       units: nnum, roi: nnum, clv: nnum,
     }),
   ),
-}).transform(hideInTracker)
+})
 
 // --------------------------------------------------------------------------------- hypotheses
 

@@ -142,3 +142,35 @@ export function headlineSentence(row: CurrentRow, name: string): string {
   if (Math.abs(row.delta) < NOISE) return `${base}about the same as the market (within ${NOISE} log loss, which is noise at this sample size).`
   return `${base}${Math.abs(row.delta).toFixed(3)} ${row.delta > 0 ? 'worse' : 'better'} than the market (log loss; lower is better).`
 }
+
+export type GapRow = { week: number } & Record<string, number>
+
+/** A signed gap with a true minus: "+0.012" / "−0.008". */
+export function signedGap(v: number): string {
+  return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(3)}`
+}
+
+/**
+ * Per week, each line's gap to the market: market cumulative log loss minus the line's, so above
+ * zero is ahead. A week with no market row is skipped; a line with no row that week has no key.
+ */
+export function gapRows(cur: Tracker['current_season']): GapRow[] {
+  const market = new Map<number, number>()
+  for (const r of cur) if (r.model_id === 'market_baseline') market.set(r.week, r.cum_log_loss)
+  const out = new Map<number, GapRow>()
+  for (const r of cur) {
+    const m = market.get(r.week)
+    if (m == null || r.model_id === 'market_baseline') continue
+    const row = out.get(r.week) ?? ({ week: r.week } as GapRow)
+    row[r.model_id] = m - r.cum_log_loss
+    out.set(r.week, row)
+  }
+  return [...out.values()].sort((a, b) => a.week - b.week)
+}
+
+/** Symmetric y limit for the gap chart: the largest shown gap, rounded up, never below twice the noise band. */
+export function gapLimit(rows: GapRow[], shown: string[]): number {
+  let max = 0
+  for (const r of rows) for (const m of shown) if (r[m] != null) max = Math.max(max, Math.abs(r[m]))
+  return Math.max(2 * NOISE, Math.ceil(max / NOISE - 1e-9) * NOISE)
+}

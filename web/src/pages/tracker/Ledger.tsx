@@ -2,6 +2,7 @@ import { ModelBadge, Section, TableScroll, td, th } from '../../components/ui'
 import { Help } from '../../components/Help'
 import type { Tracker } from '../../data/contract'
 import { dash } from '../../lib/format'
+import { isReference } from '../../lib/models'
 import { KEY_LINES, REF_LINES } from './names'
 
 const signed = (v: number | null, d: number) => (v == null ? dash : `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(d)}`)
@@ -35,7 +36,7 @@ export function Ledger({ t }: { t: Tracker }) {
             <tbody>
               {rows.map((r) => (
                 <tr key={`${r.model_id}-${r.kind}`}>
-                  <td className={td}><ModelBadge modelId={r.model_id} /></td>
+                  <td className={td}><ModelBadge modelId={r.model_id} reference={isReference(r.model_id)} /></td>
                   <td className={td}>{r.kind}</td>
                   <td className={`${td} tabular`}>{r.bets.toLocaleString('en-US')}</td>
                   <td className={`${td} tabular`}>{r.wins}-{r.losses}-{r.pushes}</td>

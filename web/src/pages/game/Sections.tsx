@@ -5,7 +5,7 @@ import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } 
 import type { Game, Meta } from '../../data/contract'
 import { fmtUnit, pct, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from '../../lib/format'
 import { approachOf, groupOf } from '../../lib/meta'
-import { SHORT } from '../../lib/models'
+import { isReference, SHORT } from '../../lib/models'
 import {
   byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, injuryRank, sortInjuries, tape, tendencyBlocks,
 } from './helpers'
@@ -51,7 +51,7 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
                 <tr key={m}>
                   <td className={td}>
                     <Help text={approachOf(meta, m)?.blurb}>
-                      <ModelBadge modelId={m} label={label(m)} />
+                      <ModelBadge modelId={m} label={label(m)} reference={isReference(m)} />
                     </Help>
                   </td>
                   <td className={`${td} tabular`}>{pct(mp.p_home, 1)}</td>

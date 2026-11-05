@@ -402,7 +402,6 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** Check what a process rule enforces before repeating it. A cautious line in a plan turned into a freeze because nobody tested it against the code.
 
-
 ## 2026-11-05: first pass on feeds and first public lock (#15)
 
 **Why.** Confirm the merged source changes on a real desktop pass before Saturday, and that the Thursday lock ran.
@@ -422,3 +421,14 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 **Findings.** A throwaway prompt on 2 Week 8 games proposed 4 distinct follow-up queries: 2 useful, 2 weak status checks, with real citations and the same output on a second run. No searches were run, so whether they find anything is unknown. Credits: one follow-up per game fits (about 885 of 1,000 a month), two don't.
 
 **Lesson.** ADR 0014 ruled out an agent on the 9B by reasoning, not by test; the only agent comparison is the Claude skill, which also uses a far larger model.
+
+## 2026-11-05: the tracker says which way is good (U5, M12)
+
+**Why.** Austin's F5, F7 and F8: too much overlap, a season chart that didn't say which direction was good, bland tabs, a scoring rule the site never explained, and History opening on its hardest view.
+
+**What changed.** The season chart plots each line's gap to the market, with a too-close-to-call band. Tabs go from five to four: log loss by season and disagreements move to Backtest, which is the period they cover, and disagreements becomes one table. The recap names the week's best call and costliest miss, and says the score pays for confidence both ways (retro schema 4). History opens on Over time. References read as dashed rings everywhere. `hideEnsemble.ts` is gone, and test fixtures no longer carry ensemble rows. Planned on Fable as M12, built by three implementer agents in parallel, then integrated and reviewed.
+
+**Findings.** Checking the plan against production changed it. Bold calls per approach would have been four copies of one line: in Week 8 all four share the same best and worst call, so they're per week. The market and every line score the same games, so a gap is a fair comparison, but gaps are ±0.03 and move week to week, so the noise band is required. After wave 2 the Student sits about even with the market after 120 backfilled games, and the Traditionalist leads by 0.006, inside what this sample can tell apart. A list built from whatever the file holds showed `ensemble` on a dev rebuild from stale marts, so those lists now filter with `isPublicLine`.
+
+**Lesson.** A plan's line such as "per approach" is a guess until it meets real rows, and five minutes with the data beats building it.
+

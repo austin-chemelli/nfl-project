@@ -67,9 +67,36 @@ function RecapBlock({ r }: { r: WeekRecap }) {
             <GameList title="Luckiest" rows={r.luckiest.map((t) => ({ id: t.game_id, label: t.team, text: t.sentence }))} />
             <GameList title="Unluckiest" rows={r.unluckiest.map((t) => ({ id: t.game_id, label: t.team, text: t.sentence }))} />
           </div>
+          <BoldCalls r={r} />
           {r.note && <p className="mt-3 text-[13px] text-ink-3">{r.note}</p>}
         </Card>
       </details>
+    </div>
+  )
+}
+
+/** The week's best right call and costliest wrong call, one each across the approaches. */
+function BoldCalls({ r }: { r: WeekRecap }) {
+  const rows = [
+    { title: 'Best call', c: r.best_call },
+    { title: 'Costliest call', c: r.costliest_call },
+  ].flatMap((x) => (x.c ? [{ ...x, c: x.c }] : []))
+  if (rows.length === 0) return null
+  return (
+    <div className="mt-4 border-t border-line pt-3">
+      <h3 className="text-[12px] font-medium uppercase tracking-wide text-ink-3">Bold calls</h3>
+      <p className="mt-1 text-[13px] text-ink-3">
+        The score pays for confidence both ways: a right 90% call earns about three times a right 60% call, and a wrong one costs about seven times as much.
+      </p>
+      <ul className="mt-1.5 flex flex-col gap-1.5 text-[14px]">
+        {rows.map(({ title, c }) => (
+          <li key={title}>
+            <span className="text-ink-3">{title}: </span>
+            <Link to={`/game/${c.game_id}`} className="font-medium text-accent hover:underline">{c.away} @ {c.home}</Link>{' '}
+            <span className="text-ink-2">{c.sentence}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

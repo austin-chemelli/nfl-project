@@ -1,7 +1,8 @@
+import { isPublicLine } from '../../lib/models'
 import { describe, expect, it } from 'vitest'
 import {
-  calibrationScaleSentence, calibrationVerdict, currentSummary, divergenceSentence, foldReliability,
-  headlineSentence, marketWinsWhenApart, personaHistoryHeadline, shortName,
+  calibrationScaleSentence, calibrationVerdict, currentSummary, divergenceSentence, foldReliability, gapLimit, gapRows,
+  headlineSentence, NOISE, marketWinsWhenApart, personaHistoryHeadline, shortName,
 } from './helpers'
 
 const rel = (mean_p: number, hit_rate: number, n: number) => ({ model_id: 'x', bin: 0, mean_p, hit_rate, n })
@@ -69,5 +70,41 @@ describe('headline', () => {
     expect(s.liveGames).toBe(0)
     const row = s.rows.find((r) => r.model_id === 'analyst')!
     expect(headlineSentence(row, 'the Analyst')).toBe('After 30 games, the Analyst is 0.040 worse than the market (log loss; lower is better).')
+  })
+})
+
+describe('gapRows', () => {
+  const r = (model_id: string, week: number, cum_log_loss: number) => ({ model_id, week, n: 16, cum_log_loss, live: false })
+  it('is market minus line, so positive means ahead', () => {
+    const rows = gapRows([r('market_baseline', 1, 0.6), r('analyst', 1, 0.65), r('sharp', 1, 0.58)])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].analyst).toBeCloseTo(-0.05)
+    expect(rows[0].sharp).toBeCloseTo(0.02)
+    expect(rows[0]).not.toHaveProperty('market_baseline')
+  })
+  it('skips a week with no market row', () => {
+    const rows = gapRows([r('market_baseline', 2, 0.6), r('analyst', 1, 0.65), r('analyst', 2, 0.61)])
+    expect(rows.map((x) => x.week)).toEqual([2])
+  })
+  it('leaves a key out when a line is missing a week, and sorts by week', () => {
+    const rows = gapRows([r('market_baseline', 2, 0.6), r('market_baseline', 1, 0.62), r('analyst', 2, 0.61), r('sharp', 1, 0.6), r('sharp', 2, 0.6)])
+    expect(rows.map((x) => x.week)).toEqual([1, 2])
+    expect(rows[0]).not.toHaveProperty('analyst')
+    expect(rows[1].analyst).toBeCloseTo(-0.01)
+  })
+})
+
+describe('gapLimit', () => {
+  it('is symmetric, rounds up, and keeps the noise band visible', () => {
+    expect(gapLimit([{ week: 1, a: 0.001 }], ['a'])).toBeCloseTo(2 * NOISE)
+    expect(gapLimit([{ week: 1, a: -0.021, b: 0.5 }], ['a'])).toBeCloseTo(0.025)
+    expect(gapLimit([], [])).toBeCloseTo(2 * NOISE)
+  })
+})
+
+describe('isPublicLine', () => {
+  it('takes approaches and references, not diagnostics a file may still carry', () => {
+    expect(['student', 'market_baseline', 'elo_v0'].every(isPublicLine)).toBe(true)
+    expect(['global', 'ensemble'].some(isPublicLine)).toBe(false)
   })
 })

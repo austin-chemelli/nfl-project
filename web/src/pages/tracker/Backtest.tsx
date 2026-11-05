@@ -2,7 +2,7 @@ import { DotWhisker } from '../../charts'
 import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
 import { llVsMarket } from '../../lib/format'
-import { APPROACHES, colorVar } from '../../lib/models'
+import { APPROACHES, colorVar, isPublicLine } from '../../lib/models'
 import { label } from './names'
 
 const signed = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(3)}`
@@ -10,7 +10,7 @@ const signed = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(3)}`
 export function Backtest({ t }: { t: Tracker; meta: Meta }) {
   const bt = t.backtest
   const market = bt.find((r) => r.model_id === 'market_baseline')
-  const rows = bt.filter((r) => r.model_id !== 'market_baseline' && r.d_vs_market != null).sort((a, b) => a.d_vs_market! - b.d_vs_market!)
+  const rows = bt.filter((r) => r.model_id !== 'market_baseline' && isPublicLine(r.model_id) && r.d_vs_market != null).sort((a, b) => a.d_vs_market! - b.d_vs_market!)
   if (!rows.length) return null
   const first = Math.min(...rows.map((r) => r.first_season))
   const last = Math.max(...rows.map((r) => r.last_season))

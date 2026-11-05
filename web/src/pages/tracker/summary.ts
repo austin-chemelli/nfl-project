@@ -10,7 +10,7 @@ import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { calibrationVerdict, currentSummary, NOISE, type CurrentRow } from './helpers'
 import { label } from './names'
 
-export type TabId = 'season' | 'backtest' | 'calibration' | 'disagreements' | 'bets'
+export type TabId = 'season' | 'backtest' | 'calibration' | 'bets'
 
 export type TileSpec = {
   id: string
