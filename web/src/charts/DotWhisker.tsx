@@ -22,8 +22,9 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
 }) {
   const [ref, width] = useWidth()
   const lw = width < 480 ? Math.min(110, labelWidth) : labelWidth
-  const lo = Math.min(refValue, ...rows.map((r) => r.lo))
-  const hi = Math.max(refValue, ...rows.map((r) => r.hi))
+  const anchors = marker ? [refValue, marker.value] : [refValue]
+  const lo = Math.min(...anchors, ...rows.map((r) => r.lo))
+  const hi = Math.max(...anchors, ...rows.map((r) => r.hi))
   const pad = (hi - lo) * 0.08 || 1
   const x = scaleLinear().domain([lo - pad, hi + pad]).range([lw, width - 56]).nice()
   const head = 20

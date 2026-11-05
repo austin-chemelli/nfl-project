@@ -70,16 +70,21 @@ export function betsVerdict(rows: LedgerRow[], nameOf: (id: string) => string): 
   const name = nameOf(best.model_id)
   const first =
     best.roi < 0
-      ? `Every approach has lost money. The best, ${name}, is at ${signedPct(best.roi)} a bet.`
+      ? `In the backtest, every approach has lost money. The best, ${name}, is at ${signedPct(best.roi)} a bet.`
       : best.roi_lo > 0
-        ? `${name[0].toUpperCase()}${name.slice(1)} is up ${signedPct(best.roi)} a bet, and its whole range clears break-even.`
-        : `${name[0].toUpperCase()}${name.slice(1)} is up ${signedPct(best.roi)} a bet, but its range still reaches below break-even.`
+        ? `In the backtest, ${name} is up ${signedPct(best.roi)} a bet, and its whole range clears break-even.`
+        : `In the backtest, ${name} is up ${signedPct(best.roi)} a bet, but its range still reaches below break-even.`
   const beat = lines.filter((r) => r.roi > noEdge).length
   const clear = lines.filter((r) => r.roi_lo > noEdge).length
   const count = COUNT[beat] ?? String(beat)
   const rest = beat === 0 ? '' : clear === 0 ? `, none by more than the noise` : `, ${(COUNT[clear] ?? String(clear)).toLowerCase()} clearly`
   const total = (COUNT[lines.length] ?? String(lines.length)).toLowerCase()
   return `${first} Betting with no edge at all costs ${signedPct(noEdge).replace('−', '')} a bet. ${count} of the ${total} did better than that${rest}.`
+}
+
+/** A season's live bets for the tooltip: the most any one line has, since lines bet different games. */
+export function liveNote(n: number): string {
+  return n > 0 ? ` (up to ${n} live ${n === 1 ? 'bet' : 'bets'} a line)` : ''
 }
 
 /** A cell's fill: stronger with the size of the swing, in the diverging pair, over the surface. */

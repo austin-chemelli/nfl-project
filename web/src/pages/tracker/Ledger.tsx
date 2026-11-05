@@ -38,7 +38,7 @@ export function Ledger({ t, meta }: { t: Tracker; meta: Meta }) {
         <>
           <h3 className="mt-6 font-medium">Bankroll over time</h3>
           <p className="mt-1 text-[13px] text-ink-2">
-            Running profit in units. The dotted line is no edge at all: what the bookmaker&apos;s cut takes from the same number of bets. A line above it is doing better than blind betting, even while it loses. The dotted line steepens from 2023, when the moneyline prices in our data start taking a bigger cut.
+            Running profit in units. The dotted line is no edge at all: what the bookmaker&apos;s cut takes from about as many bets. A line above it is doing better than blind betting, even while it loses. The dotted line steepens from 2023, when the prices in our data start taking a bigger cut.
           </p>
           <Bankroll rows={seasons} ids={ids} />
         </>

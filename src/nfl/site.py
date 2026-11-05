@@ -984,6 +984,7 @@ def tracker(paths: Paths, season: int, reg: dict) -> dict:
             {k: (_r(v) if isinstance(v, float) else v) for k, v in r.items()}
             for r in div.filter(pl.col("model_id").is_in(list(reg))).iter_rows(named=True)
         ]
+    out["ledger"] = []  # the contract requires the key, so an empty ledger can't error the page
     if not settled.is_empty():
         from nfl import ledger
 

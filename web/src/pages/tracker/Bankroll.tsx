@@ -3,7 +3,7 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Too
 import { ModelBadge } from '../../components/ui'
 import type { Tracker } from '../../data/contract'
 import { APPROACHES, colorVar, dashArray } from '../../lib/models'
-import { bankrollRows } from './bets'
+import { bankrollRows, liveNote } from './bets'
 import { label } from './names'
 
 type Row = NonNullable<Tracker['ledger_seasons']>[number]
@@ -46,7 +46,7 @@ export function Bankroll({ rows, ids }: { rows: Row[]; ids: string[] }) {
             <YAxis tickFormatter={(v: number) => (v === 0 ? '0' : units(v).replace('.0', ''))} stroke="var(--text-muted)" tick={{ fontSize: 12 }} width={48} label={{ value: 'Units', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 12 }} />
             <Tooltip
               formatter={(v, name) => [units(Number(v)), name === NO_EDGE ? 'No edge' : label(String(name))]}
-              labelFormatter={(s) => (Number(s) === start ? 'Start' : `Through ${s}`) + `${live.get(Number(s)) ? ` (${live.get(Number(s))} live bets)` : ''}`}
+              labelFormatter={(s) => (Number(s) === start ? 'Start' : `Through ${s}`) + liveNote(live.get(Number(s)) ?? 0)}
               itemSorter={(i) => -Number(i.value)}
               contentStyle={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13 }}
             />

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Tracker } from '../../data/contract'
-import { bankrollRows, betsVerdict, cellFill, noEdgeReturn, returnRows, signedPct, signedUnits } from './bets'
+import { bankrollRows, betsVerdict, cellFill, liveNote, noEdgeReturn, returnRows, signedPct, signedUnits } from './bets'
 
 type Line = Tracker['ledger'][number]
 const line = (model_id: string, roi: number, lo: number, hi: number, kind = 'backfill'): Line => ({
@@ -55,11 +55,11 @@ describe('noEdgeReturn', () => {
 describe('betsVerdict', () => {
   it('says when every approach lost, and that beating no edge was within the noise', () => {
     const text = betsVerdict([line('sharp', -0.012, -0.045, 0.02), line('student', -0.034, -0.067, 0)], name)
-    expect(text).toBe('Every approach has lost money. The best, the sharp, is at −1.2% a bet. Betting with no edge at all costs 3.0% a bet. One of the two did better than that, none by more than the noise.')
+    expect(text).toBe('In the backtest, every approach has lost money. The best, the sharp, is at −1.2% a bet. Betting with no edge at all costs 3.0% a bet. One of the two did better than that, none by more than the noise.')
   })
 
   it('does not call a profit an edge while its range reaches below break-even', () => {
-    expect(betsVerdict([line('sharp', 0.01, -0.02, 0.04)], name)).toContain('The sharp is up +1.0% a bet, but its range still reaches below break-even.')
+    expect(betsVerdict([line('sharp', 0.01, -0.02, 0.04)], name)).toContain('In the backtest, the sharp is up +1.0% a bet, but its range still reaches below break-even.')
   })
 
   it('says so when a range clears break-even and no edge', () => {
@@ -87,6 +87,12 @@ describe('formatting', () => {
     expect(signedUnits(-0.4)).toBe('0')
     expect(signedUnits(14.6)).toBe('+15')
     expect(signedUnits(-38)).toBe('−38')
+  })
+
+  it('counts live bets per line, in the singular too', () => {
+    expect(liveNote(0)).toBe('')
+    expect(liveNote(1)).toBe(' (up to 1 live bet a line)')
+    expect(liveNote(7)).toBe(' (up to 7 live bets a line)')
   })
 
   it('fills by sign and caps the strength', () => {

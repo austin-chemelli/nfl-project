@@ -16,7 +16,8 @@ export function colorVar(modelId: string): string {
 }
 
 export function dashArray(modelId: string): string | undefined {
-  return modelId === 'elo_v0' || modelId === 'home_naive' || modelId === 'global' ? '4 3' : undefined
+  if (modelId === 'home_naive') return '9 3' // Elo and the home line share a colour, so the dash tells them apart
+  return modelId === 'elo_v0' || modelId === 'global' ? '4 3' : undefined
 }
 
 export const SHORT: Record<string, string> = {

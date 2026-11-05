@@ -11,7 +11,8 @@ settle    Derived each run into marts/bets_settled.parquet: result, units, closi
           Closing line: our latest snapshot within CLOSE_WINDOW before kickoff, else nflverse's
           schedule line (the historical endpoint is paid-only). CLV is movement toward the bet:
           moneyline in vig-free probability points, spread in points. Null when bet and close are
-          the same nflverse number (all backfill bets), since that is zero by construction.
+          the same nflverse number (backfill bets, unless we hold a snapshot of the close), since that
+          is zero by construction.
 site      line_stats and season_stats shape settled bets for the tracker's Paper bets tab, each
           read against no edge: what the same bets return if the market's price is exactly right.
 """
@@ -321,7 +322,8 @@ def summary(settled: pl.DataFrame) -> pl.DataFrame:
 
 def _no_edge_units() -> pl.Expr:
     """What a bet is worth with no edge: the market's own win chance at the price paid, or a coin
-    flip on a spread. Always a small loss, the bookmaker's cut."""
+    flip on a spread. On average a small loss, the bookmaker's cut; a single spread bet at a plus
+    price can come out above zero, since the coin flip ignores the other side's price."""
     p = pl.when(pl.col("market") == "h2h").then(pl.col("market_p_vigfree")).otherwise(0.5)
     return (p * _win_units() - (1 - p)) * pl.col("stake_units")
 

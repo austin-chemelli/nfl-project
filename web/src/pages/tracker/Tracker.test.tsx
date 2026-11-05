@@ -122,7 +122,7 @@ describe('Tracker page', () => {
 
   it('bets tab: says how the lines did, with the bankroll, the returns and the seasons', async () => {
     renderRoute('/tracker?tab=bets')
-    expect(await screen.findByText(/^Every approach has lost money\. The best, the Sharp/)).toBeInTheDocument()
+    expect(await screen.findByText(/^In the backtest, every approach has lost money\. The best, the Sharp/)).toBeInTheDocument()
     for (const name of ['Bankroll over time', 'Return per bet', 'Season by season']) expect(screen.getByRole('heading', { name })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Lines to show' })).toBeInTheDocument()
     expect(screen.getByRole('rowheader', { name: /Sharp/ })).toBeInTheDocument()
