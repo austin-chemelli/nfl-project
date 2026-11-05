@@ -46,9 +46,6 @@ def test_best_rows_prefers_last_lock_before_kickoff_over_backfill(tmp_path):
     assert best["B"]["status"] == site.BACKFILL
 
 
-@pytest.mark.skipif(
-    not (DATA.site / "meta.json").exists(), reason="needs marts/site (run nfl site)"
-)
 def _band_inputs(n_teams: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     """Two weeks of `n_teams` teams, paired off; team i's week-2 value is i."""
     known = datetime(2026, 10, 1)
@@ -84,6 +81,9 @@ def test_feature_bands_ignore_rows_not_known_yet_and_thin_features():
     assert site.feature_bands(feats, games, datetime(2026, 10, 20)) == {}
 
 
+@pytest.mark.skipif(
+    not (DATA.site / "meta.json").exists(), reason="needs marts/site (run nfl site)"
+)
 def test_real_contract_shape():
     meta = json.loads((DATA.site / "meta.json").read_text())
     assert meta["schema_version"] == site.SCHEMA_VERSION
