@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import metaJson from '../../test/fixtures/site/meta.json'
 import gameJson from '../../test/fixtures/site/game/2026_08_CAR_GB.json'
 import { Game, Meta, RetroGame } from '../../data/contract'
-import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks } from './helpers'
+import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus } from './helpers'
 
 const meta = Meta.parse(metaJson)
 const game = Game.parse(gameJson)
@@ -13,8 +13,8 @@ describe('game helpers', () => {
   })
   it('edge sentences as percentiles, strongest first', () => {
     const { rows } = edgeRows(game.edges, meta)
-    expect(rows[0].sentence).toBe(`${rows[0].favors}'s ${rows[0].name} edge is in the ${ordinal(rows[0].pct)} percentile of matchups`)
-    expect(rows[0].sentence).toMatch(/^[A-Z]+'s .+ edge is in the \d+(st|nd|rd|th) percentile of matchups$/)
+    expect(rows[0].sentence).toBe(`${rows[0].favors}'s ${rows[0].name} edge is bigger than ${Math.min(99, Math.round(rows[0].pct))}% of matchups`)
+    expect(rows[0].sentence).toMatch(/^[A-Z]+'s .+ edge is bigger than \d+% of matchups$/)
     expect(rows.map((r) => r.pct)).toEqual([...rows.map((r) => r.pct)].sort((a, b) => b - a))
   })
   it('contributions: home field first, then groups; features biggest first', () => {
@@ -216,7 +216,7 @@ describe('edges that are not edges', () => {
     const edges = { venue_weather: { favors: 'CAR', strength_pct: 98 }, rest_travel: { favors: 'CAR', strength_pct: 93 }, quality: { favors: 'GB', strength_pct: 100 } }
     expect(edgeRows(edges, meta, true).rows.map((r) => r.id)).toEqual(['quality'])
     expect(edgeRows(edges, meta).rows.map((r) => r.id)).toEqual(['quality', 'rest_travel'])
-    expect(edgeRows(edges, meta).rows[0].sentence).toContain('99th percentile')
+    expect(edgeRows(edges, meta).rows[0].sentence).toContain('bigger than 99% of matchups')
   })
 })
 
@@ -240,3 +240,19 @@ describe('home field on a neutral site', () => {
   })
 })
 
+describe('marketSource and trendStatus', () => {
+  it('names the market source and snapshot time', () => {
+    const at = { p_home: 0.6, as_of: '2026-10-27T22:46:59Z' }
+    expect(marketSource({ ...at, source: 'odds_api' })).toBe('Market line: The Odds API, Tue, Oct 27, 6:46 PM ET.')
+    // a schedule line's as_of is synthetic, so it never prints as a time
+    expect(marketSource({ ...at, source: 'schedules' })).toBe('Market line: the nflverse schedule (no time recorded).')
+    expect(marketSource({ ...at, source: 'other' })).toMatch(/^Market line: other, /)
+    expect(marketSource({ ...at, source: null })).toBeNull()
+    expect(marketSource({ ...at, source: 'odds_api', as_of: null })).toBe('Market line: The Odds API.')
+    expect(marketSource({ ...at, source: 'schedules', p_home: null })).toBeNull()
+    expect(marketSource(null)).toBeNull()
+  })
+  it('trend status wording', () => {
+    expect([true, false, null].map(trendStatus)).toEqual(['producing results', 'not producing results', 'results unclear'])
+  })
+})

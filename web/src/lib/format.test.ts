@@ -7,8 +7,8 @@ describe('format', () => {
     expect(pct(null)).toBe('–')
     expect(pts(3.94)).toBe('+3.9 pts')
     expect(pts(-1.25)).toBe('−1.3 pts')
-    expect(ptsToward(2.1, 'GB', 'CAR')).toBe('+2.1 pts toward GB')
-    expect(ptsToward(-2.1, 'GB', 'CAR')).toBe('−2.1 pts toward CAR')
+    expect(ptsToward(2.1, 'GB', 'CAR')).toBe('2.1 pts toward GB')
+    expect(ptsToward(-2.1, 'GB', 'CAR')).toBe('2.1 pts toward CAR')
   })
   it('spreads and picks read like a sportsbook', () => {
     expect(spreadLabel(3.5, 'BUF', 'MIA')).toBe('BUF −3.5')

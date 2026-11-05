@@ -32,7 +32,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
       help="Each bar is what that edge has been worth in past games, in points of win chance, before any approach weighs in. The label under each name says how lopsided this matchup is next to every game since 2005."
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        The matchup before any approach weighs in: how far each part of the game pushes toward {g.away} or {g.home}, as history would price it.
+        The matchup before any approach weighs in: how far each part of the game pushes toward {g.away} or {g.home}, as history would price it. Pts are percentage points of win chance. These bars are the all-history fit, so they can differ from the Student's own numbers.
       </p>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <div className="max-w-full overflow-x-auto">

@@ -261,3 +261,82 @@ Not in scope: the paper bets rework (trigger: two weeks of live bets), D2 (tende
   - `tracker.json` reads `bets_settled` directly; `ledger` rows gain the range, no-edge return and won/needed rates; `ledger_seasons` is new. Additive.
   - CLV is live moneyline bets only. An open-bets list waits for live bets to exist.
 
+
+## M13: Site walk fixes (planned 2026-11-05 on Fable)
+
+Every bug and small change in `.notes/project-review-2026-11.md` §10: B1 to B9 and C1 to C18. One PR, about two to three hours: four parallel tasks, then one integration pass. Every item was checked against the code on 2026-11-05. Use the copy below as written. Only M13.1 touches job code, and neither fix touches a lock or a grade, so the only merge limit is the usual one: not in the last 10 minutes before a lock (`docs/runbook.md`, Merging job code).
+
+Corrections to §10, found while planning:
+- **B1:** a replay on real data shows all 15 Week 9 games differ by at least 0.5 points, up to 14.8. The fix also reaches retros, through `pregame_rows`. It is safe for finished games: `score_reference` already drops everything from the slate's first kickoff on.
+- **B7:** `sortedShares` (`web/src/pages/method/helpers.ts:33`) keeps `v >= 0.5`, so the Sharp's negative shares are never drawn. That is why its budget looks short, and the helper has to change too.
+- **C3:** `tracker.json` has no right-pick counts, so tracker tiles can't say "right 10 of 14" without a contract change. Tiles get plain wording instead.
+- **C8:** the reasons, checked in data: 2005 is `FIRST_SCORED_SEASON`; moneyline and spread prices start in 2006 (0 of 267 games in 2005, 220 in 2006).
+- **C17:** per-page titles fix tabs and bookmarks, not link previews. Crawlers read the static `index.html`.
+
+Decisions, each easy to reverse:
+- **B4:** `GAP_BAND` (0.025) becomes the tracker's one threshold, and `NOISE` leaves `tracker/helpers.ts`. The recap keeps its own 0.005 in `recapTiles.ts`: a week's tile describes what happened, and it isn't a ranking. At 14 games the fair band is about 0.07, which would say "even" every week.
+- **B9:** ask for a recap only when the week has a result. A 404 can still appear between the first final score and the next 07:00 run. Closing that needs a new `meta` field, which isn't worth it for a console line.
+- **C4:** sort by the Student's gap to the market, because C1 puts those two numbers on the card. Label `Student vs market` (changed from `Gap to market` in review: card captions name whichever approach is furthest out). The URL value stays `disagreement`, so old links work.
+- **C10:** `SCHEMA_VERSION` goes to `"5"`, so the daily run rebuilds every retro.
+- **C15:** the nav label becomes `Evidence`. It's short, which helps C14. The route and the page title stay.
+- **C17:** set `document.title` in an effect. React 19's `<title>` element would add a second tag after the one in `index.html`, and the browser uses the first.
+
+Changed in review, where the code differs from the tasks below: `_swing_sentence` has two more cases for a team at exactly 0.0; `marketSource` prints a time for snapshots only, because a schedule line's `as_of` is the synthetic kickoff − 2h stamp; the Backtest line says what's walk-forward and what isn't; Help tips are fixed to the screen and follow their "?" on scroll; the last-week line says `scored after the fact` unless every game was locked.
+
+Not in scope: §10's other bigger ideas (a how-it's-built page, published narrative evals, prices and CLV), D14, Streamlit, the duplicate D3 row.
+
+**Parallel:** M13.1 to M13.4 share no files. If a task's copy breaks a test in another task's files, leave it for M13.5. M13.5 follows all four. Start from a new branch, `ui-site-walk-fixes`, off `origin/main`.
+
+- **M13.1 Job code: preview Elo and the swing sentence (B1, C10).** *P.* Files: `src/nfl/site.py`, `src/nfl/retro/game.py`, `src/nfl/retro/schema.py`, `tests/test_site.py`, `tests/test_retro_game.py`, `tests/fixtures/retro/*`, `web/src/test/fixtures/site/retro/*`, `web/src/test/fixtures/site/recap_*`.
+  - B1: add `_history(paths)` in `site.py`: `store.games_frame(paths)` with the tz-naive `kickoff_utc` that `build()` applies. `display_rows` and `pregame_rows` each read it once and pass it to `preview_rows`, whose `games` parameter becomes `history` (all seasons). `pregame_rows` keeps its one-season `games` for the week window. Don't touch `lock.py`: another track claims it and it's already right.
+  - C10: move the `abs(h - a) >= 1` branch of `_headlines` into a pure `_swing_sentence`, keeping `tail`, with `W` the team ahead and `L` the team behind:
+    - both at or below zero: `Swing plays hurt both teams, {L} more: {|l|} points lost against {|w|} for {W}, a net {n} toward {W}`
+    - both at or above zero: `Swing plays helped both teams, {W} more: {w} points gained against {l} for {L}, a net {n} toward {W}`
+    - mixed: `Swing plays helped {W} by {w} points and cost {L} {|l|}, a net {n} toward {W}`
+  - `SCHEMA_VERSION` to `"5"` with a dated comment; update the literal at `tests/test_retro_game.py:479` and the current fixtures. Hand-edit fixtures, never run `scripts/web_fixtures.py`; `test_web_fixtures_match` needs both copies equal.
+  - Acceptance: a test with two seasons of games where a preview's Elo equals `lock.score_reference` on full history and differs from a one-season replay; a test that a finished game's pregame Elo ignores its own result; all three sentence cases; `NFL_DATA_ROOT=<empty dir> uv run pytest -q` and ruff green.
+
+- **M13.2 Tracker and Evidence copy (B4, B5, B6, C3, C6, C8, C11, C16).** *P.* Files: `web/src/pages/Tracker.tsx`, `web/src/pages/tracker/*`, `web/src/pages/Hypotheses.tsx`.
+  - B4, `helpers.ts`: delete `NOISE`. `headlineSentence` uses `GAP_BAND` and says `(within 0.025 log loss, too close to call at this sample size)`. Fix the comments that mention `NOISE`.
+  - B4, `summary.ts`: `gapWords` and `vsMarketTile` use `GAP_BAND`. `bestTile`: sort the approaches; when the runner-up is within `GAP_BAND`, value `Too close to call`, no `modelId`, sub `{label} is lowest at {score}, inside the noise`. Otherwise as now.
+  - C3, tile subs: `vsMarketTile` sub `Scored {score} (lower is better), {gapWords}, over {games}`. `betsTile` backtest sub `Pretend money: {n} {NAME} bets ({record}); live bets start with the locks`. Leave the page lede: it defines log loss.
+  - C11: tile label `{NAME} calibration, since {first}`, with `first` the smallest `first_season` in `t.backtest`, or `, all seasons` if empty.
+  - B5, B6: `Tracker.tsx:46` becomes `One season of live games cannot rank models, and in the backtest since 2005 nothing beats the market. Treat everything here as a measurement, not a verdict.`
+  - C6, C8: `Backtest.tsx` gets a visible first line above the chart: `Every game since 2005, each scored by models trained only on earlier seasons.` `Ledger.tsx`: `Bets start in 2006, the first season with prices in our data.` `Hypotheses.tsx`, after the dates line: `Finished seasons only, so 2026 isn't here. It starts before the backtest because it studies past results and doesn't score forecasts.`
+  - C16: `signedUnits`: under 0.05 shows `0`; under 1 shows one decimal (`+0.4`, `−0.7`); otherwise as now. `SeasonGrid`: `Up seasons` counts finished seasons only, so leave out `current`.
+  - Acceptance: `summary.test.ts` covers a top gap inside the band, outside it, and one approach; `helpers` tests follow the new sentence; `bets.test.ts` covers 0.01, 0.36, −0.73, 1.4; a grid test shows 2026 left out of `up of played`; web checks green.
+
+- **M13.3 Slate and site shell (B2, B9, C1, C2, C3, C4, C12, C14, C15, C17).** *P.* Files: `web/src/components/Help.tsx`, `web/src/components/ui.tsx`, `web/src/components/ui.test.tsx`, new `web/src/components/Help.test.tsx`, `web/src/app/*`, `web/src/data/api.ts`, `web/src/pages/Slate.tsx`, `web/src/pages/slate/*`, `web/src/pages/Game.tsx`, `web/src/pages/Season.tsx`.
+  - B2, `Help.tsx`: hover opens for a mouse only (`onPointerEnter` and `onPointerLeave` when `pointerType === 'mouse'`). `onPointerDown` sets a ref so the focus a tap causes doesn't open it; keyboard focus still does. Click toggles. While open, a `document` `pointerdown` outside closes it, because iOS Safari doesn't focus a tapped button, so blur may never fire.
+  - B9: `useRecap(season, week, enabled = true)`. `Recap` takes `enabled`, default true. `WeekView` passes `q.data?.games.some((g) => g.result != null) ?? false`.
+  - C1, `GameCard.tsx`: under the market row, `Student's pick: JAX 79%` via `pick()` and `SHORT[HEADLINE]`, at `text-[14px] font-medium text-ink`, on every card with a headline forecast. Leave the sentence and strip as they are.
+  - C2, `Slate.tsx` lede: `Four forecasting approaches predict every NFL game, lock in before kickoff, and get scored in public against the betting market.`
+  - C4: `gapToMarket(g)` in `helpers.ts`, the absolute gap between `g.models[HEADLINE]?.p_home` and `g.market?.p_home`, null if either is missing. `sortGames` uses it for `disagreement`, largest first, nulls last. `SORTS` label `Student vs market`. Remove `approachSpread` if nothing else uses it.
+  - C12, C3, `recapTiles.ts`: market tile label `Forecast score vs market`, values `Scored better`, `Even with the market`, `Scored worse`, sub `{ahead} of {n} approaches ahead; {avg}` where `avg` is `about even on average` or `{gap} better|worse on average`. Best tile sub `{right} of {n} right, score {x} (lower is better)`.
+  - C14, `Layout.tsx`: a `mask-image` fade on each nav edge that has more to scroll, measured on scroll and in a `ResizeObserver`. On route change, scroll the active link into view with `scrollIntoView?.({ inline: 'nearest', block: 'nearest' })` (jsdom has no such method).
+  - C15: `NAV` label `Evidence`.
+  - Last week line (§10's bigger idea, added by Austin 2026-11-05): new `web/src/pages/slate/LastWeek.tsx`, rendered in `WeekView` above the grid only on the current week (`season === meta.season && week === meta.current_week`, week above 1). It reads `useRecap(season, week - 1)` and prints `Last week: the Student got 10 of 14 right, the market 11 of 14.` from the `right` and `n` of `HEADLINE` and `market_baseline`, linking to that week's page. Renders nothing while loading, on a 404 or with either row missing.
+  - C17: `Page` gains `docTitle?: string`. An effect sets `document.title` to `{docTitle or title} · NFL approaches`, or `NFL approaches` when `title` isn't a string and there's no `docTitle`. `Game.tsx` passes `{away} @ {home}, Week {week}` once loaded. `Slate.tsx` passes `Week {week}, {season}` on `/week/:season/:week` and `This week` on the home page.
+  - Acceptance: `Help.test.tsx` runs the touch order (pointerdown touch, focus, click) and asserts the tip is open; a second tap closes it; mouse hover, keyboard focus and Escape still work; a slate test finds no recap request for a week with no result; a `sortGames` test with a null last; a card test for the pick line; a `LastWeek` test (renders, wrong week, 404); `document.title` tests; web checks green.
+
+- **M13.4 Game page and How it works (B3, B5, B6, B7, B8, C3, C5, C7, C9, C13, C18).** *P.* Files: `web/src/lib/format.ts`, `web/src/lib/format.test.ts`, `web/src/pages/Method.tsx`, `web/src/pages/method/*`, `web/src/pages/game/*`.
+  - B3: `ptsToward` prints no sign: `2.1 pts toward CAR`. It's the only change; `GamesTable` and the game pages pick it up.
+  - B5, B6, `Method.tsx`: line 175 `One season of live games cannot rank models, and one season's paper profit is mostly noise.` Lines 149 and 176 say `the backtest since 2005`.
+  - B4's echo, `Method.tsx:75`: replace the last sentence with `Over a season, gaps under about 0.025 can't be told from noise.`
+  - B7: `sortedShares` filters and sorts on `Math.abs(v)`. Bars use `Math.abs(v)` over the largest absolute share, and the value prints with its sign. Hide the `Leans on` line when `emphasis` is empty. A card with a negative share gets, under the bars, `Sizes add up to 100, ignoring signs. A minus means it leans against that group.`
+  - B8, C5: `factorTile` sub `Student: 7.8 pts of win chance toward CAR`, using `SHORT[HEADLINE]`. `Preview.tsx` lede gains `Pts are percentage points of win chance. These bars are the all-history fit, so they can differ from the Student's number above.`
+  - C5, `Method.tsx`: for approaches other than `HEADLINE`, `Starting view on home field: {why}, in football points. Fitting can move it.` Add to "How numbers are shown": `Home field under each approach is in football points; every other "pts" on the site is win chance.`
+  - C3: `game/helpers.ts:165` becomes `{favors}'s {name} edge is bigger than {n}% of matchups`, with `n` from `edgePct`. Update `helpers.test.ts`.
+  - C7: `marketSource(market)` in `game/helpers.ts` gives `Market line: The Odds API, {kickoffEt(as_of)}.` (`schedules` reads `the nflverse schedule`; any other source prints as is; null when either field is missing). Show it under the table in "What each approach thinks".
+  - C9: `Sections.tsx:331` becomes `No official report in our data yet.`
+  - C13: `Method.tsx:178` becomes `The Sharp's market-behavior inputs (line moves, public betting share) exist only for live games. Its backtest covers the same games as the others but mostly tests its football weights.`
+  - C18: `trendStatus` returns `producing results`, `not producing results`, `results unclear`.
+  - Acceptance: `format.test.ts` asserts `2.1 pts toward CAR` for −2.1; a `sortedShares` test keeps a −4.6 and sorts by size; a Method test has no `Leans on` for the Student and shows the minus note only for the Sharp; tests for `factorTile`, `marketSource` (both sources, a null) and `trendStatus`; web checks green.
+
+- **M13.5 Integrate, review, ship.** Main session. Depends on M13.1 to M13.4.
+  - Fix any cross-task test breaks. Rebuild the dev copy (`nfl retro build --season 2026 --force`, `nfl site`), then restore the production bets in `.data-prod`'s `tracker.json` if the rebuild drops them.
+  - Real data: ARI @ SEA Elo shows 83% and DEN @ CAR 29%. The Sharp's card shows `Buzz −5`. The Best approach tile says too close to call. A swing sentence reads right on a game where both teams lost points. `/method`, `/tracker`, a game page and the slate in both themes and at phone width.
+  - Touch: repeat the Playwright touch emulation that reproduced B2, on `/tracker`, including a "?" inside a `TableScroll`, since an `overflow-x` wrapper can clip the tip. Fix any clipping here.
+  - Check the console on a current-week page: no recap 404.
+  - One `reviewer` agent on the whole diff. Ask it to attack claims: does each new sentence hold on all weeks and all four lines? Then `/site-walk casual-fan auditor` against the dev server to confirm the items are gone.
+  - Update `docs/site.md` (Evidence label, slate pick, sort), journal, hub (add an M13 row, including that §10 is closed). Mark §10 done in the review note. PR, with a list of B and C items in the body; Austin merges. After the merge: wait for the image, run `nfl-retro` by hand rather than wait for 07:00, run `nfl-site`, and check production for B1 and a rebuilt swing sentence.

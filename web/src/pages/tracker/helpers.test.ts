@@ -71,6 +71,10 @@ describe('headline', () => {
     const row = s.rows.find((r) => r.model_id === 'analyst')!
     expect(headlineSentence(row, 'the Analyst')).toBe('After 30 games, the Analyst is 0.040 worse than the market (log loss; lower is better).')
   })
+  it('calls gaps inside GAP_BAND too close to call', () => {
+    const row = { model_id: 'analyst', games: 30, logLoss: 0.62, liveWeeks: 0, vsMarket: null, delta: 0.02 }
+    expect(headlineSentence(row, 'the Analyst')).toBe('After 30 games, the Analyst is about the same as the market (within 0.025 log loss, too close to call at this sample size).')
+  })
 })
 
 describe('gapRows', () => {

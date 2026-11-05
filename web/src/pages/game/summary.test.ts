@@ -21,6 +21,11 @@ describe('summaryTiles', () => {
     expect(t[1].value).toMatch(/pts more on GB|In line/)
   })
 
+  it('pregame: the factor tile names the Student and says pts of win chance', () => {
+    const f = summaryTiles(game, meta, null).find((x) => x.id === 'factor')
+    expect(f?.sub).toMatch(/^Student: \d+\.\d pts of win chance toward (GB|CAR)$/)
+  })
+
   it('pregame: the biggest edge is never a context-only group', () => {
     const g = { ...game, edges: { coaching: { favors: 'GB', strength_pct: 99 }, quality: { favors: 'CAR', strength_pct: 60 } } }
     expect(summaryTiles(g, meta, null).find((x) => x.id === 'edge')).toMatchObject({ value: 'CAR Quality' })

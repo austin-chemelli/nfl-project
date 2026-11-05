@@ -8,9 +8,9 @@ import type { WeekRecap } from '../../data/contract'
 import { dash } from '../../lib/format'
 import { recapTiles } from './recapTiles'
 
-export function Recap({ season, week }: { season: number; week: number }) {
-  const q = useRecap(season, week)
-  if (q.isPending) return null
+export function Recap({ season, week, enabled = true }: { season: number; week: number; enabled?: boolean }) {
+  const q = useRecap(season, week, enabled)
+  if (!enabled || q.isPending) return null
   if (q.isError) return isNotFound(q.error) ? null : <ErrorBox error={q.error} />
   return <RecapBlock r={q.data} />
 }

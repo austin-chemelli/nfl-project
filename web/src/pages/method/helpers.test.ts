@@ -23,4 +23,7 @@ describe('null rates', () => {
   it('sorts shares and drops dust', () => {
     expect(sortedShares({ a: 1, b: 30, c: 0.1 })).toEqual([['b', 30], ['a', 1]])
   })
+  it('keeps negative shares and sorts by size', () => {
+    expect(sortedShares({ a: 1, b: -4.6, c: 3, d: -0.2 })).toEqual([['b', -4.6], ['c', 3], ['a', 1]])
+  })
 })

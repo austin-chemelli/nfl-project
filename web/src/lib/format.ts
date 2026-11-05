@@ -11,11 +11,11 @@ export function pts(x: number | null | undefined, digits = 1): string {
   return x == null ? dash : `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(digits)} pts`
 }
 
-/** "+3.9 pts toward GB" for a contribution in win-probability points (positive = home). */
+/** "3.9 pts toward GB" for a contribution in win-probability points (positive = home). */
 export function ptsToward(x: number | null | undefined, home: string, away: string): string {
   if (x == null) return dash
   if (Math.abs(x) < 0.05) return '0.0 pts'
-  return `${pts(x)} toward ${x > 0 ? home : away}`
+  return `${Math.abs(x).toFixed(1)} pts toward ${x > 0 ? home : away}`
 }
 
 /** Book-style line from the home spread (+ = home favored): "BUF −3.5". */

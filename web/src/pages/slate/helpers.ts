@@ -91,7 +91,7 @@ export const weekHref = (meta: Meta, season: number, week: number) =>
 export type SortKey = 'kickoff' | 'disagreement' | 'upset'
 export const SORTS: { value: SortKey; label: string }[] = [
   { value: 'kickoff', label: 'Kickoff' },
-  { value: 'disagreement', label: 'Disagreement' },
+  { value: 'disagreement', label: 'Student vs market' },
   { value: 'upset', label: 'Upset' },
 ]
 export const parseSort = (s: string | null): SortKey => (SORTS.some((o) => o.value === s) ? (s as SortKey) : 'kickoff')
@@ -105,10 +105,11 @@ const approachPs = (g: GameRow): { id: string; p: number }[] =>
     return p == null ? [] : [{ id: a, p }]
   })
 
-/** Gap between the highest and lowest approach home win chance (max − min); null with fewer than two. */
-export function approachSpread(g: GameRow): number | null {
-  const ps = approachPs(g).map((x) => x.p)
-  return ps.length < 2 ? null : Math.max(...ps) - Math.min(...ps)
+/** |headline approach − market| in home win chance; null if either is missing. */
+export function gapToMarket(g: GameRow): number | null {
+  const m = g.models[HEADLINE]?.p_home
+  const mk = g.market?.p_home
+  return m == null || mk == null ? null : Math.abs(m - mk)
 }
 
 /** The market's pregame win chance for the team that won; null while unplayed, on a tie or with no line. */
@@ -122,7 +123,7 @@ export function winnerMarketP(g: GameRow): number | null {
 export function sortGames(games: GameRow[], sort: SortKey): GameRow[] {
   const base = byKickoff(games)
   if (sort === 'kickoff') return base
-  const key = (g: GameRow) => (sort === 'disagreement' ? (approachSpread(g) == null ? null : -approachSpread(g)!) : winnerMarketP(g))
+  const key = (g: GameRow) => (sort === 'disagreement' ? (gapToMarket(g) == null ? null : -gapToMarket(g)!) : winnerMarketP(g))
   return base
     .map((g, i) => ({ g, i, k: key(g) }))
     .sort((a, b) => (a.k == null || b.k == null ? Number(a.k == null) - Number(b.k == null) : a.k - b.k) || a.i - b.i)

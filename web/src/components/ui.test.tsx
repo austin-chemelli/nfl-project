@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ErrorBox, ModelBadge, Swatch } from './ui'
+import { ErrorBox, ModelBadge, Page, Swatch } from './ui'
 import { DataError } from '../data/api'
 
 describe('ErrorBox', () => {
@@ -37,5 +37,16 @@ describe('Swatch and ModelBadge', () => {
     expect(screen.queryByText('reference')).not.toBeInTheDocument()
     rerender(<ModelBadge modelId="elo_v0" reference />)
     expect(screen.getByText('reference')).toBeInTheDocument()
+  })
+})
+
+describe('Page document title', () => {
+  it('uses the title, a docTitle, or just the site name', () => {
+    const { rerender } = render(<Page title="Tracker">x</Page>)
+    expect(document.title).toBe('Tracker · NFL approaches')
+    rerender(<Page title={<span>CAR @ GB</span>} docTitle="CAR @ GB, Week 8">x</Page>)
+    expect(document.title).toBe('CAR @ GB, Week 8 · NFL approaches')
+    rerender(<Page title={<span>Game</span>}>x</Page>)
+    expect(document.title).toBe('NFL approaches')
   })
 })

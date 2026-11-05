@@ -2,8 +2,6 @@
 import type { Approach, Tracker } from '../../data/contract'
 import { llVsMarket } from '../../lib/format'
 
-/** Log-loss differences below this are indistinguishable at these sample sizes. */
-export const NOISE = 0.005
 export const BUCKET_ORDER = ['0-2.5', '2.5-5', '5-10', '10+']
 export const BUCKET_WORDS: Record<string, string> = {
   '0-2.5': 'by less than 2.5 points',
@@ -55,7 +53,7 @@ export function calibrationVerdict(rows: Reliability[], name: string): Verdict {
   const won = bins.reduce((s, r) => s + r.hit_rate * r.n, 0) / n
   const gap = won - said
   const gapPts = Math.round(Math.abs(gap) * 100)
-  const calls = `its ${(100 * said).toFixed(0)}% calls won ${(100 * won).toFixed(0)}% (n = ${n.toLocaleString('en-US')})`
+  const calls = `its calls of 60-80% averaged ${(100 * said).toFixed(0)}% and won ${(100 * won).toFixed(0)}% (n = ${n.toLocaleString('en-US')})`
   if (gap < -0.03) return { kind: 'over', gapPts, said, won, n, text: `${name}: overconfident by ${gapPts} points, ${calls}.` }
   if (gap > 0.03) return { kind: 'under', gapPts, said, won, n, text: `${name}: underconfident by ${gapPts} points, ${calls}.` }
   return { kind: 'well', gapPts, said, won, n, text: `${name}: well calibrated, ${calls}.` }
@@ -139,7 +137,7 @@ export function currentSummary(cur: Tracker['current_season']): { rows: CurrentR
 export function headlineSentence(row: CurrentRow, name: string): string {
   const base = `After ${row.games.toLocaleString('en-US')} games, ${name} is `
   if (row.delta == null) return `${base}the reference.`
-  if (Math.abs(row.delta) < NOISE) return `${base}about the same as the market (within ${NOISE} log loss, which is noise at this sample size).`
+  if (Math.abs(row.delta) < GAP_BAND) return `${base}about the same as the market (within ${GAP_BAND} log loss, too close to call at this sample size).`
   return `${base}${Math.abs(row.delta).toFixed(3)} ${row.delta > 0 ? 'worse' : 'better'} than the market (log loss; lower is better).`
 }
 
@@ -157,8 +155,8 @@ export function signedGap(v: number): string {
  */
 /**
  * Half-width of the season chart's too-close-to-call band. A paired bootstrap over the first 120
- * games of 2026 put every line's 90% range across zero, about ±0.025 wide. NOISE (0.005) is what
- * words call noise; this is what a chart can claim. It narrows with games: re-measure by Week 14.
+ * games of 2026 put every line's 90% range across zero, about ±0.025 wide. It is the tracker's one
+ * threshold, for words and for the chart. It narrows with games: re-measure by Week 14.
  */
 export const GAP_BAND = 0.025
 
@@ -176,7 +174,7 @@ export function gapRows(cur: Tracker['current_season']): GapRow[] {
   return [...out.values()].sort((a, b) => a.week - b.week)
 }
 
-/** Symmetric y limit for the gap chart: the largest shown gap, rounded up, never below twice the noise band. */
+/** Symmetric y limit for the gap chart: the largest shown gap, rounded up, never below the 0.04 floor. */
 export function gapLimit(rows: GapRow[], shown: string[]): number {
   let max = 0
   for (const r of rows) for (const m of shown) if (r[m] != null) max = Math.max(max, Math.abs(r[m]))

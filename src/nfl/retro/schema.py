@@ -14,7 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "4"  # v4 2026-11-05: the recap's bold calls
+SCHEMA_VERSION = "5"  # v5 2026-11-05: preview Elo on full history, new swing sentence; v4: the recap's bold calls
 # v3 2026-11-04: played-like inputs, the phase scorecard; game-only headlines
 
 Side = Literal["home", "away"]

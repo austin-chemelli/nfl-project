@@ -86,7 +86,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| ui | `ui-next` | `~/dev/nfl-project-ui` | round 2 done; later items in `.notes/ui-round2.md` §9 (tendencies across situations, H4 injuries and news tab, open-bets list once live bets exist) | U1 to U5 merged and live (#11, #13, #14, #16, #17); `nfl-retro` and `nfl-site` run by hand on 041a83a, 2026-11-05 | #11, #13, #14, #16, #17 |
+| ui | `ui-site-walk-fixes` | `~/dev/nfl-project-ui` | M13 site walk fixes in review; round 2 done; later items in `.notes/ui-round2.md` §9 (tendencies across situations, H4 injuries and news tab, open-bets list once live bets exist) | U1 to U5 merged and live (#11, #13, #14, #16, #17); `nfl-retro` and `nfl-site` run by hand on 041a83a, 2026-11-05 | #11, #13, #14, #16, #17 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
@@ -106,6 +106,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M9 game retrospective (ADR 0016) | done 2026-11-02 |
 | M10 site v2, one answer first (ADR 0017) | done 2026-11-04 (PR #4) |
 | M11 model wave 2 (ADR 0018) | done 2026-11-04 (PR #12), live before the first public lock |
+| M13 site walk fixes (review §10) | built 2026-11-05, in review on `ui-site-walk-fixes` |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -166,7 +167,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-05 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-04 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-05 |
-| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-04 |
+| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-05 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |

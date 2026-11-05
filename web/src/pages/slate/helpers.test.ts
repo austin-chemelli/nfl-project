@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CardData, GameRow, Meta } from '../../data/contract'
-import { approachSpread, cardSentence, contrastLine, correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, parseSort, pickOf, sideText, sortGames, whyLine, winnerMarketP } from './helpers'
+import { gapToMarket, cardSentence, contrastLine, correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, parseSort, pickOf, sideText, sortGames, whyLine, winnerMarketP } from './helpers'
 
 const pick = (p: number, div: number | null = null) => ({ p_home: p, spread_home: null, status: 'preview' as const, lock_ts: null, divergence: div })
 const game = (over: Partial<GameRow> = {}): GameRow => ({
@@ -89,15 +89,20 @@ describe('sortGames', () => {
   const d = game({ game_id: 'd', kickoff_utc: '2026-10-31T18:00:00Z', models: {} }) // nothing scored
   const ids = (xs: GameRow[]) => xs.map((g) => g.game_id)
   it('kickoff', () => expect(ids(sortGames([a, b, c, d], 'kickoff'))).toEqual(['c', 'a', 'b', 'd']))
-  it('disagreement: widest first, unscored last', () => expect(ids(sortGames([a, b, c, d], 'disagreement'))).toEqual(['b', 'c', 'a', 'd']))
+  it('gap to market: widest first, no market or no forecast last', () => {
+    // student vs market: b 0.5, a 0.3, c 0; d has neither
+    expect(ids(sortGames([a, b, c, d], 'disagreement'))).toEqual(['b', 'a', 'c', 'd'])
+    const noMarket = game({ game_id: 'n', kickoff_utc: '2026-10-28T18:00:00Z', models: models(0.1, 0.9) })
+    expect(ids(sortGames([noMarket, a, b], 'disagreement'))).toEqual(['b', 'a', 'n'])
+  })
   it('upset: lowest winner chance first, then the unplayed by kickoff', () => expect(ids(sortGames([a, b, c, d], 'upset'))).toEqual(['b', 'a', 'c', 'd']))
   it('upset: unplayed games keep kickoff order whatever the input order', () => {
     const e = game({ game_id: 'e', kickoff_utc: '2026-10-29T12:00:00Z', market: mk(0.5), models: models(0.5, 0.5) })
     expect(ids(sortGames([d, c, e, b, a], 'upset'))).toEqual(['b', 'a', 'e', 'c', 'd'])
   })
   it('spread, winner market and sort parsing', () => {
-    expect(approachSpread(b)).toBeCloseTo(0.7)
-    expect(approachSpread(d)).toBeNull()
+    expect(gapToMarket(b)).toBeCloseTo(0.5)
+    expect(gapToMarket(d)).toBeNull()
     expect(winnerMarketP(b)).toBeCloseTo(0.3)
     expect(winnerMarketP(c)).toBeNull()
     expect(parseSort('upset')).toBe('upset')

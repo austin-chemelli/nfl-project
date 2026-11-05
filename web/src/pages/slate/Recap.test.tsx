@@ -1,9 +1,26 @@
-import { describe, expect, it } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { describe, expect, it, vi } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderRoute } from '../../test/render'
 import type { WeekRecap } from '../../data/contract'
 import { recapTiles } from './recapTiles'
+
+/** A copy of the fixtures where the listed weeks' slates have a finished game, so their recap is requested. */
+export function fixturesWithResults(weeks: number[]): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'slate-recap-'))
+  fs.cpSync(path.resolve(import.meta.dirname, '../../test/fixtures'), root, { recursive: true })
+  const base = JSON.parse(fs.readFileSync(path.join(root, 'site/slate_2026_08.json'), 'utf8'))
+  for (const w of weeks) {
+    const d = structuredClone(base)
+    d.week = w
+    d.games[0].result = { home_score: 23, away_score: 20, margin: 3 }
+    fs.writeFileSync(path.join(root, `site/slate_2026_${String(w).padStart(2, '0')}.json`), JSON.stringify(d))
+  }
+  return root
+}
 
 const model = (id: string, kind: string, right: number, ll: number, vs: number | null, rank: number) =>
   ({ model_id: id, label: id, kind, n: 10, right, log_loss: ll, vs_market: vs, rank }) as WeekRecap['models'][number]
@@ -22,17 +39,17 @@ describe('recapTiles', () => {
   it('states the week in five tiles', () => {
     const t = recapTiles(recap())
     expect(t.map((x) => x.id)).toEqual(['best', 'market', 'right', 'upset', 'luck'])
-    expect(t[0]).toMatchObject({ value: 'Student', sub: '7 of 10 right, log loss 0.600', modelId: 'student' })
-    expect(t[1]).toMatchObject({ value: 'Even with the market', sub: '2 of 4 ahead; about even on average' })
+    expect(t[0]).toMatchObject({ value: 'Student', sub: '7 of 10 right, score 0.600 (lower is better)', modelId: 'student' })
+    expect(t[1]).toMatchObject({ value: 'Even with the market', sub: '2 of 4 ahead; about even on average. Confidence counts, not just picks' })
     expect(t[2]).toMatchObject({ value: '7 of 10', sub: 'Student; market 6 of 10', modelId: 'student' })
     expect(t[3]).toMatchObject({ value: 'NYG @ HOU', sub: 'winner was 20% in the market' })
     expect(t[4]).toMatchObject({ value: 'HOU', sub: '+5.6 pts of pure luck' })
   })
   it('beat / trailed by the average gap, with the direction printed', () => {
     const m = (gaps: number[]) => recap({ models: ['student', 'analyst', 'sharp', 'traditionalist'].map((id, i) => model(id, 'approach', 5, 0.6, gaps[i], i + 1)) })
-    expect(recapTiles(m([-0.02, -0.02, -0.02, 0.02]))[1]).toMatchObject({ value: 'Beat the market', sub: '3 of 4 ahead; 0.010 log loss better on average' })
+    expect(recapTiles(m([-0.02, -0.02, -0.02, 0.02]))[1]).toMatchObject({ value: 'Scored better', sub: '3 of 4 ahead; 0.010 better on average. Confidence counts, not just picks' })
     // three slightly ahead and one far behind: worse on average, whatever the count says
-    expect(recapTiles(m([-0.001, -0.002, -0.001, 0.1]))[1]).toMatchObject({ value: 'Trailed the market', sub: '3 of 4 ahead; 0.024 log loss worse on average' })
+    expect(recapTiles(m([-0.001, -0.002, -0.001, 0.1]))[1]).toMatchObject({ value: 'Scored worse', sub: '3 of 4 ahead; 0.024 worse on average. Confidence counts, not just picks' })
   })
   it('does not call a near-even winner an upset', () => {
     const t = recapTiles(recap({ upsets: [{ game_id: 'g', away: 'A', home: 'B', value: 0.47, sentence: '' }] }))
@@ -42,11 +59,11 @@ describe('recapTiles', () => {
 
 describe('Recap', () => {
   it('shows the week-8 strip, with the full table and lists behind "Full recap"', async () => {
-    renderRoute('/week/2026/8')
+    renderRoute('/week/2026/8', fixturesWithResults([8]))
     const region = await screen.findByRole('region', { name: 'Week 8 recap' })
     const strip = within(region).getByRole('group', { name: 'Week 8 summary' })
     expect(within(strip).getByText('Traditionalist')).toBeInTheDocument()
-    expect(within(strip).getByText('Trailed the market')).toBeInTheDocument()
+    expect(within(strip).getByText('Scored worse')).toBeInTheDocument()
     expect(within(strip).getByText('CAR @ GB')).toBeInTheDocument()
     expect(within(strip).getByText('CAR')).toBeInTheDocument()
     const details = within(region).getByText('Full recap').closest('details') as HTMLDetailsElement
@@ -59,7 +76,7 @@ describe('Recap', () => {
   })
 
   it('lists the bold calls under the confidence line, each linked to its game', async () => {
-    renderRoute('/week/2026/8')
+    renderRoute('/week/2026/8', fixturesWithResults([8]))
     const region = await screen.findByRole('region', { name: 'Week 8 recap' })
     await userEvent.click(within(region).getByText('Full recap'))
     expect(within(region).getByRole('heading', { name: 'Bold calls' })).toBeInTheDocument()
@@ -70,10 +87,19 @@ describe('Recap', () => {
   })
 
   it('renders a recap without bold calls (week 5 predates them) and hides the block', async () => {
-    renderRoute('/week/2026/5')
+    renderRoute('/week/2026/5', fixturesWithResults([5]))
     const region = await screen.findByRole('region', { name: 'Week 5 recap' })
     await userEvent.click(within(region).getByText('Full recap'))
     expect(within(region).queryByText('Bold calls')).toBeNull()
+  })
+
+  it('asks for no recap while the week has no result', async () => {
+    const seen = vi.spyOn(fs, 'existsSync')
+    renderRoute('/week/2026/8')
+    await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
+    expect(screen.queryByRole('region', { name: /recap/ })).toBeNull()
+    expect(seen.mock.calls.some(([f]) => String(f).includes('recap_2026_08'))).toBe(false)
+    seen.mockRestore()
   })
 
   it('renders nothing for a week without a recap', async () => {

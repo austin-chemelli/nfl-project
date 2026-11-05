@@ -29,7 +29,7 @@ export function topNullRates(rows: NullRow[] | undefined, limit = 25): { shown: 
   return { shown: sorted.slice(0, limit), total: withNulls.length }
 }
 
-/** Budget shares sorted largest first, dropping groups under half a point. */
+/** Budget shares sorted by size (ignoring sign), largest first, dropping groups under half a point. A negative share leans against its group. */
 export function sortedShares(share: Record<string, number>, min = 0.5): [string, number][] {
-  return Object.entries(share).filter(([, v]) => v >= min).sort((a, b) => b[1] - a[1])
+  return Object.entries(share).filter(([, v]) => Math.abs(v) >= min).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
 }

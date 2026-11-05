@@ -6,10 +6,24 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderRoute } from '../../test/render'
 
+/** A copy of the fixtures where the listed weeks' slates have a finished game, so their recap is requested. */
+export function fixturesWithResults(weeks: number[]): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'slate-recap-'))
+  fs.cpSync(path.resolve(import.meta.dirname, '../../test/fixtures'), root, { recursive: true })
+  const base = JSON.parse(fs.readFileSync(path.join(root, 'site/slate_2026_08.json'), 'utf8'))
+  for (const w of weeks) {
+    const d = structuredClone(base)
+    d.week = w
+    d.games[0].result = { home_score: 23, away_score: 20, margin: 3 }
+    fs.writeFileSync(path.join(root, `site/slate_2026_${String(w).padStart(2, '0')}.json`), JSON.stringify(d))
+  }
+  return root
+}
+
 describe('Slate page', () => {
   it('renders the week-8 games with picks, line and market', async () => {
     renderRoute('/')
-    expect((await screen.findAllByText('CAR @ GB')).length).toBeGreaterThan(0)
+    await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
     expect(screen.getAllByText('ARI').length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: /Week 8/ })).toBeInTheDocument()
     // Fixture: market GB 64%, line GB −3.5
@@ -17,6 +31,7 @@ describe('Slate page', () => {
     expect(card).toHaveAttribute('href', '/game/2026_08_CAR_GB')
     expect(within(card).getByText(/market GB 64%/)).toBeInTheDocument()
     expect(within(card).getByText(/GB −3.5/)).toBeInTheDocument()
+    expect(within(card).getByText("Student's pick: GB 72%")).toBeInTheDocument()
     expect(within(card).getByRole('img')).toHaveAccessibleName(/market 64%.*Student \d+%/)
     expect(screen.queryByRole('heading', { name: /Where they disagree most/ })).toBeNull()
     expect(screen.queryByRole('columnheader', { name: /Kickoff/ })).toBeNull()
@@ -40,7 +55,7 @@ describe('Slate page', () => {
   it('sorts by ?sort= and the control updates the URL order', async () => {
     renderRoute('/?sort=disagreement')
     await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
-    expect(screen.getByRole('radio', { name: 'Disagreement' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Student vs market' })).toHaveAttribute('aria-checked', 'true')
     await userEvent.click(screen.getByRole('radio', { name: 'Kickoff' }))
     expect(screen.getByRole('radio', { name: 'Kickoff' })).toHaveAttribute('aria-checked', 'true')
   })
@@ -60,6 +75,54 @@ describe('Slate page', () => {
     expect(screen.getAllByText('Fine print')).toHaveLength(1)
   })
 
+  it('titles the tab for the page', async () => {
+    renderRoute('/')
+    await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
+    expect(document.title).toBe('This week · NFL approaches')
+  })
+
+  it('titles the tab for an explicit week', async () => {
+    renderRoute('/week/2026/9')
+    await screen.findByText(/No slate for 2026 week 9/)
+    expect(document.title).toBe('Week 9, 2026 · NFL approaches')
+  })
+
+  it('shows last week\'s line on the current week only', async () => {
+    const root = fixturesWithResults([7])
+    fs.copyFileSync(path.join(root, 'site/recap_2026_08.json'), path.join(root, 'site/recap_2026_07.json'))
+    renderRoute('/', root)
+    const link = await screen.findByRole('link', { name: /^Last week(, scored after the fact)?: the Student got \d+ of \d+ right, the market \d+ of \d+\.$/ })
+    expect(link).toHaveAttribute('href', '/week/2026/7')
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+
+  it.each([
+    ['backfill', /^Last week, scored after the fact: /],
+    ['locked', /^Last week: /],
+  ])('says when last week was %s', async (status, name) => {
+    const root = fixturesWithResults([7])
+    fs.copyFileSync(path.join(root, 'site/recap_2026_08.json'), path.join(root, 'site/recap_2026_07.json'))
+    const file = path.join(root, 'site/slate_2026_07.json')
+    const slate = JSON.parse(fs.readFileSync(file, 'utf8'))
+    for (const g of slate.games) for (const m of Object.values<{ status: string }>(g.models)) m.status = status
+    fs.writeFileSync(file, JSON.stringify(slate))
+    renderRoute('/', root)
+    expect(await screen.findByRole('link', { name })).toBeInTheDocument()
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+
+  it('shows no last-week line on the current week without a recap, or on another week', async () => {
+    renderRoute('/')
+    await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
+    expect(screen.queryByText(/Last week:/)).toBeNull()
+    const root = fixturesWithResults([7])
+    fs.copyFileSync(path.join(root, 'site/recap_2026_08.json'), path.join(root, 'site/recap_2026_07.json'))
+    renderRoute('/week/2026/7', root)
+    await screen.findAllByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
+    expect(screen.queryByText(/Last week:/)).toBeNull()
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+
   it('opens an explicit week and shows a friendly message for a missing slate', async () => {
     renderRoute('/week/2026/9')
     expect(await screen.findByText(/No slate for 2026 week 9/)).toBeInTheDocument()
@@ -67,7 +130,7 @@ describe('Slate page', () => {
 
   it('week picker navigates', async () => {
     renderRoute('/')
-    await screen.findAllByText('CAR @ GB')
+    await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
     await userEvent.click(screen.getByRole('button', { name: 'Next week' }))
     expect(await screen.findByText(/No slate for 2026 week 9/)).toBeInTheDocument()
   })

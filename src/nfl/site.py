@@ -262,10 +262,19 @@ def best_rows(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.DataFrame:
     )
 
 
+def _history(paths: Paths) -> pl.DataFrame:
+    """Every season's games with the tz-naive `kickoff_utc` that `build()` applies. Elo replays
+    all of it (B1, 2026-11-05: a one-season replay started every team at 1500 each September)."""
+    return store.games_frame(paths).with_columns(
+        pl.col("kickoff_utc").dt.replace_time_zone(None).cast(pl.Datetime("us"))
+    )
+
+
 def preview_rows(
-    paths: Paths, games: pl.DataFrame, slate: pl.DataFrame, now: datetime
+    paths: Paths, history: pl.DataFrame, slate: pl.DataFrame, now: datetime
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
-    """Score upcoming games without a lock, as of now. Returns (rows like predictions, market)."""
+    """Score upcoming games without a lock, as of now. `history` is every season's games, so the
+    reference Elo matches the lock. Returns (rows like predictions, market)."""
     from nfl import lock
 
     if slate.is_empty():
@@ -275,7 +284,7 @@ def preview_rows(
     models, _missing = lock.load_models(paths, season - 1)
     market = lock.market_at(feats, slate, now)
     scored = lock.score_approaches(models, feats, slate, now) + lock.score_reference(
-        games, slate, market
+        history, slate, market
     )
     rows = []
     for s in scored:
@@ -314,8 +323,9 @@ def pregame_rows(paths: Paths, games: pl.DataFrame, have: pl.DataFrame, now: dat
         if started.is_empty():
             return pl.DataFrame()
     out = []
+    history = _history(paths)
     for (kick,), part in started.group_by(["kickoff_utc"]):
-        rows, _ = preview_rows(paths, games, part, kick - PREGAME_LEAD)
+        rows, _ = preview_rows(paths, history, part, kick - PREGAME_LEAD)
         if not rows.is_empty():
             out.append(rows.with_columns(pl.lit(PREGAME).alias("status")))
     return pl.concat(out, how="vertical_relaxed") if out else pl.DataFrame()
@@ -338,7 +348,7 @@ def display_rows(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.DataFra
     if not upcoming.is_empty():
         first = int(upcoming["week"].min())
         upcoming = upcoming.filter(pl.col("week") <= first + 1)
-    prev, _ = preview_rows(paths, games, upcoming, now)
+    prev, _ = preview_rows(paths, _history(paths), upcoming, now)
     pre = pregame_rows(paths, games, have, now)
     allrows = pl.concat(
         [r.select("game_id", "model_id", "p_home", "spread_home", "contributions", "lock_ts", "status")
