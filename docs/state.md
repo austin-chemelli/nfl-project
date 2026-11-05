@@ -121,7 +121,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D11 | GPU for the desktop (§6): a 24 GB card to run 27–32B models, or stay on the 1070 with prompts and evals only? | buy / stay | Austin's money | 2026-11-05 |
 | D12 | Learned Student (§3.1): a fifth line in shadow (recommended) or a replacement for the Student? | shadow / replace | Austin | 2026-11-05 |
 | D13 | Player-level data (§2.2): injury weighting plus four position groups, or wider? | narrow / wide | Austin | 2026-11-05 |
-| D9 | A backup lock run 30 minutes after each lock that acts only if the first didn't, so a badly timed merge fixes itself? | (a) build it, about an hour, plus an "already locked?" check; (b) leave reruns manual | Austin, after the first public lock | 2026-11-04 |
+| D14 | A backup lock run 30 minutes after each lock that acts only if the first didn't, so a badly timed merge fixes itself? | (a) build it, about an hour, plus an "already locked?" check; (b) leave reruns manual | Austin, after the first public lock | 2026-11-04 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
@@ -144,6 +144,8 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 - **Baltimore's Week 9 starter is uncertain.** Tyler Huntley missed Wednesday's practice and Joe Fagnano took full reps. The lock uses the depth chart nflverse has at 09:00.
 - **First live locks** Thu 2026-11-05 09:00 and Sat 2026-11-07 12:00: watch the executions and the lock commits; the laptop fallback is `uv run nfl lock --slot thu` in the primary checkout. Thursday's is the first push from the cloud: dry runs don't push, so the deploy key's write access is confirmed but the push itself is untested.
 - **Desktop passes** 2026-11-05: the pass on #15 stored the 7 missing games (15 of 15 in the bucket, 06:32Z), Tavily served its queries (51 credits used), the 08:30 check passed and the first public lock landed (`c8d8103`, JAX @ BAL). Open: (1) games took 26.5 minutes each, against about 16 for full games on the search-only pass. Feed pages take about 32 seconds each against 21 in Week 8 (n=8, one game), because they yield more facts, which accounts for about 6 of the 10 extra minutes. At that rate Saturday's 14 games end about 13:10 ET, after the 11:30 check, which would email a false failure because uploads come last; the lock doesn't depend on it, and Saturday's fewer queries won't shorten the model time. (2) `push_locks` tries once and the job has no retries, so a GitHub push error fails the lock job; rerun it before kickoff. A docs push failed that way twice on 2026-11-05 (`fatal error in commit_refs_rules`) and passed 28 minutes later. (3) LA @ WAS (14 claims, 2 pages) and NYG @ PHI (4 pages) are thin leftovers from the blocked run; Saturday's pass replaces them.
+- **Game-page feature bands use a Week 18 pregame row.** `feature_bands` (`src/nfl/site.py`) keeps each team's last-kickoff row, so rate and per-game features show stale values (found by the team-scatter plan, 2026-11-05; measured on `.data-prod`). Fix: a shared next-game helper, in `.notes/plans/team-scatter.md`.
+- The learned-Student experiment (2026-11-05, `.notes/plans/learned-student.md`): a GBM on the same matrix loses to the Student by 0.0033; "Student + trees" ties. Not building it now. Also found: `.data-prod` in the UI worktree is stale (features from Oct 28); `schema.py` defines a `shadow` flag no code reads.
 - Follow-up to wave 2: the retro's kicking luck should read against the kicker's own season rate (`src/nfl/retro/game.py`, after the UI retro PR).
 - A correction to an earlier game doesn't mark later retros stale (accepted 2026-11-03; the daily job only rehashes each game's own inputs).
 - NO @ NYG Week 6: the books' spread and moneyline disagree on the favorite at a coin flip. Real market data, not a bug.
@@ -170,7 +172,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |
 | [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona | 2026-11-04 |
 | [PROJECT_BRIEF.md](PROJECT_BRIEF.md) | the original scope; historical, ADRs win on conflict | 2026-10-27 |
-| `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `project-review-2026-11.md` the 2026-11-05 review and next directions (D9–D13); `archive/` notes that were true once | 2026-11-04 |
+| `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `project-review-2026-11.md` the 2026-11-05 review and next directions (D9–D13); `plans/` one research plan per enhancement (2026-11-05: interaction features, learned Student, boldness view, league page, team scatter, WP chart and motion), each ending in decisions for Austin; `archive/` notes that were true once | 2026-11-04 |
 
 ## Maintenance
 
