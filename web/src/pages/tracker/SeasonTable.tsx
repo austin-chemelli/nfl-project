@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { DataTable, ModelBadge, td, th } from '../../components/ui'
 import type { Tracker } from '../../data/contract'
-import { LINES, REFERENCES } from '../../lib/models'
+import { APPROACHES, REFERENCES } from '../../lib/models'
 
 /** Log loss by season, one column per line (the scoring rule is always read against the Market column). */
 export function SeasonTable({ t }: { t: Tracker }) {
@@ -10,7 +10,7 @@ export function SeasonTable({ t }: { t: Tracker }) {
     for (const r of t.seasons) cell.set(`${r.season}|${r.model_id}`, r.log_loss)
     const seasons = [...new Set(t.seasons.map((r) => r.season))].sort((a, b) => b - a)
     const present = new Set(t.seasons.map((r) => r.model_id))
-    const cols = ['market_baseline', ...LINES, ...REFERENCES].filter((m, i, a) => a.indexOf(m) === i && present.has(m))
+    const cols = ['market_baseline', ...APPROACHES, ...REFERENCES].filter((m, i, a) => a.indexOf(m) === i && present.has(m))
     return { seasons, cols, cell }
   }, [t.seasons])
   if (!seasons.length) return null

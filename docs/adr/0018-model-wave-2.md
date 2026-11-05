@@ -13,10 +13,10 @@ The evidence: 13 of the 26 coaching and scheme features exist, and none reaches 
 - **The Student and the Analyst read line moves too**, at half the Sharp's weight. This reverses ADR 0013's "the Student stays market-free". The rule that matters stands: no approach sees the market's forecast. The weight is declared, not learned, because line moves exist live only. The public split stays the Sharp's. The Traditionalist has no market input, for character.
 - **Special teams is a group**: overall value (moved from Quality), kicking, punt unit and kickoff unit, all season-to-date EPA per game, demeaned by play type. Kicking uses EPA, which already accounts for distance, so no new expectation table is needed.
 - **Pressure rate moves to Defense.** This is a football judgment: its verdict is "no evidence".
-- **The ensemble is retired.** It stops locking and leaves the site, the README and the tiles. The Student is the headline line. Rows already written stay; backfill rows are derived and go.
+- **The ensemble is retired.** It never locks and leaves the site, the README and the tiles. The Student is the headline line. Its backfill rows are derived and go.
 
 ## Consequences
-- The composites changed, so `REGISTRY_VERSION` is 6 and every fit is new. Live rows from Week 9 keep their old `model_version`, so 2026's public record spans two model versions.
+- The composites changed, so `REGISTRY_VERSION` is 6 and every fit is new. It lands before the first public lock (Thu 2026-11-05), so no live row exists on the old model and the public record starts on one version.
 - The Student's "learns only from results" is no longer quite true, and its description says so.
 - Removing weak groups leaves less for the approaches to disagree about.
 - Special teams adds little predictive signal: overall value ranks 20th of the 21 features that reach "matters". It is in the model because it belongs in the picture of a game.

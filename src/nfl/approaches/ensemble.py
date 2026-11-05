@@ -4,8 +4,8 @@ global    one ridge fit toward zero on every non-market, non-narrative feature i
           not an approach: it answers "what does history say each feature is worth?" for the
           Hypotheses page and is a reference line. Market features are excluded so a hypothesis
           reads "does rest predict wins", not "is rest already priced in" (a later, separate fit).
-ensemble  retired (ADR 0018): the mean of the four lines' logits, scored until 2026 Week 9. Its live
-          rows stay in the record; nothing writes new ones. The Student is the headline line.
+ensemble  retired (ADR 0018) before it ever locked: the mean of the four lines' logits. Nothing
+          writes it any more. The Student is the headline line.
 """
 
 from __future__ import annotations

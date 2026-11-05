@@ -2,17 +2,17 @@ import { useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { DataTable, Section, Segmented, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
-import { colorVar } from '../../lib/models'
+import { APPROACHES, colorVar } from '../../lib/models'
 import { BUCKET_ORDER, divergenceSentence, marketWinsWhenApart } from './helpers'
 import { label, sentenceName } from './names'
 
 const PC = (v: number | null) => (v == null ? '–' : `${Math.round(100 * v)}%`)
 
 export function Divergence({ t, meta }: { t: Tracker; meta: Meta }) {
-  const ids = ['traditionalist', 'analyst', 'sharp', 'student', 'ensemble'].filter((m) => t.divergence.some((r) => r.model_id === m))
-  const [sel, setSel] = useState(ids[0])
+  const ids = APPROACHES.filter((m) => t.divergence.some((r) => r.model_id === m))
+  const [sel, setSel] = useState<string>(ids[0])
   if (!ids.length) return null
-  const [wins, total] = marketWinsWhenApart(t.divergence.filter((r) => ids.includes(r.model_id)))
+  const [wins, total] = marketWinsWhenApart(t.divergence.filter((r) => (ids as string[]).includes(r.model_id)))
   const d = t.divergence.filter((r) => r.model_id === sel).sort((a, b) => BUCKET_ORDER.indexOf(a.bucket) - BUCKET_ORDER.indexOf(b.bucket))
   const bars = d.map((r) => ({
     name: `${r.bucket} pts apart`,

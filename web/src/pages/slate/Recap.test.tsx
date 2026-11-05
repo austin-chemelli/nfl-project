@@ -11,7 +11,7 @@ const recap = (over: Partial<WeekRecap> = {}): WeekRecap => ({
   schema_version: '2', season: 2026, week: 7, built_at: '', games: [], best_model: 'student', note: '',
   models: [
     model('student', 'approach', 7, 0.6, -0.018, 1), model('analyst', 'approach', 6, 0.64, 0.01, 2), model('sharp', 'approach', 6, 0.66, 0.03, 3),
-    model('traditionalist', 'approach', 6, 0.65, -0.01, 4), model('ensemble', 'ensemble', 7, 0.62, -0.005, 5), model('market_baseline', 'reference', 6, 0.62, 0, 0),
+    model('traditionalist', 'approach', 6, 0.65, -0.01, 4), model('market_baseline', 'reference', 6, 0.62, 0, 0),
   ],
   upsets: [{ game_id: 'g1', away: 'NYG', home: 'HOU', value: 0.196, sentence: '' }], misread: [], unluckiest: [],
   luckiest: [{ team: 'HOU', game_id: 'g1', luck_net: 5.6, sentence: '' }],
@@ -24,7 +24,7 @@ describe('recapTiles', () => {
     expect(t.map((x) => x.id)).toEqual(['best', 'market', 'right', 'upset', 'luck'])
     expect(t[0]).toMatchObject({ value: 'Student', sub: '7 of 10 right, log loss 0.600', modelId: 'student' })
     expect(t[1]).toMatchObject({ value: 'Even with the market', sub: '2 of 4 ahead; about even on average' })
-    expect(t[2]).toMatchObject({ value: '7 of 10', sub: 'ensemble; market 6 of 10' })
+    expect(t[2]).toMatchObject({ value: '7 of 10', sub: 'Student; market 6 of 10', modelId: 'student' })
     expect(t[3]).toMatchObject({ value: 'NYG @ HOU', sub: 'winner was 20% in the market' })
     expect(t[4]).toMatchObject({ value: 'HOU', sub: '+5.6 pts of pure luck' })
   })

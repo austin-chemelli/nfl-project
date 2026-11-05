@@ -63,7 +63,7 @@ function HowItWorks({ meta }: { meta: Meta }) {
     <Section title="How it works">
       <div className="max-w-3xl space-y-3 text-[15px] leading-relaxed">
         <p>
-          Several <strong>approaches</strong> ({meta.approaches.map((a) => a.name.replace(/^The /, '')).join(', ')}) weigh the same shared evidence differently, like different kinds of fans, plus an <strong>ensemble</strong> (their average). Each approach is <strong>one public line</strong>: the persona&apos;s own weights, lightly fitted to history and then calibrated, so the persona&apos;s biases survive. Models produce every number; an LLM, where used, only explains and is never allowed to introduce a statistic.
+          Several <strong>approaches</strong> ({meta.approaches.map((a) => a.name.replace(/^The /, '')).join(', ')}) weigh the same shared evidence differently, like different kinds of fans. Each approach is <strong>one public line</strong>: the persona&apos;s own weights, lightly fitted to history and then calibrated, so the persona&apos;s biases survive. Models produce every number; an LLM, where used, only explains and is never allowed to introduce a statistic.
         </p>
         <p>
           <strong>The market is the reference, never an input</strong> (ADR 0013). The betting market&apos;s forecast (the spread and moneyline probability) is the line every approach is compared against, and no approach is allowed to read it. The Sharp reads market <em>behavior</em> (line moves, public betting share, disagreement between books) as a capped supplement, never the forecast itself. Feeding the market to a model and then crediting the model for matching the market was the mistake that made an early Sharp look as good as the market.
@@ -130,7 +130,7 @@ function Locks() {
         <p>A <em>lock</em> freezes predictions before kickoff, twice a week (Thursday and Saturday). It:</p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>Downloads the latest public data and an odds snapshot, then rebuilds every feature, each row stamped with the time it became known.</li>
-          <li>Scores the games that have not kicked off, using models fitted only through last season: every approach, the ensemble, and the market, Elo and naive reference lines.</li>
+          <li>Scores the games that have not kicked off, using models fitted only through last season: every approach, and the market, Elo and naive reference lines.</li>
           <li>Appends the predictions (they are never edited) and opens paper bets at the current odds.</li>
           <li>Writes a file with a checksum and commits it to git before kickoff, so the record cannot be quietly rewritten. A lock refuses games that have already kicked off, so the live record cannot be backfilled.</li>
         </ol>

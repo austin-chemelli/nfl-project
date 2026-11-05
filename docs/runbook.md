@@ -106,7 +106,7 @@ The task runs when Austin is signed in, which Ollama needs anyway (docs/desktop-
 
 ## Model wave cutover (ADR 0018; any change to approach configs or groups)
 
-`nfl lock` and `nfl site` both refuse a fit whose config hash differs from the YAML, so the code and the fits have to change together. Any job that builds previews between the two fails loudly and emails. Do it when nothing is scheduled to write: Tuesday afternoon, after the 10:00 refresh and before the Wednesday 18:00 desktop pass. `marts/predictions.parquet` must be pulled and pushed inside that gap, or a live row could be lost.
+`nfl lock` and `nfl site` both refuse a fit whose config hash differs from the YAML, so the code and the fits have to change together. Any job that builds previews between the two fails loudly and emails. Do it when nothing is scheduled to write `marts/`: Tuesday after the 10:00 refresh is the widest gap, and any evening with no job due works. A desktop pass ending mid-cutover only fails its `nfl-site` step; rerun that job. `marts/predictions.parquet` must be pulled and pushed inside that gap, or a live row could be lost.
 
 Before starting: the web changes the wave depends on are deployed, including `web/src/diy/` for a new group.
 

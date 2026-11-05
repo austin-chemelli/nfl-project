@@ -8,7 +8,7 @@ describe('Tracker page', () => {
     renderRoute('/tracker')
     const strip = await screen.findByRole('group', { name: 'Tracker summary' })
     expect(within(strip).getAllByRole('button')).toHaveLength(5)
-    expect(await screen.findByText(/^After \d+ games, the Analyst is/)).toBeInTheDocument()
+    expect(await screen.findByText(/^After \d+ games, the Student is/)).toBeInTheDocument()
     expect(screen.getByText(/No live locks have been graded yet/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Log loss by season/ })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /Backtest: how far/ })).not.toBeInTheDocument()
@@ -25,7 +25,8 @@ describe('Tracker page', () => {
     renderRoute('/tracker?tab=backtest')
     const h = await screen.findByRole('heading', { name: /Backtest: how far/ })
     const section = h.closest('section')!
-    expect(within(section).getAllByText(/Ensemble/).length).toBeGreaterThan(0)
+    expect(within(section).getAllByText(/Student/).length).toBeGreaterThan(0)
+    expect(within(section).queryByText(/Ensemble/)).toBeNull()
     expect(within(section).getAllByText(/games and \d+ seasons/, { exact: false }).length).toBeGreaterThan(0)
     expect(screen.getAllByText('better than the market', { exact: false }).length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: /What history would change/ })).toBeInTheDocument()

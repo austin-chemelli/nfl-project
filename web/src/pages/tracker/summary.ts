@@ -6,7 +6,7 @@
  * same 0.005 noise rule: smaller log-loss gaps are "about the same as the market", never a ranking.
  */
 import type { Tracker } from '../../data/contract'
-import { APPROACHES } from '../../lib/models'
+import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { calibrationVerdict, currentSummary, NOISE, type CurrentRow } from './helpers'
 import { label } from './names'
 
@@ -21,6 +21,7 @@ export type TileSpec = {
   modelId?: string
 }
 
+const NAME = SHORT[HEADLINE]
 const n3 = (x: number) => Math.abs(x).toFixed(3)
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
@@ -36,12 +37,12 @@ export function summaryTiles(t: Tracker): TileSpec[] {
 }
 
 function vsMarketTile(rows: CurrentRow[]): TileSpec {
-  const ens = rows.find((r) => r.model_id === 'ensemble')
-  if (!ens || ens.delta == null) return { id: 'season', label: 'Ensemble vs the market', value: '–', sub: 'no graded games yet', tab: 'season', modelId: 'ensemble' }
-  const value = Math.abs(ens.delta) < NOISE ? 'Same as market' : ens.delta > 0 ? 'Trails the market' : 'Beats the market'
+  const line = rows.find((r) => r.model_id === HEADLINE)
+  if (!line || line.delta == null) return { id: 'season', label: `${NAME} vs the market`, value: '–', sub: 'no graded games yet', tab: 'season', modelId: HEADLINE }
+  const value = Math.abs(line.delta) < NOISE ? 'Same as market' : line.delta > 0 ? 'Trails the market' : 'Beats the market'
   return {
-    id: 'season', label: 'Ensemble vs the market', value, tab: 'season', modelId: 'ensemble',
-    sub: `${ens.logLoss.toFixed(3)} log loss, ${gapWords(ens.delta)}, ${plural(ens.games, 'game')}`,
+    id: 'season', label: `${NAME} vs the market`, value, tab: 'season', modelId: HEADLINE,
+    sub: `${line.logLoss.toFixed(3)} log loss, ${gapWords(line.delta)}, ${plural(line.games, 'game')}`,
   }
 }
 
@@ -62,8 +63,8 @@ function bestTile(rows: CurrentRow[]): TileSpec {
 }
 
 function calibrationTile(t: Tracker): TileSpec {
-  const base = { id: 'calibration', label: 'Ensemble calibration', tab: 'calibration' as const, modelId: 'ensemble' }
-  const v = calibrationVerdict(t.reliability.filter((r) => r.model_id === 'ensemble'), 'Ensemble')
+  const base = { id: 'calibration', label: `${NAME} calibration`, tab: 'calibration' as const, modelId: HEADLINE }
+  const v = calibrationVerdict(t.reliability.filter((r) => r.model_id === HEADLINE), NAME)
   const calls = `its ${Math.round(100 * v.said)}% calls won ${Math.round(100 * v.won)}%`
   switch (v.kind) {
     case 'well': return { ...base, value: 'Well calibrated', sub: calls }
@@ -73,9 +74,9 @@ function calibrationTile(t: Tracker): TileSpec {
   }
 }
 
-/** Paper bets for the ensemble: this season's live bets once they exist, otherwise the backfill. */
+/** Paper bets for the headline line: this season's live bets once they exist, otherwise the backfill. */
 function betsTile(t: Tracker): TileSpec {
-  const rows = t.ledger.filter((r) => r.model_id === 'ensemble' && r.units != null)
+  const rows = t.ledger.filter((r) => r.model_id === HEADLINE && r.units != null)
   const row = rows.find((r) => r.kind === 'live') ?? rows[0]
   if (!row) return { id: 'bets', label: 'Paper bets', value: 'None yet', sub: 'no bets recorded', tab: 'bets' }
   const u = row.units!
@@ -87,6 +88,6 @@ function betsTile(t: Tracker): TileSpec {
   return {
     id: 'bets', label: 'Paper bets, backtest', tab: 'bets',
     value: `${roi >= 0 ? '+' : '−'}${(100 * Math.abs(roi)).toFixed(1)}% a bet`,
-    sub: `${row.bets.toLocaleString('en-US')} ensemble bets (${record}); live bets start with the locks`,
+    sub: `${row.bets.toLocaleString('en-US')} ${NAME} bets (${record}); live bets start with the locks`,
   }
 }
