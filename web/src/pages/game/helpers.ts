@@ -1,6 +1,6 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
 import type { Contribution, Game, Meta, RetroGame, Tendency } from '../../data/contract'
-import { fmtUnit, pct } from '../../lib/format'
+import { fmtUnit, kickoffEt, pct } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
 import { APPROACHES } from '../../lib/models'
 
@@ -162,7 +162,7 @@ export function edgeRows(edges: Game['edges'], meta: Meta, neutral = false) {
     }
     rows.push({
       id, name, help: helpFor(meta, id), favors: e.favors, pct: e.strength_pct,
-      sentence: `${e.favors}'s ${name} edge is in the ${ordinal(edgePct(e.strength_pct))} percentile of matchups`,
+      sentence: `${e.favors}'s ${name} edge is bigger than ${edgePct(e.strength_pct)}% of matchups`,
     })
   }
   return { rows: rows.sort((a, b) => b.pct - a.pct), none }
@@ -307,7 +307,7 @@ export function impactMarker(impact: number | null | undefined): { arrows: strin
   return { arrows: (i > 0 ? '▲' : '▼').repeat(Math.min(Math.abs(i), 2)), words: `${i > 0 ? 'helps' : 'hurts'}${Math.abs(i) >= 2 ? ' a lot' : ''}` }
 }
 
-export const trendStatus = (working: boolean | null): string => (working == null ? 'unclear' : working ? 'working' : 'not working')
+export const trendStatus = (working: boolean | null): string => (working == null ? 'results unclear' : working ? 'producing results' : 'not producing results')
 
 export const sortNotes = <T extends { impact: number }>(notes: T[]): T[] => [...notes].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact))
 
@@ -315,4 +315,15 @@ export const sortMatchupNotes = <T extends { support: number }>(notes: T[]): T[]
 
 export function sourcesText(n: number): string {
   return `${n} source${n === 1 ? '' : 's'}`
+}
+
+/**
+ * "Market line: The Odds API, Sun 1:00 PM ET." Null with no line or no source. A schedule line's
+ * as_of is the synthetic kickoff − 2h stamp, not when it was seen, so only a snapshot prints a time.
+ */
+export function marketSource(market: { p_home?: number | null; source?: string | null; as_of?: string | null } | null | undefined): string | null {
+  if (market?.p_home == null || !market.source) return null
+  if (market.source === 'schedules') return 'Market line: the nflverse schedule (no time recorded).'
+  const name = market.source === 'odds_api' ? 'The Odds API' : market.source
+  return market.as_of ? `Market line: ${name}, ${kickoffEt(market.as_of)}.` : `Market line: ${name}.`
 }

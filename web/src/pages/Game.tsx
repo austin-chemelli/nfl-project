@@ -37,7 +37,7 @@ export default function GamePage() {
   const teams = teamsOf(id)
   return (
     <div data-matchup style={teams ? matchupVars(teams.away, teams.home) : undefined}>
-    <Page title={teams ? <GameTitle {...teams} /> : 'Game'}>
+    <Page title={teams ? <GameTitle {...teams} /> : 'Game'} docTitle={q.data ? `${q.data.away} @ ${q.data.home}, Week ${q.data.week}` : undefined}>
       {missing ? (
         <Card>
           <div className="font-medium">No detail file for this game yet.</div>

@@ -84,7 +84,10 @@ describe('betsVerdict', () => {
 describe('formatting', () => {
   it('never shows a signed zero', () => {
     expect(signedPct(-0.00001)).toBe('0.0%')
-    expect(signedUnits(-0.4)).toBe('0')
+    expect(signedUnits(0.01)).toBe('0')
+    expect(signedUnits(0.36)).toBe('+0.4')
+    expect(signedUnits(-0.73)).toBe('−0.7')
+    expect(signedUnits(1.4)).toBe('+1')
     expect(signedUnits(14.6)).toBe('+15')
     expect(signedUnits(-38)).toBe('−38')
   })

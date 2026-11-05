@@ -7,7 +7,11 @@ export default function SlatePage() {
   const params = useParams()
   const meta = useMeta()
   return (
-    <Page title="Slate" lede="What each approach picks this week, set against the betting market.">
+    <Page
+      title="Slate"
+      docTitle={params.season && params.week ? `Week ${params.week}, ${params.season}` : 'This week'}
+      lede="Four forecasting approaches predict every NFL game, lock in before kickoff, and get scored in public against the betting market. The Student, built from results instead of a persona, is the headline pick."
+    >
       <Loaded q={meta} what="site info">
         {(m) => {
           const season = params.season ? Number(params.season) : m.season

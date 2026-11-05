@@ -43,7 +43,7 @@ export default function TrackerPage() {
                         <TabBody>
                           <CurrentSeason t={t} meta={m} />
                           <FinePrint>
-                            <p>About 180 live games a season cannot rank models, and in the 2005 to 2025 backtest nothing beats the market. Treat everything here as a measurement, not a verdict.</p>
+                            <p>One season of live games cannot rank models, and in the backtest since 2005 nothing beats the market. Treat everything here as a measurement, not a verdict.</p>
                             <p>{t.current_season.some((r) => r.live) ? 'Before the dashed vertical line, weeks are backfill: models frozen before the season, scored after the fact. A week with any live lock counts from there, with diamonds marking it.' : 'Every week so far is backfill: models frozen before the season, scored after the fact. A dashed vertical line will mark the first week with a graded lock.'} The gray band is roughly the 90% range of a gap at this sample size, so a line inside it can't be told from the market. A handful of 16-game weeks is very noisy, so lines crossing early means little.</p>
                             <p>The chart is a running average since week 1, so early weeks swing and later ones settle. &quot;Show the numbers&quot; lists the raw log loss for every line, the market included.</p>
                           </FinePrint>

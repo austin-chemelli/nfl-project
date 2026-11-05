@@ -7,7 +7,7 @@ import { fmtUnit, pct, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from '../.
 import { approachOf, groupOf } from '../../lib/meta'
 import { isReference, SHORT } from '../../lib/models'
 import {
-  byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, injuryRank, sortInjuries, tape, tendencyBlocks,
+  byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, injuryRank, marketSource, sortInjuries, tape, tendencyBlocks,
 } from './helpers'
 
 // ----------------------------------------------------------------------- approaches vs market
@@ -16,6 +16,7 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
   const rows = dotModels(g.models)
   const mkt = g.market?.p_home ?? g.models.market_baseline?.p_home ?? null
   const label = (m: string) => SHORT[m] ?? m
+  const source = marketSource(g.market)
   if (rows.length === 0)
     return (
       <Section title="What each approach thinks">
@@ -63,6 +64,7 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
           </tbody>
         </table>
       </DataTable>
+      {source && <p className="mt-2 text-[13px] text-ink-3">{source}</p>}
     </Section>
   )
 }
@@ -328,7 +330,7 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
 // -------------------------------------------------------------------------------- injuries
 
 export function Injuries({ g }: { g: Game }) {
-  if (g.injuries.length === 0) return <Section title="Injuries"><p className="text-ink-2">No injury report yet.</p></Section>
+  if (g.injuries.length === 0) return <Section title="Injuries"><p className="text-ink-2">No official report in our data yet.</p></Section>
   return (
     <Section title="Injuries">
       <div className="grid gap-4 md:grid-cols-2">

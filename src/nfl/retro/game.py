@@ -795,6 +795,38 @@ def pure_luck(t: TeamRetro) -> float:
     return _z(sum(f.swing_pts for f in t.luck if not f.partly_skill), 1)
 
 
+def _swing_sentence(home: str, h: float, away: str, a: float, tail: str) -> str:
+    """The swing-plays headline when the nets differ by a point or more. W is the team ahead on
+    swing plays, L the team behind; the wording follows the signs (a net toward W can still mean
+    both teams lost points)."""
+    (w_name, w), (l_name, l) = sorted(((home, h), (away, a)), key=lambda t: -t[1])
+    net = f"{_z(abs(h - a), 1):.1f}"
+    if w < 0 and l < 0:
+        return (
+            f"Swing plays hurt both teams, {l_name} more: {_z(abs(l), 1):.1f} points lost "
+            f"against {_z(abs(w), 1):.1f} for {w_name}, a net {net} toward {w_name}{tail}"
+        )
+    if w > 0 and l > 0:
+        return (
+            f"Swing plays helped both teams, {w_name} more: {_z(w, 1):.1f} points gained "
+            f"against {_z(l, 1):.1f} for {l_name}, a net {net} toward {w_name}{tail}"
+        )
+    if w == 0:
+        return (
+            f"Swing plays cost {l_name} {_z(abs(l), 1):.1f} points and left {w_name} even, "
+            f"a net {net} toward {w_name}{tail}"
+        )
+    if l == 0:
+        return (
+            f"Swing plays helped {w_name} by {_z(w, 1):.1f} points and left {l_name} even, "
+            f"a net {net} toward {w_name}{tail}"
+        )
+    return (
+        f"Swing plays helped {w_name} by {_z(w, 1):.1f} points and cost {l_name} "
+        f"{_z(abs(l), 1):.1f}, a net {net} toward {w_name}{tail}"
+    )
+
+
 def _headlines(
     g: dict, names: dict[str, str], teams: dict[str, TeamRetro], pl_: PlayedLike
 ) -> list[str]:
@@ -810,11 +842,7 @@ def _headlines(
     hs, as_ = (pure_luck(teams[k]) for k in ("home", "away"))
     tail = f"; the pure-luck part was {_sig(hs)} for {nm(home)} and {_sig(as_)} for {nm(away)}."
     if abs(h - a) >= 1:
-        toward = home if h > a else away
-        out.append(
-            f"Swing plays tilted toward {nm(toward)} by about {_z(abs(h - a), 1):.1f} points "
-            f"({_sig(h)} for {nm(home)}, {_sig(a)} for {nm(away)}){tail}"
-        )
+        out.append(_swing_sentence(nm(home), h, nm(away), a, tail))
     else:
         out.append(
             f"Swing plays roughly evened out ({_sig(h)} for {nm(home)}, {_sig(a)} for "

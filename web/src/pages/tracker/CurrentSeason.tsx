@@ -7,7 +7,7 @@ import { currentSummary, gapLimit, gapRows, headlineSentence, GAP_BAND, signedGa
 import { KEY_LINES, label, sentenceName } from './names'
 
 const HELP_LL =
-  'Log loss is the scoring rule: it punishes confident wrong calls hard. Lower is better; 0.693 is a coin flip. The market scores about 0.61, so read every number as a distance from the market. Differences under 0.005 are noise at this sample size. The score is on win probability and pays for confidence both ways: a bold call that lands earns a lot, one that misses costs more.'
+  'Log loss is the scoring rule: it punishes confident wrong calls hard. Lower is better; 0.693 is a coin flip. The market scores about 0.61, so read every number as a distance from the market. Differences under 0.025 are too close to call at this sample size. The score is on win probability and pays for confidence both ways: a bold call that lands earns a lot, one that misses costs more.'
 
 export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
   const cur = t.current_season

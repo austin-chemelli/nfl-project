@@ -32,6 +32,7 @@ export function Ledger({ t, meta }: { t: Tracker; meta: Meta }) {
       <p className="mt-1 text-[13px] text-ink-2">
         One paper unit whenever a line disagrees with the market: on the moneyline if it is more than 5 points of win probability away, otherwise on the spread if it is 1.5 points or more away.
       </p>
+      <p className="mt-1 text-[13px] text-ink-2">Bets start in 2006, the first season with prices in our data.</p>
       {rows.length === 0 && <p className="mt-3 text-ink-2">No bets recorded yet.</p>}
 
       {seasons.length > 0 && (
