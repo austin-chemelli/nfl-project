@@ -43,6 +43,15 @@ Takes about 30 seconds.
 
 `uv run nfl lock --slot sat --dry-run` does steps 1–2 and writes the artifact under `data/marts/dryrun/` only. Use it for the dry-run week and whenever the code changed since the last lock. `--no-refresh` skips step 1 (fast, uses the data on disk); `--no-odds` skips the snapshot.
 
+## Merging job code
+
+Job code is `src/`, `scripts/`, `pyproject.toml`, `uv.lock` and `Dockerfile`. Merging it rebuilds the image, which takes 3 to 4 minutes, and a lock refuses to run while the image is behind `main` (`check_image_matches` in `scripts/cloud-job.sh`).
+
+- **Merge anytime except the last 10 minutes before a lock** (Thu 09:00, Sat 12:00 ET). Web-only and docs-only changes have no limit.
+- **If a lock is refused**, it emails. Wait for the image (`gh run list --workflow ci.yml --limit 1`) and rerun the job. Rerunning is safe, and the only hard deadline is kickoff.
+- **Dry-run a risky change**, not every merge: `gcloud run jobs execute nfl-lock-thu --region us-central1 --args="lock,thu,--dry-run,--no-odds" --wait`.
+- **Model changes are the exception.** The lock checks each fit against its config, so a change to approach configs has to ship with its refit and upload, in one go.
+
 ## If something breaks
 
 - **nflverse download fails:** rerun; ingest is idempotent. If it's still down, `--no-refresh` locks on the data from the last successful ingest (features are stamped with what was actually known).

@@ -392,3 +392,13 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** Reviewers given real data and told to attack claims rather than code found what a spec-following build couldn't. The spec itself said "starts for". Season test timeouts also came back after the earlier fix: role queries over a 284-row table take about 2 seconds alone, so that file now has its own limit.
 
+## 2026-11-04 (later): job code can merge almost anytime (U4)
+
+**Why.** Austin asked why merges felt so restricted, with a lock most of a day away. The round 2 plan said no job-code merges from Wednesday evening until Thursday's lock, and every chat kept repeating it.
+
+**Findings.** Nothing enforced that. `check_image_matches` in `scripts/cloud-job.sh` only refuses a lock when the image is behind `main` at run time, and an image builds in 3 to 4 minutes, so the rule was about 10 hours wider than the mechanism. A refused lock emails and reruns safely, with 11 hours to spare on Thursday.
+
+**What changed.** The rule is now the real one, in `docs/runbook.md` and the hub: merge job code anytime except the last 10 minutes before a lock. Dry-runs are for risky changes, not every merge. Model changes still ship with their refit, because the lock checks each fit against its config. A backup lock run is open as D9.
+
+**Lesson.** Check what a process rule enforces before repeating it. A cautious line in a plan turned into a freeze because nobody tested it against the code.
+
