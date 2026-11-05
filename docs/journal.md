@@ -372,3 +372,12 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** A plan describing code is a claim to check before building on it. The dev copy needed production's wave 2 fits before `nfl retro build` would run, and that guard did its job. Real records also caught what unit tests couldn't: "9 of 16" third downs against the headline's 9 of 14, and a special-teams number that charged field goals to both teams. New rows should read the record's existing counts and definitions rather than recompute them.
 
+## 2026-11-05: the first desktop pass failed twice, so search became the last resort (narrative-sources)
+
+**Why.** The first scheduled pass stopped at `git pull` on a local edit in the desktop clone. The rerun stored 8 of 15 games, then failed the other 7 in about 20 seconds. Austin asked how to fix the cause, not just space calls out.
+
+**What changed.** Injuries and team news come from RSS feeds and weather from Open-Meteo (`src/nfl/llm/feeds.py`). Tavily is the first search backend when `TAVILY_API_KEY` is set, with SearXNG as the fallback. Queries per game fell from 17 to 7, and 5 on Saturday with film results reused. Blocked engines are now a real error (`EnginesBlocked`): the pass waits and retries, up to 80 minutes, rather than writing thin records. Rerunning a pass skips games already stored. The failure email names each game and error. `scripts/desktop-narrative.sh` resets to `origin/main`, saving any local edit as a patch. ESPN's undocumented API was tested and left out because of its terms (ADR 0014 amendment).
+
+**Findings.** SearXNG answers 200 with an empty list when its engines are blocked, so nothing flagged it. `qwen3:14b` was still loaded after the failure, which showed games 9 to 15 never reached the model. Reproducing it from the laptop gave 0 pages in 11 seconds, with Brave and Google CSE on "too many requests". Brave blocked after about 5 test queries over a few minutes, so spacing alone wouldn't have been enough. The desktop's own log wasn't available, so the 7 errors are inferred. In a live check, 29 of 30 teams had injury items in their feeds.
+
+**Lesson.** A self-hosted metasearch has no quota, which also means no promise. Questions with a known home shouldn't go through search, and a status code of 200 doesn't mean a search worked.

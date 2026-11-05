@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import httpx
+import polars as pl
 
 from nfl.config import Paths
 from nfl.llm import research
@@ -16,12 +17,17 @@ from nfl.llm.client import LLMClient, LLMConfig
 from nfl.llm.fetch import Page
 from nfl.llm.narrative import GameNarrative
 from nfl.llm.research import (
+    BLOCK_WAIT_MAX_S,
+    BLOCK_WAIT_S,
     FACT_REF,
     LINE,
     MAX_STATUS_FACTS,
     Doc,
     Fact,
     Game,
+    GameRun,
+    SearchReuse,
+    Sources,
     _aliases,
     _facts_for,
     _mispaired,
@@ -29,10 +35,12 @@ from nfl.llm.research import (
     _unsupported,
     _whole,
     _wrong_team,
+    gather,
     queries,
     research_game,
+    run_week,
 )
-from nfl.llm.search import SearchResult
+from nfl.llm.search import EnginesBlocked, SearchResult
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
 GAME = Game(
@@ -381,11 +389,124 @@ def test_started_games_are_refused(tmp_path):
     assert not run.ok and "kicked off" in run.error
 
 
-def test_weather_query_only_outdoors():
-    kinds = [k for k, _ in queries(GAME)]
-    assert "weather" in kinds
+def test_open_ended_queries_only():
+    assert [k for k, _ in queries(GAME)] == ["qb", "qb", "scheme", "scheme", "matchup", "matchup", "betting"]  # fmt: skip
+
+
+class _Feeds:
+    def __init__(self, team_items):
+        self.team_items = team_items
+
+    def pools(self, team, name, today):
+        return self.team_items.get(team, {"injury": [], "news": []})
+
+
+def _item(url):
+    return SearchResult(url, "t", "s", date(2026, 10, 29), ("feed",))
+
+
+def test_feeds_replace_searches_and_an_empty_feed_falls_back():
+    feeds = _Feeds({"BAL": {"injury": [_item("https://www.espn.com/bal")], "news": []}})
+    sent: list[str] = []
+
+    def spy(q, max_results=8):
+        sent.append(q)
+        return []
+
+    docs, searches = gather(GAME, _Fetcher(), GameRun(GAME.game_id), NOW, spy, Sources(feeds))
+    assert [d.url for d in docs] == ["https://www.espn.com/bal"]
+    assert "feed: Baltimore Ravens injury" in searches
+    assert "Baltimore Ravens injury report week 8 2026" not in sent
+    assert "Buffalo Bills injury report week 8 2026" in sent  # its feed was empty
+    assert len(sent) == 3 + len(queries(GAME))
+
+
+def test_forecast_is_a_page_for_outdoor_games_only():
+    wx = lambda stadium, kickoff: ("https://api.open-meteo.com/x", "Forecast: 40 F, wind 9 mph.")
+    src = Sources(forecast=wx)
+    docs, searches = gather(GAME, _Fetcher(), GameRun(GAME.game_id), NOW, lambda q, max_results=8: [], src)  # fmt: skip
+    assert [(d.kind, d.domain) for d in docs] == [("weather", "open-meteo.com")]
+    assert "forecast: open-meteo" in searches
     dome = Game(**{**GAME.__dict__, "roof": "dome"})
-    assert "weather" not in [k for k, _ in queries(dome)]
+    assert gather(dome, _Fetcher(), GameRun(GAME.game_id), NOW, lambda q, max_results=8: [], src)[0] == []  # fmt: skip
+
+
+def test_film_results_are_reused_within_the_week_only(tmp_path):
+    reuse = SearchReuse(Paths(tmp_path))
+    calls: list[str] = []
+
+    def spy(q, max_results=8):
+        calls.append(q)
+        return [SearchResult("https://www.espn.com/bal", "t", "s", date(2026, 10, 29), ("x",))]
+
+    def film_calls():
+        return [q for q in calls if "film" in q]
+
+    for when in (NOW, NOW + timedelta(days=3)):
+        gather(GAME, _Fetcher(), GameRun(GAME.game_id), when, spy, Sources(reuse=reuse))
+    assert len(film_calls()) == 2  # two teams, once
+    assert sum("status" in q for q in calls) == 4  # the rest ran on both passes
+    gather(GAME, _Fetcher(), GameRun(GAME.game_id), NOW + timedelta(days=7), spy, Sources(reuse=reuse))  # fmt: skip
+    assert len(film_calls()) == 4
+
+
+def test_blocked_engines_fail_the_game_without_a_thin_record(tmp_path):
+    def blocked(q, max_results=8):
+        raise EnginesBlocked("search engines blocked: brave too many requests")
+
+    feeds = _Feeds({"BAL": {"injury": [_item("https://www.espn.com/bal")], "news": []}})
+    client = LLMClient(Paths(tmp_path), LLMConfig(base_url="http://desk/v1"), log=False)
+    run = research_game(Paths(tmp_path), GAME, client, _Fetcher(), store=False, now=NOW, search_fn=blocked, sources=Sources(feeds))  # fmt: skip
+    assert run.blocked and not run.ok and "brave" in run.error
+
+
+def _week(monkeypatch, results, done=()):
+    rows = pl.DataFrame({
+        "game_id": ["2026_09_AAA_BBB", "2026_09_CCC_DDD"], "home_team": ["BBB", "DDD"],
+        "away_team": ["AAA", "CCC"], "kickoff_utc": [datetime(2099, 1, 1)] * 2,
+    })  # fmt: skip
+    tried: list[str] = []
+
+    def fake(paths, g, client, fetcher, **kw):
+        tried.append(g.game_id)
+        return results.pop(0) if results else GameRun(g.game_id, ok=True)
+
+    monkeypatch.setattr("nfl.llm.narrative.slate", lambda *a: rows)
+    monkeypatch.setattr("nfl.llm.narrative.stored_since", lambda *a: set(done))
+    monkeypatch.setattr("nfl.llm.research.research_game", fake)
+    return tried
+
+
+def test_a_rerun_skips_games_stored_in_this_pass(monkeypatch, tmp_path):
+    tried = _week(monkeypatch, [], done=["2026_09_AAA_BBB"])
+    runs = run_week(Paths(tmp_path), 2026, 9)
+    assert tried == ["2026_09_CCC_DDD"] and all(r.ok for r in runs)
+
+
+def test_named_games_run_even_if_stored(monkeypatch, tmp_path):
+    tried = _week(monkeypatch, [], done=["2026_09_AAA_BBB"])
+    run_week(Paths(tmp_path), 2026, 9, ["2026_09_AAA_BBB"])
+    assert tried == ["2026_09_AAA_BBB"]
+
+
+def test_blocked_game_waits_and_retries(monkeypatch, tmp_path):
+    blocked = GameRun("2026_09_AAA_BBB", blocked=True, error="EnginesBlocked: x")
+    tried = _week(monkeypatch, [blocked])
+    waits: list[float] = []
+    runs = run_week(Paths(tmp_path), 2026, 9, sleep=waits.append)
+    assert waits == [BLOCK_WAIT_S]
+    assert tried == ["2026_09_AAA_BBB", "2026_09_AAA_BBB", "2026_09_CCC_DDD"]
+    assert all(r.ok for r in runs)
+
+
+def test_waiting_is_capped_per_pass(monkeypatch, tmp_path):
+    many = [GameRun("g", blocked=True, error="EnginesBlocked: x") for _ in range(50)]
+    tried = _week(monkeypatch, many)
+    waits: list[float] = []
+    runs = run_week(Paths(tmp_path), 2026, 9, sleep=waits.append)
+    assert sum(waits) == BLOCK_WAIT_MAX_S
+    assert len(tried) == len(waits) + 2  # after the cap each game is tried once more
+    assert [r.ok for r in runs] == [False, False]
 
 
 def test_line_statements_are_recognized():

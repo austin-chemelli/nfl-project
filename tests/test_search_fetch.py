@@ -9,7 +9,7 @@ import pytest
 
 from nfl.config import Paths
 from nfl.llm.fetch import Fetcher
-from nfl.llm.search import SearchError, search
+from nfl.llm.search import EnginesBlocked, SearchError, paced, search
 
 BASE = "http://searx.test:8080"
 
@@ -25,6 +25,66 @@ ARTICLE = f"""<html><head><title>Packers injury report: Wednesday update</title>
 SHORT = (
     "<html><head><title>Stub</title></head><body><article><p>Subscribe.</p></article></body></html>"
 )
+
+
+@pytest.fixture(autouse=True)
+def _no_tavily(monkeypatch):
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+
+
+def test_blocked_engines_are_an_error_not_an_empty_result() -> None:
+    body = {"results": [], "unresponsive_engines": [["brave", "Suspended: too many requests"], ["duckduckgo", "timeout"]]}  # fmt: skip
+    with pytest.raises(EnginesBlocked, match="brave"):
+        search("q", base_url=BASE, http=_searx(body))
+
+
+def test_no_hits_with_a_timeout_is_just_empty() -> None:
+    body = {"results": [], "unresponsive_engines": [["duckduckgo", "timeout"]]}
+    assert search("q", base_url=BASE, http=_searx(body)) == []
+
+
+def test_results_win_over_a_blocked_engine() -> None:
+    body = {"results": [{"url": "https://a.com/x", "title": "A"}],
+            "unresponsive_engines": [["brave", "too many requests"]]}  # fmt: skip
+    assert len(search("q", base_url=BASE, http=_searx(body))) == 1
+
+
+def _both(tavily: httpx.Response, seen: list[str]) -> httpx.Client:
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append(req.url.host)
+        if req.url.host == "api.tavily.com":
+            assert req.headers["authorization"] == "Bearer tvly-test"
+            return tavily
+        return httpx.Response(200, json={"results": [{"url": "https://searx.example/a", "title": "S"}]})  # fmt: skip
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_tavily_comes_first_when_a_key_is_set(monkeypatch) -> None:
+    monkeypatch.setenv("TAVILY_API_KEY", "tvly-test")
+    body = {"results": [{"url": "https://t.com/a#x", "title": "T", "content": "c", "published_date": "2026-10-27T01:00:00Z"}]}  # fmt: skip
+    seen: list[str] = []
+    res = search("q", base_url=BASE, http=_both(httpx.Response(200, json=body), seen))
+    assert seen == ["api.tavily.com"]
+    assert (res[0].url, res[0].published, res[0].engines) == ("https://t.com/a", date(2026, 10, 27), ("tavily",))  # fmt: skip
+
+
+@pytest.mark.parametrize("status", [429, 432, 500])
+def test_tavily_failure_falls_back_without_leaking_the_key(monkeypatch, caplog, status) -> None:
+    monkeypatch.setenv("TAVILY_API_KEY", "tvly-test")
+    seen: list[str] = []
+    res = search("q", base_url=BASE, http=_both(httpx.Response(status), seen))
+    assert seen == ["api.tavily.com", "searx.test"]
+    assert res[0].url == "https://searx.example/a"
+    assert str(status) in caplog.text and "tvly-test" not in caplog.text
+
+
+def test_paced_spaces_calls_out() -> None:
+    waits: list[float] = []
+    fn = paced(lambda q: [], pause_s=3.0, sleep=waits.append)
+    fn("a")
+    fn("b")
+    assert len(waits) == 1 and 2.9 < waits[0] <= 3.0
 
 
 def _searx(payload: dict) -> httpx.Client:

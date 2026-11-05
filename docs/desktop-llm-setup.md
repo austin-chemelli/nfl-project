@@ -1,6 +1,6 @@
 # Desktop LLM setup (Windows 10)
 
-Status: current, verified 2026-11-04 (the production models are `qwen3.5:9b` plus `qwen3:14b` for the matchup job since 2026-11-03, `docs/local-llm-narrative.md`).
+Status: current, verified 2026-11-05 (the production models are `qwen3.5:9b` plus `qwen3:14b` for the matchup job since 2026-11-03, `docs/local-llm-narrative.md`).
 
 The spare desktop is the project's local LLM and search server (ADR 0014). This is what was actually set up on 2026-10-29 and how to check or redo it; the original plan was written 2026-10-28 and corrected where the hardware disagreed. Recheck the two version pins (driver, Ollama) if you redo this much later.
 
@@ -67,6 +67,19 @@ Docker Desktop runs the Linux engine inside WSL2. The config goes in a **named D
 3. Check: `curl 'http://localhost:8080/search?q=green+bay+packers&format=json'` from WSL returns JSON. Docker Desktop publishes the port on Windows too, so it is also reachable at `http://<desktop-tailscale-ip>:8080`.
 4. `--restart unless-stopped` only helps while Docker Desktop is running: Docker Desktop must start at sign-in (its entry in the Run key does that; the setting in Docker Desktop → General is "Start Docker Desktop when you sign in").
 
+5. **Search order.** With `TAVILY_API_KEY` in `.env` (free key from https://app.tavily.com, 1,000 searches a month, no card), passes search through Tavily and use SearXNG only if Tavily fails. Most of a pass needs neither: see the amendment to ADR 0014.
+6. **More engines for the fallback.** Add to `settings.yml`, copy it into the volume as in step 2, and restart:
+   ```yaml
+   engines:
+     - name: bing
+       disabled: false
+     - name: mojeek
+       disabled: false
+     - name: startpage
+       disabled: false
+   ```
+   SearXNG scrapes these engines, so they block it. After a 429 it suspends the engine for an hour, and a request then returns 200 with no results, naming the engines in `unresponsive_engines`. `curl -s 'http://localhost:8080/search?q=test&format=json' | jq .unresponsive_engines` shows which are out.
+
 ## 4. Tailscale (private network between your machines)
 
 Tailscale is a WireGuard mesh: each signed-in device gets a stable `100.x.y.z` address reachable only from your other signed-in devices, from any network, with no router changes.
@@ -122,6 +135,6 @@ All three should answer (the third in a few seconds once the model is loaded, ~2
 - **Reachable over Tailscale but not from WSL's NAT gateway:** expected; see §2 step 4 and §4 step 3.
 - **Replies are slow and `completion_tokens` is large:** thinking is on. Send `reasoning_effort: "none"` (`/v1`) or `think: false` (`/api/chat`).
 - **Out of memory / very slow:** drop `OLLAMA_CONTEXT_LENGTH` to 8192 or use `qwen3.5:4b`.
-- **SearXNG returns few results:** some engines rate-limit; enable more engines in `settings.yml` or lower request frequency.
+- **SearXNG returns few or no results:** engines are blocked (§3 step 6). Don't test with bursts of queries: Brave blocked after about 5 in a few minutes on 2026-11-04, and suspended engines stay out for an hour.
 - **SearXNG down after a reboot:** Docker Desktop isn't running; start it (or fix its start-at-sign-in setting).
 - **SearXNG answers HTML but `format=json` is 403 after a reboot:** the container is running a default `settings.yml`, which happens if its config is a bind mount from the WSL distro (see §3). Move the config to the named volume; as a stopgap, `docker restart searxng` once the distro is up.

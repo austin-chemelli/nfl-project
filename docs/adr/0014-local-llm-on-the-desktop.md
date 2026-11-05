@@ -29,3 +29,10 @@ LLM cost becomes electricity (~$1–5/month depending on idle policy) and runtim
 
 ## Amendment 2026-10-29: no API fallback
 Austin decided the app never uses a paid LLM API, including as a fallback. The M6.1 client talks only to the desktop's Ollama; it has no Anthropic code path, SDK dependency or cost cap. If the desktop is off or a run fails, LLM jobs fail and Austin gets an email; nothing reroutes. If the M6.2e comparison shows the local model is clearly worse, the options are a better local model or prompt, or keeping the Narrative approach on `/nfl-narrative` skill records (run by hand), not an API job. ADR 0007's spend target and weekly cap no longer apply.
+
+## Amendment 2026-11-05: known sources first, then a search API, then SearXNG
+The first live pass lost 7 of 15 games: SearXNG scrapes public engines from one home IP, and they blocked it. It still answered 200 with no results, so games failed with no clear cause. Search now handles only open-ended questions. Injuries and team news come from RSS feeds (32 team sites, Yahoo, ProFootballTalk), the weather from Open-Meteo, and film results are reused between a week's passes, so a game takes 7 queries on Wednesday and 5 on Saturday instead of 17.
+
+Search uses Tavily's free plan when `TAVILY_API_KEY` is set (1,000 searches a month, about 760 needed, no card), with SearXNG as the fallback. This isn't an exception to the no-paid-LLM rule: Tavily is a search index, we don't request its generated answers, and the desktop models still do all the reading and writing. If the free plan runs out the pass falls back to SearXNG; it doesn't buy credits.
+
+ESPN's undocumented API was tested and left out (Austin, 2026-11-04). It has the best per-game data, but the Disney terms restrict automated access, limit use to personal and noncommercial, and exclude prompting AI tools, and this is a public project under Austin's name. Comparison of every option: `.notes/narrative-sources.md`.

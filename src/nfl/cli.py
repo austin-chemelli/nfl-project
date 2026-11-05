@@ -292,6 +292,9 @@ def narrative_run(
             f"{r.seconds / 60:.1f}",
         )
     console.print(t)
+    for r in runs:  # plain lines: scripts/desktop-narrative.sh puts them in the failure email
+        if not r.ok:
+            print(f"FAILED {r.game_id.split('_', 2)[2]}: {r.error}")
     if not all(r.ok for r in runs):
         raise typer.Exit(1)
 
