@@ -224,7 +224,7 @@ Austin's F5, F7 and F8 (`.notes/ui-round2.md` P4), plus what's left of P5. About
 
 Checked against production on 2026-11-05: the market and every line score the same games in all 8 weeks, so a gap is a fair comparison. Gaps are small (±0.03) and move week to week, so the noise band below isn't optional. In Week 8 all four approaches share the same best and worst call, so bold calls are per week, not per approach. The ensemble survives only in `tracker.json`'s ledger and `meta.models`, and `Ledger.tsx` already filters it.
 
-Not in scope: the paper bets rework (trigger: two weeks of live bets), D2 (tendencies on the league band), comparing tendencies across situations, D9 (backup lock), Streamlit, removing `ensemble` from `SPECIAL` in `site.py` (`model_registry` feeds the retro builder too; not worth the risk here).
+Not in scope: the paper bets rework (trigger: two weeks of live bets), D2 (tendencies on the league band), comparing tendencies across situations, D14 (backup lock), Streamlit, removing `ensemble` from `SPECIAL` in `site.py` (`model_registry` feeds the retro builder too; not worth the risk here).
 
 **Parallel:** M12.1, M12.2 and M12.3 share no files. M12.4 follows all three.
 
