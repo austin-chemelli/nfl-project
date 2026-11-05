@@ -53,7 +53,7 @@ export function featureLabel(meta: Meta, feature: string): string {
 
 // -------------------------------------------------------------------------------------- preview
 
-export type PreviewRow = { id: string; name: string; help: string; edge: string; pp: number | null; overlay: number | null }
+export type PreviewRow = { id: string; name: string; help: string; edge: string; pct: number | null; pp: number | null; overlay: number | null }
 
 /** "JAX, 90th pct"; a matchup in the bottom tenth of all edges reads as even, whichever way it leans. */
 function edgeLabel(e: Game['edges'][string] | undefined): string {
@@ -72,14 +72,14 @@ export function previewRows(g: Game, meta: Meta, approach: string | null): Previ
   if (!base) return []
   const rows: PreviewRow[] = [{
     id: 'home_field', name: 'Home field', help: 'The built-in edge the home team gets before anything else is considered.',
-    edge: g.neutral_site ? 'neutral site' : `${g.home} at home`, pp: base.home_field_pp ?? 0, overlay: over?.home_field_pp ?? null,
+    edge: g.neutral_site ? 'neutral site' : `${g.home} at home`, pct: null, pp: base.home_field_pp ?? 0, overlay: over?.home_field_pp ?? null,
   }]
   for (const { id, name } of meta.groups.groups) {
     if (isContextOnly(meta, id)) continue
     const pp = base.groups[id]?.pp ?? null
     const overlay = over?.groups[id]?.pp ?? null
     if (pp == null && !overlay) continue
-    rows.push({ id, name, help: helpFor(meta, id), edge: edgeLabel(g.edges[id]), pp, overlay })
+    rows.push({ id, name, help: helpFor(meta, id), edge: edgeLabel(g.edges[id]), pct: g.edges[id]?.strength_pct ?? null, pp, overlay })
   }
   return rows
 }
@@ -116,7 +116,7 @@ export function edgeRows(edges: Game['edges'], meta: Meta) {
 // ------------------------------------------------------------------------------- tale of the tape
 
 /** `band` is set only when the row can be drawn on the league's range: a team feature with two values and a real spread. */
-export type TapeBand = { lo: number; hi: number; homeV: number; awayV: number; stands: boolean; flip: boolean }
+export type TapeBand = { lo: number; q1: number; med: number; q3: number; hi: number; homeV: number; awayV: number; stands: boolean; flip: boolean }
 export type TapeRow = { feature: string; label: string; help: string; home: string; away: string; unit: string | undefined; band: TapeBand | null }
 export type TapeGroup = { id: string; name: string; help: string; rows: TapeRow[] }
 
@@ -126,8 +126,8 @@ function tapeBand(f: string, d: Game['features'][string], meta: Meta): TapeBand 
   const m = memberOf(meta, f)
   const unit = m?.unit
   const { home, away } = d
-  if (!b || home == null || away == null || unit === 'flag' || !(b.iqr > 0) || !(b.hi > b.lo)) return null
-  return { lo: b.lo, hi: b.hi, homeV: home, awayV: away, stands: Math.abs(home - away) > b.iqr, flip: (m?.sign ?? 1) < 0 }
+  if (!b || home == null || away == null || unit === 'flag' || !(b.q3 > b.q1) || !(b.hi > b.lo)) return null
+  return { ...b, homeV: home, awayV: away, stands: Math.abs(home - away) > b.q3 - b.q1, flip: (m?.sign ?? 1) < 0 }
 }
 
 /** heading -> groups -> formatted rows, registry order; features with no values are skipped. */
@@ -164,8 +164,8 @@ export function tape(features: Game['features'], meta: Meta): { heading: string;
 export type TendRow = { key: string; label: string; help: string; unit: string; a: number | null; b: number | null; league: number | null; n: number }
 export type TendBlock = { key: string; title: string; note: string; aName: string; bName: string; aColor: string; bColor: string; rows: TendRow[] }
 
-const AWAY_COLOR = 'var(--div-neg)'
-const HOME_COLOR = 'var(--div-pos)'
+const AWAY_COLOR = 'var(--team-away)'
+const HOME_COLOR = 'var(--team-home)'
 
 const find = (rows: Tendency[], team_side: string, side: string, metric: string, situation: string) =>
   rows.find((r) => r.team_side === team_side && r.side === side && r.metric === metric && r.situation === situation)

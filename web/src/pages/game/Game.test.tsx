@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderRoute } from '../../test/render'
 
@@ -59,10 +59,48 @@ describe('Game page', () => {
     expect(container.textContent).not.toMatch(/Global/)
   })
 
+  it('never shows a push toward a team as a negative number', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB')
+    await screen.findByRole('heading', { name: /^Who has the edge/ })
+    await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Overlay an approach' })).getByRole('radio', { name: 'Sharp' }))
+    const chart = container.querySelector('section svg[role="img"]')!
+    expect(chart.textContent).toMatch(/\+\d+\.\d pts/)
+    expect(chart.textContent).not.toMatch(/[−-]\d/)
+  })
+
   it('draws the tape on league bands and says how many gaps stand out', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB?tab=details')
     expect(await screen.findByText(/of these \d+ gaps stands? out/)).toBeInTheDocument()
     expect(container.querySelectorAll('[data-testid="band"]').length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('[data-testid="band-core"]').length).toBeGreaterThan(0)
+  })
+
+  it('a hovered band row shows both teams and where the league sits; it leaves with the pointer', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB?tab=details')
+    await screen.findByText(/of these \d+ gaps stands? out/)
+    const row = container.querySelector('svg g[tabindex]')!
+    fireEvent.pointerMove(row, { clientX: 40, clientY: 10 })
+    const tip = await screen.findByTestId('chart-tip')
+    expect(tip).toHaveTextContent(/CAR/)
+    expect(tip).toHaveTextContent(/GB/)
+    expect(tip).toHaveTextContent(/League median/)
+    fireEvent.pointerLeave(row)
+    expect(screen.queryByTestId('chart-tip')).toBeNull()
+  })
+
+  it('a band row shows the same card on keyboard focus', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB?tab=details')
+    await screen.findByText(/of these \d+ gaps stands? out/)
+    fireEvent.focus(container.querySelector('svg g[tabindex]')!)
+    expect(await screen.findByTestId('chart-tip')).toHaveTextContent(/League median/)
+  })
+
+  it('wears the matchup colors from the banner down', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB')
+    await screen.findByRole('heading', { name: /^Who has the edge/ })
+    const scope = container.querySelector<HTMLElement>('[data-matchup]')!
+    expect(scope.style.getPropertyValue('--team-away-dark')).toMatch(/^#/)
+    expect(scope.style.getPropertyValue('--team-home-light')).toMatch(/^#/)
   })
 
   it('shows "no narrative" for a game without one', async () => {

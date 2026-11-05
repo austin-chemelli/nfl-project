@@ -138,7 +138,7 @@ describe('tape bands', () => {
   const f = 'strength.epa_off'
   const row = (home: number | null, away: number | null, meta2: Meta, feature = f) =>
     tape({ [feature]: { group: 'offense', home, away } }, meta2).flatMap((h) => h.groups.flatMap((x) => x.rows))[0]
-  const band = { lo: -0.1, hi: 0.1, iqr: 0.1 }
+  const band = { lo: -0.1, q1: -0.05, med: 0, q3: 0.05, hi: 0.1 }
 
   it('a gap stands out only past the league interquartile width', () => {
     expect(row(0.12, 0, m({ [f]: band })).band).toMatchObject({ stands: true, flip: false })
@@ -150,6 +150,6 @@ describe('tape bands', () => {
   it('stays a plain row with no band, a missing side, or no spread in the league', () => {
     expect(row(0.1, 0, m({})).band).toBeNull()
     expect(row(0.1, null, m({ [f]: band })).band).toBeNull()
-    expect(row(0.1, 0, m({ [f]: { lo: 0, hi: 0, iqr: 0 } })).band).toBeNull()
+    expect(row(0.1, 0, m({ [f]: { lo: 0, q1: 0, med: 0, q3: 0, hi: 0 } })).band).toBeNull()
   })
 })

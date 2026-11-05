@@ -84,7 +84,7 @@ export const Meta = z.looseObject({
   tendency_metrics: z.record(z.string(), TendencyMetric).default({}),
   tendency_situations: z.record(z.string(), z.string()).default({}),
   // the league's spread per team-level feature (Details tab); older files lack it and the rows go plain
-  feature_bands: z.record(z.string(), z.looseObject({ lo: num, hi: num, iqr: num })).default({}),
+  feature_bands: z.record(z.string(), z.looseObject({ lo: num, q1: num, med: num, q3: num, hi: num })).default({}),
   last_lock: z.looseObject({ lock_ts: z.string(), season: num, week: num, slot: nstr }).nullable(),
 })
 

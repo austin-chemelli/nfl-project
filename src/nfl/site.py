@@ -478,9 +478,9 @@ def build(paths: Paths, season: int | None = None) -> dict:
 
 
 def feature_bands(feats: pl.DataFrame, games: pl.DataFrame, now: datetime) -> dict[str, dict]:
-    """League spread per team-level feature for the game page's Details tab: p10, p90 and the
-    interquartile width of each team's latest value known now. One band per feature for the whole
-    season, so an old game's values sit on today's league, which is fine for display only."""
+    """League spread per team-level feature for the game page's Details tab: p10, the quartiles and
+    p90 of each team's latest value known now. One band per feature for the whole season, so an old
+    game's values sit on today's league, which is fine for display only."""
     import numpy as np
 
     if feats.is_empty() or games.is_empty():
@@ -503,8 +503,8 @@ def feature_bands(feats: pl.DataFrame, games: pl.DataFrame, now: datetime) -> di
     out: dict[str, dict] = {}
     for (feature,), part in latest.group_by(["feature"]):
         if part.height >= FEATURE_BAND_MIN_TEAMS:
-            p10, p25, p75, p90 = np.percentile(part["value"].to_numpy(), (10, 25, 75, 90))
-            out[feature] = {"lo": _r(p10), "hi": _r(p90), "iqr": _r(p75 - p25)}
+            pcts = np.percentile(part["value"].to_numpy(), (10, 25, 50, 75, 90))
+            out[feature] = dict(zip(("lo", "q1", "med", "q3", "hi"), map(_r, pcts), strict=True))
     return dict(sorted(out.items()))
 
 

@@ -13,6 +13,7 @@ import { Preview } from './game/Preview'
 import { Retro } from './game/Retro'
 import { summaryTiles } from './game/summary'
 import { gameStatus } from './slate/helpers'
+import { matchupVars } from '../lib/teamColors'
 
 const STATUS_TEXT: Record<string, string> = {
   preview: 'Preview: scored now, not yet a lock.',
@@ -35,6 +36,7 @@ export default function GamePage() {
   const missing = q.isError && isNotFound(q.error)
   const teams = teamsOf(id)
   return (
+    <div data-matchup style={teams ? matchupVars(teams.away, teams.home) : undefined}>
     <Page title={teams ? <GameTitle {...teams} /> : 'Game'}>
       {missing ? (
         <Card>
@@ -51,6 +53,7 @@ export default function GamePage() {
         </Loaded>
       )}
     </Page>
+    </div>
   )
 }
 
@@ -137,7 +140,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       <GameHeader g={g} />
       <SummaryStrip label="Game summary">
         {summaryTiles(g, meta, retro).map((t) => (
-          <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} tab={tabs.some((x) => x.id === t.tab) ? t.tab : undefined} modelId={t.modelId} />
+          <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} tab={tabs.some((x) => x.id === t.tab) ? t.tab : undefined} modelId={t.modelId} accent={t.team === g.home ? 'var(--team-home)' : t.team === g.away ? 'var(--team-away)' : undefined} />
         ))}
       </SummaryStrip>
       <Tabs label="Game sections" tabs={tabs} default={retro ? 'retro' : 'preview'} />

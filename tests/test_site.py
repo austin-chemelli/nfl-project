@@ -68,7 +68,13 @@ def test_feature_bands_use_each_teams_latest_value_and_skip_game_features():
     games, feats = _band_inputs(32)
     bands = site.feature_bands(feats, games, datetime(2026, 10, 20))
     assert list(bands) == ["f.x"]
-    assert bands["f.x"] == {"lo": 3.1, "hi": 27.9, "iqr": 15.5}  # team values 0..31
+    assert bands["f.x"] == {
+        "lo": 3.1,
+        "q1": 7.75,
+        "med": 15.5,
+        "q3": 23.25,
+        "hi": 27.9,
+    }  # teams 0..31
 
 
 def test_feature_bands_ignore_rows_not_known_yet_and_thin_features():

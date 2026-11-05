@@ -84,3 +84,9 @@ export function fmtEff(v: number | null | undefined, unit: string): string {
   if (unit === 'pp') return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)} pct pts`
   return fmtUnit(v, unit)
 }
+
+/** A push toward a team, whichever side it's on: helping a team is never a negative number. */
+export const ptsFor = (v: number) => `+${Math.abs(v).toFixed(1)} pts`
+
+/** The same in a table, where position can't say whose side it is: "JAX +7.6". */
+export const ptsSide = (v: number, home: string, away: string) => (Math.abs(v) < 0.05 ? 'even' : `${v > 0 ? home : away} +${Math.abs(v).toFixed(1)}`)

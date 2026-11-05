@@ -17,7 +17,7 @@ export function groupName(meta: Meta, id: string): string {
   return groupOf(meta, id)?.name ?? id.replace(/_/g, ' ')
 }
 
-/** Until `context_only` ships in meta.groups, the groups wave 2 zeroes (D7). Delete this set once it has. */
+/** The groups wave 2 zeroed (D7), for meta.json files published before `context_only`. Delete once production's has it. */
 const CONTEXT_ONLY = new Set(['coaching', 'off_scheme', 'def_scheme', 'matchups'])
 
 /** A group shown as context (Tendencies, Details) that carries no weight in the Preview's bars. */

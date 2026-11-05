@@ -348,3 +348,13 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** Regenerating fixtures from the dev copy broke the tests that need Week 8 to be pregame, so `scripts/web_fixtures.py` depends on the week it runs in; `feature_bands` went into `fixtures/site/meta.json` by hand. Screenshots from a headless browser found five problems in a page whose tests all passed.
 
+## 2026-11-04 (later): team colors, and some color for the site (U2, Austin's first look)
+
+**Why.** Austin liked the structure and had four notes. A push toward the left team read as a negative. Red and blue made him check the legend for who was who, and the overlay outlines changed color for no reason he could see. The range bars didn't show where teams bunch up, and the hover was a plain text box. And the whole site felt bland in dark mode.
+
+**What changed.** Pushes are always a plus, with position or a team code saying whose they are. On a game, color now means the team: `lib/teamColors.ts` fits each brand color to each theme and picks a pair per matchup, running through the bars, dots, a banner wash, tile edges and slate cards. Overlays are one neutral outline. `feature_bands` gains the quartiles and median, so the band is faint from p10 to p90 and solid over the middle half. `useChartTip` is a real hover card on Details, Preview and Tendencies. Surfaces take a slight cool tint, with one brand gradient under the header. ADR 0017 is amended: team colors were a thin accent only.
+
+**Findings.** Brand colors fail as marks: Ravens purple and Bears navy vanish on a dark page, and four teams share `#002244`. Of 992 matchups, fitting alone left 86 failures under red-green colorblind simulation and two Saints games that nothing could separate, until the pair picker scored colorblind distance too and the Saints and Raiders got an ink neutral. JAX @ BAL first came out as Jacksonville gold: teal and purple sit at one lightness. Splitting them by a lightness step before reaching for a secondary color kept both teams recognizable; that needed the target at 18 rather than 20, still above the hard floor of 15.
+
+**Lesson.** Red-and-blue was a default nobody chose. Asking what a color means on each page separated what should become a team (toward JAX) from what shouldn't (helped, hurt, better than the market).
+

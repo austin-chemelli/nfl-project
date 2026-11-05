@@ -37,7 +37,7 @@ export function hideInRetro<
   return { ...out, best_model: best?.model_id ?? null, predictions: out.predictions.map((p) => ({ ...p, best: p.model_id === best?.model_id })) }
 }
 
-/** Ranks close up behind the ensemble. "Most misread" was built on it, so those rows wait for the rebuild on the Student (U3). */
+/** Ranks close up behind the ensemble. "Most misread" rows built on it go; `retro/week.py` now uses the Student, so they return with each rebuilt recap. */
 export function hideInRecap<
   M extends { model_id: string; rank: number },
   G extends { sentence: string },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtUnit, llVsMarket, pct, pick, pts, ptsToward, spreadLabel } from './format'
+import { fmtUnit, llVsMarket, pct, pick, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from './format'
 
 describe('format', () => {
   it('percent and points', () => {
@@ -24,5 +24,17 @@ describe('format', () => {
   })
   it('log loss always comes with the market comparison', () => {
     expect(llVsMarket(0.65, 0.63)).toBe('0.650 (0.020 worse than the market)')
+  })
+})
+
+describe('points for a team', () => {
+  it('reads as a plus on either side', () => {
+    expect(ptsFor(-7.64)).toBe('+7.6 pts')
+    expect(ptsFor(6.4)).toBe('+6.4 pts')
+  })
+  it('names the team where position can\'t, and calls nothing even', () => {
+    expect(ptsSide(-7.6, 'BAL', 'JAX')).toBe('JAX +7.6')
+    expect(ptsSide(1, 'BAL', 'JAX')).toBe('BAL +1.0')
+    expect(ptsSide(0.01, 'BAL', 'JAX')).toBe('even')
   })
 })

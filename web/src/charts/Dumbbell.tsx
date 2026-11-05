@@ -4,9 +4,10 @@
  */
 import { scaleLinear } from 'd3-scale'
 import type { ReactNode } from 'react'
+import { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
 
-export type DumbbellRow = { key: string; label: ReactNode; a: number | null; b: number | null; league: number | null; title?: string; bColor?: string }
+export type DumbbellRow = { key: string; label: ReactNode; a: number | null; b: number | null; league: number | null; title?: string; bColor?: string; help?: string }
 
 export function Dumbbell({ rows, aName, bName, aColor = 'var(--series-traditionalist)', bColor = 'var(--series-analyst)', format, domain, rowHeight = 28, labelWidth = 170, legend }: {
   rows: DumbbellRow[]
@@ -22,12 +23,14 @@ export function Dumbbell({ rows, aName, bName, aColor = 'var(--series-traditiona
   legend?: ReactNode
 }) {
   const [ref, width] = useWidth()
+  const { box, at, bind, card } = useChartTip()
   const lw = width < 480 ? Math.min(110, labelWidth) : labelWidth
   const vals = rows.flatMap((r) => [r.a, r.b, r.league]).filter((v): v is number => v != null)
   const [d0, d1] = domain ?? [Math.min(...vals, 0), Math.max(...vals, 0.01)]
   const x = scaleLinear().domain([d0, d1]).range([lw + 8, width - 48]).nice()
   const head = 22
   const h = head + rows.length * rowHeight + 4
+  const hovered = rows.find((r) => r.key === at?.key)
   return (
     <div ref={ref} className="w-full">
       {legend ?? (
@@ -37,13 +40,14 @@ export function Dumbbell({ rows, aName, bName, aColor = 'var(--series-traditiona
           <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-0.5 bg-[var(--text-muted)]" /> League average</span>
         </div>
       )}
+      <div ref={box} className="relative">
       <svg width={width} height={h} role="img" className="block text-[12px]">
         {rows.map((r, i) => {
           const y = head + i * rowHeight + rowHeight / 2 - 10
           const pts = [r.a, r.b].filter((v): v is number => v != null)
           return (
-            <g key={r.key}>
-              <title>{r.title ?? `${aName} ${r.a == null ? '–' : format(r.a)}, ${bName} ${r.b == null ? '–' : format(r.b)}, league ${r.league == null ? '–' : format(r.league)}`}</title>
+            <g key={r.key} {...bind(r.key)}>
+              <rect x={0} y={y - rowHeight / 2} width={width} height={rowHeight} rx={4} fill={hovered?.key === r.key ? 'var(--surface-2)' : 'transparent'} />
               <foreignObject x={0} y={y - rowHeight / 2} width={lw} height={rowHeight}>
                 <div className="flex h-full items-center truncate text-[13px] text-ink-2">{r.label}</div>
               </foreignObject>
@@ -57,6 +61,17 @@ export function Dumbbell({ rows, aName, bName, aColor = 'var(--series-traditiona
           )
         })}
       </svg>
+      {card(
+        hovered && (
+          <>
+            <TipTitle note={hovered.help}>{hovered.label}</TipTitle>
+            <TipRow color={aColor} value={hovered.a == null ? '–' : format(hovered.a)} label={aName} />
+            <TipRow color={hovered.bColor ?? bColor} value={hovered.b == null ? '–' : format(hovered.b)} label={bName} />
+            {hovered.league != null && <TipNote>League average {format(hovered.league)}</TipNote>}
+          </>
+        ),
+      )}
+      </div>
     </div>
   )
 }

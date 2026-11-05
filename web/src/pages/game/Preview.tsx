@@ -4,12 +4,12 @@
  * on the same rows. The bars come from the Global fit, a diagnostic, so the name never appears here.
  */
 import { useState } from 'react'
-import { DivergingBars } from '../../charts'
+import { DivergingBars, TipNote, TipRow, TipTitle } from '../../charts'
 import { DataTable, Section, Segmented, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
-import { pct, pts, ptsToward } from '../../lib/format'
+import { pct, ptsFor, ptsToward } from '../../lib/format'
 import { approachOf } from '../../lib/meta'
-import { colorVar, SHORT } from '../../lib/models'
+import { SHORT } from '../../lib/models'
 import { contribOrder, lineMoveChip, previewRows } from './helpers'
 import { Edges } from './Sections'
 
@@ -25,6 +25,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
   const domain = Math.max(1, ...rows.flatMap((r) => [Math.abs(r.pp ?? 0), Math.abs(r.overlay ?? 0)])) * 1.25
   const chip = overlay === 'sharp' ? lineMoveChip(g) : null
   const name = overlay ? SHORT[overlay] : null
+  const side = (v: number) => (v >= 0 ? 'var(--team-home)' : 'var(--team-away)')
   return (
     <Section
       title="Who has the edge"
@@ -54,9 +55,11 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
         leftLabel={`toward ${g.away}`}
         rightLabel={`toward ${g.home}`}
         domain={domain}
-        format={(v) => pts(v)}
+        format={ptsFor}
         rowHeight={42}
-        overlayColor={overlay ? colorVar(overlay) : undefined}
+        leftColor="var(--team-away)"
+        rightColor="var(--team-home)"
+        overlayName={name ?? undefined}
         ariaLabel={rows.map((r) => `${r.name}: ${r.pp == null ? 'no bar' : ptsToward(r.pp, g.home, g.away)}${r.edge ? `, ${r.edge}` : ''}`).join('; ')}
         rows={rows.map((r) => ({
           key: r.id,
@@ -68,7 +71,14 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
           ),
           value: r.pp,
           overlay: r.overlay,
-          title: `${r.name}: ${r.pp == null ? 'not in the history fit' : ptsToward(r.pp, g.home, g.away)}${overlay && r.overlay != null ? `; ${name} ${ptsToward(r.overlay, g.home, g.away)}` : ''}${r.help ? `. ${r.help}` : ''}`,
+          tip: (
+            <>
+              <TipTitle note={r.help}>{r.name}</TipTitle>
+              {r.pp != null && <TipRow color={side(r.pp)} value={ptsFor(r.pp)} label={`toward ${r.pp >= 0 ? g.home : g.away}, by history`} />}
+              {r.overlay != null && <TipRow color="var(--text-primary)" value={ptsFor(r.overlay)} label={`toward ${r.overlay >= 0 ? g.home : g.away}, the ${name}`} />}
+              {r.pct != null && r.edge !== 'about even' && <TipNote>Bigger than {Math.round(r.pct)}% of matchups since 2005.</TipNote>}
+            </>
+          ),
         }))}
       />
       <DataTable>

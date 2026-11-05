@@ -3,7 +3,7 @@ import { DivergingBars, Dumbbell, MatchupBand, ProbStrip } from '../../charts'
 import { Help } from '../../components/Help'
 import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
-import { fmtUnit, pct, pts, ptsToward, spreadLabel } from '../../lib/format'
+import { fmtUnit, pct, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from '../../lib/format'
 import { approachOf, groupOf } from '../../lib/meta'
 import { SHORT } from '../../lib/models'
 import {
@@ -95,7 +95,9 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
         leftLabel={`toward ${g.away}`}
         rightLabel={`toward ${g.home}`}
         domain={domain}
-        format={(v) => pts(v)}
+        format={ptsFor}
+        leftColor="var(--team-away)"
+        rightColor="var(--team-home)"
         rows={items.map((i) => ({
           key: i.id, label: i.name, value: i.pp,
           title: `${i.name}: ${ptsToward(i.pp, g.home, g.away)}${i.help ? `. ${i.help}` : ''}`,
@@ -153,7 +155,7 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
                 <td className={td}>{id === 'home_field' ? 'Home field' : groupOf(meta, id)?.name}</td>
                 {opts.map((o) => {
                   const v = id === 'home_field' ? contrib[o].home_field_pp : contrib[o].groups[id]?.pp
-                  return <td key={o} className={`${td} tabular`}>{v == null ? '–' : pts(v)}</td>
+                  return <td key={o} className={`${td} tabular whitespace-nowrap`}>{v == null ? '–' : ptsSide(v, g.home, g.away)}</td>
                 })}
               </tr>
             ))}
@@ -182,7 +184,7 @@ export function Edges({ g, meta }: { g: Game; meta: Meta }) {
               <Help text={r.help}>{r.sentence}</Help>
             </div>
             <div className="mt-1 h-1.5 w-full max-w-md rounded bg-surface-2" aria-hidden>
-              <div className="h-full rounded" style={{ width: `${r.pct}%`, background: r.favors === g.home ? 'var(--div-pos)' : 'var(--div-neg)' }} />
+              <div className="h-full rounded" style={{ width: `${r.pct}%`, background: r.favors === g.home ? 'var(--team-home)' : 'var(--team-away)' }} />
             </div>
           </li>
         ))}
@@ -210,9 +212,10 @@ export function TaleOfTheTape({ g, meta }: { g: Game; meta: Meta }) {
             {big === 0 ? `None of these ${drawn.length} gaps stands out` : `${big} of these ${drawn.length} gaps ${big === 1 ? 'stands' : 'stand'} out`}: a gap stands out when it is wider than the middle half of the league.
           </p>
           <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
-            <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--div-neg)]" /> {g.away}</span>
-            <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--div-pos)]" /> {g.home}</span>
-            <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-5 rounded-sm bg-[var(--div-mid)]" /> Typical range</span>
+            <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--team-away)]" /> {g.away}</span>
+            <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--team-home)]" /> {g.home}</span>
+            <span className="inline-flex items-center gap-1"><span className="inline-flex h-2.5 w-7 overflow-hidden rounded-sm bg-[var(--band)]"><span className="ml-1.5 h-full w-4 bg-[var(--band-strong)]" /></span> Most teams, darker where they bunch up</span>
+            <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-0.5 bg-[var(--text-muted)]" /> Median</span>
             <span>Further right is better</span>
           </div>
         </>
@@ -229,8 +232,8 @@ export function TaleOfTheTape({ g, meta }: { g: Game; meta: Meta }) {
                   away={g.away} home={g.home}
                   format={(v, key) => fmtUnit(v, bands.find((r) => r.feature === key)?.unit)}
                   rows={bands.map((r) => ({
-                    key: r.feature, label: r.label, away: r.band!.awayV, home: r.band!.homeV, lo: r.band!.lo, hi: r.band!.hi, stands: r.band!.stands, flip: r.band!.flip,
-                    title: `${r.label}: ${g.away} ${r.away}, ${g.home} ${r.home}. ${r.help}`,
+                    key: r.feature, label: r.label, help: r.help, away: r.band!.awayV, home: r.band!.homeV,
+                    lo: r.band!.lo, q1: r.band!.q1, med: r.band!.med, q3: r.band!.q3, hi: r.band!.hi, stands: r.band!.stands, flip: r.band!.flip,
                   }))}
                 />
               )}
@@ -293,8 +296,7 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
                 domain={u.domain}
                 format={fmtFor(u.unit)}
                 rows={u.rows.map((r) => ({
-                  key: r.key, label: r.label, a: r.a, b: r.b, league: r.league,
-                  title: `${r.label}: ${b.aName} ${r.a == null ? '–' : fmtUnit(r.a, r.unit)}, ${b.bName} ${r.b == null ? '–' : fmtUnit(r.b, r.unit)}, league ${r.league == null ? '–' : fmtUnit(r.league, r.unit)}. ${r.help}`,
+                  key: r.key, label: r.label, a: r.a, b: r.b, league: r.league, help: r.help,
                 }))}
               />
             ))}

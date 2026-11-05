@@ -6,22 +6,23 @@ import { kickoffEt } from '../../lib/format'
 import { teamInfo } from '../../lib/teams'
 import { gameStatus } from '../slate/helpers'
 
-/** "CAR @ GB" with a team-color bar under each code; works from the id alone, before the data arrives. */
+/** The matchup as a banner: each team's color washing in from its own side. Works from the id alone, before the data arrives. */
 export function GameTitle({ away, home }: { away: string; home: string }) {
   return (
-    <span className="inline-flex items-baseline gap-2">
-      <TeamCode team={away} />
-      <span className="text-ink-3">@</span>
-      <TeamCode team={home} />
+    <span className="matchup-wash flex items-center justify-between gap-3 rounded-xl border border-line px-4 py-4 sm:px-6">
+      <TeamSide team={away} color="var(--team-away)" />
+      <span className="text-lg font-normal text-ink-3">@</span>
+      <TeamSide team={home} color="var(--team-home)" right />
     </span>
   )
 }
 
-function TeamCode({ team }: { team: string }) {
+function TeamSide({ team, color, right = false }: { team: string; color: string; right?: boolean }) {
   return (
-    <span className="inline-flex flex-col" title={teamInfo(team).name}>
-      <span>{team}</span>
-      <TeamAccent team={team} />
+    <span className={`flex min-w-0 flex-col gap-1 ${right ? 'items-end text-right' : ''}`} title={teamInfo(team).name}>
+      <span className="text-3xl font-bold leading-none">{team}</span>
+      <TeamAccent team={team} color={color} className="!w-14" />
+      <span className="hidden text-[13px] font-normal tracking-normal text-ink-2 sm:block">{teamInfo(team).name}</span>
     </span>
   )
 }
