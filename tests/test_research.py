@@ -471,6 +471,7 @@ def _week(monkeypatch, results, done=()):
         tried.append(g.game_id)
         return results.pop(0) if results else GameRun(g.game_id, ok=True)
 
+    monkeypatch.setenv("LLM_BASE_URL", "http://desk/v1")  # run_week builds a real client
     monkeypatch.setattr("nfl.llm.narrative.slate", lambda *a: rows)
     monkeypatch.setattr("nfl.llm.narrative.stored_since", lambda *a: set(done))
     monkeypatch.setattr("nfl.llm.research.research_game", fake)
