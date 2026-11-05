@@ -428,6 +428,11 @@ def build(paths: Paths, season: int | None = None) -> dict:
 
     narr = {r.game_id: r for r in load_records(paths, (season, season))}
     edges = group_edges(paths, games, feats, season, now)
+    card_ctx = {
+        "starts": _qb_starts(games),
+        "ranks": _contrast_ranks(tend, season),
+        "weather": feats.filter(pl.col("feature") == WEATHER_FEATURE) if not feats.is_empty() else feats,
+    }  # fmt: skip
 
     n_weeks = 0
     for (week,), wk in games.group_by(["week"], maintain_order=True):
@@ -435,6 +440,7 @@ def build(paths: Paths, season: int | None = None) -> dict:
         slate_games = []
         for g in wk.iter_rows(named=True):
             row = _game_row(g, allrows, market, reg)
+            row["card"] = _card(g, edges, injuries, now, **card_ctx)
             slate_games.append(row)
             detail = row | _game_detail(g, allrows, feats, tend, injuries, narr, now, edges)
             _write(site / "game" / f"{g['game_id']}.json", detail)
@@ -611,6 +617,111 @@ def _game_row(g: dict, allrows: pl.DataFrame, market: pl.DataFrame, reg: dict) -
         },
         "models": models,
     }  # fmt: skip
+
+
+# (offense metric, offense label, high rate is the extreme?, defense metric, defense label)
+CONTRASTS = [
+    ("pass_rate", "pass-heavy", True, "blitz_rate", "blitz-heavy"),
+    ("screen_rate", "screen-heavy", True, "blitz_rate", "blitz-heavy"),
+    ("pass_rate", "run-heavy", False, "box_8plus_vs_run_rate", "stacked-box"),
+    ("play_action_rate", "play-action-heavy", True, "box_8plus_vs_run_rate", "stacked-box"),
+    ("no_huddle_rate", "up-tempo", True, "pass_rushers_5plus_rate", "five-man-rush"),
+]
+CONTRAST_TOP = 5  # both sides must rank this high among the league's teams
+CONTRAST_MIN_TEAMS = 24
+WEATHER_FEATURE = "narrative.weather_concern"
+
+
+def _contrast_ranks(tend: pl.DataFrame, season: int) -> dict[tuple[str, str, bool], dict[str, int]]:
+    """(side, metric, high is extreme) -> {canonical team: rank, 1 = most extreme}. Metrics with
+    fewer than CONTRAST_MIN_TEAMS teams are left out. Computed once per build."""
+    from nfl.models.elo import TEAM_ALIASES
+
+    if tend.is_empty():
+        return {}
+    t = tend.filter(
+        (pl.col("season") == season) & (pl.col("situation") == "all") & pl.col("rate").is_not_null()
+    )
+    wanted = {("off", m, hi) for m, _, hi, _, _ in CONTRASTS}
+    wanted |= {("def", dm, True) for _, _, _, dm, _ in CONTRASTS}
+    ranks: dict[tuple[str, str, bool], dict[str, int]] = {}
+    for side, metric, high in wanted:
+        x = t.filter((pl.col("side") == side) & (pl.col("metric") == metric))
+        rates = {TEAM_ALIASES.get(r["team"], r["team"]): r["rate"] for r in x.iter_rows(named=True)}
+        if len(rates) < CONTRAST_MIN_TEAMS:
+            continue
+        order = sorted(rates, key=lambda k: (-rates[k] if high else rates[k], k))
+        ranks[(side, metric, high)] = {k: i + 1 for i, k in enumerate(order)}
+    return ranks
+
+
+def _contrast(ranks: dict, g: dict) -> dict | None:
+    """The starkest (offense, defense) pair in this game, or None. Lowest rank sum wins; ties go
+    to the earlier CONTRASTS entry, then away offense first."""
+    from nfl.models.elo import TEAM_ALIASES
+
+    best = None
+    for i, (om, ol, high, dm, dl) in enumerate(CONTRASTS):
+        o_ranks, d_ranks = ranks.get(("off", om, high)), ranks.get(("def", dm, True))
+        if not o_ranks or not d_ranks:
+            continue
+        for j, (off, dfn) in enumerate(((g["away_team"], g["home_team"]), (g["home_team"], g["away_team"]))):  # fmt: skip
+            ro = o_ranks.get(TEAM_ALIASES.get(off, off))
+            rd = d_ranks.get(TEAM_ALIASES.get(dfn, dfn))
+            if ro is None or rd is None or ro > CONTRAST_TOP or rd > CONTRAST_TOP:
+                continue
+            key = (ro + rd, i, j)
+            if best is None or key < best[0]:
+                best = (key, {"offense": off, "defense": dfn, "off_label": ol, "def_label": dl,
+                              "off_rank": ro, "def_rank": rd})  # fmt: skip
+    return None if best is None else best[1]
+
+
+def _qb_starts(games: pl.DataFrame) -> dict[str, list[tuple[datetime, str]]]:
+    """team -> [(kickoff, starting QB name)] in kickoff order, home and away starts together."""
+    starts: dict[str, list[tuple[datetime, str]]] = {}
+    for g in games.sort("kickoff_utc", "game_id").iter_rows(named=True):
+        for team, qb in ((g["home_team"], g.get("home_qb_name")), (g["away_team"], g.get("away_qb_name"))):  # fmt: skip
+            if qb:
+                starts.setdefault(team, []).append((g["kickoff_utc"], qb))
+    return starts
+
+
+def _usual_qb(starts: dict, team: str, kickoff: datetime) -> str | None:
+    """Most frequent starter among starts strictly before `kickoff`; ties go to the most recent."""
+    count: dict[str, int] = {}
+    last: dict[str, int] = {}
+    for i, (ts, qb) in enumerate(starts.get(team, [])):
+        if ts < kickoff:
+            count[qb] = count.get(qb, 0) + 1
+            last[qb] = i
+    return max(count, key=lambda q: (count[q], last[q])) if count else None
+
+
+def _card(g, edges, injuries, now, starts, ranks, weather) -> dict:
+    """The slate card block (U4): why-this-game data, as known at the same cut `_game_detail` uses."""
+    gid, teams = g["game_id"], (g["home_team"], g["away_team"])
+    wx = None
+    if not weather.is_empty():
+        fv = store.as_of(weather.filter(pl.col("game_id") == gid), min(g["kickoff_utc"], now))
+        if fv.height:
+            wx = _r(fv["value"][0])
+    return {
+        "edges": (edges or {}).get(gid, {}),
+        "injuries": [
+            {"team": i["team"], "player": i["player"], "pos": i["pos"], "status": i["status"]}
+            for i in injuries
+            if i["week"] == g["week"]
+            and i["team"] in teams
+            and any(k in (i["status"] or "").lower() for k in ("out", "doubtful"))
+        ],
+        "usual_qb": {
+            "home": _usual_qb(starts, g["home_team"], g["kickoff_utc"]),
+            "away": _usual_qb(starts, g["away_team"], g["kickoff_utc"]),
+        },
+        "weather_concern": wx,
+        "contrast": _contrast(ranks, g),
+    }
 
 
 def _pp(total_logit: float, piece: float) -> float:

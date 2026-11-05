@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { GameRow } from '../../data/contract'
-import { approachSpread, cardSentence, correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, parseSort, pickOf, sideText, sortGames, winnerMarketP } from './helpers'
+import type { CardData, GameRow, Meta } from '../../data/contract'
+import { approachSpread, cardSentence, contrastLine, correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, parseSort, pickOf, sideText, sortGames, whyLine, winnerMarketP } from './helpers'
 
 const pick = (p: number, div: number | null = null) => ({ p_home: p, spread_home: null, status: 'preview' as const, lock_ts: null, divergence: div })
 const game = (over: Partial<GameRow> = {}): GameRow => ({
   game_id: 'g', season: 2026, week: 8, kickoff_utc: '2026-10-30T00:15:00Z', away: 'CAR', home: 'GB', stadium: null, roof: null,
-  neutral_site: false, away_qb: null, home_qb: null, result: null, market: null,
+  neutral_site: false, away_qb: null, home_qb: null, result: null, market: null, card: null,
   models: { traditionalist: pick(0.7), analyst: pick(0.4), sharp: pick(0.55), student: pick(0.5) },
   ...over,
 })
@@ -115,5 +115,81 @@ describe('gameStatus', () => {
     expect(gameStatus(row({ global: m('pregame'), elo_v0: m('backfill'), sharp: m('locked') })).status).toBe('locked')
     expect(gameStatus(row({ global: m('pregame'), elo_v0: m('backfill') })).status).toBe('backfill')
     expect(gameStatus(row({})).status).toBe('none')
+  })
+})
+
+describe('whyLine', () => {
+  const meta = { groups: { groups: [{ id: 'form', name: 'Form', context_only: false }, { id: 'coaching', name: 'Coaching', context_only: true }] } } as unknown as Meta
+  const card = (over: Partial<CardData> = {}): CardData => ({ edges: {}, injuries: [], usual_qb: { home: null, away: null }, weather_concern: null, contrast: null, ...over })
+  const withCard = (c: Partial<CardData> | null, over: Partial<GameRow> = {}) => game({ roof: 'outdoors', card: c == null ? null : card(c), ...over })
+  const edge = (pct: number, id = 'form') => ({ [id]: { favors: 'JAX', strength_pct: pct } })
+  const out = { team: 'BAL', player: 'A Name', pos: 'WR', status: 'Out' }
+
+  it('names a neutral site, and never calls one a venue edge', () => {
+    const card = { edges: { venue_weather: { favors: 'CAR', strength_pct: 98 } }, injuries: [], usual_qb: { home: null, away: null }, weather_concern: null, contrast: null }
+    const g = game({ neutral_site: true, stadium: 'Bernabeu', card })
+    expect(whyLine(g, meta)).toBe('Neutral site: Bernabeu')
+    expect(whyLine(game({ card }), meta)).toBeNull()
+  })
+
+  it('is null with no card, no pieces and no edges, or a finished game', () => {
+    expect(whyLine(withCard(null), meta)).toBeNull()
+    expect(whyLine(withCard({}), meta)).toBeNull()
+    expect(whyLine(withCard({ injuries: [out] }, { result: { home_score: 1, away_score: 0, margin: 1 } }), meta)).toBeNull()
+  })
+  it('names a new starter, an absence, an edge and weather', () => {
+    expect(whyLine(withCard({ usual_qb: { home: 'Jordan Love', away: null } }, { home_qb: 'Backup Bob' }), meta)).toBe('Backup Bob starts for GB (usually Jordan Love)')
+    expect(whyLine(withCard({ injuries: [out] }), meta)).toBe('BAL without A Name (WR)')
+    expect(whyLine(withCard({ edges: edge(92) }), meta)).toBe('JAX Form edge, bigger than 92% of matchups')
+    expect(whyLine(withCard({ weather_concern: 0.5 }), meta)).toBe('Weather could be a factor')
+  })
+  it('says doubtful for a doubtful player', () => {
+    expect(whyLine(withCard({ injuries: [{ ...out, status: 'Doubtful' }] }), meta)).toBe("BAL's A Name doubtful")
+  })
+  it('keeps two pieces, in order', () => {
+    const c = { usual_qb: { home: 'Jordan Love', away: null }, injuries: [out], edges: edge(92), weather_concern: 0.8 }
+    expect(whyLine(withCard(c, { home_qb: 'Backup Bob' }), meta)).toBe('Backup Bob starts for GB (usually Jordan Love) · BAL without A Name (WR)')
+    expect(whyLine(withCard({ ...c, injuries: [] }), meta)).toBe('JAX Form edge, bigger than 92% of matchups · Weather could be a factor')
+  })
+  it('names a player once when the QB piece and the absence agree', () => {
+    const qb = { team: 'GB', player: 'Jordan Love', pos: 'QB', status: 'Out' }
+    expect(whyLine(withCard({ usual_qb: { home: 'Jordan Love', away: null }, injuries: [qb] }, { home_qb: 'Backup Bob' }), meta)).toBe('Backup Bob starts for GB (usually Jordan Love)')
+    // the next absence still shows
+    expect(whyLine(withCard({ usual_qb: { home: 'Jordan Love', away: null }, injuries: [qb, out] }, { home_qb: 'Backup Bob' }), meta)).toContain('BAL without A Name (WR)')
+  })
+  it('lists both teams with a new starter', () => {
+    const g = withCard({ usual_qb: { home: 'Jordan Love', away: 'Bryce Young' } }, { home_qb: 'Backup Bob', away_qb: 'Other Guy' })
+    expect(whyLine(g, meta)).toBe('Other Guy starts for CAR (usually Bryce Young) · Backup Bob starts for GB (usually Jordan Love)')
+  })
+  it('ignores a starter who matches the usual one', () => {
+    expect(whyLine(withCard({ usual_qb: { home: 'Jordan Love', away: null } }, { home_qb: 'Jordan Love' }), meta)).toBeNull()
+  })
+  it('uses edges at 75 and above; below that it is no standout edge', () => {
+    expect(whyLine(withCard({ edges: edge(75) }), meta)).toContain('edge, bigger than 75%')
+    expect(whyLine(withCard({ edges: edge(74.9) }), meta)).toBe('No standout edge')
+  })
+  it('skips context-only groups as edges', () => {
+    expect(whyLine(withCard({ edges: edge(99, 'coaching') }), meta)).toBeNull()
+  })
+  it('mentions weather only outdoors (or open) and at 0.5 or more', () => {
+    expect(whyLine(withCard({ weather_concern: 0.49 }), meta)).toBeNull()
+    expect(whyLine(withCard({ weather_concern: 0.9 }, { roof: 'dome' }), meta)).toBeNull()
+    expect(whyLine(withCard({ weather_concern: 0.9 }, { roof: 'closed' }), meta)).toBeNull()
+    expect(whyLine(withCard({ weather_concern: 0.9 }, { roof: 'open' }), meta)).toBe('Weather could be a factor')
+    expect(whyLine(withCard({ weather_concern: 0.9 }, { roof: null }), meta)).toBeNull()
+  })
+})
+
+describe('contrastLine', () => {
+  const contrast = { offense: 'JAX', defense: 'BAL', off_label: 'pass-heavy', def_label: 'blitz-heavy', off_rank: 3, def_rank: 1 }
+  const c = (x: typeof contrast | null) => ({ edges: {}, injuries: [], usual_qb: { home: null, away: null }, weather_concern: null, contrast: x })
+  it('reads most for rank 1 and the ordinal otherwise', () => {
+    expect(contrastLine(game({ card: c(contrast) }))).toBe("JAX's 3rd-most pass-heavy offense faces BAL's most blitz-heavy defense")
+    expect(contrastLine(game({ card: c({ ...contrast, off_rank: 1, def_rank: 2 }) }))).toBe("JAX's most pass-heavy offense faces BAL's 2nd-most blitz-heavy defense")
+  })
+  it('is null on a finished game, without a contrast or without a card', () => {
+    expect(contrastLine(game({ card: c(contrast), result: { home_score: 1, away_score: 0, margin: 1 } }))).toBeNull()
+    expect(contrastLine(game({ card: c(null) }))).toBeNull()
+    expect(contrastLine(game())).toBeNull()
   })
 })

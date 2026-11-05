@@ -117,7 +117,7 @@ function Games({ meta, games, week }: { meta: Meta; games: GameRow[]; week: numb
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {sorted.map((g) => (
-              <GameCard key={g.game_id} g={g} showStatus={gameStatus(g).status !== common} />
+              <GameCard key={g.game_id} g={g} meta={meta} showStatus={gameStatus(g).status !== common} />
             ))}
           </div>
         )}

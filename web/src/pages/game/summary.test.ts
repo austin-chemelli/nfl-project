@@ -26,6 +26,11 @@ describe('summaryTiles', () => {
     expect(summaryTiles(g, meta, null).find((x) => x.id === 'edge')).toMatchObject({ value: 'CAR Quality' })
   })
 
+  it('pregame: the biggest edge is never Venue & weather, which only moves home advantage', () => {
+    const g = { ...game, edges: { venue_weather: { favors: 'CAR', strength_pct: 98 }, quality: { favors: 'GB', strength_pct: 60 } } }
+    expect(summaryTiles(g, meta, null).find((x) => x.id === 'edge')).toMatchObject({ value: 'GB Quality' })
+  })
+
   it('pregame: dates a market line more than 3 days old', () => {
     const g = { ...game, market: { ...game.market!, as_of: '2026-10-20T15:00:00Z' } }
     const m = { ...meta, generated_at: '2026-11-03T20:00:00Z' }

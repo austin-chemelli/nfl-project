@@ -2,6 +2,9 @@
 import type { GameRow, Meta } from '../../data/contract'
 import { APPROACHES, HEADLINE, REFERENCES, SHORT } from '../../lib/models'
 import { pct } from '../../lib/format'
+import { groupOf } from '../../lib/meta'
+import { injuryRank, ordinal } from '../game/helpers'
+import { topAbsence, topEdge } from '../game/summary'
 
 /** |model − market| in probability at which a cell is highlighted. */
 export const DIVERGE = 0.05
@@ -165,4 +168,60 @@ function finishedSentence(g: GameRow, ps: { id: string; p: number }[], won: bool
   if (right.length === 0) return `${n} picked ${loser}; ${winner} won`
   if (right.length <= ps.length / 2) return `${names(right)} called it`
   return `${names(ps.filter((x) => !right.includes(x.id)).map((x) => x.id))} missed it`
+}
+
+// ------------------------------------------------------------------- why this game (U4)
+
+/** An edge must beat this share of matchups to be worth a card's line. */
+const EDGE_MIN_PCT = 75
+const WEATHER_MIN = 0.5
+
+/** One line on why a pregame matchup is worth a look, from `g.card`: up to two pieces, most newsworthy first. */
+export function whyLine(g: GameRow, meta: Meta): string | null {
+  const c = g.card
+  if (g.result != null || c == null) return null
+  const pieces: string[] = []
+
+  // 1. A new starter, for each side
+  const named = new Set<string>()
+  for (const [team, starter, usual] of [
+    [g.away, g.away_qb, c.usual_qb.away],
+    [g.home, g.home_qb, c.usual_qb.home],
+  ] as const) {
+    if (starter && usual && starter !== usual) {
+      pieces.push(`${starter} starts for ${team} (usually ${usual})`)
+      named.add(starter)
+      named.add(usual)
+    }
+  }
+
+  // 2. The key absence, unless a QB piece already names that player
+  const absence = topAbsence(c.injuries.filter((i) => !named.has(i.player)))
+  if (absence) {
+    const i = absence.top
+    pieces.push(injuryRank(i.status) === 0 ? `${i.team} without ${i.player}${i.pos ? ` (${i.pos})` : ''}` : `${i.team}'s ${i.player} doubtful`)
+  }
+
+  // 3. A game away from either home
+  if (g.neutral_site) pieces.push(g.stadium ? `Neutral site: ${g.stadium}` : 'Neutral site')
+
+  // 4. The biggest edge, when it is big
+  const edge = topEdge(c.edges, meta)
+  if (edge && edge.strength_pct >= EDGE_MIN_PCT) {
+    pieces.push(`${edge.favors} ${groupOf(meta, edge.id)?.name ?? edge.id} edge, bigger than ${Math.round(edge.strength_pct)}% of matchups`)
+  }
+
+  // 5. Weather, only where it can matter
+  if ((g.roof === 'outdoors' || g.roof === 'open') && (c.weather_concern ?? 0) >= WEATHER_MIN) pieces.push('Weather could be a factor')
+
+  if (pieces.length > 0) return pieces.slice(0, 2).join(' · ')
+  return edge ? 'No standout edge' : null
+}
+
+/** The stark tendencies pairing, when there is one: "JAX's 3rd-most pass-heavy offense faces BAL's most blitz-heavy defense". */
+export function contrastLine(g: GameRow): string | null {
+  const x = g.card?.contrast
+  if (g.result != null || !x) return null
+  const rank = (n: number) => (n === 1 ? 'most' : `${ordinal(n)}-most`)
+  return `${x.offense}'s ${rank(x.off_rank)} ${x.off_label} offense faces ${x.defense}'s ${rank(x.def_rank)} ${x.def_label} defense`
 }

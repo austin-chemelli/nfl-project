@@ -127,23 +127,41 @@ const posRank = (pos: string | null) => POS_RANK.find(([re]) => re.test(pos ?? '
 /** Long-term lists (IR, PUP, NFI) were already missing for weeks; they're not this week's news. */
 const LONG_TERM = /\b(ir|pup|nfi)\b|reserve/i
 
-/** This week's absences: out before doubtful, then by position (QB, skill, line, defense, specialists). */
-function absenceTile(g: Game): TileSpec | null {
-  const out = sortInjuries(g.injuries.filter((i) => injuryRank(i.status) <= 1 && !LONG_TERM.test(i.status))).sort(
+type AbsenceRow = { team: string; player: string; pos: string | null; status: string }
+
+/** This week's absences: out before doubtful, then by position (QB, skill, line, defense, specialists). Shared with the slate cards. */
+export function topAbsence<T extends AbsenceRow>(injuries: T[]): { top: T; count: number } | null {
+  const out = sortInjuries(injuries.filter((i) => injuryRank(i.status) <= 1 && !LONG_TERM.test(i.status))).sort(
     (a, b) => posRank(a.pos) - posRank(b.pos) || injuryRank(a.status) - injuryRank(b.status),
   )
-  if (out.length === 0) return null
-  const i = out[0]
-  return { id: 'absence', label: 'Key absence', value: i.player, sub: `${i.team}${i.pos ? ` ${i.pos}` : ''}, ${i.status.toLowerCase()}${out.length > 1 ? ` · +${out.length - 1} more` : ''}`, tab: 'news', team: i.team }
+  return out.length === 0 ? null : { top: out[0], count: out.length }
+}
+
+function absenceTile(g: Game): TileSpec | null {
+  const a = topAbsence(g.injuries)
+  if (!a) return null
+  const i = a.top
+  return { id: 'absence', label: 'Key absence', value: i.player, sub: `${i.team}${i.pos ? ` ${i.pos}` : ''}, ${i.status.toLowerCase()}${a.count > 1 ? ` · +${a.count - 1} more` : ''}`, tab: 'news', team: i.team }
+}
+
+type EdgeMap = Record<string, { favors: string | null; strength_pct: number | null }>
+
+/**
+ * The strongest edge among scored groups; coaching and scheme groups are context, never an edge.
+ * Venue & weather isn't either: it only shifts home advantage, so a neutral site reads as a huge
+ * edge for the away team. Shared with the slate cards.
+ */
+export function topEdge(edges: EdgeMap, meta: Meta): { id: string; favors: string; strength_pct: number } | null {
+  const best = Object.entries(edges)
+    .filter(([id, e]) => e.favors && e.strength_pct != null && id !== 'venue_weather' && !isContextOnly(meta, id))
+    .sort(([, a], [, b]) => (b.strength_pct ?? 0) - (a.strength_pct ?? 0))[0]
+  return best ? { id: best[0], favors: best[1].favors as string, strength_pct: best[1].strength_pct as number } : null
 }
 
 function edgeTile(g: Game, meta: Meta): TileSpec | null {
-  const edges = Object.entries(g.edges)
-    .filter(([id, e]) => e.favors && e.strength_pct != null && !isContextOnly(meta, id))
-    .sort(([, a], [, b]) => (b.strength_pct ?? 0) - (a.strength_pct ?? 0))
-  if (edges.length === 0) return null
-  const [id, e] = edges[0]
-  return { id: 'edge', label: 'Biggest edge', value: `${e.favors} ${groupOf(meta, id)?.name ?? id}`, sub: `bigger than ${Math.round(e.strength_pct ?? 0)}% of matchups`, tab: 'preview', team: e.favors ?? undefined }
+  const e = topEdge(g.edges, meta)
+  if (!e) return null
+  return { id: 'edge', label: 'Biggest edge', value: `${e.favors} ${groupOf(meta, e.id)?.name ?? e.id}`, sub: `bigger than ${Math.round(e.strength_pct)}% of matchups`, tab: 'preview', team: e.favors }
 }
 
 // ------------------------------------------------------------------------------------ finished
