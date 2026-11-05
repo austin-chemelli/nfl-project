@@ -402,3 +402,13 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** Check what a process rule enforces before repeating it. A cautious line in a plan turned into a freeze because nobody tested it against the code.
 
+
+## 2026-11-05: first pass on feeds and first public lock (#15)
+
+**Why.** Confirm the merged source changes on a real desktop pass before Saturday, and that the Thursday lock ran.
+
+**What changed.** Nothing in code. The desktop stored the 7 games the 2026-11-04 run lost, the 08:30 check passed, and `nfl-lock-thu` committed `lock: 2026 W09 thu` (`c8d8103`, JAX @ BAL) from the cloud at 14:07Z.
+
+**Findings.** 15 of 15 records in the bucket at 06:32Z. All 7 new records used the 4 feed pools and 7 queries; 5 outdoor games also used the forecast. All 7 reached 30 claims from 10 to 14 pages, and team sites and NBC Sports rose among the cited sources, with 15 claims citing Open-Meteo. Games took 26.5 minutes on average (n=7), against 14.4 on the search-only pass (n=7 gaps), which the feeds may explain but nothing measured. Quality against the search-only records is not compared yet.
+
+**Lesson.** Resuming worked, but a resume keeps thin records: LA @ WAS stayed at 14 claims until the next pass. Pass length now matters on Saturdays, when the check runs 4.5 hours after the start and uploads come last.
