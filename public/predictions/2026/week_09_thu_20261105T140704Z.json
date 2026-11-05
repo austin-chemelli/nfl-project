@@ -1,0 +1,60 @@
+{
+ "code_version": "59a5447",
+ "conventions": "p_home = home win probability; spread_home > 0 = home favored (points)",
+ "data_snapshot": "20261105T140158Z",
+ "games": [
+  {
+   "away": "JAX",
+   "game_id": "2026_09_JAX_BAL",
+   "home": "BAL",
+   "kickoff_utc": "2026-11-06T01:15:00Z",
+   "market": {
+    "as_of": "2026-11-05T14:02:12Z",
+    "p_home_vigfree": 0.1945,
+    "source": "odds_api",
+    "spread_home": -10.0,
+    "total": 39.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.227,
+     "spread_home": -10.1061
+    },
+    "elo_v0": {
+     "p_home": 0.398,
+     "spread_home": -2.8762
+    },
+    "global": {
+     "p_home": 0.3228,
+     "spread_home": -6.2099
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.1945,
+     "spread_home": -10.0
+    },
+    "sharp": {
+     "p_home": 0.1964,
+     "spread_home": -11.5367
+    },
+    "student": {
+     "p_home": 0.2137,
+     "spread_home": -10.7134
+    },
+    "traditionalist": {
+     "p_home": 0.2345,
+     "spread_home": -9.7757
+    }
+   }
+  }
+ ],
+ "lock_ts": "2026-11-05T14:07:04Z",
+ "odds_snapshot": "20261105T140212Z",
+ "schema_version": "1",
+ "season": 2026,
+ "slot": "thu",
+ "week": 9
+}
