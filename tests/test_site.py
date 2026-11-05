@@ -482,3 +482,81 @@ def test_contrast_ranks_read_old_codes_in_tendencies_as_their_franchise():
     t = _tend({}).with_columns(pl.col("team").replace({"T00": "OAK"}))
     ranks = site._contrast_ranks(t, 2026)[("off", "pass_rate", True)]
     assert "LV" in ranks and "OAK" not in ranks
+
+
+# ---- B1: previews and pregame rows replay Elo over all seasons, like the lock (2026-11-05)
+
+
+def _hist(own_result=3.0):
+    """Two seasons: in 2025 HOME_T beats AWAY_T four times; the 2026 opener is the same pairing."""
+    rows = [
+        {"game_id": f"2025_{i}", "season": 2025, "week": i + 1, "home_team": "HOME_T",
+         "away_team": "AWAY_T", "location": "Home", "result": 14.0,
+         "kickoff_utc": datetime(2025, 9, 7 + 7 * i, 17)}
+        for i in range(4)
+    ]  # fmt: skip
+    rows.append(
+        {"game_id": "2026_1", "season": 2026, "week": 1, "home_team": "HOME_T",
+         "away_team": "AWAY_T", "location": "Home", "result": own_result,
+         "kickoff_utc": datetime(2026, 9, 10, 17)}
+    )  # fmt: skip
+    return pl.DataFrame(rows)
+
+
+def _stub_scoring(monkeypatch, history):
+    from nfl import lock
+
+    monkeypatch.setattr(site.store, "games_frame", lambda paths: history)
+    monkeypatch.setattr(site.store, "read_features", lambda *a, **k: pl.DataFrame())
+    monkeypatch.setattr(lock, "load_models", lambda *a, **k: ([], []))
+    monkeypatch.setattr(lock, "market_at", lambda *a, **k: pl.DataFrame())
+    monkeypatch.setattr(lock, "score_approaches", lambda *a, **k: [])
+
+
+def _elo(rows):
+    return rows.filter(pl.col("model_id") == "elo_v0")["p_home"][0]
+
+
+def test_pregame_elo_replays_every_season_like_the_lock(tmp_path, monkeypatch):
+    from nfl import lock
+
+    history = _hist()
+    _stub_scoring(monkeypatch, history)
+    season = history.filter(pl.col("season") == 2026)
+    now = datetime(2026, 9, 12)
+    have = pl.DataFrame(schema={"game_id": pl.Utf8})
+    got = _elo(site.pregame_rows(Paths(tmp_path), season, have, now))
+
+    slate = season.filter(pl.col("game_id") == "2026_1")
+    empty = pl.DataFrame()
+    full = lock.score_reference(history, slate, empty)
+    one = lock.score_reference(season, slate, empty)
+    ref = lambda refs: next(s for s in refs if s.model_id == "elo_v0").frame["p_home"][0]
+    assert got == pytest.approx(ref(full))
+    assert abs(got - ref(one)) > 0.01  # a one-season replay starts both teams at 1500
+
+
+def test_preview_elo_replays_every_season_like_the_lock(tmp_path, monkeypatch):
+    from nfl import lock
+
+    history = _hist()
+    _stub_scoring(monkeypatch, history)
+    season = history.filter(pl.col("season") == 2026)
+    rows = site.display_rows(Paths(tmp_path), season, datetime(2026, 9, 1))
+    assert set(rows["status"].to_list()) == {site.PREVIEW}
+
+    refs = lock.score_reference(history, season, pl.DataFrame())
+    full = next(s for s in refs if s.model_id == "elo_v0").frame["p_home"][0]
+    assert _elo(rows) == pytest.approx(full)
+
+
+def test_pregame_elo_ignores_the_games_own_result(tmp_path, monkeypatch):
+    now = datetime(2026, 9, 12)
+    have = pl.DataFrame(schema={"game_id": pl.Utf8})
+    got = []
+    for result in (30.0, -30.0):
+        history = _hist(result)
+        _stub_scoring(monkeypatch, history)
+        season = history.filter(pl.col("season") == 2026)
+        got.append(_elo(site.pregame_rows(Paths(tmp_path), season, have, now)))
+    assert got[0] == pytest.approx(got[1])

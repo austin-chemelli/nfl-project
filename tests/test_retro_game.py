@@ -476,7 +476,7 @@ def test_league_bands_match_metrics_per_team():
 
 def test_schema_version_staleness(tree):
     build_games(tree, 2026)
-    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION == "4"
+    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION == "5"
     assert build_games(tree, 2026) == []  # same hash, expectations and schema: up to date
     f = retro_path(tree, 2026, "g2")
     d = json.loads(f.read_text())
@@ -575,3 +575,30 @@ def test_phases_fewer_turnovers_wins_and_equal_text_is_even():
     assert [p for p in ph] == [
         "passing", "rushing", "explosive", "third_down", "red_zone", "special_teams", "field_position", "turnovers",
     ]  # fmt: skip
+
+
+def test_swing_sentence_hurt_both_helped_both_and_mixed():
+    from nfl.retro.game import _swing_sentence
+
+    tail = "."
+    assert _swing_sentence("Green Bay", -9.6, "Carolina", -2.0, tail) == (
+        "Swing plays hurt both teams, Green Bay more: 9.6 points lost against 2.0 for Carolina, "
+        "a net 7.6 toward Carolina."
+    )
+    assert _swing_sentence("Green Bay", 1.0, "Carolina", 6.5, tail) == (
+        "Swing plays helped both teams, Carolina more: 6.5 points gained against 1.0 for Green "
+        "Bay, a net 5.5 toward Carolina."
+    )
+    assert _swing_sentence("Green Bay", -9.6, "Carolina", 5.3, tail) == (
+        "Swing plays helped Carolina by 5.3 points and cost Green Bay 9.6, a net 14.9 toward "
+        "Carolina."
+    )
+    # a team at exactly zero isn't helped or hurt (2026_01_BAL_IND, 2026_06_ARI_LA)
+    assert _swing_sentence("Indianapolis", -4.6, "Baltimore", 0.0, tail) == (
+        "Swing plays cost Indianapolis 4.6 points and left Baltimore even, a net 4.6 toward "
+        "Baltimore."
+    )
+    assert _swing_sentence("Los Angeles", 0.0, "Arizona", 3.3, tail) == (
+        "Swing plays helped Arizona by 3.3 points and left Los Angeles even, a net 3.3 toward "
+        "Arizona."
+    )

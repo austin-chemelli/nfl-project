@@ -5,7 +5,7 @@ import { Card, Loaded, Page, Section, DataTable, td, th } from '../components/ui
 import { useAudit, useMeta } from '../data/api'
 import type { Audit, Meta } from '../data/contract'
 import { groupName, helpFor } from '../lib/meta'
-import { colorVar } from '../lib/models'
+import { colorVar, HEADLINE } from '../lib/models'
 import { snapshotAgo, snapshotLabel, sortedShares, topNullRates } from './method/helpers'
 
 const REPO = 'https://github.com/austin-chemelli/nfl-project'
@@ -66,13 +66,13 @@ function HowItWorks({ meta }: { meta: Meta }) {
           Several <strong>approaches</strong> ({meta.approaches.map((a) => a.name.replace(/^The /, '')).join(', ')}) weigh the same shared evidence differently, like different kinds of fans. Each approach is <strong>one public line</strong>: the persona&apos;s own weights, lightly fitted to history and then calibrated, so the persona&apos;s biases survive. Models produce every number; an LLM, where used, only explains and is never allowed to introduce a statistic.
         </p>
         <p>
-          <strong>The market is the reference, never an input</strong> (ADR 0013). The betting market&apos;s forecast (the spread and moneyline probability) is the line every approach is compared against, and no approach is allowed to read it. The Sharp reads market <em>behavior</em> (line moves, public betting share, disagreement between books) as a capped supplement, never the forecast itself. Feeding the market to a model and then crediting the model for matching the market was the mistake that made an early Sharp look as good as the market.
+          <strong>The market is the reference, never an input</strong> (ADR 0013). The betting market&apos;s forecast (the spread and moneyline probability) is the line every approach is compared against, and no approach is allowed to read it. Approaches may read market <em>behavior</em> (line moves, public betting share, disagreement between books) as a capped supplement, the Sharp most of all, never the forecast itself. Feeding the market to a model and then crediting the model for matching the market was the mistake that made an early Sharp look as good as the market.
         </p>
         <p>
           <strong>How it is scored.</strong> Every line is scored in public against the market and a naive baseline on forecast quality (log loss, calibration), on odds-weighted paper bets, and on how often it was right when it disagreed with the market. Forecast quality comes first; betting is a lens.
         </p>
         <p>
-          <strong>How numbers are shown.</strong> Probabilities and rates are percentages, differences are points of win probability, weights are shares of a 100-point attention budget, and team gaps are percentile ranks. Log loss is the scoring rule (lower is better, 0.693 is a coin flip), so it always appears next to the market&apos;s score. Differences under 0.005 are noise at this sample size.
+          <strong>How numbers are shown.</strong> Probabilities and rates are percentages, differences are points of win probability, weights are shares of a 100-point attention budget, and team gaps are percentile ranks. Log loss is the scoring rule (lower is better, 0.693 is a coin flip), so it always appears next to the market&apos;s score. At about 120 games, gaps under about 0.025 can&apos;t be told from noise. Home field under each approach and swing plays are in football points; other &quot;pts&quot; are win chance.
         </p>
       </div>
     </Section>
@@ -85,7 +85,8 @@ function Approaches({ meta }: { meta: Meta }) {
       <div className="grid gap-4 md:grid-cols-2">
         {meta.approaches.map((a) => {
           const shares = sortedShares(a.public_share)
-          const top = shares[0]?.[1] ?? 1
+          const top = Math.max(...shares.map(([, v]) => Math.abs(v)), 1e-9)
+          const hasNegative = shares.some(([, v]) => v < 0)
           return (
             <Card key={a.id}>
               <h3 className="flex items-center gap-2 text-base font-semibold">
@@ -93,27 +94,32 @@ function Approaches({ meta }: { meta: Meta }) {
                 {a.name}
               </h3>
               <p className="mt-1 text-[14px] text-ink-2">{a.blurb}</p>
-              <p className="mt-2 text-[13px] text-ink-3">
-                Leans on: {a.emphasis.map((g, i) => (
-                  <span key={g}>
-                    {i > 0 && ', '}
-                    <Help text={helpFor(meta, g)}>{groupName(meta, g)}</Help>
-                  </span>
-                ))}
+              {a.emphasis.length > 0 && (
+                <p className="mt-2 text-[13px] text-ink-3">
+                  Leans on: {a.emphasis.map((g, i) => (
+                    <span key={g}>
+                      {i > 0 && ', '}
+                      <Help text={helpFor(meta, g)}>{groupName(meta, g)}</Help>
+                    </span>
+                  ))}
+                </p>
+              )}
+              <p className="mt-1 text-[13px] text-ink-3">
+                {a.id === HEADLINE ? `Home field: ${a.home_field_why}.` : `Starting view: ${a.home_field_why} (football points). Fitting can move it.`}
               </p>
-              <p className="mt-1 text-[13px] text-ink-3">Home field: {a.home_field_why}.</p>
               <div className="mt-3 text-[12px] uppercase tracking-wide text-ink-3">Attention budget (public line, of 100)</div>
               <ul className="mt-1 space-y-1">
                 {shares.map(([g, v]) => (
                   <li key={g} className="grid grid-cols-[7.5rem_1fr_2.5rem] items-center gap-2 text-[13px]">
                     <span className="truncate"><Help text={helpFor(meta, g)}>{groupName(meta, g)}</Help></span>
-                    <span className="h-2 rounded-sm bg-surface-2" role="img" aria-label={`${groupName(meta, g)} ${v.toFixed(0)} of 100`}>
-                      <span className="block h-2 rounded-sm" style={{ width: `${(100 * v) / top}%`, background: colorVar(a.id) }} />
+                    <span className="h-2 rounded-sm bg-surface-2" role="img" aria-label={`${groupName(meta, g)} ${v < 0 ? 'minus ' : ''}${Math.abs(v).toFixed(0)} of 100`}>
+                      <span className="block h-2 rounded-sm" style={{ width: `${(100 * Math.abs(v)) / top}%`, background: colorVar(a.id) }} />
                     </span>
-                    <span className="tabular text-right text-ink-2">{v.toFixed(0)}</span>
+                    <span className="tabular text-right text-ink-2">{v < 0 ? '−' : ''}{Math.abs(v).toFixed(0)}</span>
                   </li>
                 ))}
               </ul>
+              {hasNegative && <p className="mt-2 text-[12px] text-ink-3">Sizes add up to 100, ignoring signs. A minus means it leans against that group.</p>}
             </Card>
           )
         })}
@@ -146,7 +152,7 @@ function Locks() {
         <ul className="list-disc space-y-1 pl-5">
           <li>A prediction may only use data that was known <strong>before</strong> the lock time.</li>
           <li>Models used in season S are trained through season S−1 and frozen all year.</li>
-          <li>Backfill scores (the 2005 to 2025 backtest, and weeks before the first live lock) use synthetic locks and frozen models. They are scored after the fact, so they are weaker evidence than live weeks.</li>
+          <li>Backfill scores (the backtest since 2005, and weeks before the first live lock) use synthetic locks and frozen models. They are scored after the fact, so they are weaker evidence than live weeks.</li>
           <li>When a result looks too good, assume leakage before skill.</li>
         </ul>
       </div>
@@ -172,10 +178,10 @@ function Limits() {
   return (
     <Section title="Honest limits">
       <ul className="max-w-3xl list-disc space-y-1 pl-5 text-[15px] leading-relaxed">
-        <li>Football data is observational and samples are small: about 180 live games a season cannot rank models, and one season&apos;s paper profit is mostly noise.</li>
-        <li>Markets are efficient. In the 2005 to 2025 backtest every approach trails the market by about 0.015 to 0.02 log loss, and when an approach disagrees with the market by 10+ points the market has been right more often.</li>
+        <li>Football data is observational and samples are small. One season of live games cannot rank models, and one season&apos;s paper profit is mostly noise.</li>
+        <li>Markets are efficient. In the backtest since 2005 every approach trails the market by about 0.015 to 0.02 log loss, and when an approach disagrees with the market by 10+ points the market has been right more often.</li>
         <li>Persona weights are opinions. History-fitted weights describe the past, not the future.</li>
-        <li>The Sharp&apos;s market-behavior inputs (line moves, public betting share) exist only for live games, so its backtest is thin.</li>
+        <li>The Sharp&apos;s market-behavior inputs (line moves, public betting share) exist only for live games. Its backtest covers the same games as the others but mostly tests its football weights.</li>
         <li>Narrative (news) features exist only for live games; there is no history to fit.</li>
       </ul>
     </Section>

@@ -77,7 +77,7 @@ function approachesRight(g: Game): { right: string[]; n: number } {
 function pregameTiles(g: Game, meta: Meta): TileSpec[] {
   const tiles: TileSpec[] = [pickTile(g), marketTile(g, meta.generated_at), factorTile(g, meta)]
   const absence = absenceTile(g)
-  tiles.push(absence ?? edgeTile(g, meta) ?? { id: 'absence', label: 'Key absence', value: 'None listed', sub: g.injuries.length ? 'no one out or doubtful' : 'no injury report yet', tab: 'news' })
+  tiles.push(absence ?? edgeTile(g, meta) ?? { id: 'absence', label: 'Key absence', value: 'None listed', sub: g.injuries.length ? 'no one out or doubtful' : 'no official report yet', tab: 'news' })
   return tiles
 }
 
@@ -118,7 +118,7 @@ function factorTile(g: Game, meta: Meta): TileSpec {
     ...Object.entries(c.groups).map(([id, x]) => ({ name: groupOf(meta, id)?.name ?? id, pp: x.pp ?? 0 })),
   ]
   const top = items.reduce((a, b) => (Math.abs(b.pp) > Math.abs(a.pp) ? b : a))
-  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${one(top.pp)} pts toward ${top.pp >= 0 ? g.home : g.away}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
+  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${SHORT[HEADLINE]}: ${Math.abs(top.pp).toFixed(1)} pts of win chance toward ${top.pp >= 0 ? g.home : g.away}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
 }
 
 /** Position weight for "key": the injury file has no importance field, so the position stands in for it. */

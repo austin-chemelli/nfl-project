@@ -7,7 +7,7 @@ export type RecapTile = { id: string; label: string; value: string; sub: string;
 
 /** Under 45% in the market is an upset; closer to even is a toss-up (never called an upset). */
 const UPSET_BELOW = 0.45
-/** Log-loss gaps under this are noise at a week's sample size (the tracker uses the same rule). */
+/** Below this a week's tile says even. It describes one week and isn't a ranking, so it's tighter than the tracker's GAP_BAND. */
 const NOISE = 0.005
 
 /** The strip's tiles, from the recap alone. */
@@ -16,17 +16,17 @@ export function recapTiles(r: WeekRecap): RecapTile[] {
   const best = r.models.find((m) => m.model_id === r.best_model)
   tiles.push(
     best
-      ? { id: 'best', label: 'Best approach', value: SHORT[best.model_id] ?? best.label, sub: `${best.right} of ${best.n} right, log loss ${best.log_loss.toFixed(3)}`, modelId: best.model_id }
+      ? { id: 'best', label: 'Best approach', value: SHORT[best.model_id] ?? best.label, sub: `${best.right} of ${best.n} right, score ${best.log_loss.toFixed(3)} (lower is better)`, modelId: best.model_id }
       : { id: 'best', label: 'Best approach', value: dash, sub: 'no finished games' },
   )
   const ap = r.models.filter((m) => (APPROACHES as readonly string[]).includes(m.model_id) && m.vs_market != null)
   if (ap.length > 0) {
     const ahead = ap.filter((m) => m.vs_market! < 0).length
     const gap = ap.reduce((a, m) => a + m.vs_market!, 0) / ap.length
-    // decided by the average gap (negative = better), with the tracker's noise rule
-    const value = Math.abs(gap) < NOISE ? 'Even with the market' : gap < 0 ? 'Beat the market' : 'Trailed the market'
-    const avg = Math.abs(gap) < NOISE ? 'about even on average' : `${Math.abs(gap).toFixed(3)} log loss ${gap < 0 ? 'better' : 'worse'} on average`
-    tiles.push({ id: 'market', label: 'vs the market', value, sub: `${ahead} of ${ap.length} ahead; ${avg}` })
+    // decided by the average gap (negative = better)
+    const value = Math.abs(gap) < NOISE ? 'Even with the market' : gap < 0 ? 'Scored better' : 'Scored worse'
+    const avg = Math.abs(gap) < NOISE ? 'about even on average' : `${Math.abs(gap).toFixed(3)} ${gap < 0 ? 'better' : 'worse'} on average`
+    tiles.push({ id: 'market', label: 'Forecast score vs market', value, sub: `${ahead} of ${ap.length} ahead; ${avg}. Confidence counts, not just picks` })
   }
   const line = r.models.find((m) => m.model_id === HEADLINE)
   const mk = r.models.find((m) => m.model_id === 'market_baseline')

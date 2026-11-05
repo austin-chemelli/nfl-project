@@ -17,7 +17,8 @@ export function Backtest({ t }: { t: Tracker; meta: Meta }) {
   const seasons = Math.max(...rows.map((r) => r.seasons))
   const games = Math.max(...rows.map((r) => r.n_games))
   return (
-    <Section title="Backtest: how far each line sits from the market" help="Every game from 2005 on, scored by models that never trained on the season they predict.">
+    <Section title="Backtest: how far each line sits from the market" help="Every decided game from 2005 on. Approach weights are fitted only on earlier seasons.">
+      <p className="mb-2 text-[14px] text-ink-2">Every decided game since 2005. Fitted weights use only earlier seasons; Elo updates game by game, and a few model settings were chosen later and apply to all seasons.</p>
       <DotWhisker
         rows={rows.map((r) => ({
           key: r.model_id,

@@ -1,12 +1,18 @@
 /** Small shared building blocks. Pages compose these; keep page-specific UI in the page. */
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { colorVar, REFERENCES, SHORT } from '../lib/models'
 import { pct } from '../lib/format'
 import { Help } from './Help'
 import { DataError } from '../data/api'
 
-export function Page({ title, lede, children }: { title: ReactNode; lede?: ReactNode; children: ReactNode }) {
+const SITE = 'NFL approaches'
+
+export function Page({ title, docTitle, lede, children }: { title: ReactNode; docTitle?: string; lede?: ReactNode; children: ReactNode }) {
+  const name = docTitle ?? (typeof title === 'string' ? title : null)
+  useEffect(() => {
+    document.title = name ? `${name} · ${SITE}` : SITE
+  }, [name])
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>

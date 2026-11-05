@@ -6,10 +6,10 @@ import { StatusBadge } from '../../components/ui'
 import { TeamAccent } from '../../components/TeamAccent'
 import type { GameRow, Meta } from '../../data/contract'
 import { kickoffEt, pct, spreadLabel } from '../../lib/format'
-import { APPROACHES, SHORT } from '../../lib/models'
+import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { matchupVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
-import { cardSentence, contrastLine, gameStatus, whyLine } from './helpers'
+import { cardSentence, contrastLine, gameStatus, pickOf, whyLine } from './helpers'
 
 function TeamCode({ team, color }: { team: string; color: string }) {
   return (
@@ -46,6 +46,7 @@ export function GameCard({ g, meta, showStatus }: { g: GameRow; meta: Meta; show
   const fav = mk == null ? null : `${mk >= 0.5 ? g.home : g.away} ${pct(mk >= 0.5 ? mk : 1 - mk)}`
   const pregame = g.result == null
   const id = useId()
+  const pk = pickOf(g, HEADLINE)
   const why = whyLine(g, meta)
   const contrast = contrastLine(g)
   return (
@@ -74,6 +75,7 @@ export function GameCard({ g, meta, showStatus }: { g: GameRow; meta: Meta; show
         {g.market?.total != null && <span className="text-ink-3"> · total {g.market.total}</span>}
         {fav && <span className="text-ink-3"> · market {fav}</span>}
       </div>
+      {pk && <div className="text-[14px] font-medium text-ink">{SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}</div>}
       {why && <div id={`${id}-why`} className="text-[14px] text-ink">{why}</div>}
       {contrast && <div className="text-[13px] text-ink-2">{contrast}</div>}
       <div className={`flex items-center gap-2 text-[11px] text-ink-3 ${pregame ? 'border-t border-line pt-2' : ''}`}>

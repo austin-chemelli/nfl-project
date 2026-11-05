@@ -1,6 +1,6 @@
 # The public site (M7.4, M7.5; v2 layout M10)
 
-Status: current, verified 2026-11-04 against `web/` after PR #4.
+Status: current, verified 2026-11-05 against `web/` after the site walk fixes (M13).
 
 A static React app on Firebase Hosting that reads the published site JSON from the public bucket. Decisions: ADR 0009 (static site, no API), ADR 0015 (data from a public bucket, so data changes never need a deploy). The Streamlit app stays as the local explorer; this replaces it as the public face.
 
@@ -27,7 +27,7 @@ flowchart LR
 
 | Route | Page | Reads |
 |---|---|---|
-| `/` | Slate: the week's games × approaches, divergence markers, statuses, disagreement strip | meta, slate |
+| `/` | Slate: one plain sentence on what the site is, last week's record, the week's games × approaches with the Student's pick on each card, divergence markers, statuses, disagreement strip | meta, slate, last week's recap |
 | `/game/:id` | Game: approaches vs market, why (group contributions in win-probability points), edges by group, tale of the tape, tendency dumbbells vs league, injuries, narrative v2 | game |
 | `/tracker` | Season tracker: gap to the market by week, backtest Δ with CIs, log loss by season, disagreements, calibration, paper bets (bankroll, return per bet, season grid), persona vs history | tracker, meta |
 | `/hypotheses` | What history says per feature; one feature or group over time | hypotheses |
@@ -36,7 +36,7 @@ flowchart LR
 | `/season/:year` | Every game of a season under a weight set | season_<yyyy>, diy_matrix |
 | `/method` | How it works, honest limits, leaks found, freshness, audit | meta, audit |
 
-Global: header nav, "last updated" from `meta.generated_at` and the last lock, footer with credits and the "fan-made, not affiliated with the NFL" line, light/dark theme from the dataviz palette tokens, hover help on every feature/group/metric (descriptions from `meta.groups`), mobile-friendly layouts (tables scroll horizontally, charts reflow).
+Global: page titles per route (`Page`'s `docTitle`; tabs and bookmarks only, link previews read `index.html`), `/hypotheses` is labeled Evidence in the nav, Help tips open by tap, hover or keyboard and stay on screen (fixed position), header nav, "last updated" from `meta.generated_at` and the last lock, footer with credits and the "fan-made, not affiliated with the NFL" line, light/dark theme from the dataviz palette tokens, hover help on every feature/group/metric (descriptions from `meta.groups`), mobile-friendly layouts (tables scroll horizontally, charts reflow).
 
 ## Work order
 
@@ -51,7 +51,7 @@ Decided 2026-11-03 after the retrospective made the game page 21 sections long. 
 
 | Route | Summary strip | Tabs (`?tab=`) |
 |---|---|---|
-| `/`, `/week/:season/:week` | week recap: best approach, vs the market, picks right, biggest upset, luckiest team (finished weeks) | none; cards sort by `?sort=kickoff\|disagreement\|upset`, `?view=table` for the grid |
+| `/`, `/week/:season/:week` | week recap: best approach, vs the market, picks right, biggest upset, luckiest team (finished weeks) | none; cards sort by `?sort=kickoff\|disagreement\|upset` (`disagreement` is labeled Student vs market), `?view=table` for the grid |
 | `/game/:id` | pregame: the pick, vs the market, biggest factor, key absence or biggest edge; finished: result, approaches right, played like, swing plays, biggest surprise | `retro` (finished games with a retro; default), `preview` (default otherwise), `approaches`, `tendencies`, `details`, `news` |
 | `/tracker` | the Student vs the market, live games graded, best approach, calibration, paper bets | `season`, `backtest` (also log loss by season and disagreements, which span every season), `calibration`, `bets` |
 | `/hypotheses` | none | `time` (default; `?item=` picks the feature), `effects` |
@@ -72,7 +72,7 @@ Slate cards lead with the game too: teams, the line and total, a **why this game
 
 The tracker's season chart plots each line's gap to the market (market cumulative log loss minus the line's, so above zero is ahead), with a band at ±0.025 for gaps too close to call: `GAP_BAND`, the 90% range of a gap over 120 games, which narrows as games accumulate. References (`REFERENCES` in `lib/models.ts`) draw as a dashed ring in `Swatch`, so in tables and toggles, and `ModelBadge`'s `reference` prop adds a tag in tables. A list built from a data file filters with `isPublicLine`, so diagnostics never appear because the file carries them. The week recap's Full recap names the week's best call and costliest miss, from `best_call` and `costliest_call`.
 
-Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and log-loss gaps under 0.005 are "about the same".
+Tile values are pure functions of the site JSON (`pages/*/summary.ts`, `slate/recapTiles.ts`), unit-tested. Within 5 points of even, results and played-like are called a toss-up, and on the tracker, log-loss gaps under 0.025 are "about the same" (`GAP_BAND`; a week's recap tile uses 0.005 and only describes that week).
 
 ## The design language (decided 2026-11-03, ADR 0017; the rules every page follows)
 
@@ -85,7 +85,7 @@ Why: with the retrospective added, a finished game's page was 21 stacked section
 5. **Visual before table.** Tables live behind "show the numbers"; the injury report is the one table-first section.
 6. **Status and meta are quiet.** Kickoff, stadium, QBs and lock status are one muted line under the title; the final score is the only loud element.
 7. **Team identity without logos** (ADR 0011): a thin team-color bar (`TeamAccent`, from nflverse `teams`, with a ring for dark colors) under each code; approach colors stay the chart colors.
-8. **Calls are honest about noise.** Within 5 points of even a result or a played-like is a toss-up; log-loss gaps under 0.005 are "about the same"; a line older than 3 days says so ("line from Oct 27").
+8. **Calls are honest about noise.** Within 5 points of even a result or a played-like is a toss-up; on the tracker, log-loss gaps under 0.025 are "about the same" (`GAP_BAND`; a week's recap tile uses 0.005 and only describes that week); a line older than 3 days says so ("line from Oct 27").
 9. **Slate as matchup cards** on every screen size, one computed sentence each, sorted by `?sort=`; `?view=table` keeps the grid for power users.
 10. **Phone first for the slate and the game page**; the tracker and build-your-own may lean desktop.
 

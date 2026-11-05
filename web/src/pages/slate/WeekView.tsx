@@ -8,6 +8,7 @@ import { ago, kickoffEt, spreadLabel } from '../../lib/format'
 import { approachOf } from '../../lib/meta'
 import { APPROACHES, colorVar } from '../../lib/models'
 import { GameCard } from './GameCard'
+import { LastWeek } from './LastWeek'
 import { Recap } from './Recap'
 import { correct, divergenceText, DIVERGE, gameStatus, neighbours, parseSort, pickOf, scoreText, SORTS, sortGames, weekHref, type SortKey } from './helpers'
 
@@ -21,7 +22,8 @@ export function WeekView({ meta, season, week }: { meta: Meta; season: number; w
         Site data updated {ago(meta.generated_at)}.{' '}
         {lock ? `Last lock: week ${lock.week}, ${kickoffEt(lock.lock_ts)}.` : 'No live lock yet.'}
       </p>
-      <Recap season={season} week={week} />
+      {season === meta.season && week === meta.current_week && week > 1 && <LastWeek meta={meta} season={season} week={week - 1} />}
+      <Recap season={season} week={week} enabled={q.data?.games.some((g) => g.result != null) ?? false} />
       {q.isError && isNotFound(q.error) ? (
         <Card>
           <div className="font-medium">No slate for {season} week {week} yet.</div>

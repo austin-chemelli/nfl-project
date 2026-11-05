@@ -20,14 +20,14 @@ export function SeasonGrid({ rows, ids, current }: { rows: Row[]; ids: string[];
                 {`'${String(s).slice(2)}`}
               </th>
             ))}
-            <th className="whitespace-nowrap pl-2 text-right font-normal text-ink-3">Up seasons</th>
+            <th className="whitespace-nowrap pl-2 text-right font-normal text-ink-3">Finished seasons up</th>
           </tr>
         </thead>
         <tbody>
           {ids.map((m) => {
             const mine = seasons.map((s) => at.get(`${m}|${s}`))
-            const up = mine.filter((r) => r && r.units > 0).length
-            const played = mine.filter(Boolean).length
+            const up = mine.filter((r, i) => r && seasons[i] !== current && r.units > 0).length
+            const played = mine.filter((r, i) => r && seasons[i] !== current).length
             return (
               <tr key={m}>
                 <th scope="row" className="sticky left-0 z-10 whitespace-nowrap bg-surface-0 pr-2 text-left font-normal">

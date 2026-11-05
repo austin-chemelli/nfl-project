@@ -436,3 +436,15 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** A plan's line such as "per approach" is a guess until it meets real rows, and five minutes with the data beats building it.
 
+
+## 2026-11-05: site walk fixes, all of review §10 (M13)
+
+**Why.** Four simulated test users walked the site and left 9 bugs and 18 small changes (`.notes/project-review-2026-11.md` §10). Austin asked for all of them, plus a last-week line on the slate.
+
+**What changed.** Preview Elo replays every season (`site.py`), as the lock does. Every "?" works on touch and stays on screen. The tracker has one too-close-to-call threshold, 0.025, so the Best approach tile no longer crowns a winner inside the noise. Slate cards name the Student's pick, the home page says what the site is, the slate shows last week's record, and the Disagreement sort is now Gap to market. The Sharp's negative shares are drawn. Retro swing sentences are rewritten, so `SCHEMA_VERSION` is 5. The rest is copy: periods, units, labels, page titles, a nav fade, and History renamed Evidence in the nav.
+
+**Findings.** Replaying Week 9 on real data, all 15 previews differed from the full-history Elo by at least 0.5 points, up to 14.8 (ARI @ SEA 68% against 83%). Display only: locks and grades already used full history. Two bugs were hiding behind others. The Sharp's budget looked short because `sortedShares` dropped negatives, not because of the way shares are counted. And once a tap opened the "?", the tip ran off the left edge of a phone (left −126 on a 390-wide screen), which no test user could have seen, so tips are now fixed to the screen. Paper bets start in 2006 because prices do: none of 2005's 267 games has one.
+
+**Review.** It caught claims the plan itself had wrong. A schedule line's `as_of` is a synthetic stamp, so printing it as a market time was false on 108 finished games; only snapshots print a time now. "Models trained only on earlier seasons" overclaimed: Elo updates game by game, and a few settings were chosen on 2022-24 and apply to every season. "Hurt both teams" was false on 2 games with a team at exactly 0.0. A re-walk by two personas found that the new last-week line read like a live record, when Week 8 was backfill, and that `hover:no-underline` had never worked, because unlayered `a:hover` beats every Tailwind layer.
+
+**Lesson.** Rebuilding `.data-prod` with local marts mixes stale predictions into production files. Check code changes on the rebuild, then sync back from the bucket before anyone walks the site. And copy written into a plan is a claim like any other: check it against the data the same way.

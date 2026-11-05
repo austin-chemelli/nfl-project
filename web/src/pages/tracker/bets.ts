@@ -13,11 +13,12 @@ export function signedPct(v: number, digits = 1): string {
   return `${v > 0 ? '+' : '−'}${s}%`
 }
 
-/** Units, signed and whole: "+14", "−38", "0". */
+/** Units, signed: "+14", "−38", "+0.4" under 1, "0" under 0.05. */
 export function signedUnits(v: number): string {
-  const r = Math.round(Math.abs(v))
-  if (r === 0) return '0'
-  return `${v > 0 ? '+' : '−'}${r}`
+  const a = Math.abs(v)
+  if (a < 0.05) return '0'
+  const s = a < 1 ? a.toFixed(1) : String(Math.round(a))
+  return `${v > 0 ? '+' : '−'}${s}`
 }
 
 /**
