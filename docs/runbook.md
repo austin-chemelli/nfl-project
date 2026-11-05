@@ -122,9 +122,10 @@ uv run nfl hypotheses && uv run nfl diy-matrix
 Then merge the PR, wait for the image (`gh run list --workflow ci.yml --limit 1`), and upload straight away:
 
 ```
-gcloud storage rsync -r $NFL_DATA_ROOT/marts gs://nfl-project-prod-data/marts
+gcloud storage rsync -r --checksums-only $NFL_DATA_ROOT/marts gs://nfl-project-prod-data/marts
+gcloud storage rsync -r --checksums-only --dry-run $NFL_DATA_ROOT/marts gs://nfl-project-prod-data/marts   # must list nothing
 gcloud run jobs execute nfl-site --region us-central1 --wait
 gcloud run jobs execute nfl-lock-thu --region us-central1 --args="lock,thu,--dry-run,--no-odds" --wait
 ```
 
-The dry run must pass before the wave counts as done. Then `uv run nfl readme` from the primary checkout.
+Don't pipe the upload through anything that hides its exit status, and don't skip the second pass: the first cutover left 28 fits at their old versions with no visible error, and the site job failed on the hash check. Back up `marts/` first. The dry run must pass before the wave counts as done. Then `uv run nfl readme` from the primary checkout.

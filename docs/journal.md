@@ -338,6 +338,8 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** Scale a live-only feature from what it does, not from a guess: the declared SD of 1.5 was fine for a normal week and useless for the one game that mattered.
 
+**Cutover (evening of 2026-11-04).** Austin moved it up from Week 10 to before the first public lock, because production had no live rows: the whole public record starts on this model and the ensemble never locked. U1 merged first, PR #12 followed, and the marts went up. The first `nfl-site` run failed on a config-hash mismatch for the Analyst: 28 of the 308 fit files in the bucket were still their October versions after the upload. The cause isn't established. Their sizes all differed, so rsync had no reason to skip them; the upload's output was piped into `grep -c`, which hid any errors and its exit status, and the network dropped at least once around then, so failed copies are the likely explanation. An MD5 comparison of every file found them, they were copied individually, and all 308 fits were then checked by checksum. Then the site job and a cloud dry-run lock passed on `2bdcf05`. The hash guard did its job: it refused to publish mixed weights. Nothing wrong reached the public site. The runbook now requires reading the upload's exit status and a second pass that must find nothing to copy.
+
 ## 2026-11-04: the game page leads with the game (U2)
 
 **Why.** Austin's feedback F2 to F4: everything above the fold was the approaches, the tale of the tape gave no way to tell whether a gap was big, and Tendencies was buried. D4 scales the bars by the Global fit.
@@ -357,4 +359,3 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 **Findings.** Brand colors fail as marks: Ravens purple and Bears navy vanish on a dark page, and four teams share `#002244`. Of 992 matchups, fitting alone left 86 failures under red-green colorblind simulation and two Saints games that nothing could separate, until the pair picker scored colorblind distance too and the Saints and Raiders got an ink neutral. JAX @ BAL first came out as Jacksonville gold: teal and purple sit at one lightness. Splitting them by a lightness step before reaching for a secondary color kept both teams recognizable; that needed the target at 18 rather than 20, still above the hard floor of 15.
 
 **Lesson.** Red-and-blue was a default nobody chose. Asking what a color means on each page separated what should become a team (toward JAX) from what shouldn't (helped, hurt, better than the market).
-

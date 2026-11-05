@@ -4,7 +4,7 @@ Where the project is right now. Chats keep it current as they work ([state-maint
 
 ## Bottom line (as of 2026-11-04)
 
-The numeric pipeline and the public site run on schedules with nobody touching them. Locks went live on 2026-11-04 (PR #6): the first public lock is Thursday 2026-11-05 at 09:00 ET. The desktop's scheduled task was registered the same day, and its first real pass is 2026-11-04 at 18:00 ET. This week shipped the site's v2 layout (one answer first, ADR 0017), fixed three number bugs a cross-check of production found (market consensus near even money, an Elo leak in after-the-fact scoring, Week 8 missing from the tracker), and put the desktop research on a Wednesday and Saturday schedule. Next: watch the first live locks, then the narrative's previews and evals (M6.3, M6.4).
+The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock is Thursday 2026-11-05 at 09:00 ET, on model wave 2 (ADR 0018). Wave 2 went live tonight: football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. Next: watch the first live locks, finish the UI round (game page next), then the narrative's previews and evals (M6.3, M6.4).
 
 ## What runs where
 
@@ -86,8 +86,8 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| ui | `ui-u2-game-page` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | U1 (ensemble off the site, Student headline) merged 2026-11-04 (#11); U2 game page built 2026-11-04, Austin's first notes done (team colors, hover cards, range bars, theme), Austin signed off 2026-11-04, PR #13 open, merges after Thu 09:00; U3 retro next (waits on H3) | #11, #13 |
-| model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version` for the Week 10 Thursday lock. Runs parallel to ui (§8) | in PR, cutover 2026-11-04 evening, before the first lock | #12 |
+| ui | `ui-u2-game-page` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | U1 (ensemble off the site, Student headline) merged 2026-11-04 (#11); U2 game page built 2026-11-04, Austin's first notes done (team colors, hover cards, range bars, theme), Austin signed off 2026-11-04, PR #13 merges before the Thu 09:00 lock (Austin, 2026-11-04); U3 retro next (waits on H3) | #11, #13 |
+| model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
@@ -104,7 +104,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M8 observability | alerts done; uptime check on `meta.json` and a data-freshness alert still open |
 | M9 game retrospective (ADR 0016) | done 2026-11-02 |
 | M10 site v2, one answer first (ADR 0017) | done 2026-11-04 (PR #4) |
-| M11 model wave 2 (ADR 0018) | PR #12; cutover the evening of 2026-11-04, before the first public lock |
+| M11 model wave 2 (ADR 0018) | done 2026-11-04 (PR #12), live before the first public lock |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -133,10 +133,10 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 ## Known issues and risks
 
-- **Upcoming games priced the previous starter, not the named one** (Baltimore on Lamar Jackson's career with Tyler Huntley charted; Arizona likewise). Fixed on `qb-charted-starter`: upcoming games follow the depth chart's QB1. Not live until that PR merges and its image builds. Huntley missed Wednesday's practice, so the chart may change again; the lock follows whatever nflverse has at 09:00.
+- **Baltimore's Week 9 starter is uncertain.** Tyler Huntley missed Wednesday's practice and Joe Fagnano took full reps. The lock uses the depth chart nflverse has at 09:00.
 - **First live locks** Thu 2026-11-05 09:00 and Sat 2026-11-07 12:00: watch the executions and the lock commits; the laptop fallback is `uv run nfl lock --slot thu` in the primary checkout. Thursday's is the first push from the cloud: dry runs don't push, so the deploy key's write access is confirmed but the push itself is untested.
 - **First desktop pass** 2026-11-04 18:00 ET: the task's environment is tested (entry `desktop setup test` in Cloud Logging), a full scheduled run isn't. The 08:30 check on 2026-11-05 emails if it didn't upload.
-- **Production retros are v1 until the 07:00 run on 2026-11-05** rebuilds all 2026 retros with the league bands, the Elo fix and the Week 8 backfill rows. Until then 28 Week 8 retros show a graded Elo that differs from the game page.
+- Follow-up to wave 2: the retro's kicking luck should read against the kicker's own season rate (`src/nfl/retro/game.py`, after the UI retro PR).
 - A correction to an earlier game doesn't mark later retros stale (accepted 2026-11-03; the daily job only rehashes each game's own inputs).
 - NO @ NYG Week 6: the books' spread and moneyline disagree on the favorite at a coin flip. Real market data, not a bug.
 - The GCP free trial ends about late January 2027: upgrade the billing account before then (`docs/hosting.md` §3.1).

@@ -18,14 +18,13 @@ No graded live locks yet. Lock files are committed under `public/predictions/` b
 
 | Model | Games | Log loss | Δ vs market (90% CI) |
 |---|---|---|---|
-| Market (vig-free moneyline) | 5,777 | 0.6095 |  |
-| Ensemble (average of the four) | 5,790 | 0.6242 | +0.0146 (+0.0108 to +0.0189) |
-| The Traditionalist | 5,790 | 0.6305 | +0.0209 (+0.0162 to +0.0263) |
-| The Analyst | 5,790 | 0.6281 | +0.0184 (+0.0135 to +0.0231) |
-| The Sharp | 5,790 | 0.6291 | +0.0193 (+0.0143 to +0.0246) |
-| The Student | 5,790 | 0.6259 | +0.0163 (+0.0122 to +0.0202) |
-| Elo | 5,777 | 0.6295 | +0.0200 (+0.0160 to +0.0237) |
-| Home team 57% | 5,777 | 0.6865 | +0.0770 (+0.0700 to +0.0840) |
+| Market (vig-free moneyline) | 5,804 | 0.6095 |  |
+| The Traditionalist | 5,804 | 0.6294 | +0.0199 (+0.0151 to +0.0247) |
+| The Analyst | 5,804 | 0.6250 | +0.0155 (+0.0115 to +0.0193) |
+| The Sharp | 5,804 | 0.6288 | +0.0193 (+0.0145 to +0.0246) |
+| The Student | 5,804 | 0.6247 | +0.0152 (+0.0110 to +0.0190) |
+| Elo | 5,804 | 0.6295 | +0.0200 (+0.0154 to +0.0241) |
+| Home team 57% | 5,804 | 0.6865 | +0.0771 (+0.0699 to +0.0831) |
 
 <!-- scorecard:end -->
 
