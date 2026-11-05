@@ -321,21 +321,33 @@ def test_card_usual_qb_counts_only_games_already_played():
     assert card["last_qb"]["home"] == "Played"
 
 
-def test_card_marks_starters_and_absences_that_are_new():
+def test_card_marks_starters_by_player_id_and_absences_new_since_the_last_game():
     def inj(player, week, status="Out"):
-        return {"week": week, "team": "BAL", "player": player, "pos": "WR", "status": status}
+        return {"week": week, "team": "BAL", "gsis_id": player, "player": player, "pos": "WR", "status": status}  # fmt: skip
 
-    injuries = [inj("New Guy", 8), inj("Long Term", 8), inj("Long Term", 7), inj("Bye Week", 8),
-                inj("Bye Week", 6), inj("Back Up", 8), inj("Was Fine", 8), inj("Was Fine", 7, "Questionable")]  # fmt: skip
-    g = _g("G", datetime(2026, 10, 25, 17), "BAL", "KC")
-    card = site._card(g, {}, injuries, datetime(2026, 10, 20), {}, {}, pl.DataFrame(), {},
-                      starters={("BAL", "new guy")}, listed=site._listed(injuries))  # fmt: skip
+    injuries = [inj("New Guy", 9), inj("Long Term", 9), inj("Long Term", 8), inj("Re Hurt", 9),
+                inj("Re Hurt", 7), inj("Back Up", 9), inj("Was Fine", 9), inj("Was Fine", 8, "Questionable")]  # fmt: skip
+    g = _g("G", datetime(2026, 11, 1, 17), "BAL", "KC", week=9)
+    card = site._card(g, {}, injuries, datetime(2026, 10, 30), {}, {}, pl.DataFrame(), {},
+                      starters={("G", "BAL"): {"New Guy"}}, listed=site._listed(injuries),
+                      prev_game={("BAL", 9): 8})  # fmt: skip
     by = {i["player"]: i for i in card["injuries"]}
     assert by["New Guy"]["starter"] and by["New Guy"]["new"]
     assert not by["Back Up"]["starter"]
     assert not by["Long Term"]["new"]
-    assert not by["Bye Week"]["new"]  # out, a bye, out again
+    assert by["Re Hurt"]["new"]  # out in 7, played 8, out in 9: Lamar Jackson's pattern in 2026
     assert by["Was Fine"]["new"]  # questionable last week isn't a missed game
+
+
+def test_a_bye_does_not_make_a_long_absence_look_new():
+    games = pl.DataFrame([{"week": w, "home_team": "BAL", "away_team": "KC"} for w in (5, 7)])
+    prev = site._prev_game_weeks(games)
+    assert prev == {("BAL", 7): 5, ("KC", 7): 5}
+    i = {"week": 7, "team": "BAL", "gsis_id": "x", "player": "P", "pos": "WR", "status": "Out"}
+    g = _g("G", datetime(2026, 11, 1, 17), "BAL", "KC", week=7)
+    card = site._card(g, {}, [i], datetime(2026, 10, 30), {}, {}, pl.DataFrame(), {},
+                      listed={("BAL", "P", 5)}, prev_game=prev)  # fmt: skip
+    assert card["injuries"][0]["new"] is False
 
 
 def test_card_skips_an_injury_with_no_player_name():
@@ -349,11 +361,79 @@ def test_named_qbs_turns_ids_into_names_and_drops_unknown_ids():
     assert site._named_qbs(charted, {"00-1": "Tyler Huntley"}) == {("G", "BAL"): "Tyler Huntley"}
 
 
-def test_charted_qbs_is_empty_without_depth_charts_or_upcoming_games(tmp_path):
-    games = pl.DataFrame({"game_id": ["G"], "kickoff_utc": [datetime(2026, 10, 25, 17)]})
+def _charts_root(tmp_path):
     paths = Paths(tmp_path)
-    assert site._charted_qbs(paths, games, 2026, datetime(2026, 10, 20)) == {}
-    assert site._charted_qbs(paths, games, 2026, datetime(2026, 11, 20)) == {}
+    d = paths.curated_table("depth_charts") / "season=2026"
+    d.mkdir(parents=True)
+    pl.DataFrame({
+        "gsis_id": ["00-1", "00-1"], "player_name": ["Gardner Minshew II", "Gardner Minshew"],
+        "dt": ["2026-11-01", "2026-09-01"],
+    }).write_parquet(d / "p.parquet")  # fmt: skip
+    return paths
+
+
+def test_depth_context_is_empty_without_depth_charts(tmp_path):
+    games = pl.DataFrame({"game_id": ["G"], "kickoff_utc": [datetime(2026, 10, 25, 17)]})
+    assert site._depth_context(Paths(tmp_path), games, 2026, datetime(2026, 10, 20)) == ({}, {})
+
+
+def test_depth_context_charts_only_games_not_yet_kicked_off(tmp_path, monkeypatch):
+    from nfl.features import availability
+
+    seen = []
+
+    def qb1(games, depth, ts):
+        seen.append(games["game_id"].to_list())
+        return pl.DataFrame({"game_id": ["LATER"], "team": ["BAL"], "qb1": ["00-1"]})
+
+    monkeypatch.setattr(availability, "load_depth", lambda p: pl.DataFrame())
+    monkeypatch.setattr(availability, "charted_qb1", qb1)
+    monkeypatch.setattr(
+        availability, "charted_starters",
+        lambda g, d, t: pl.DataFrame({"game_id": ["PAST"], "team": ["BAL"], "gsis_id": ["00-9"]}),
+    )  # fmt: skip
+    games = pl.DataFrame({
+        "game_id": ["PAST", "LATER"],
+        "kickoff_utc": [datetime(2026, 10, 18, 17), datetime(2026, 10, 25, 17)],
+    })  # fmt: skip
+    charted, starters = site._depth_context(_charts_root(tmp_path), games, 2026, datetime(2026, 10, 20))  # fmt: skip
+    assert seen == [["LATER"]]
+    assert charted == {("LATER", "BAL"): "Gardner Minshew II"}  # the latest spelling
+    assert starters == {("PAST", "BAL"): {"00-9"}}  # starters cover every game
+
+
+def test_build_puts_a_card_on_every_slate_row(tmp_path, monkeypatch):
+    """The wiring: `_card` is tested alone, this proves `build` calls it with what it computed."""
+    from nfl.llm import narrative
+
+    kick = datetime(2099, 10, 25, 17)
+    row = _g("G", kick, "BAL", "KC", "Lamar Jackson", "Patrick Mahomes", week=8) | {"season": 2099}
+    games = pl.DataFrame([row])
+    feats = pl.DataFrame(schema={"game_id": pl.Utf8, "feature": pl.Utf8, "side": pl.Utf8,
+                                 "value": pl.Float64, "known_as_of": pl.Datetime("us"),
+                                 "season": pl.Int64, "week": pl.Int64})  # fmt: skip
+    edge = {"quality": {"favors": "BAL", "strength_pct": 90.0}}
+    hurt = {"week": 8, "team": "BAL", "gsis_id": "00-1", "player": "P", "pos": "WR", "status": "Out",
+            "practice": None, "injury": None}  # fmt: skip
+    monkeypatch.setattr(site.store, "games_frame", lambda p: games)
+    monkeypatch.setattr(site.store, "read_features", lambda p, seasons: feats)
+    monkeypatch.setattr(site, "display_rows", lambda p, g, n: pl.DataFrame())
+    monkeypatch.setattr(site, "_market_by_game", lambda p, g, n: pl.DataFrame())
+    monkeypatch.setattr(site, "group_edges", lambda p, g, f, s, n: {"G": edge})
+    monkeypatch.setattr(site, "_injuries", lambda p, s: [hurt])
+    monkeypatch.setattr(site, "tracker", lambda p, s, r: {})
+    monkeypatch.setattr(site, "audit", lambda p: {})
+    monkeypatch.setattr(site, "write_retro", lambda p, s: [])
+    monkeypatch.setattr(narrative, "load_records", lambda p, s: [])
+    monkeypatch.setattr(site, "_depth_context", lambda p, g, s, n: (
+        {("G", "BAL"): "Charted Guy"}, {("G", "BAL"): {"00-1"}}))  # fmt: skip
+    paths = Paths(tmp_path)
+    paths.site.mkdir(parents=True)
+    site.build(paths, 2099)
+    card = json.loads((paths.site / "slate_2099_08.json").read_text())["games"][0]["card"]
+    assert card["edges"] == edge
+    assert card["charted_qb"] == {"home": "Charted Guy", "away": None}
+    assert card["injuries"][0]["starter"] and card["injuries"][0]["new"]
 
 
 def test_qb_starts_sorts_by_kickoff_whatever_the_input_order():

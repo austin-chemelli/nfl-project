@@ -70,14 +70,20 @@ export function previewRows(g: Game, meta: Meta, approach: string | null): Previ
   const base = g.contributions.global
   const over = approach ? g.contributions[approach] : undefined
   if (!base) return []
+  // The fit's home bonus is a constant, and the neutral-site discount sits in Venue & weather. Read
+  // apart, a neutral game shows a full home edge; so that discount moves onto the home field row.
+  const discount = (c: Contribution | undefined) => (g.neutral_site ? (c?.groups.venue_weather?.features['environment.neutral_site'] ?? 0) : 0)
+  const homeField = (c: Contribution | undefined) => (c?.home_field_pp == null ? null : c.home_field_pp + discount(c))
   const rows: PreviewRow[] = [{
-    id: 'home_field', name: 'Home field', help: 'The built-in edge the home team gets before anything else is considered.',
-    edge: g.neutral_site ? 'neutral site' : `${g.home} at home`, pct: null, pp: base.home_field_pp ?? 0, overlay: over?.home_field_pp ?? null,
+    id: 'home_field', name: 'Home field',
+    help: g.neutral_site ? 'A neutral site: what is left of the listed home team\'s usual edge.' : 'The built-in edge the home team gets before anything else is considered.',
+    edge: g.neutral_site ? 'neutral site' : `${g.home} at home`, pct: null, pp: homeField(base) ?? 0, overlay: homeField(over),
   }]
   for (const { id, name } of meta.groups.groups) {
     if (isContextOnly(meta, id)) continue
-    const pp = base.groups[id]?.pp ?? null
-    const overlay = over?.groups[id]?.pp ?? null
+    const venue = id === 'venue_weather'
+    const pp = base.groups[id]?.pp == null ? null : (base.groups[id].pp as number) - (venue ? discount(base) : 0)
+    const overlay = over?.groups[id]?.pp == null ? null : (over.groups[id].pp as number) - (venue ? discount(over) : 0)
     if (pp == null && !overlay) continue
     const edge = countsAsEdge(meta, id, g.neutral_site) ? g.edges[id] : undefined
     rows.push({ id, name, help: helpFor(meta, id), edge: edgeLabel(edge), pct: edge?.strength_pct ?? null, pp, overlay })

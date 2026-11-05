@@ -139,7 +139,11 @@ export const GameRow = z.looseObject({
   result: z.looseObject({ home_score: nnum, away_score: nnum, margin: num }).nullable(),
   market: MarketLine.nullable(),
   models: z.record(z.string(), ModelPick),
-  card: CardData.nullable().default(null).catch(null), // a bad card costs that game its why line, not the week its slate,
+  // a bad card costs that game its why line, not the week its slate; contract.test.ts checks cards strictly
+  card: CardData.nullable().default(null).catch((ctx) => {
+    console.warn('slate card dropped', ctx.error.issues.slice(0, 3))
+    return null
+  }),
 })
 
 export const Slate = z.looseObject({

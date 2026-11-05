@@ -219,3 +219,24 @@ describe('edges that are not edges', () => {
     expect(edgeRows(edges, meta).rows[0].sentence).toContain('99th percentile')
   })
 })
+
+describe('home field on a neutral site', () => {
+  const venue = (pp: number, n: number) => ({ pp, features: { 'environment.neutral_site': n, 'environment.is_turf': pp - n } })
+  const c = (hf: number, pp: number, n: number) => ({ p_home: 0.5, home_field_pp: hf, groups: { venue_weather: venue(pp, n) } })
+  const g = (neutral: boolean) => ({ ...game, neutral_site: neutral, edges: {}, contributions: { global: c(6, -3.2, -3.8), student: c(6.3, -4, -4.6) } }) as unknown as Game
+
+  it('moves the neutral-site discount from Venue & weather onto the home field row', () => {
+    const rows = Object.fromEntries(previewRows(g(true), meta, 'student').map((r) => [r.id, r]))
+    expect(rows.home_field.pp).toBeCloseTo(2.2)
+    expect(rows.home_field.overlay).toBeCloseTo(1.7)
+    expect(rows.venue_weather.pp).toBeCloseTo(0.6)
+    expect(rows.venue_weather.overlay).toBeCloseTo(0.6)
+    expect(rows.home_field.edge).toBe('neutral site')
+  })
+  it('leaves a home game alone', () => {
+    const rows = Object.fromEntries(previewRows(g(false), meta, 'student').map((r) => [r.id, r]))
+    expect(rows.home_field).toMatchObject({ pp: 6, overlay: 6.3 })
+    expect(rows.venue_weather.pp).toBeCloseTo(-3.2)
+  })
+})
+

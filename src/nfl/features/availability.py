@@ -361,6 +361,14 @@ def charted_qb1(games: pl.DataFrame, depth: pl.DataFrame, build_ts: datetime) ->
     )
 
 
+def charted_starters(games: pl.DataFrame, depth: pl.DataFrame, build_ts: datetime) -> pl.DataFrame:
+    """(game_id, team, gsis_id): everyone listed first at a position for each game-team, special
+    teams excluded, from the same lookup `compute` uses."""
+    return (
+        _charts(_game_teams(games, build_ts), depth).select("game_id", "team", "gsis_id").unique()
+    )
+
+
 def compute(
     games: pl.DataFrame,
     injuries: pl.DataFrame,

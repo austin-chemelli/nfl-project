@@ -36,7 +36,12 @@ function files(root: string): string[] {
 function check(root: string, rel: string) {
   const schema = schemaFor(rel)
   if (!schema) return
-  const parsed = schema.safeParse(JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8')))
+  const raw = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'))
+  const parsed = schema.safeParse(raw)
+  // GameRow forgives a bad card at runtime, so drift has to fail here
+  for (const row of rel.startsWith('game/') ? [raw] : (raw.games ?? [])) {
+    if (row.card != null) expect(C.CardData.safeParse(row.card).error?.issues).toBeUndefined()
+  }
   if (!parsed.success) {
     const issues = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`)
     expect.fail(`${rel}\n  ${issues.join('\n  ')}`)

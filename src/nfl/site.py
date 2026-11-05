@@ -428,11 +428,13 @@ def build(paths: Paths, season: int | None = None) -> dict:
 
     narr = {r.game_id: r for r in load_records(paths, (season, season))}
     edges = group_edges(paths, games, feats, season, now)
+    charted, starters = _depth_context(paths, games, season, now)
     card_ctx = {
         "starts": _qb_starts(games),
-        "charted": _charted_qbs(paths, games, season, now),
-        "starters": _depth_starters(paths, season),
+        "charted": charted,
+        "starters": starters,
         "listed": _listed(injuries),
+        "prev_game": _prev_game_weeks(games),
         "ranks": _contrast_ranks(tend, season),
         "weather": feats.filter(pl.col("feature") == WEATHER_FEATURE) if not feats.is_empty() else feats,
     }  # fmt: skip
@@ -691,27 +693,32 @@ def _qb_starts(games: pl.DataFrame) -> dict[str, list[tuple[datetime, str]]]:
     return starts
 
 
-def _charted_qbs(
+def _depth_context(
     paths: Paths, games: pl.DataFrame, season: int, now: datetime
-) -> dict[tuple[str, str], str]:
-    """(game_id, team) -> the depth chart's QB1 by name, for games that haven't kicked off: the
-    starter the model prices. The schedule's name for an unplayed game is only a projection, and
-    has been wrong days out (Tyler Huntley for BAL in 2026 Week 8; Lamar Jackson started). Empty
-    without depth charts."""
+) -> tuple[dict[tuple[str, str], str], dict[tuple[str, str], set[str]]]:
+    """From the model's own depth-chart lookup: (game_id, team) -> charted QB1 by name for games
+    not yet kicked off, and (game_id, team) -> the ids of everyone listed first at a position,
+    special teams excluded. Both empty without depth charts, so the card claims nothing."""
     import duckdb
 
     from nfl.features import availability
 
     chart_dir = paths.curated_table("depth_charts") / f"season={season}"
+    if games.is_empty() or not any(chart_dir.glob("*.parquet")):
+        return {}, {}
+    depth = availability.load_depth(paths)
+    starters: dict[tuple[str, str], set[str]] = {}
+    for r in availability.charted_starters(games, depth, now).iter_rows(named=True):
+        starters.setdefault((r["game_id"], r["team"]), set()).add(r["gsis_id"])
     upcoming = games.filter(pl.col("kickoff_utc") > now)
-    if upcoming.is_empty() or not any(chart_dir.glob("*.parquet")):
-        return {}
+    if upcoming.is_empty():
+        return {}, starters
+    # oldest first, so the latest spelling of a name wins whatever the file order
     ids = duckdb.sql(
-        f"select distinct gsis_id, player_name from read_parquet('{chart_dir.as_posix()}/*.parquet') "
-        "where gsis_id is not null and player_name is not null"
+        f"select gsis_id, player_name from read_parquet('{chart_dir.as_posix()}/*.parquet') "
+        "where gsis_id is not null and player_name is not null order by dt nulls first"
     ).fetchall()
-    charted = availability.charted_qb1(upcoming, availability.load_depth(paths), now)
-    return _named_qbs(charted, dict(ids))
+    return _named_qbs(availability.charted_qb1(upcoming, depth, now), dict(ids)), starters
 
 
 def _named_qbs(charted: pl.DataFrame, names: dict[str, str]) -> dict[tuple[str, str], str]:
@@ -750,24 +757,28 @@ def _listed(injuries: list[dict]) -> set[tuple[str, str, int]]:
     return {(i["team"], i["player"], i["week"]) for i in injuries if _missing(i)}
 
 
-def _depth_starters(paths: Paths, season: int) -> set[tuple[str, str]]:
-    """(team, lowercase name) of everyone listed first at a position this season. Without depth
-    charts nobody is, so the card says nothing about absences rather than guessing."""
-    import duckdb
-
-    chart_dir = paths.curated_table("depth_charts") / f"season={season}"
-    if not any(chart_dir.glob("*.parquet")):
-        return set()
-    return {
-        (team, name)
-        for team, name in duckdb.sql(
-            f"select distinct team, lower(player_name) from read_parquet('{chart_dir.as_posix()}/*.parquet') "
-            "where pos_rank = 1 and player_name is not null"
-        ).fetchall()
-    }  # fmt: skip
+def _prev_game_weeks(games: pl.DataFrame) -> dict[tuple[str, int], int]:
+    """(team, week) -> the week of that team's previous game, so a bye doesn't look like a gap."""
+    weeks: dict[str, list[int]] = {}
+    for g in games.sort("week").iter_rows(named=True):
+        for t in (g["home_team"], g["away_team"]):
+            weeks.setdefault(t, []).append(int(g["week"]))
+    return {(t, w): ws[i - 1] for t, ws in weeks.items() for i, w in enumerate(ws) if i}
 
 
-def _card(g, edges, injuries, now, starts, ranks, weather, charted, starters=(), listed=()) -> dict:
+def _card(
+    g,
+    edges,
+    injuries,
+    now,
+    starts,
+    ranks,
+    weather,
+    charted,
+    starters=None,
+    listed=(),
+    prev_game=None,
+) -> dict:
     """The slate card block (U4): why-this-game data, as known at the same cut `_game_detail` uses."""
     gid, teams = g["game_id"], (g["home_team"], g["away_team"])
     cut = min(g["kickoff_utc"], now)
@@ -784,9 +795,11 @@ def _card(g, edges, injuries, now, starts, ranks, weather, charted, starters=(),
                 "player": i["player"],
                 "pos": i["pos"],
                 "status": i["status"],
-                "starter": (i["team"], i["player"].lower()) in starters,
-                # two weeks back, so a bye doesn't make a long absence look new
-                "new": not any((i["team"], i["player"], i["week"] - k) in listed for k in (1, 2)),
+                "starter": i.get("gsis_id") in (starters or {}).get((gid, i["team"]), ()),
+                # against the team's last game, not the calendar: a bye isn't a return, and a
+                # player back for a week and hurt again is news
+                "new": (i["team"], i["player"], (prev_game or {}).get((i["team"], i["week"])))
+                not in listed,
             }
             for i in injuries
             if i["week"] == g["week"] and i["team"] in teams and _missing(i)
@@ -913,11 +926,11 @@ def _injuries(paths: Paths, season: int) -> list[dict]:
     if not d.exists():
         return []
     df = duckdb.sql(
-        f"select week, team, full_name, position, report_status, practice_status, report_primary_injury "
+        f"select week, team, gsis_id, full_name, position, report_status, practice_status, report_primary_injury "
         f"from read_parquet('{d.as_posix()}/*.parquet') where report_status is not null"
     ).pl()
     return [
-        {"week": r["week"], "team": r["team"], "player": r["full_name"], "pos": r["position"],
+        {"week": r["week"], "team": r["team"], "gsis_id": r["gsis_id"], "player": r["full_name"], "pos": r["position"],
          "status": r["report_status"], "practice": r["practice_status"], "injury": r["report_primary_injury"]}
         for r in df.iter_rows(named=True)
     ]  # fmt: skip

@@ -81,6 +81,10 @@ describe('Slate page', () => {
     expect(within(card).getByText(/total 47.5/)).toBeInTheDocument()
     const bal = screen.getByRole('link', { name: /^BAL\s*@\s*BUF\s*\S/ })
     expect(within(bal).getByText('Tyler Huntley listed to start for BAL (usually Lamar Jackson) · BUF without A Receiver (WR)')).toBeInTheDocument()
+    // the link reads the teams and kickoff, then the why line as its description, not the whole card
+    expect(bal).toHaveAccessibleName(/^BAL\s*@\s*BUF.*ET/)
+    expect(bal.getAttribute('aria-labelledby')).toBeTruthy()
+    expect(bal).toHaveAccessibleDescription('Tyler Huntley listed to start for BAL (usually Lamar Jackson) · BUF without A Receiver (WR)')
     expect(within(screen.getByRole('link', { name: /^MIN\s*@\s*DET\s*\S/ })).queryByText('Weather could be a factor')).toBeNull()
     expect(within(screen.getByRole('link', { name: /^KC\s*@\s*DEN\s*\S/ })).getByText('No standout edge')).toBeInTheDocument()
   })

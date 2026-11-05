@@ -183,18 +183,21 @@ const sameQb = (a: string, b: string) => {
 }
 
 /**
- * The QB news for one team, or null. Nothing here is confirmed: for an unplayed game the schedule's
- * name is a projection (it had Tyler Huntley days before Lamar Jackson started in 2026 Week 8), so
- * the line says "listed", leads with the depth chart the model prices, and says so when the two
- * sources disagree. No claim when the starter is the regular, already has the job, or is hurt
- * (his absence says that better).
+ * The QB news for one team, or null. Neither source is reliable alone: replayed days out, the
+ * schedule's projected name and the depth chart each named the wrong man in about a third of the
+ * lines they would have printed. So this needs both. It says "listed" when they agree and "unclear"
+ * when they don't, and nothing once the game kicks off, when the chart is no longer read. A hurt
+ * player is out of the running: his absence says that better, and the other source may have the
+ * real story. `usual` comes back when the line names him, so the absence doesn't repeat it.
  */
-function qbPiece(team: string, schedule: string | null, charted: string | null, usual: string | null, last: string | null, injuries: CardData['injuries']): string | null {
-  const listed = charted ?? schedule
+function qbPiece(team: string, schedule: string | null, charted: string | null, usual: string | null, last: string | null, injuries: CardData['injuries']): { text: string; namesUsual: boolean } | null {
+  if (!schedule || !charted) return null
+  const hurt = (name: string) => injuries.some((i) => i.team === team && sameQb(i.player, name))
+  const names = [charted, schedule].filter((n) => !hurt(n))
+  if (names.length === 2 && !sameQb(charted, schedule)) return { text: `${team} starter unclear: ${charted} on the depth chart, ${schedule} on the schedule`, namesUsual: false }
+  const listed = names[0]
   if (!listed || !usual || sameQb(listed, usual) || (last && sameQb(listed, last))) return null
-  if (injuries.some((i) => i.team === team && sameQb(i.player, listed))) return null
-  if (charted && schedule && !sameQb(charted, schedule) && !sameQb(schedule, usual)) return `${team} starter unclear: ${charted} on the depth chart, ${schedule} on the schedule`
-  return `${listed} listed to start for ${team} (usually ${usual})`
+  return { text: `${listed} listed to start for ${team} (usually ${usual})`, namesUsual: true }
 }
 
 /** One line on why a pregame matchup is worth a look, from `g.card`: up to two pieces, most newsworthy first. */
@@ -208,10 +211,8 @@ export function whyLine(g: GameRow, meta: Meta): string | null {
   if (g.week === meta.current_week) {
     for (const [team, schedule, side] of [[g.away, g.away_qb, 'away'], [g.home, g.home_qb, 'home']] as const) {
       const piece = qbPiece(team, schedule, c.charted_qb[side], c.usual_qb[side], c.last_qb[side], c.injuries)
-      if (piece) {
-        pieces.push(piece)
-        if (c.usual_qb[side]) named.add(c.usual_qb[side])
-      }
+      if (piece) pieces.push(piece.text)
+      if (piece?.namesUsual && c.usual_qb[side]) named.add(c.usual_qb[side])
     }
   }
 
@@ -238,7 +239,7 @@ export function whyLine(g: GameRow, meta: Meta): string | null {
   return edge ? 'No standout edge' : null
 }
 
-/** The stark tendencies pairing, when there is one: "JAX's 3rd-most pass-heavy offense faces BAL's most blitz-heavy defense". */
+/** `The league's 3rd-most pass-heavy offense (JAX) faces its most blitz-heavy defense (BAL)`; null when nothing is stark. */
 export function contrastLine(g: GameRow): string | null {
   const x = g.card?.contrast
   if (g.result != null || !x) return null
