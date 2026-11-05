@@ -8,7 +8,7 @@ Steps (`run`):
   1. refresh  current-season nflverse data (idempotent ingest), an Odds API snapshot (3 credits),
               curate (incl. lines), all feature families stamped with this build time
   2. score    every approach flavor with the frozen fits trained through season − 1, the global fit,
-              the ensemble, and the reference models (market = vig-free moneyline as of the lock,
+              and the reference models (market = vig-free moneyline as of the lock,
               Elo walked over every completed game, naive); features as of lock_ts strictly
   3. record   append prediction rows (is_backfill=false, slot, lock_ts), open paper bets
   4. publish  public/predictions/<season>/week_<ww>_<slot>_<lock ts>.json (+ .sha256), sorted keys
@@ -107,10 +107,8 @@ class LockResult:
     bets_opened: int = 0
 
 
-def load_models(
-    paths: Paths, trained_through: int
-) -> tuple[list[tuple[str, Model, bool]], list[str]]:
-    """[(model_id, model, is_ensemble_member)]: the one public line per approach + global."""
+def load_models(paths: Paths, trained_through: int) -> tuple[list[tuple[str, Model]], list[str]]:
+    """[(model_id, model)]: the one public line per approach + global."""
     out, missing = [], []
     for a in [*load_all().values()]:
         if a.id == "narrative":
@@ -125,18 +123,16 @@ def load_models(
                 f"{a.id}: the YAML changed since its fit (config hash mismatch); run `nfl fit` "
                 "before locking, or the lock would publish stale weights"
             )
-        out.append((a.id, m, not a.shadow))
+        out.append((a.id, m))
     try:
-        out.append(
-            (ensemble.GLOBAL_ID, fit.load(paths, ensemble.GLOBAL_ID, trained_through), False)
-        )
+        out.append((ensemble.GLOBAL_ID, fit.load(paths, ensemble.GLOBAL_ID, trained_through)))
     except FileNotFoundError:
         missing.append(ensemble.GLOBAL_ID)
     return out, missing
 
 
 def score_approaches(
-    models: list[tuple[str, Model, bool]],
+    models: list[tuple[str, Model]],
     feats_long: pl.DataFrame,
     slate: pl.DataFrame,
     lock_ts: datetime,
@@ -147,15 +143,11 @@ def score_approaches(
     )
     vec = store.game_vectors(asof)
     ids = slate.select("game_id")
-    out, members = [], []
-    for mid, m, member in models:
+    out = []
+    for mid, m in models:
         wide = ids.join(store.to_wide(vec, m.features), on="game_id", how="left")
         sc = m.score(wide)
         out.append(Scored(mid, f"{m.meta.get('config_hash', '')}", sc))
-        if member:
-            members.append(sc)
-    if members:
-        out.append(Scored(ensemble.ENSEMBLE_ID, "mean-public", ensemble.combine(members)))
     return out
 
 

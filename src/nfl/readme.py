@@ -16,7 +16,6 @@ START = "<!-- scorecard:start -->"
 END = "<!-- scorecard:end -->"
 SHOW = [
     "market_baseline",
-    "ensemble",
     "traditionalist",
     "analyst",
     "sharp",
@@ -26,7 +25,6 @@ SHOW = [
 ]
 LABELS = {
     "market_baseline": "Market (vig-free moneyline)",
-    "ensemble": "Ensemble (average of the four)",
     "traditionalist": "The Traditionalist",
     "analyst": "The Analyst",
     "sharp": "The Sharp",

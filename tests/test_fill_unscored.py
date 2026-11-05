@@ -22,9 +22,9 @@ def _setup(tmp_path, monkeypatch):
     paths = Paths(tmp_path)
     paths.marts.mkdir(parents=True)
     prev = [
-        _pred("2026_07_A_B", 7, "ensemble", True, 0.6),  # backfilled earlier
-        _pred("2025_10_A_B", 10, "ensemble", True, 0.5),  # another season's backfill
-        _pred("2026_09_E_F", 9, "ensemble", False, 0.7),  # a live lock
+        _pred("2026_07_A_B", 7, "student", True, 0.6),  # backfilled earlier
+        _pred("2025_10_A_B", 10, "student", True, 0.5),  # another season's backfill
+        _pred("2026_09_E_F", 9, "student", False, 0.7),  # a live lock
     ]
     pl.DataFrame(prev, schema=PRED_SCHEMA).write_parquet(paths.marts / "predictions.parquet")
     games = pl.DataFrame(
@@ -39,8 +39,8 @@ def _setup(tmp_path, monkeypatch):
 
     def fake_score(_paths, g):
         scored.append(g.get_column("game_id").to_list())
-        rows = [_pred(gid, 8, m, True, 0.4) for gid in g["game_id"] for m in ("ensemble", "sharp")]
-        return pl.DataFrame(rows, schema=PRED_SCHEMA), {"ensemble", "sharp"}
+        rows = [_pred(gid, 8, m, True, 0.4) for gid in g["game_id"] for m in ("student", "sharp")]
+        return pl.DataFrame(rows, schema=PRED_SCHEMA), {"student", "sharp"}
 
     monkeypatch.setattr(run, "_score", fake_score)
     return paths, scored

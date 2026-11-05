@@ -18,8 +18,7 @@ st.markdown(
     """
 **What this is.** A weekly NFL preview and prediction tool that is educational first and
 market-aware second. Several *approaches* (the Traditionalist, the Analyst, the Sharp, the
-Student) weigh the same shared evidence differently, like different kinds of fans, plus an
-ensemble (their average). Each approach is **one line**: the persona's own weights, lightly
+Student) weigh the same shared evidence differently, like different kinds of fans. Each approach is **one line**: the persona's own weights, lightly
 fitted to history and then calibrated. Models produce every number; an LLM, where used, only
 explains and is never allowed to introduce a statistic.
 
@@ -51,7 +50,7 @@ Saturday). It:
 1. Downloads the latest public data and an odds snapshot, then rebuilds every feature, each row
    stamped with the time it became known.
 2. Scores the games that have not kicked off, using models fitted only through last season:
-   every approach, the ensemble, and the market, Elo and naive reference lines.
+   every approach and the market, Elo and naive reference lines.
 3. Appends the predictions (they are never edited) and opens paper bets at the current odds.
 4. Writes a signed-off file with a checksum and commits it, so the record cannot be quietly
    rewritten. A lock refuses games that have already kicked off, so the live record cannot be

@@ -11,7 +11,7 @@ export type Weights = GroupWeights | Record<string, GroupWeights>
 
 /** Group order of the matrix (nfl.features.groups.GROUPS); fixes the order of the encoded string. */
 export const GROUP_IDS = [
-  'quality', 'offense', 'defense', 'quarterback', 'health', 'form', 'stakes', 'rest_travel',
+  'quality', 'offense', 'defense', 'special_teams', 'quarterback', 'health', 'form', 'stakes', 'rest_travel',
   'venue_weather', 'coaching', 'off_scheme', 'def_scheme', 'matchups', 'market', 'buzz',
 ] as const
 

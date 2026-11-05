@@ -22,7 +22,7 @@ def planted(gid, margin=-3, ens_ll=1.0, luck=None, week=8):
         for f in t["luck"]:
             f["partly_skill"] = f["factor"] in SKILL
     for p in d["predictions"]:
-        if p["model_id"] == "ensemble":
+        if p["model_id"] in ("ensemble", "student"):
             p["log_loss"] = ens_ll
     for side, vals in (luck or {}).items():
         for f in d["teams"][side]["luck"]:

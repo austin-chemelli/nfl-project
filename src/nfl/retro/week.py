@@ -80,7 +80,7 @@ def _upsets(games: list[RetroGame], names: dict[str, str]) -> list[RecapGame]:
 def _misread(games: list[RetroGame], names: dict[str, str]) -> list[RecapGame]:
     rows = []
     for g in games:
-        e = next((p for p in g.predictions if p.model_id == "ensemble"), None)
+        e = next((p for p in g.predictions if p.model_id == "student"), None)
         if e is not None:
             rows.append((e.log_loss, e, g))
     out = []
@@ -98,7 +98,7 @@ def _misread(games: list[RetroGame], names: dict[str, str]) -> list[RecapGame]:
                 away=g.away,
                 home=g.home,
                 value=round(ll, 3),
-                sentence=f"The ensemble gave {nm(e.pick)} {round(100 * e.p_pick)}% and {end}.",
+                sentence=f"The Student gave {nm(e.pick)} {round(100 * e.p_pick)}% and {end}.",
             )
         )
     return out

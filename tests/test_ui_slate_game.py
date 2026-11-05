@@ -39,7 +39,7 @@ def test_slate_one_column_per_approach():
     at = _run("slate")
     assert not at.exception, [e.value for e in at.exception]
     md = " ".join(m.value for m in at.markdown)
-    for name in ("Traditionalist", "Analyst", "Sharp", "Student", "Ensemble"):
+    for name in ("Traditionalist", "Analyst", "Sharp", "Student"):
         assert name in md
     assert "persona" not in md.lower().replace("personal", "")
     assert not [t for t in at.toggle if "flavor" in t.label.lower()]

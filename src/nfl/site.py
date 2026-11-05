@@ -210,6 +210,7 @@ def groups_meta() -> dict:
                 "meaning": g.meaning,
                 "description": g.description,
                 "game_level": g.game_level,
+                "context_only": g.context_only,
                 "members": [
                     {"feature": m.feature, "sign": m.sign, "adv": m.adv, "label": m.label,
                      "unit": m.unit, "description": m.description}

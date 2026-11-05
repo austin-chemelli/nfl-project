@@ -76,3 +76,31 @@ def test_select_lambda_and_artifact_roundtrip(tmp_path):
     m = fit.load(paths, "sharp.fitted", 2024)
     test = data.filter(pl.col("season") == 2025).select("game_id", *a.features)
     np.testing.assert_allclose(m.score(test)["p_home"], r.fitted.score(test)["p_home"])
+
+
+def test_line_move_is_capped_inside_the_model_only():
+    """JAX @ BAL moved 12.5 points and entered at -8.3 SD. The model sees the cap; the input stays."""
+    from nfl.approaches.engine import Scaler
+    from nfl.features.groups import FEATURE_CAPS
+
+    cap = FEATURE_CAPS["market.line_move_pts"]
+    sc = Scaler(["market.line_move_pts", "strength.epa_off"], [0.0, 0.0], [1.5, 1.0])
+    wide = pl.DataFrame(
+        {"market.line_move_pts": [-12.5, 12.5, 2.0, None], "strength.epa_off": [9.0] * 4}
+    )
+    z = sc.transform(wide)
+    np.testing.assert_allclose(z[:, 0], [-cap / 1.5, cap / 1.5, 2.0 / 1.5, 0.0])
+    np.testing.assert_allclose(z[:, 1], 9.0)  # other features are not capped
+    assert wide["market.line_move_pts"][0] == -12.5
+
+
+@pytest.mark.parametrize("approach_id", ["student", "analyst"])
+def test_declared_line_move_weight_survives_fitting_with_no_history(approach_id):
+    """Line move exists live only, so it can't be learned: its weight stays where the YAML sets it,
+    including for the Student, whose public line is the fitted one."""
+    a = schema.load_all()[approach_id]
+    data = toy_data(a).with_columns(pl.lit(None, dtype=pl.Float64).alias("market.line_move_pts"))
+    res = fit.fit_flavors(a, data, lam=100.0, trained_through=2025)
+    pub = res.public
+    w = pub.weights[pub.features.index("market.line_move_pts")]
+    assert w == pytest.approx(a.groups["market"].w, rel=1e-6)

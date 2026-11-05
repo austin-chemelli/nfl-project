@@ -104,3 +104,27 @@ Register-ScheduledTask -TaskName "nfl-narrative" -Action $a -Trigger $t -Setting
 ```
 The task runs when Austin is signed in, which Ollama needs anyway (docs/desktop-llm-setup.md §6). Check the task's environment without a full pass (uv and gcloud on the login shell's PATH): `wsl -d <distro> -- bash -lc "cd ~/dev/nfl-project && uv run nfl narrative week && echo OK"`. Run a pass by hand: `Start-ScheduledTask nfl-narrative`, or `bash scripts/desktop-narrative.sh` in WSL. Logs: `data/raw/narrative_local/passes/` on the desktop, and `gcloud logging read 'logName="projects/nfl-project-prod/logs/nfl-desktop-narrative"' --limit 20`.
 
+## Model wave cutover (ADR 0018; any change to approach configs or groups)
+
+`nfl lock` and `nfl site` both refuse a fit whose config hash differs from the YAML, so the code and the fits have to change together. Any job that builds previews between the two fails loudly and emails. Do it when nothing is scheduled to write `marts/`: Tuesday after the 10:00 refresh is the widest gap, and any evening with no job due works. A desktop pass ending mid-cutover only fails its `nfl-site` step; rerun that job. `marts/predictions.parquet` must be pulled and pushed inside that gap, or a live row could be lost.
+
+Before starting: the web changes the wave depends on are deployed, including `web/src/diy/` for a new group.
+
+```
+export NFL_DATA_ROOT=$PWD/.data-cutover                     # never data/
+gcloud storage rsync -r gs://nfl-project-prod-data/curated $NFL_DATA_ROOT/curated
+gcloud storage rsync -r gs://nfl-project-prod-data/marts $NFL_DATA_ROOT/marts
+uv run nfl features --seasons 1999-2026 --families strength # the families that changed
+uv run nfl fit && uv run nfl predict --backfill && uv run nfl grade
+uv run nfl hypotheses && uv run nfl diy-matrix
+```
+
+Then merge the PR, wait for the image (`gh run list --workflow ci.yml --limit 1`), and upload straight away:
+
+```
+gcloud storage rsync -r $NFL_DATA_ROOT/marts gs://nfl-project-prod-data/marts
+gcloud run jobs execute nfl-site --region us-central1 --wait
+gcloud run jobs execute nfl-lock-thu --region us-central1 --args="lock,thu,--dry-run,--no-odds" --wait
+```
+
+The dry run must pass before the wave counts as done. Then `uv run nfl readme` from the primary checkout.

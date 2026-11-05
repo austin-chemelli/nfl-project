@@ -87,7 +87,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
 | ui | `ui-next` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | U1 (ensemble off the site, Student headline) built 2026-11-04, web-only; U2 game page next; parallel to model-wave2 (§8) | |
-| model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version` for the Week 10 Thursday lock. Runs parallel to ui (§8) | started 2026-11-04 | |
+| model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version` for the Week 10 Thursday lock. Runs parallel to ui (§8) | in PR, cutover 2026-11-04 evening, before the first lock | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
@@ -104,6 +104,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M8 observability | alerts done; uptime check on `meta.json` and a data-freshness alert still open |
 | M9 game retrospective (ADR 0016) | done 2026-11-02 |
 | M10 site v2, one answer first (ADR 0017) | done 2026-11-04 (PR #4) |
+| M11 model wave 2 (ADR 0018) | PR #12; cutover the evening of 2026-11-04, before the first public lock |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -152,7 +153,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | Doc | Read it when | Verified |
 |---|---|---|
 | [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-02 |
-| [adr/](adr/) | before re-opening a decision; ADR 0017 is the newest | 2026-11-03 |
+| [adr/](adr/) | before re-opening a decision; ADR 0018 is the newest | 2026-11-03 |
 | [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-04 |
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-04 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-04 |
@@ -161,7 +162,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-04 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-04 |
-| [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona | 2026-10-28 |
+| [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona | 2026-11-04 |
 | [PROJECT_BRIEF.md](PROJECT_BRIEF.md) | the original scope; historical, ADRs win on conflict | 2026-10-27 |
 | `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `archive/` notes that were true once | 2026-11-04 |
 

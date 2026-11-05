@@ -16,7 +16,7 @@ def test_registry_partitions_features_and_headings():
             assert m.feature not in seen, (m.feature, seen.get(m.feature), g.id)
             seen[m.feature] = g.id
             assert m.sign in (-1, 0, 1)
-    assert len(G.GROUPS) == 15
+    assert len(G.GROUPS) == 16
     assert set(G.FEATURE_GROUP) == set(seen)
 
 
@@ -113,3 +113,23 @@ def test_overrides_replace_inner_weights():
     r = fit.fit_flavors(a, toy_train(), lam=10.0, trained_through=2020)
     q = r.persona.meta["inner"]["quality"]
     assert q["strength.point_diff_pg"] == 0.0 and q["strength.elo_pre"] > 0
+
+
+def test_context_only_groups_carry_no_weight_in_any_approach():
+    """Model wave 2 (ADR 0018): scheme, coaching and matchups are context until research earns
+    them a weight; the schema rejects them and no shipped config uses them."""
+    from nfl.approaches import schema
+
+    context = {g.id for g in G.GROUPS.values() if g.context_only}
+    assert context == {"coaching", "off_scheme", "def_scheme", "matchups"}
+    for a in schema.load_all().values():
+        assert not context & set(a.groups), a.id
+    base = schema.load_all()["student"].model_dump()
+    base["groups"]["coaching"] = {"w": 0.1, "why": "Should be refused"}
+    with pytest.raises(ValueError, match="context-only"):
+        schema.Approach(**base)
+
+
+def test_pressure_rate_is_defense_and_special_teams_is_a_group():
+    assert G.FEATURE_GROUP["scheme.def_pressure_rate_prior"] == "defense"
+    assert G.FEATURE_GROUP["strength.st_epa_pg"] == "special_teams"

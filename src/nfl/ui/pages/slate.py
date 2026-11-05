@@ -43,8 +43,7 @@ st.caption(
 
 sl = data.require(data.slate(season, week), f"No slate for week {week}.")
 games = sorted(sl["games"], key=lambda g: g["kickoff_utc"] or "")
-cols = [*data.approaches(), {"id": "ensemble", "name": "Ensemble",
-                              "blurb": "The average of the four approaches."}]  # fmt: skip
+cols = data.approaches()
 
 
 def _name(a: dict) -> str:

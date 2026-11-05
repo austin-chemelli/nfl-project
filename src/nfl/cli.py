@@ -93,7 +93,7 @@ def predict(
         False, help="Score the approaches on completed games (needs `nfl fit`); default 2005-now."
     ),
 ) -> None:
-    """Reference models (market, Elo, naive), or with --backfill the approaches + ensemble."""
+    """Reference models (market, Elo, naive), or with --backfill the approaches."""
     if backfill:
         from nfl.approaches.run import backfill as run_backfill
 
@@ -548,7 +548,7 @@ def lock_cmd(
             f"[yellow]lock: no {slot} games left to lock in {res.season} week {res.week}[/]"
         )
         return
-    show = ["market_baseline", "traditionalist", "analyst", "sharp", "student", "ensemble", "elo_v0"]  # fmt: skip
+    show = ["market_baseline", "traditionalist", "analyst", "sharp", "student", "elo_v0"]  # fmt: skip
     t = Table(title=f"{'DRY RUN ' if dry_run else ''}lock {res.season} W{res.week:02d} {slot} "
                     f"at {res.lock_ts:%Y-%m-%d %H:%M}Z: P(home win)")  # fmt: skip
     t.add_column("game")

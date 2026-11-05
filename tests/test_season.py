@@ -21,7 +21,7 @@ def test_season_files_are_slim_and_consistent_with_the_matrix():
     assert 250 <= n <= 290
     for k in ("game_id", "week", "home", "away", "kickoff", "result", "home_won", "market_p"):
         assert len(doc[k]) == n
-    assert set(doc["c"]) == set(doc["groups"]) and len(doc["groups"]) == 15
+    assert set(doc["c"]) == set(doc["groups"]) and len(doc["groups"]) == 16
     assert all(len(v) == n for v in doc["c"].values())
     assert f.stat().st_size < 80_000
     assert doc["home_won"] == [int(r > 0) for r in doc["result"]]  # ties are not in the matrix
