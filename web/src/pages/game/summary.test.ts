@@ -50,16 +50,17 @@ describe('summaryTiles', () => {
     expect(summaryTiles(g, meta, null).find((x) => x.id === 'absence')).toMatchObject({ value: 'B Receiver', sub: 'GB WR, doubtful · +2 more' })
   })
 
-  it('post-game: result, approaches right, played like, swing plays, biggest surprise', () => {
+  it('post-game: the game first and the approaches last', () => {
     const t = summaryTiles(final, meta, retro)
-    expect(t.map((x) => x.id)).toEqual(['result', 'right', 'played', 'swing', 'surprise'])
+    expect(t.map((x) => x.id)).toEqual(['result', 'played', 'swing', 'surprise', 'right'])
     expect(t.every((x) => x.tab === 'retro')).toBe(true)
     expect(t[0]).toMatchObject({ value: 'Upset', sub: expect.stringMatching(/^CAR won as a \d+% underdog$/) })
-    expect(t[1]).toMatchObject({ value: '0 of 4', sub: 'best read: Traditionalist', modelId: 'traditionalist' })
-    expect(t[2]).toMatchObject({ value: 'GB 61%', sub: 'the better side, but lost' })
-    // GB net −9.6, CAR +5.3: the swing plays went to CAR by 14.9
-    expect(t[3].value).toBe('CAR +14.9 pts')
-    expect(t[4].sub).toMatch(/^(better|worse) than its season by \d\.\d\d EPA a (play|dropback|rush)$/)
+    expect(t[1]).toMatchObject({ value: 'GB 61%', sub: 'the better side, but lost' })
+    // GB net −9.6, CAR +5.3: the swing plays went to CAR by 14.9, and the two parts add up to it
+    expect(t[2].value).toBe('CAR +14.9 pts')
+    expect(t[2].sub).toMatch(/^variance (even|[A-Z]+ \+\d+\.\d) · pure luck (even|[A-Z]+ \+\d+\.\d)$/)
+    expect(t[3].sub).toMatch(/^(better|worse) than its season by \d\.\d\d EPA a (play|dropback|rush)$/)
+    expect(t[4]).toMatchObject({ value: '0 of 4', sub: 'best read: Traditionalist', modelId: 'traditionalist' })
   })
 
   it('post-game: a tie has no "right" count', () => {

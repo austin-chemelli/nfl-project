@@ -1,5 +1,5 @@
 {
- "schema_version": "2",
+ "schema_version": "3",
  "game_id": "2026_08_CAR_GB",
  "season": 2026,
  "week": 8,
@@ -19,14 +19,18 @@
   "Green Bay lost 3 of its 3 fumbles; about 1.6 would be lost on average (-6.2 pts).",
   "Luck tilted toward Carolina by about 14.9 points: -9.6 for Green Bay, +5.3 for Carolina.",
   "Teams that played as efficiently as Green Bay did here (turnovers aside) win 61% of the time; Green Bay lost 23-20.",
-  "Green Bay's offense gained 0.11 EPA per play, above its 0.04 this season.",
-  "The Traditionalist came closest (1.17 log loss); its Rest & travel group helped most."
+  "Green Bay's offense gained 0.11 EPA per play, above its 0.04 this season."
  ],
  "played_like": {
   "p_home": 0.61,
   "favored": "GB",
   "matches_result": false,
-  "sentence": "Teams that played as efficiently as Green Bay did here (turnovers aside) win 61% of the time; Green Bay lost 23-20."
+  "sentence": "Teams that played as efficiently as Green Bay did here (turnovers aside) win 61% of the time; Green Bay lost 23-20.",
+  "home_epa": 0.052,
+  "away_epa": 0.043,
+  "home_success": 0.468,
+  "away_success": 0.452,
+  "p_base": 0.5911
  },
  "teams": {
   "home": {
@@ -1066,6 +1070,88 @@
     }
    ],
    "most_valuable": "rest_travel"
+  }
+ ],
+ "phases": [
+  {
+   "phase": "passing",
+   "label": "Passing",
+   "note": "Expected points added per dropback.",
+   "home": 0.31,
+   "away": 0.12,
+   "home_text": "+0.31",
+   "away_text": "+0.12",
+   "leader": "home"
+  },
+  {
+   "phase": "rushing",
+   "label": "Rushing",
+   "note": "Expected points added per rush.",
+   "home": -0.08,
+   "away": 0.02,
+   "home_text": "−0.08",
+   "away_text": "+0.02",
+   "leader": "away"
+  },
+  {
+   "phase": "explosive",
+   "label": "Explosive plays",
+   "note": "Share of plays gaining 20+ yards passing or 10+ rushing.",
+   "home": 0.105,
+   "away": 0.081,
+   "home_text": "10.5%",
+   "away_text": "8.1%",
+   "leader": "home"
+  },
+  {
+   "phase": "third_down",
+   "label": "Third downs",
+   "note": "Third downs converted.",
+   "home": 0.5,
+   "away": 0.417,
+   "home_text": "6 of 12",
+   "away_text": "5 of 12",
+   "leader": "home"
+  },
+  {
+   "phase": "red_zone",
+   "label": "Red zone",
+   "note": "Touchdowns on drives that reached the opponent's 20.",
+   "home": 0.5,
+   "away": 0.667,
+   "home_text": "2 of 4",
+   "away_text": "2 of 3",
+   "leader": "away"
+  },
+  {
+   "phase": "special_teams",
+   "label": "Special teams",
+   "note": "Expected points gained on kicks, punts and returns, for and against.",
+   "home": -1.2,
+   "away": 1.2,
+   "home_text": "−1.2",
+   "away_text": "+1.2",
+   "leader": "away"
+  },
+  {
+   "phase": "field_position",
+   "label": "Field position",
+   "note": "Average drive start, leaving out drives right after a turnover.",
+   "home": 29.4,
+   "away": 29.4,
+   "home_text": "own 29",
+   "away_text": "own 29",
+   "leader": null
+  },
+  {
+   "phase": "turnovers",
+   "label": "Turnovers",
+   "note": "Interceptions and lost fumbles.",
+   "home": 3.0,
+   "away": 1.0,
+   "home_text": "3",
+   "away_text": "1",
+   "leader": "away"
   }
  ]
 }

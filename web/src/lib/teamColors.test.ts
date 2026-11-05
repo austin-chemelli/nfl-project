@@ -40,6 +40,11 @@ describe('team colors', () => {
     expect(m.away).not.toEqual(teamColor('DAL'))
   })
 
+  it('keeps a dark, muted brand color a color: the Packers stay green, not gray', () => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(teamColor('GB').dark.slice(i, i + 2), 16))
+    expect(g - Math.max(r, b)).toBeGreaterThan(15) // 8 when it was treated as a neutral
+  })
+
   it('reads old codes as their franchise and survives an unknown one', () => {
     expect(teamColor('OAK')).toEqual(teamColor('LV'))
     expect(teamColor('STL')).toEqual(teamColor('LA'))

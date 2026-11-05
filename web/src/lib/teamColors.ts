@@ -32,8 +32,8 @@ const MIN_CONTRAST = 3.2
 /** Colors closer than this (OKLab × 100) read as the same team, to most readers and to red-green colorblind ones. */
 export const MIN_DISTANCE = 18
 export const MIN_CVD_DISTANCE = 8
-/** Below this chroma a color is a neutral (silver, pewter) and stays one. */
-const NEUTRAL = 0.04
+/** Below this chroma a color is a neutral (silver, pewter) and stays one. Packers green sits just above it. */
+const NEUTRAL = 0.02
 /** One step of lightness: enough to split two same-tone colors while they stay the same color. */
 const STEP = 0.14
 const MIN_CHROMA = 0.11

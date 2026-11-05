@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import metaJson from '../../test/fixtures/site/meta.json'
 import gameJson from '../../test/fixtures/site/game/2026_08_CAR_GB.json'
-import { Game, Meta } from '../../data/contract'
-import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, previewRows, sortInjuries, sortMatchupNotes, tape, tendencyBlocks } from './helpers'
+import { Game, Meta, RetroGame } from '../../data/contract'
+import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks } from './helpers'
 
 const meta = Meta.parse(metaJson)
 const game = Game.parse(gameJson)
@@ -93,7 +93,7 @@ describe('previewRows', () => {
   it('leads with home field, follows the registry and leaves the context-only groups out', () => {
     expect(ids(previewRows(g(), meta, null))).toEqual(['home_field', 'quality', 'offense', 'defense'])
   })
-  it('honors context_only from meta as well as the fallback list', () => {
+  it('reads context_only from meta, so a group can move without a change here', () => {
     const m = structuredClone(meta)
     m.groups.groups.find((x) => x.id === 'offense')!.context_only = true
     expect(ids(previewRows(g(), m, null))).not.toContain('offense')
@@ -151,5 +151,49 @@ describe('tape bands', () => {
     expect(row(0.1, 0, m({})).band).toBeNull()
     expect(row(0.1, null, m({ [f]: band })).band).toBeNull()
     expect(row(0.1, 0, m({ [f]: { lo: 0, q1: 0, med: 0, q3: 0, hi: 0 } })).band).toBeNull()
+  })
+})
+
+describe('swingRows', () => {
+  const f = (factor: string, swing: number, skill: boolean) => ({ factor, label: factor, actual: 0, expected: 0, unit: 'count', attempts: null, swing_pts: swing, partly_skill: skill, sentence: `${factor} ${swing}` })
+  const team = (name: string, luck: ReturnType<typeof f>[]) => ({ team: name, score: 0, efficiency: [], luck, luck_net: luck.reduce((a, x) => a + x.swing_pts, 0) })
+  const r = {
+    teams: {
+      home: team('GB', [f('third_down', 8.1, true), f('kicking', -0.8, false), f('special_teams', 0, false)]),
+      away: team('CAR', [f('third_down', -3.8, true), f('kicking', 1.7, false), f('special_teams', 0, false)]),
+    },
+  } as unknown as RetroGame
+
+  it('nets the two teams on one bar, so one side\'s miss reads as the other\'s gain', () => {
+    const { variance, pure, net } = swingRows(r)
+    expect(variance.map((x) => [x.key, x.value])).toEqual([['third_down', 11.9]])
+    expect(pure.map((x) => [x.key, x.value])).toEqual([['kicking', -2.5]])
+    expect(net).toBe(9.4)
+  })
+  it('keeps what each team did, and leaves out a factor nobody moved', () => {
+    const { pure } = swingRows(r)
+    expect(pure[0].teams.map((t) => [t.team, t.swing])).toEqual([['CAR', 1.7], ['GB', -0.8]])
+    expect(pure.map((x) => x.key)).not.toContain('special_teams')
+  })
+})
+
+describe('playedLikeSteps', () => {
+  const r = (over: object) => ({ home: 'GB', away: 'CAR', played_like: { p_home: 0.4, home_epa: 0.01, away_epa: 0.06, home_success: 0.45, away_success: 0.5, p_base: 0.59, ...over } }) as unknown as RetroGame
+  it('names the team with the edge, even when that moves the home side down', () => {
+    expect(playedLikeSteps(r({}))?.sentence).toBe("Before any plays, the home side wins 59% of the time. CAR's edge of 0.050 EPA a play moves GB to 40%.")
+  })
+  it('is null on a record without the inputs', () => {
+    expect(playedLikeSteps(r({ p_base: null }))).toBeNull()
+  })
+})
+
+describe('phaseSummary', () => {
+  const r = (...leaders: ('home' | 'away' | null)[]) => ({ home: 'GB', away: 'CAR', phases: leaders.map((leader) => ({ leader })) }) as unknown as RetroGame
+  it('counts every phase, even ones nobody won', () => {
+    expect(phaseSummary(r('home', 'home', 'away', null))).toBe('GB won 2 of 4 phases')
+    expect(phaseSummary(r('away', 'away', 'away'))).toBe('CAR won 3 of 3 phases')
+  })
+  it('says when the teams split them', () => {
+    expect(phaseSummary(r('home', 'away', null))).toBe('CAR and GB split the phases 1–1')
   })
 })

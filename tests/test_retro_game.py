@@ -13,8 +13,16 @@ import pytest
 from nfl.config import Paths
 from nfl.features.groups import FEATURE_GROUP
 from nfl.predict import PRED_SCHEMA
-from nfl.retro.game import _league_bands, _metric_exprs, _metrics, build, build_games, retro_path
-from nfl.retro.schema import SCHEMA_VERSION, Expectations, RetroGame
+from nfl.retro.game import (
+    _league_bands,
+    _metric_exprs,
+    _metrics,
+    _phases,
+    build,
+    build_games,
+    retro_path,
+)
+from nfl.retro.schema import SCHEMA_VERSION, Expectations, RetroGame, TeamRetro
 
 EXP = Path(__file__).parent / "fixtures" / "retro" / "expectations.json"
 PLAY_COLS = [
@@ -23,7 +31,7 @@ PLAY_COLS = [
     "special_teams_play", "down", "ydstogo", "third_down_converted", "third_down_failed",
     "fourth_down_converted", "fourth_down_failed", "field_goal_attempt", "field_goal_result",
     "kick_distance", "extra_point_attempt", "extra_point_result", "penalty_team", "penalty_yards",
-    "return_touchdown", "td_team", "punt_blocked", "season_type",
+    "return_touchdown", "td_team", "punt_blocked", "season_type", "drive", "yardline_100", "touchdown",
 ]  # fmt: skip
 STR = {"game_id", "raw_snapshot_ts", "posteam", "defteam", "play_type", "field_goal_result",
        "extra_point_result", "penalty_team", "td_team", "season_type"}  # fmt: skip
@@ -468,11 +476,102 @@ def test_league_bands_match_metrics_per_team():
 
 def test_schema_version_staleness(tree):
     build_games(tree, 2026)
-    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION == "2"
+    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION == "3"
     assert build_games(tree, 2026) == []  # same hash, expectations and schema: up to date
     f = retro_path(tree, 2026, "g2")
     d = json.loads(f.read_text())
     d["schema_version"] = "1"
     f.write_text(json.dumps(d))
     assert build_games(tree, 2026) == ["g2"]
-    assert read(tree, "g2")["schema_version"] == "2"
+    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION
+
+
+# ------------------------------------------------------------------------------------- phases
+
+
+def _phase_frame(plays):
+    schema = {c: (pl.Utf8 if c in STR else pl.Float64) for c in PLAY_COLS}
+    return pl.DataFrame(plays, schema=schema)
+
+
+def _team(code):
+    rows = [
+        {"metric": m, "unit_side": "off", "label": m, "unit": "epa", "higher_is_better": True,
+         "game": v, "season": None, "league": None, "season_games": 0}
+        for m, v in (("off_epa_dropback", 0.2), ("off_epa_rush", 0.0), ("off_explosive", 0.1))
+    ]  # fmt: skip
+    made, tries = (9.0, 14) if code == "HOM" else (5.0, 15)
+    third = {"factor": "third_down", "label": "3rd", "actual": made, "expected": 6.0, "unit": "count",
+             "attempts": tries, "swing_pts": 0.0, "sentence": ""}  # fmt: skip
+    return TeamRetro(team=code, score=0, efficiency=rows, luck=[third], luck_net=0.0)
+
+
+def _by_id(plays):
+    teams = {"home": _team("HOM"), "away": _team("AWY")}
+    return {p.phase: p for p in _phases(_phase_frame(plays), teams, "HOM", "AWY")}
+
+
+def test_phases_red_zone_counts_trips_not_plays_and_only_your_own_touchdowns():
+    plays = [
+        play("g", "HOM", "AWY", drive=1.0, yardline_100=18.0),
+        play("g", "HOM", "AWY", drive=1.0, yardline_100=9.0, touchdown=1.0, td_team="HOM"),
+        play("g", "AWY", "HOM", drive=2.0, yardline_100=15.0),
+        play("g", "HOM", "AWY", drive=3.0, yardline_100=12.0),
+        # a pick-six on the trip: a touchdown, but not one this offense scored
+        play("g", "HOM", "AWY", drive=3.0, yardline_100=8.0, touchdown=1.0, td_team="AWY"),
+    ]
+    p = _by_id(plays)["red_zone"]
+    assert (p.home_text, p.away_text, p.leader) == ("1 of 2", "0 of 1", "home")
+
+
+def test_phases_a_team_with_no_trips_is_not_compared():
+    p = _by_id([play("g", "HOM", "AWY", drive=1.0, yardline_100=10.0)])["red_zone"]
+    assert (p.away_text, p.away, p.leader) == ("no trips", None, None)
+
+
+def test_phases_special_teams_counts_kickoffs_and_punts_both_ways_and_field_goals_once():
+    plays = [
+        play("g", "HOM", "AWY", "kickoff", -5.0, special_teams_play=1.0),  # HOM fumbles the return
+        play("g", "AWY", "HOM", "punt", 0.5, special_teams_play=1.0),
+        play("g", "HOM", "AWY", "field_goal", 1.5, special_teams_play=1.0),
+        play("g", "AWY", "HOM", "extra_point", 0.1),  # flag or play type: either counts
+        play("g", "HOM", "AWY", "pass", 3.0, special_teams_play=1.0),  # a fake is scrimmage
+    ]
+    p = _by_id(plays)["special_teams"]
+    assert p.home == -5.0 - 0.5 + 1.5
+    assert p.away == 5.0 + 0.5 + 0.1
+    assert (p.home_text, p.away_text, p.leader) == ("−4.0", "+5.6", "away")
+
+
+def test_phases_third_downs_read_the_swing_plays_count():
+    p = _by_id([play("g", "HOM", "AWY", third_down_converted=1.0)])["third_down"]
+    assert (p.home_text, p.away_text, p.leader) == ("9 of 14", "5 of 15", "home")
+
+
+def test_phases_field_position_drops_the_drive_after_a_turnover():
+    plays = [
+        play("g", "HOM", "AWY", drive=1.0, yardline_100=75.0),
+        play("g", "AWY", "HOM", drive=2.0, yardline_100=80.0, interception=1.0),
+        play(
+            "g", "HOM", "AWY", drive=3.0, yardline_100=20.0
+        ),  # handed the ball at the 20: left out
+        play("g", "AWY", "HOM", drive=4.0, yardline_100=80.0),
+    ]
+    p = _by_id(plays)["field_position"]
+    assert (p.home, p.home_text) == (25.0, "own 25")
+    assert (p.away, p.away_text) == (20.0, "own 20")
+    assert p.leader == "home"
+
+
+def test_phases_fewer_turnovers_wins_and_equal_text_is_even():
+    plays = [play("g", "HOM", "AWY", interception=1.0), play("g", "AWY", "HOM")]
+    ph = _by_id(plays)
+    assert (ph["turnovers"].home_text, ph["turnovers"].away_text, ph["turnovers"].leader) == (
+        "1",
+        "0",
+        "away",
+    )
+    assert ph["passing"].leader is None  # both +0.20
+    assert [p for p in ph] == [
+        "passing", "rushing", "explosive", "third_down", "red_zone", "special_teams", "field_position", "turnovers",
+    ]  # fmt: skip

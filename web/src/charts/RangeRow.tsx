@@ -6,6 +6,7 @@
  */
 import { scaleLinear } from 'd3-scale'
 import type { ReactNode } from 'react'
+import { useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
 
 export type RangeVerdict = 'better' | 'worse' | 'same' | 'neutral'
@@ -19,6 +20,7 @@ export type RangeRowData = {
   hi: number | null
   verdict: RangeVerdict
   title?: string
+  tip?: ReactNode
 }
 
 const VERDICT_COLOR: Record<RangeVerdict, string> = { better: 'var(--good)', worse: 'var(--critical)', same: 'var(--text-muted)', neutral: 'var(--text-muted)' }
@@ -39,6 +41,7 @@ export function RangeRow({ rows, format, formatDelta, labelWidth = 150, rowHeigh
   legend?: ReactNode | false
 }) {
   const [ref, width] = useWidth()
+  const { box, at, bind, card } = useChartTip()
   const lw = width < 480 ? Math.min(110, labelWidth) : labelWidth
   const x0 = lw + 8
   const x1 = Math.max(x0 + 40, width - VALUE_W - 8)
@@ -67,6 +70,7 @@ export function RangeRow({ rows, format, formatDelta, labelWidth = 150, rowHeigh
             <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-5 rounded-sm bg-[var(--div-mid)]" /> Typical range</span>
           </div>
         ))}
+      <div ref={box} className="relative">
       <svg width={width} height={h} role="img" aria-label={aria} className="block text-[12px]">
         {rows.map((r, i) => {
           const cy = i * rowHeight + rowHeight / 2
@@ -83,13 +87,13 @@ export function RangeRow({ rows, format, formatDelta, labelWidth = 150, rowHeigh
           const title =
             r.title ?? `${plain(r.label)}: ${num(r.game) ? format(r.game) : 'no data'}${num(r.season) ? `, season ${format(r.season)}` : ''}${num(r.league) ? `, league ${format(r.league)}` : ''}`
           return (
-            <g key={r.key}>
-              <title>{title}</title>
+            <g key={r.key} {...(r.tip ? bind(r.key) : {})}>
+              {r.tip ? <rect x={0} y={i * rowHeight} width={width} height={rowHeight} rx={4} fill={at?.key === r.key ? 'var(--surface-2)' : 'transparent'} /> : <title>{title}</title>}
               <foreignObject x={0} y={cy - rowHeight / 2} width={lw} height={rowHeight}>
                 <div className="flex h-full items-center truncate text-[13px] text-ink-2">{r.label}</div>
               </foreignObject>
               <line x1={x0} x2={x1} y1={cy} y2={cy} stroke="var(--border)" />
-              {hasBand && <rect data-testid="band" x={x(bandLo)} y={cy - 7} width={Math.max(2, x(bandHi) - x(bandLo))} height={14} rx={3} fill="var(--div-mid)" />}
+              {hasBand && <rect data-testid="band" x={x(bandLo)} y={cy - 7} width={Math.max(2, x(bandHi) - x(bandLo))} height={14} rx={3} fill="var(--band-strong)" />}
               {num(r.league) && <line x1={x(r.league)} x2={x(r.league)} y1={cy - 8} y2={cy + 8} stroke="var(--text-muted)" strokeWidth={2} />}
               {num(r.season) && <circle cx={x(r.season)} cy={cy} r={5} fill="var(--surface-1)" stroke="var(--text-secondary)" strokeWidth={2} />}
               {num(r.game) && <circle cx={x(r.game)} cy={cy} r={5.5} fill={color} stroke="var(--surface-1)" strokeWidth={1.5} />}
@@ -102,6 +106,8 @@ export function RangeRow({ rows, format, formatDelta, labelWidth = 150, rowHeigh
           )
         })}
       </svg>
+      {card(rows.find((r) => r.key === at?.key)?.tip)}
+      </div>
     </div>
   )
 }
