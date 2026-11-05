@@ -24,7 +24,15 @@ log() {  # severity, message: to Cloud Logging and this run's log file
 }
 fail() { log ERROR "desktop narrative pass failed: $1 (log: $LOGDIR on the desktop)"; exit 1; }
 
-git pull -q --ff-only origin main || fail "git pull"
+# This clone only runs passes, so it follows main exactly. A local edit used to stop the pass
+# (2026-11-04); now it is saved next to the logs and dropped, with a warning.
+out=$(git fetch -q origin main 2>&1) || fail "git fetch: $(tail -1 <<<"$out")"
+if ! git diff --quiet HEAD; then
+  patch="$LOGDIR/local-edits-$(date -u +%Y%m%dT%H%M%SZ).patch"
+  git diff HEAD >"$patch"
+  log WARNING "desktop checkout had local edits to $(git diff --name-only HEAD | tr '\n' ' '); saved to $patch"
+fi
+out=$(git reset -q --hard origin/main 2>&1) || fail "git reset: $(tail -1 <<<"$out")"
 uv sync -q || fail "uv sync"
 for t in games lines; do
   gcloud storage rsync -r "$BUCKET/curated/$t" "data/curated/$t" -q || fail "download curated/$t"
@@ -34,8 +42,9 @@ read -r season week < <(uv run nfl narrative week) || fail "no upcoming week in 
 wk=$(printf '%02d' "$week")
 log INFO "desktop narrative pass started: $season week $week"
 
-uv run nfl narrative run "$season" "$week"
-status=$?
+result=$(mktemp)
+uv run nfl narrative run "$season" "$week" 2>&1 | tee "$result"
+status=${PIPESTATUS[0]}
 
 # Upload whatever was stored, even if some games failed; never delete anything in the bucket.
 dir="marts/narrative/season=$season/week=$wk"
@@ -45,5 +54,8 @@ fi
 gcloud run jobs execute nfl-site --region "$REGION" --project "$PROJECT" --async -q ||
   fail "starting the site rebuild"
 
-[ "$status" -eq 0 ] || fail "some games failed in $season week $week (the rest were uploaded)"
+if [ "$status" -ne 0 ]; then
+  detail=$(grep '^FAILED ' "$result" | cut -c8- | head -8 | tr '\n' ';' | cut -c1-1200)
+  fail "some games failed in $season week $week (the rest were uploaded; rerunning this script resumes): ${detail:-$(tail -1 "$result" | cut -c1-300)}"
+fi
 log INFO "desktop narrative pass done: $season week $week"

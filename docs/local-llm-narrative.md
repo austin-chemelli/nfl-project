@@ -1,6 +1,6 @@
 # The local narrative model: results, limits, experiments
 
-Status: current, verified 2026-11-04 (through `local_v5`).
+Status: current, verified 2026-11-05 (through `local_v5`).
 
 How the project researches each game's narrative (injuries, QB status, scheme, matchups, betting action) with an open-weight model on a home desktop instead of a paid API, what the first results looked like next to a frontier model, where the limits come from, and what moved the needle. Decisions: [ADR 0014](adr/) (local model, no paid API). Code: `src/nfl/llm/research.py`; prompts: `src/nfl/llm/prompts/`.
 
@@ -134,3 +134,18 @@ The comparison was per job, so the next step was to stop choosing one model. The
 With thinking on, the 14B wrote the same notes as before, errors included. With thinking off, it wrote cleaner offense-against-defense pairings, backed by a few more sites. Two of them pitted one defense against the other ("Chicago's aggressive blitz package faces Seattle's top-ranked pass defense"), so the pairing check now drops that too.
 
 On two games the gain is small: the 9B was more specific (named cornerbacks, the 41-40 last meeting), the 14B cleaner. v5 costs about 35 minutes a week, so it runs in production from Week 9, and the 9B-only version is recomposed on the same facts for a larger comparison.
+
+## Sources: feeds first, search for open questions (2026-11-05)
+
+The first live pass stored 8 of 15 games, then search engines blocked SearXNG. Measuring what each query earned (6 saved Week 8 runs) showed where to cut: injury and news queries gave 19 to 20 facts each, QB, matchup and betting 9 to 11, scheme 3, weather under 1.
+
+| Kind | Queries per game before | Now |
+|---|---|---|
+| Injury, news | 4 | 0: RSS feeds, with a search only if a team's feed is empty |
+| QB status | 2 | 2 |
+| Scheme | 6 | 2 film queries, reused on Saturday; EPA and blitz dropped, we compute those |
+| Matchup | 3 | 2 |
+| Betting | 1 | 1 |
+| Weather | 1 | 0: Open-Meteo forecast at kickoff |
+
+A live check on 2026-11-05 covered all 30 teams playing in Week 9: 29 had injury items and all had news items in their feeds (Washington's feed held 1 item, so it falls back to search for injuries). Three games gathered 11 to 13 pages in about 6 seconds each, led by the teams' own injury reports. Whether records improve is unmeasured: Week 9's first 8 records came from search, and they did catch Baltimore's surprise starter.

@@ -1,6 +1,6 @@
 # Weekly runbook
 
-Status: current, verified 2026-11-04. The cloud runs the week (§In the cloud); the hand commands are the fallback.
+Status: current, verified 2026-11-05. The cloud runs the week (§In the cloud); the hand commands are the fallback.
 
 How to operate the live pipeline by hand when a cloud job can't. Every command runs from the repo root. Times are US Eastern (Daylight Time until Nov 1, 2026, then Standard). The Odds API free tier allows 500 credits a month; `nfl odds status` shows usage, and the code refuses past a soft cap of 400.
 
@@ -75,19 +75,19 @@ gcloud storage rsync -r gs://nfl-project-prod-data ./data       # pull the cloud
 Two passes a week on the desktop, which has the models (docs/desktop-llm-setup.md): Wednesday 18:00 ET for every game (the Thursday game's final reports are out by then; the rest get an early preview) and Saturday 07:00 ET for the Sunday and Monday games (after Friday's injury designations, done before the 12:00 lock). Each pass stores new records; nothing is overwritten. The site shows a game's newest record, and features and locks use the newest one from before their own time (`known_as_of`). The pass times are `PASSES` in `src/nfl/llm/narrative.py`; the cloud check uses them, so change both together.
 
 `scripts/desktop-narrative.sh` does one pass:
-1. `git pull` and `uv sync`.
+1. Reset the checkout to `origin/main` and `uv sync`. This clone only runs passes: a local edit is saved as `local-edits-*.patch` in the pass log folder, logged as a WARNING, and dropped.
 2. Download `curated/games` and `curated/lines` from the bucket (the schedule, starting QBs and lines the research reads).
-3. `nfl narrative run <season> <week>` for every game not yet kicked off.
+3. `nfl narrative run <season> <week>` for every game not yet kicked off and not already stored in this pass. It prints one line per game, so `tail -f` on the pass log shows progress. If every search engine is blocked it waits 10 minutes and retries, up to 80 minutes per pass.
 4. Upload `marts/narrative/season=S/week=WW/` to the bucket (rsync, never deletes) and start `nfl-site` (rebuild and publish).
 
-Failures go to Cloud Logging (log `nfl-desktop-narrative`, ERROR) and email Austin. A pass that never runs (desktop off, asleep, signed out) is caught by `nfl-narrative-check` at 08:30 Thursday and 11:30 Saturday, which fails, and so emails, if an upcoming game has no `local` record since the last pass started. The check never touches the locks.
+Failures go to Cloud Logging (log `nfl-desktop-narrative`, ERROR) and email Austin, with each failed game and its error. To finish a failed pass, run it again (`Start-ScheduledTask nfl-narrative`): stored games are skipped. Naming games (`nfl narrative run 2026 9 <game_id>...`) redoes them even if stored, and uploads nothing. A pass that never runs (desktop off, asleep, signed out) is caught by `nfl-narrative-check` at 08:30 Thursday and 11:30 Saturday, which fails, and so emails, if an upcoming game has no `local` record since the last pass started. The check never touches the locks.
 
 **One-time desktop setup** (WSL Ubuntu on the desktop):
 ```
 curl -LsSf https://astral.sh/uv/install.sh | sh                    # uv, if missing
 git clone https://github.com/austin-chemelli/nfl-project.git ~/dev/nfl-project   # public repo: pulls need no key
 cd ~/dev/nfl-project && uv sync
-# .env: LLM_BASE_URL=http://<desktop-tailscale-ip>:11434/v1, SEARX_URL=http://<desktop-tailscale-ip>:8080, LLM_MODEL=qwen3.5:9b
+# .env: LLM_BASE_URL=http://<desktop-tailscale-ip>:11434/v1, SEARX_URL=http://<desktop-tailscale-ip>:8080, LLM_MODEL=qwen3.5:9b, TAVILY_API_KEY=<key from app.tavily.com>
 # gcloud CLI (https://cloud.google.com/sdk/docs/install#deb), then:
 gcloud auth login && gcloud config set project nfl-project-prod
 uv run nfl llm ping                                                # model reachable

@@ -239,6 +239,15 @@ def upcoming_week(paths: Paths, now: datetime) -> tuple[int, int]:
     return next_week(games_frame(paths), now)
 
 
+def stored_since(paths: Paths, season: int, week: int, since: datetime) -> set[str]:
+    """Games of the week with a `local` record from `since` on."""
+    return {
+        r.game_id
+        for r in load_records(paths, (season, season))
+        if r.week == week and r.producer == "local" and r.known_as_of >= since
+    }
+
+
 def missing_records(paths: Paths, now: datetime) -> tuple[int, int, datetime, list[str]]:
     """The upcoming week's games, not yet kicked off, with no `local` record stored since the last
     scheduled pass started: (season, week, pass start, game ids). Empty when the pass ran."""
@@ -247,11 +256,7 @@ def missing_records(paths: Paths, now: datetime) -> tuple[int, int, datetime, li
     games = slate(paths, season, week).filter(
         pl.col("kickoff_utc").dt.replace_time_zone(None) > now
     )
-    have = {
-        r.game_id
-        for r in load_records(paths, (season, season))
-        if r.week == week and r.producer == "local" and r.known_as_of >= since
-    }
+    have = stored_since(paths, season, week, since)
     return season, week, since, [g for g in games["game_id"].to_list() if g not in have]
 
 

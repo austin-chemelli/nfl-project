@@ -170,6 +170,17 @@ class Fetcher:
         return parser is None or parser.can_fetch(USER_AGENT, url)
 
     # --- public ------------------------------------------------------------------------------
+    def raw(self, url: str) -> bytes | None:
+        """The body of a feed: robots and delays apply, no cache or extraction. None on failure."""
+        try:
+            if not self._allowed(url):
+                return None
+            resp = self._request(url, urlparse(url).netloc)
+        except Exception:  # noqa: BLE001 - never raise for a single bad feed
+            return None
+        ok = 200 <= resp.status_code < 300 and len(resp.content) <= MAX_BYTES
+        return resp.content if ok else None
+
     def get(self, url: str) -> Page:
         # Expiry matters: hub pages (team injury pages) keep their URL week to week, so a cached
         # copy is reused only within max_age (re-runs the same day), never for next week's run.

@@ -29,6 +29,11 @@ stating one is dropped; Ollama enforces the schema's maxLength by cutting the st
 trimmed to its last full sentence or dropped; stat-driven queries (EPA ranks, blitz and pressure,
 betting previews) and 24 pages; prompt anchors for summaries, trends and motivation.
 
+v5 sources (2026-11-05, after search engines blocked 7 of 15 games): injuries and team news come
+from RSS feeds and the weather from Open-Meteo (`nfl.llm.feeds`), so a game needs 7 queries, not
+17, and 5 once Wednesday's film results are reused. Records list these as `feed:` and `forecast:`
+entries in `searches`. Stat queries (EPA, blitz) are gone: we compute those numbers ourselves.
+
 Undated pages are dropped, except for weather and betting-consensus queries, whose facts become
 claims with `published_at: null` and `confidence: low`. Every LLM call is logged with the game id
 (`nfl llm calls`); the draft record and a run summary are kept under raw/narrative_local/.
@@ -36,6 +41,7 @@ claims with `published_at: null` and `confidence: low`. Every LLM call is logged
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import time
@@ -52,9 +58,10 @@ from pydantic import BaseModel, Field, create_model
 
 from nfl.config import Paths, now_utc, snapshot_ts
 from nfl.llm.client import LLMClient, LLMError
+from nfl.llm.feeds import Feeds, forecast
 from nfl.llm.fetch import Fetcher
 from nfl.llm.narrative import Category, GameNarrative, ingest
-from nfl.llm.search import SearchError, search
+from nfl.llm.search import EnginesBlocked, SearchError, SearchResult, paced, search
 
 PROMPTS = Path(__file__).parent / "prompts"
 EXTRACT_V = "extract_v2"
@@ -69,6 +76,9 @@ RECORD_PROMPT_VERSION = "local_v5"  # the record's prompt_version (feature rows 
 WINDOW_DAYS = 9  # one day inside the validator's 10, so a run that crosses midnight still passes
 PER_QUERY = 3  # pages kept per query at most
 MAX_DOCS = 24  # pages per game, picked round-robin across queries
+REUSE_SEARCH = timedelta(days=4)  # Saturday reuses Wednesday's film results; next week doesn't
+BLOCK_WAIT_S = 600  # with every engine blocked: wait, then retry the game
+BLOCK_WAIT_MAX_S = 4800  # per pass; SearXNG suspends an engine for an hour after a 429
 MAX_FACTS_IN_PROMPT = 80
 MAX_STATUS_FACTS = 25  # injury + QB facts per compose prompt, after the per-player dedupe
 MAX_PER_PLAYER = 2  # status facts kept per player, newest page first
@@ -277,26 +287,25 @@ def queries(g: Game) -> list[tuple[str, str]]:
     names = full_names()
     a, h = names.get(g.away, g.away), names.get(g.home, g.home)
     q: list[tuple[str, str]] = []
-    for team in (a, h):
-        q.append(("injury", f"{team} injury report week {g.week} {g.season}"))
     for team, qb in ((a, g.away_qb), (h, g.home_qb)):
         if qb:
             q.append(("qb", f"{team} {qb} status week {g.week}"))
     for team in (a, h):
-        q.append(("news", f"{team} news week {g.week} {g.season}"))
-    for team in (a, h):
         q.append(("scheme", f"{team} offense defense film breakdown {g.season}"))
-    for team in (a, h):
-        q.append(("scheme", f"{team} offense defense EPA per play rank {g.season}"))
-    for team in (a, h):
-        q.append(("scheme", f"{team} defense blitz rate pressure {g.season}"))
     q.append(("matchup", f"{a} vs {h} week {g.week} preview"))
     q.append(("matchup", f"{a} vs {h} matchup keys to the game"))
-    q.append(("matchup", f"{a} vs {h} prediction betting preview week {g.week}"))
     q.append(("betting", f"{a} vs {h} public betting percentages week {g.week}"))
-    if g.outdoors and g.stadium:
-        q.append(("weather", f"{g.stadium} weather {g.kickoff_utc:%B %-d %Y}"))
     return q
+
+
+def known_queries(g: Game) -> list[tuple[str, str, str]]:
+    """(kind, team, query) for what the feeds normally cover; each runs only if its feed is empty."""
+    names = full_names()
+    a, h = names.get(g.away, g.away), names.get(g.home, g.home)
+    return [
+        *(("injury", t, f"{t} injury report week {g.week} {g.season}") for t in (a, h)),
+        *(("news", t, f"{t} news week {g.week} {g.season}") for t in (a, h)),
+    ]
 
 
 # ------------------------------------------------------------------------------ docs and facts
@@ -340,6 +349,44 @@ class GameRun:
     recited: Counter = field(default_factory=Counter)  # items kept under a corrected citation
     warnings: list[str] = field(default_factory=list)
     seconds: float = 0.0
+    blocked: bool = False  # every search engine refused: worth retrying later
+
+
+class SearchReuse:
+    """Results of week-independent queries, kept across the week's passes: one JSON per query."""
+
+    def __init__(self, paths: Paths, max_age: timedelta = REUSE_SEARCH) -> None:
+        self.dir = paths.root / "raw" / "narrative_local" / "search_reuse"
+        self.max_age = max_age
+
+    def _path(self, q: str) -> Path:
+        return self.dir / f"{hashlib.sha256(q.encode()).hexdigest()}.json"
+
+    def get(self, q: str, now: datetime) -> list[SearchResult] | None:
+        path = self._path(q)
+        if not path.exists():
+            return None
+        d = json.loads(path.read_text())
+        if now - datetime.fromisoformat(d["at"]) >= self.max_age:
+            return None
+        return [SearchResult(r["url"], r["title"], r["snippet"],
+                             date.fromisoformat(r["published"]) if r["published"] else None,
+                             tuple(r["engines"])) for r in d["results"]]  # fmt: skip
+
+    def put(self, q: str, results: list[SearchResult], now: datetime) -> None:
+        self.dir.mkdir(parents=True, exist_ok=True)
+        rows = [{"url": r.url, "title": r.title, "snippet": r.snippet, "engines": list(r.engines),
+                 "published": r.published.isoformat() if r.published else None} for r in results]  # fmt: skip
+        self._path(q).write_text(json.dumps({"at": now.isoformat(), "results": rows}))
+
+
+@dataclass
+class Sources:
+    """What a live pass adds to plain search; tests and experiments run without it."""
+
+    feeds: Feeds | None = None
+    reuse: SearchReuse | None = None
+    forecast: Any = None  # (stadium, kickoff_utc) -> (url, text) | None
 
 
 def _domain(url: str) -> str:
@@ -347,17 +394,40 @@ def _domain(url: str) -> str:
     return host.removeprefix("www.")
 
 
-def gather(g: Game, fetcher: Fetcher, run: GameRun, now: datetime, search_fn=search) -> tuple[list[Doc], list[str]]:  # fmt: skip
-    """Run every query first, then pick pages round-robin across the queries (each query's best
-    remaining result in turn) until MAX_DOCS, so every kind of search gets pages; a query keeps at
-    most PER_QUERY. Pages outside the date window don't count. Returns the pages and the queries."""
+def _lookup(kind: str, q: str, now: datetime, search_fn, reuse: SearchReuse | None) -> list[SearchResult]:  # fmt: skip
+    keep = reuse is not None and kind == "scheme"
+    if keep and (saved := reuse.get(q, now)) is not None:
+        return saved
+    out = list(search_fn(q, max_results=8))
+    if keep and out:
+        reuse.put(q, out, now)
+    return out
+
+
+def gather(g: Game, fetcher: Fetcher, run: GameRun, now: datetime, search_fn=search, sources: Sources | None = None) -> tuple[list[Doc], list[str]]:  # fmt: skip
+    """Read the feeds and run the queries first, then pick pages round-robin across them (each
+    pool's best remaining result in turn) until MAX_DOCS, so every kind gets pages; a pool keeps at
+    most PER_QUERY. Pages outside the date window don't count. Returns the pages and what was
+    searched. If the engines are blocked this raises rather than writing a thin record."""
     today = now.date()
+    src = sources or Sources()
     sent: list[str] = []
     pools: list[tuple[str, list]] = []
-    for kind, q in queries(g):
+    plan: list[tuple[str, str]] = []
+    teams = {full_names().get(t, t): t for t in (g.away, g.home)}
+    fed = {name: src.feeds.pools(t, name, today) for name, t in teams.items()} if src.feeds else {}
+    for kind, name, q in known_queries(g):
+        if items := fed.get(name, {}).get(kind):
+            sent.append(f"feed: {name} {kind}")
+            pools.append((kind, list(items)))
+        else:
+            plan.append((kind, q))
+    for kind, q in plan + queries(g):
         sent.append(q)
         try:
-            pools.append((kind, list(search_fn(q, max_results=8))))
+            pools.append((kind, _lookup(kind, q, now, search_fn, src.reuse)))
+        except EnginesBlocked:
+            raise
         except SearchError as e:
             run.warnings.append(f"search failed for {q!r}: {e}")
     docs: list[Doc] = []
@@ -378,6 +448,13 @@ def gather(g: Game, fetcher: Fetcher, run: GameRun, now: datetime, search_fn=sea
                     break
             if kept[i] >= PER_QUERY:
                 pool.clear()
+    if src.forecast and g.outdoors:
+        if (wx := src.forecast(g.stadium, g.kickoff_utc)) is None:
+            run.warnings.append(f"no forecast for {g.stadium!r}")
+        else:
+            url, text = wx
+            docs.append(Doc(f"D{len(docs) + 1}", url, f"Forecast for {g.stadium}", "open-meteo.com", today, "weather", text))  # fmt: skip
+            sent.append("forecast: open-meteo")
     return docs, sent
 
 
@@ -990,7 +1067,7 @@ def drafts_dir(paths: Paths, season: int, week: int) -> Path:
     return paths.root / "raw" / "narrative_local" / f"season={season}" / f"week={week:02d}"
 
 
-def research_game(paths: Paths, g: Game, client: LLMClient, fetcher: Fetcher, *, store: bool = True, now: datetime | None = None, search_fn=search, compose_client: LLMClient | None = None) -> GameRun:  # fmt: skip
+def research_game(paths: Paths, g: Game, client: LLMClient, fetcher: Fetcher, *, store: bool = True, now: datetime | None = None, search_fn=search, compose_client: LLMClient | None = None, sources: Sources | None = None) -> GameRun:  # fmt: skip
     """Research one game end to end. Never raises: failures are in the returned GameRun."""
     run = GameRun(g.game_id)
     t0 = time.perf_counter()
@@ -998,7 +1075,7 @@ def research_game(paths: Paths, g: Game, client: LLMClient, fetcher: Fetcher, *,
     try:
         if g.kickoff_utc <= now.replace(tzinfo=None):
             raise ValueError("already kicked off")
-        docs, searches = gather(g, fetcher, run, now, search_fn)
+        docs, searches = gather(g, fetcher, run, now, search_fn, sources)
         if not docs:
             raise ValueError("no usable pages")
         facts = extract(g, docs, client, run, now)
@@ -1017,6 +1094,9 @@ def research_game(paths: Paths, g: Game, client: LLMClient, fetcher: Fetcher, *,
         if store:
             run.stored = str(ingest(paths, draft))
         run.ok = True
+    except EnginesBlocked as e:
+        run.blocked = True
+        run.error = f"EnginesBlocked: {str(e)[:300]}"
     except (LLMError, ValueError) as e:  # pydantic's ValidationError is a ValueError
         run.error = f"{type(e).__name__}: {str(e).splitlines()[0][:300]}"
     run.seconds = time.perf_counter() - t0
@@ -1066,8 +1146,11 @@ def _write_summary(paths: Paths, g: Game, run: GameRun) -> None:
     (d / f"{g.game_id}_{snapshot_ts()}.summary.json").write_text(json.dumps(out, indent=1))
 
 
-def run_week(paths: Paths, season: int, week: int, game_ids: list[str] | None = None, *, store: bool = True) -> list[GameRun]:  # fmt: skip
-    from nfl.llm.narrative import slate
+def run_week(paths: Paths, season: int, week: int, game_ids: list[str] | None = None, *, store: bool = True, sleep=time.sleep) -> list[GameRun]:  # fmt: skip
+    """Research the week's games. Without `game_ids` this is a pass: games under way are skipped,
+    and so are games already stored since the pass began, so rerunning a failed pass resumes it.
+    With every search engine blocked it waits and retries, up to BLOCK_WAIT_MAX_S in all."""
+    from nfl.llm.narrative import last_pass, slate, stored_since
 
     rows = slate(paths, season, week).to_dicts()
     if game_ids:
@@ -1077,10 +1160,28 @@ def run_week(paths: Paths, season: int, week: int, game_ids: list[str] | None = 
         rows = [r for r in rows if r["game_id"] in game_ids]
     else:  # the default skips games already under way
         now = now_utc().replace(tzinfo=None)
-        rows = [r for r in rows if r["kickoff_utc"] > now]
+        done = stored_since(paths, season, week, last_pass(now)) if store else set()
+        rows = [r for r in rows if r["kickoff_utc"] > now and r["game_id"] not in done]
+        if done:
+            print(f"resuming: {len(done)} games already stored in this pass", flush=True)
     client = LLMClient(paths)
     fetcher = Fetcher(paths)
-    return [research_game(paths, Game.from_slate(r), client, fetcher, store=store) for r in rows]
+    sources = Sources(Feeds(fetcher, WINDOW_DAYS), SearchReuse(paths), forecast)
+    search_fn = paced(search)
+    runs: list[GameRun] = []
+    waited = 0
+    for r in rows:
+        g = Game.from_slate(r)
+        while True:
+            run = research_game(paths, g, client, fetcher, store=store, search_fn=search_fn, sources=sources)  # fmt: skip
+            if not run.blocked or waited >= BLOCK_WAIT_MAX_S:
+                break
+            print(f"{g.game_id}: {run.error}; waiting {BLOCK_WAIT_S // 60} min", flush=True)
+            sleep(BLOCK_WAIT_S)
+            waited += BLOCK_WAIT_S
+        runs.append(run)
+        print(f"{g.game_id}: {'stored' if run.ok else run.error} ({run.seconds / 60:.1f} min)", flush=True)  # fmt: skip
+    return runs
 
 
 # ----------------------------------------------------------------------------- experiments

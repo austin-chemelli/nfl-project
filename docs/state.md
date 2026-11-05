@@ -90,6 +90,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
+| narrative-sources | `narrative-sources` | `~/dev/nfl-project-sources` | fix the 2026-11-04 pass failures: feeds and Tavily before search, resumable passes, failure detail, reset instead of pull | PR open 2026-11-05; merge after the Thu 09:00 lock, before the Sat 2026-11-07 07:00 ET pass | #15 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
 
 ## Milestones
@@ -135,7 +136,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 - **Baltimore's Week 9 starter is uncertain.** Tyler Huntley missed Wednesday's practice and Joe Fagnano took full reps. The lock uses the depth chart nflverse has at 09:00.
 - **First live locks** Thu 2026-11-05 09:00 and Sat 2026-11-07 12:00: watch the executions and the lock commits; the laptop fallback is `uv run nfl lock --slot thu` in the primary checkout. Thursday's is the first push from the cloud: dry runs don't push, so the deploy key's write access is confirmed but the push itself is untested.
-- **First desktop pass** 2026-11-04 18:00 ET: the task's environment is tested (entry `desktop setup test` in Cloud Logging), a full scheduled run isn't. The 08:30 check on 2026-11-05 emails if it didn't upload.
+- **First desktop pass** 2026-11-04: two failures. `git pull` refused at 18:00 ET because of a local edit in the desktop clone; rerun at 18:41 ET stored 8 of 15 games, then search engines blocked SearXNG (the desktop log should confirm the 7 errors). The Sunday and Monday games are missing, so the 08:30 check on 2026-11-05 emails unless they are rerun; it never touches the lock. Fixes are in `narrative-sources`; Saturday's pass depends on them and on `TAVILY_API_KEY` in the desktop's `.env`.
 - Follow-up to wave 2: the retro's kicking luck should read against the kicker's own season rate (`src/nfl/retro/game.py`, after the UI retro PR).
 - A correction to an earlier game doesn't mark later retros stale (accepted 2026-11-03; the daily job only rehashes each game's own inputs).
 - NO @ NYG Week 6: the books' spread and moneyline disagree on the favorite at a coin flip. Real market data, not a bug.
@@ -156,11 +157,11 @@ Current docs, what each is for, and when it was last verified against the code o
 | [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-04 |
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-04 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-04 |
-| [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-04 |
+| [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-05 |
 | [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-04 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
-| [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-04 |
-| [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-04 |
+| [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
+| [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |
 | [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona | 2026-11-04 |
 | [PROJECT_BRIEF.md](PROJECT_BRIEF.md) | the original scope; historical, ADRs win on conflict | 2026-10-27 |
 | `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `archive/` notes that were true once | 2026-11-04 |
