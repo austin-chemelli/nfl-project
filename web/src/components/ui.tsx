@@ -20,7 +20,7 @@ export function Section({ title, help, aside, children }: { title: string; help?
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">
+        <h2 className="border-l-[3px] border-accent pl-2 text-lg font-semibold leading-tight">
           <Help text={help}>{title}</Help>
         </h2>
         {aside}
@@ -136,7 +136,7 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
           role="radio"
           aria-checked={o.value === value}
           onClick={() => onChange(o.value)}
-          className={`rounded px-2.5 py-1 ${o.value === value ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
+          className={`whitespace-nowrap rounded px-2.5 py-1 ${o.value === value ? 'bg-accent/20 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`}
         >
           {o.label}
         </button>

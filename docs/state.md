@@ -86,8 +86,8 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| ui | `ui-next` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | U1 (ensemble off the site, Student headline) built 2026-11-04, web-only; U2 game page next; parallel to model-wave2 (§8) | |
-| model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version` for the Week 10 Thursday lock. Runs parallel to ui (§8) | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
+| ui | `ui-u2-game-page` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: game page Preview tab, retro reorder, slate cards, tracker) | U1 (ensemble off the site, Student headline) merged 2026-11-04 (#11); U2 game page built 2026-11-04, Austin's first notes done (team colors, hover cards, range bars, theme), Austin signed off 2026-11-04, PR #13 merges before the Thu 09:00 lock (Austin, 2026-11-04); U3 retro next (waits on H3) | #11, #13 |
+| model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
 | narrative | `narrative-m6.2u`, `desktop-task-fix`, `locks-live` | removed | desktop narrative schedule, the desktop task fixes, locks live | merged 2026-11-04; worktrees and branches removed; task registered on the desktop, first pass 2026-11-04 18:00 ET | #1, #5, #6 |
@@ -142,8 +142,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 - The GCP free trial ends about late January 2027: upgrade the billing account before then (`docs/hosting.md` §3.1).
 - M8 leftovers: no uptime check on `meta.json`, no data-freshness alert.
 - README scorecard CIs change between `nfl readme` runs: on 2026-11-03 only the bootstrap CI digits moved (point estimates and counts identical), although `grade.py` seeds its RNG. Cause unverified; that run's README change was discarded.
-- "Most misread" is hidden in the week recaps: it is built on the ensemble in `retro/week.py`. Moves to the Student with U3's retro schema bump; wave 2's ensemble stop would leave it empty for new weeks until then.
-- Flaky web test: `web/src/pages/build/build.test.tsx` ("Blank (equal weights)" button not found) failed once on PR #6, which doesn't touch `web/`, and passed on rerun. Not investigated; UI track.
+- "Most misread" is hidden in recaps built before wave 2 (their sentences name the ensemble). `retro/week.py` now uses the Student, so each week's list returns when its recap is rebuilt; weeks 1 to 8 need U3's schema bump.
 - gcsfuse logs ERROR `BufferedWriteHandler.OutOfOrderError` on curated parquet writes in cloud jobs (seen in dry run `nfl-lock-thu-5mqhw`, 2026-11-04). The job succeeded; the effect on the written files wasn't checked.
 
 ## Docs map

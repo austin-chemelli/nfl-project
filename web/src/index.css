@@ -1,26 +1,30 @@
 @import "tailwindcss";
 
 /* Design tokens. Palette = the dataviz reference instance (validated categorical order; light and
-   dark steps). Color follows the approach everywhere; references are neutral gray. */
+   dark steps). On a page about two teams, color follows the team; elsewhere it follows the approach;
+   references are neutral gray. */
 :root {
   color-scheme: light;
-  --surface-0: #f6f6f4;
-  --surface-1: #fcfcfb;
-  --surface-2: #f0efec;
-  --border: #e4e3df;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #7a7974;
+  --surface-0: #f3f5f8;
+  --surface-1: #fcfcfd;
+  --surface-2: #e9edf2;
+  --border: #d9dee6;
+  --text-primary: #0d1117;
+  --text-secondary: #4a5260;
+  --text-muted: #6b7482;
   --accent: #2a78d6;
+  --accent-2: #12966a;
+  --band: #e3e7ed;
+  --band-strong: #bcc4d0;
   --series-analyst: #2a78d6;
   --series-traditionalist: #eb6834;
   --series-sharp: #1baf7a;
   --series-student: #eda100;
-  --series-market: #52514e;
+  --series-market: #4a5260;
   --series-ref: #8a8984;
   --div-pos: #2a78d6;
   --div-neg: #e34948;
-  --div-mid: #f0efec;
+  --div-mid: #e3e7ed;
   --good: #0ca30c;
   --warning: #fab219;
   --critical: #d03b3b;
@@ -28,44 +32,66 @@
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
-    --surface-0: #121211;
-    --surface-1: #1a1a19;
-    --surface-2: #242422;
-    --border: #383835;
-    --text-primary: #f0efec;
-    --text-secondary: #c3c2b7;
-    --text-muted: #94938b;
-    --accent: #3987e5;
+    --surface-0: #0e1217;
+    --surface-1: #161b22;
+    --surface-2: #202731;
+    --border: #313b48;
+    --text-primary: #eef1f5;
+    --text-secondary: #c2c9d3;
+    --text-muted: #929baa;
+    --accent: #4f9bf5;
+    --accent-2: #2fc08a;
+    --band: #2b3441;
+    --band-strong: #4a5768;
     --series-analyst: #3987e5;
     --series-traditionalist: #d95926;
     --series-sharp: #199e70;
     --series-student: #c98500;
-    --series-market: #c3c2b7;
+    --series-market: #c2c9d3;
     --series-ref: #8a8984;
     --div-pos: #3987e5;
     --div-neg: #e66767;
-    --div-mid: #383835;
+    --div-mid: #313b48;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface-0: #121211;
-  --surface-1: #1a1a19;
-  --surface-2: #242422;
-  --border: #383835;
-  --text-primary: #f0efec;
-  --text-secondary: #c3c2b7;
-  --text-muted: #94938b;
-  --accent: #3987e5;
+  --surface-0: #0e1217;
+  --surface-1: #161b22;
+  --surface-2: #202731;
+  --border: #313b48;
+  --text-primary: #eef1f5;
+  --text-secondary: #c2c9d3;
+  --text-muted: #929baa;
+  --accent: #4f9bf5;
+  --accent-2: #2fc08a;
+  --band: #2b3441;
+  --band-strong: #4a5768;
   --series-analyst: #3987e5;
   --series-traditionalist: #d95926;
   --series-sharp: #199e70;
   --series-student: #c98500;
-  --series-market: #c3c2b7;
+  --series-market: #c2c9d3;
   --series-ref: #8a8984;
   --div-pos: #3987e5;
   --div-neg: #e66767;
-  --div-mid: #383835;
+  --div-mid: #313b48;
+}
+
+/* A matchup's two colors, set per game by lib/teamColors.ts for both themes. */
+[data-matchup] {
+  --team-away: var(--team-away-light);
+  --team-home: var(--team-home-light);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) [data-matchup] {
+    --team-away: var(--team-away-dark);
+    --team-home: var(--team-home-dark);
+  }
+}
+:root[data-theme="dark"] [data-matchup] {
+  --team-away: var(--team-away-dark);
+  --team-home: var(--team-home-dark);
 }
 
 @theme inline {
@@ -77,6 +103,7 @@
   --color-ink-2: var(--text-secondary);
   --color-ink-3: var(--text-muted);
   --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
 }
 
 html, body, #root { min-height: 100%; }
@@ -92,3 +119,12 @@ body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* The one bit of brand color on every page: a hairline under the header. */
+.brand-rule { height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+/* A wash of each team's color from its own side, over the surface. */
+.matchup-wash {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--team-away) 26%, transparent), transparent 46%, transparent 54%, color-mix(in srgb, var(--team-home) 26%, transparent)),
+    var(--surface-1);
+}

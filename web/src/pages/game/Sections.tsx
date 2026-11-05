@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { DivergingBars, Dumbbell, ProbStrip } from '../../charts'
+import { DivergingBars, Dumbbell, MatchupBand, ProbStrip } from '../../charts'
 import { Help } from '../../components/Help'
 import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
-import { fmtUnit, pct, pts, ptsToward, spreadLabel } from '../../lib/format'
+import { fmtUnit, pct, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from '../../lib/format'
 import { approachOf, groupOf } from '../../lib/meta'
 import { SHORT } from '../../lib/models'
 import {
@@ -95,7 +95,9 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
         leftLabel={`toward ${g.away}`}
         rightLabel={`toward ${g.home}`}
         domain={domain}
-        format={(v) => pts(v)}
+        format={ptsFor}
+        leftColor="var(--team-away)"
+        rightColor="var(--team-home)"
         rows={items.map((i) => ({
           key: i.id, label: i.name, value: i.pp,
           title: `${i.name}: ${ptsToward(i.pp, g.home, g.away)}${i.help ? `. ${i.help}` : ''}`,
@@ -153,7 +155,7 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
                 <td className={td}>{id === 'home_field' ? 'Home field' : groupOf(meta, id)?.name}</td>
                 {opts.map((o) => {
                   const v = id === 'home_field' ? contrib[o].home_field_pp : contrib[o].groups[id]?.pp
-                  return <td key={o} className={`${td} tabular`}>{v == null ? '–' : pts(v)}</td>
+                  return <td key={o} className={`${td} tabular whitespace-nowrap`}>{v == null ? '–' : ptsSide(v, g.home, g.away)}</td>
                 })}
               </tr>
             ))}
@@ -182,7 +184,7 @@ export function Edges({ g, meta }: { g: Game; meta: Meta }) {
               <Help text={r.help}>{r.sentence}</Help>
             </div>
             <div className="mt-1 h-1.5 w-full max-w-md rounded bg-surface-2" aria-hidden>
-              <div className="h-full rounded" style={{ width: `${r.pct}%`, background: r.favors === g.home ? 'var(--div-pos)' : 'var(--div-neg)' }} />
+              <div className="h-full rounded" style={{ width: `${r.pct}%`, background: r.favors === g.home ? 'var(--team-home)' : 'var(--team-away)' }} />
             </div>
           </li>
         ))}
@@ -197,33 +199,65 @@ export function TaleOfTheTape({ g, meta }: { g: Game; meta: Meta }) {
   const [heading, setHeading] = useState<string>('')
   if (t.length === 0) return <Section title="Tale of the tape"><p className="text-ink-2">No feature values for this game.</p></Section>
   const cur = t.find((x) => x.heading === heading) ?? t[0]
+  const drawn = cur.groups.flatMap((x) => x.rows).filter((r) => r.band)
+  const big = drawn.filter((r) => r.band?.stands).length
   return (
-    <Section title="Tale of the tape" help="The raw numbers behind each group, for each team. Hover any feature or group name for what it means.">
+    <Section title="Tale of the tape" help="The raw numbers behind each group, on the league's typical range. Hover any feature or group name for what it means.">
       <div className="mb-3 overflow-x-auto">
         <Segmented label="Group heading" value={cur.heading} onChange={setHeading} options={t.map((x) => ({ value: x.heading, label: x.heading }))} />
       </div>
-      <div className="flex flex-col gap-4">
-        {cur.groups.map((grp) => (
-          <div key={grp.id}>
-            <h3 className="mb-1 text-[15px] font-semibold"><Help text={grp.help}>{grp.name}</Help></h3>
-            <TableScroll>
-              <table className="w-full border-collapse text-[14px]">
-                <thead>
-                  <tr><th className={th}>Feature</th><th className={th}>{g.away}</th><th className={th}>{g.home}</th></tr>
-                </thead>
-                <tbody>
-                  {grp.rows.map((r) => (
-                    <tr key={r.feature}>
-                      <td className={td}><Help text={r.help}>{r.label}</Help></td>
-                      <td className={`${td} tabular`}>{r.away}</td>
-                      <td className={`${td} tabular`}>{r.home}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableScroll>
+      {drawn.length > 0 && (
+        <>
+          <p className="mb-2 max-w-3xl text-[13px] text-ink-2">
+            {big === 0 ? `None of these ${drawn.length} gaps stands out` : `${big} of these ${drawn.length} gaps ${big === 1 ? 'stands' : 'stand'} out`}: a gap stands out when it is wider than the middle half of the league.
+          </p>
+          <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
+            <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--team-away)]" /> {g.away}</span>
+            <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--team-home)]" /> {g.home}</span>
+            <span className="inline-flex items-center gap-1"><span className="inline-flex h-2.5 w-7 overflow-hidden rounded-sm bg-[var(--band)]"><span className="ml-1.5 h-full w-4 bg-[var(--band-strong)]" /></span> Most teams, darker where they bunch up</span>
+            <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-0.5 bg-[var(--text-muted)]" /> Median</span>
+            <span>Further right is better</span>
           </div>
-        ))}
+        </>
+      )}
+      <div className="flex flex-col gap-4">
+        {cur.groups.map((grp) => {
+          const bands = grp.rows.filter((r) => r.band)
+          const plain = grp.rows.filter((r) => !r.band)
+          return (
+            <div key={grp.id}>
+              <h3 className="mb-1 text-[15px] font-semibold"><Help text={grp.help}>{grp.name}</Help></h3>
+              {bands.length > 0 && (
+                <MatchupBand
+                  away={g.away} home={g.home}
+                  format={(v, key) => fmtUnit(v, bands.find((r) => r.feature === key)?.unit)}
+                  rows={bands.map((r) => ({
+                    key: r.feature, label: r.label, help: r.help, away: r.band!.awayV, home: r.band!.homeV,
+                    lo: r.band!.lo, q1: r.band!.q1, med: r.band!.med, q3: r.band!.q3, hi: r.band!.hi, stands: r.band!.stands, flip: r.band!.flip,
+                  }))}
+                />
+              )}
+              {plain.length > 0 && (
+                <TableScroll>
+                  <table className="w-full border-collapse text-[14px]">
+                    <thead>
+                      <tr><th className={th}>Feature</th><th className={th}>{g.away}</th><th className={th}>{g.home}</th></tr>
+                    </thead>
+                    <tbody>
+                      {plain.map((r) => (
+                        <tr key={r.feature}>
+                          <td className={td}><Help text={r.help}>{r.label}</Help></td>
+                          <td className={`${td} tabular`}>{r.away}</td>
+                          <td className={`${td} tabular`}>{r.home}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableScroll>
+              )}
+            </div>
+          )
+        })}
       </div>
     </Section>
   )
@@ -262,8 +296,7 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
                 domain={u.domain}
                 format={fmtFor(u.unit)}
                 rows={u.rows.map((r) => ({
-                  key: r.key, label: r.label, a: r.a, b: r.b, league: r.league,
-                  title: `${r.label}: ${b.aName} ${r.a == null ? '–' : fmtUnit(r.a, r.unit)}, ${b.bName} ${r.b == null ? '–' : fmtUnit(r.b, r.unit)}, league ${r.league == null ? '–' : fmtUnit(r.league, r.unit)}. ${r.help}`,
+                  key: r.key, label: r.label, a: r.a, b: r.b, league: r.league, help: r.help,
                 }))}
               />
             ))}

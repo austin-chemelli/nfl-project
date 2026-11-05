@@ -1,6 +1,8 @@
 export { DivergingBars, type DivRow } from './DivergingBars'
 export { DotWhisker, type DotRow } from './DotWhisker'
 export { Dumbbell, type DumbbellRow } from './Dumbbell'
+export { MatchupBand, type MatchupBandRow } from './MatchupBand'
 export { useWidth } from './useWidth'
 export { RangeRow, type RangeRowData, type RangeVerdict } from './RangeRow'
 export { ProbStrip, type ProbModel } from './ProbStrip'
+export { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'

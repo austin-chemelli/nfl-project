@@ -6,14 +6,15 @@ import { TeamAccent } from '../../components/TeamAccent'
 import type { GameRow } from '../../data/contract'
 import { kickoffEt, pct, spreadLabel } from '../../lib/format'
 import { APPROACHES, SHORT } from '../../lib/models'
+import { matchupVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
 import { cardSentence, gameStatus } from './helpers'
 
-function TeamCode({ team }: { team: string }) {
+function TeamCode({ team, color }: { team: string; color: string }) {
   return (
     <span className="inline-flex flex-col" title={teamInfo(team).name}>
       <span>{team}</span>
-      <TeamAccent team={team} />
+      <TeamAccent team={team} color={color} />
     </span>
   )
 }
@@ -45,13 +46,16 @@ export function GameCard({ g, showStatus }: { g: GameRow; showStatus: boolean })
   return (
     <Link
       to={`/game/${g.game_id}`}
-      className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface-1 p-3 hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+      data-matchup
+      style={matchupVars(g.away, g.home)}
+      className="relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-line bg-surface-1 p-3 pt-3.5 hover:bg-surface-2 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
     >
+      <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'linear-gradient(90deg, var(--team-away) 50%, var(--team-home) 50%)' }} />
       <div className="flex items-start justify-between gap-2">
-        <span className="inline-flex items-baseline gap-2 text-lg font-semibold text-accent">
-          <TeamCode team={g.away} />
+        <span className="inline-flex items-baseline gap-2 text-lg font-semibold text-ink">
+          <TeamCode team={g.away} color="var(--team-away)" />
           <span className="text-ink-3">@</span>
-          <TeamCode team={g.home} />
+          <TeamCode team={g.home} color="var(--team-home)" />
         </span>
         <span className="flex flex-col items-end gap-1 text-right">
           {g.result ? <FinalScore g={g} /> : <span className="text-[13px] text-ink-2">{kickoffEt(g.kickoff_utc)}</span>}
@@ -69,7 +73,7 @@ export function GameCard({ g, showStatus }: { g: GameRow; showStatus: boolean })
         </div>
         <span>{g.home}</span>
       </div>
-      <div className="text-[14px]">{cardSentence(g)}</div>
+      <div className="text-[14px] text-ink">{cardSentence(g)}</div>
     </Link>
   )
 }

@@ -44,6 +44,12 @@ const ALIAS: Record<string, string> = { LAR: 'LA', STL: 'LA', SD: 'LAC', OAK: 'L
 
 const FALLBACK: TeamInfo = { name: '', color: '#8a8984' }
 
+/** The site's code for a franchise, whichever era's code it was given. */
+export function canonicalTeam(code: string): string {
+  const k = code.toUpperCase()
+  return ALIAS[k] ?? k
+}
+
 export function teamInfo(code: string | null | undefined): TeamInfo {
   if (!code) return { ...FALLBACK, name: 'Unknown' }
   const k = code.toUpperCase()

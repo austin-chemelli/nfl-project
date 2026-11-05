@@ -27,3 +27,13 @@ The site has the data but reads as a wall. A finished game's page stacks 21 sect
 - Adding fields to retros needs a rebuild: `SCHEMA_VERSION` becomes "2" and the builder treats a different stored schema version as stale, the same as a changed play hash.
 - The tendencies dumbbells get the same league band later (from `tendencies.parquet`); not in this milestone.
 - Risk: a tab can still be busy. The text budget is the guard, and the review step after M10.3 is where it is checked.
+
+## Amendment 2026-11-04: color follows the team, and the site gets some color
+
+Austin, after a day with the round 2 game page: the red and blue bars made him check the legend to know who was who, and in dark mode the site read as bland. This replaces "team colors appear as a thin accent bar only".
+
+- On a page about two teams, color means the team: bars, dots, a wash in the banner, tile edges. Approach colors stay on everything about approaches. Red and blue stay where they mean better and worse or helped and hurt, not a team.
+- Brand colors don't work directly as chart marks: the Ravens' purple disappears on a dark page and four teams share one navy. `web/src/lib/teamColors.ts` fits each color to each theme and picks a pair per matchup, keeping a team's main color where it can (a lightness step first, a secondary color after). A test holds all 992 matchups to 3:1 on the page and to a separation floor for normal and for red-green colorblind vision.
+- The surfaces take a slight cool tint and one brand gradient sits under the header, so pages that aren't about teams have some color too. Text stays in the text tokens, never a team's color.
+- Logos stay banned (ADR 0011).
+

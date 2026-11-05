@@ -6,12 +6,14 @@ import { Tabs, type TabDef } from '../components/Tabs'
 import { Card, ErrorBox, Loaded, Loading, Page } from '../components/ui'
 import { useGame, useMeta, useRetro, isNotFound } from '../data/api'
 import type { Game, Meta, RetroGame } from '../data/contract'
-import { Edges, Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './game/Sections'
+import { Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './game/Sections'
 import { GameHeader, GameTitle } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
+import { Preview } from './game/Preview'
 import { Retro } from './game/Retro'
 import { summaryTiles } from './game/summary'
 import { gameStatus } from './slate/helpers'
+import { matchupVars } from '../lib/teamColors'
 
 const STATUS_TEXT: Record<string, string> = {
   preview: 'Preview: scored now, not yet a lock.',
@@ -34,6 +36,7 @@ export default function GamePage() {
   const missing = q.isError && isNotFound(q.error)
   const teams = teamsOf(id)
   return (
+    <div data-matchup style={teams ? matchupVars(teams.away, teams.home) : undefined}>
     <Page title={teams ? <GameTitle {...teams} /> : 'Game'}>
       {missing ? (
         <Card>
@@ -50,6 +53,7 @@ export default function GamePage() {
         </Loaded>
       )}
     </Page>
+    </div>
   )
 }
 
@@ -67,13 +71,25 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
     tabs.push({ id: 'retro', label: 'What happened', content: retro ? <Retro r={retro} /> : <ErrorBox error={retroError} /> })
   tabs.push(
     {
-      id: 'forecast',
-      label: final ? 'Pregame forecast' : 'Forecast',
+      id: 'preview',
+      label: 'Preview',
+      content: (
+        <TabBody>
+          <Preview g={g} meta={meta} />
+          <FinePrint>
+            <p>The bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
+            <p>Probabilities are the models' estimates, not advice.</p>
+          </FinePrint>
+        </TabBody>
+      ),
+    },
+    {
+      id: 'approaches',
+      label: 'Approaches',
       content: (
         <TabBody>
           <ApproachesVsMarket g={g} meta={meta} />
           <Why g={g} meta={meta} />
-          <Edges g={g} meta={meta} />
           <FinePrint>
             <p>{STATUS_TEXT[status] ?? status}</p>
             <p>Probabilities are the models' estimates, not advice. The market is the reference every approach is compared with, never an input.</p>
@@ -83,14 +99,25 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       ),
     },
     {
-      id: 'matchup',
-      label: 'Matchup',
+      id: 'tendencies',
+      label: 'Tendencies',
       content: (
         <TabBody>
-          <TaleOfTheTape g={g} meta={meta} />
           <Tendencies g={g} meta={meta} />
           <FinePrint>
             <p>Tendencies are season-to-date rates, shrunk toward the league average when plays are few. Each chart has its own scale.</p>
+          </FinePrint>
+        </TabBody>
+      ),
+    },
+    {
+      id: 'details',
+      label: 'Details',
+      content: (
+        <TabBody>
+          <TaleOfTheTape g={g} meta={meta} />
+          <FinePrint>
+            <p>The typical range runs from the league's 10th to its 90th percentile team, as of the latest data, so an older game's values sit on today's league.</p>
             <p>Values that describe the game as a whole (like the market line) show the same number for both teams.</p>
           </FinePrint>
         </TabBody>
@@ -113,10 +140,10 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       <GameHeader g={g} />
       <SummaryStrip label="Game summary">
         {summaryTiles(g, meta, retro).map((t) => (
-          <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} tab={tabs.some((x) => x.id === t.tab) ? t.tab : undefined} modelId={t.modelId} />
+          <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} tab={tabs.some((x) => x.id === t.tab) ? t.tab : undefined} modelId={t.modelId} accent={t.team === g.home ? 'var(--team-home)' : t.team === g.away ? 'var(--team-away)' : undefined} />
         ))}
       </SummaryStrip>
-      <Tabs label="Game sections" tabs={tabs} default={retro ? 'retro' : 'forecast'} />
+      <Tabs label="Game sections" tabs={tabs} default={retro ? 'retro' : 'preview'} />
       <p className="text-[12px] text-ink-3">Fan-made, not affiliated with the NFL. Not betting advice.</p>
     </>
   )

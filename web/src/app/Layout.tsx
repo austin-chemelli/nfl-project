@@ -29,7 +29,7 @@ function Header() {
   const [theme, setTheme] = useTheme()
   const next: Record<Theme, Theme> = { system: 'light', light: 'dark', dark: 'system' }
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-surface-1/95 backdrop-blur">
+    <header className="sticky top-0 z-20 bg-surface-1/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
         <NavLink to="/" className="shrink-0 font-semibold text-ink hover:no-underline">NFL approaches</NavLink>
         <nav aria-label="Main" className="-mx-1 flex min-w-0 flex-1 gap-1 overflow-x-auto text-[14px]">
@@ -39,7 +39,7 @@ function Header() {
               to={n.to}
               end={n.end}
               className={({ isActive }) =>
-                `shrink-0 rounded px-2 py-1 hover:no-underline ${isActive ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`
+                `shrink-0 rounded px-2 py-1 hover:no-underline ${isActive ? 'bg-accent/20 font-medium text-ink' : 'text-ink-2 hover:text-ink'}`
               }
             >
               {n.label}
@@ -56,6 +56,7 @@ function Header() {
           {theme === 'system' ? 'Auto' : theme === 'light' ? 'Light' : 'Dark'}
         </button>
       </div>
+      <div className="brand-rule" />
     </header>
   )
 }

@@ -12,14 +12,18 @@ const retro = RetroGame.parse(load('retro/2026_08_CAR_GB.json'))
 const final = { ...game, result: { home_score: 20, away_score: 23, margin: -3 } }
 
 describe('summaryTiles', () => {
-  it('pregame: the pick, vs the market, the split, the biggest factor, and an edge when no one is out', () => {
+  it('pregame: the pick, vs the market, the biggest factor, and an edge when no one is out', () => {
     const t = summaryTiles(game, meta, null)
-    expect(t.map((x) => x.id)).toEqual(['pick', 'market', 'split', 'factor', 'edge'])
-    expect(t.every((x) => x.tab === 'forecast')).toBe(true)
+    expect(t.map((x) => x.id)).toEqual(['pick', 'market', 'factor', 'edge'])
+    expect(t.map((x) => x.tab)).toEqual(['approaches', 'approaches', 'preview', 'preview'])
     expect(t[0]).toMatchObject({ value: expect.stringMatching(/^GB \d+%$/), sub: "the Student's line", modelId: 'student' })
     // every approach leans further toward GB than the market (divergence +5 to +8 pts)
     expect(t[1].value).toMatch(/pts more on GB|In line/)
-    expect(t[2]).toMatchObject({ value: 'All on GB', sub: '4 of 4 agree' })
+  })
+
+  it('pregame: the biggest edge is never a context-only group', () => {
+    const g = { ...game, edges: { coaching: { favors: 'GB', strength_pct: 99 }, quality: { favors: 'CAR', strength_pct: 60 } } }
+    expect(summaryTiles(g, meta, null).find((x) => x.id === 'edge')).toMatchObject({ value: 'CAR Quality' })
   })
 
   it('pregame: dates a market line more than 3 days old', () => {
@@ -44,12 +48,6 @@ describe('summaryTiles', () => {
     const g = { ...game, injuries: [inj('A Linebacker', 'LB', 'Out'), inj('B Receiver', 'WR', 'Doubtful'), inj('C Tackle', 'T', 'Out'), inj('A Quarterback', 'QB', 'Reserve/Injured (IR)')] }
     // the IR quarterback is not this week's news; a doubtful receiver outranks an out linebacker
     expect(summaryTiles(g, meta, null).find((x) => x.id === 'absence')).toMatchObject({ value: 'B Receiver', sub: 'GB WR, doubtful · +2 more' })
-  })
-
-  it('pregame: a 3–1 split names the dissenter', () => {
-    const g = structuredClone(game)
-    g.models.sharp.p_home = 0.4
-    expect(summaryTiles(g, meta, null).find((x) => x.id === 'split')).toMatchObject({ value: '3–1 GB', sub: 'Sharp takes CAR' })
   })
 
   it('post-game: result, approaches right, played like, swing plays, biggest surprise', () => {

@@ -3,18 +3,18 @@
  * first, linking to the tab that explains it. Pure functions over the contract so both cases are
  * unit-tested.
  *
- * Before kickoff: the pick, how it sits against the market, whether the approaches agree, what
- * drives the pick, and the key absence (or the biggest edge when no one is out).
+ * Before kickoff: the pick, how it sits against the market, what drives the pick, and the key
+ * absence (or the biggest edge when no one is out). How the approaches split lives on their tab.
  * After the game: upset or not, how the approaches did, whether the play matched the result, which
  * way the swing plays went, and the biggest surprise against a team's season.
  */
 import type { Efficiency, Game, Meta, RetroGame, TeamRetro } from '../../data/contract'
 import { pct } from '../../lib/format'
-import { groupOf } from '../../lib/meta'
+import { groupOf, isContextOnly } from '../../lib/meta'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { injuryRank, sortInjuries } from './helpers'
 
-export type TabId = 'retro' | 'forecast' | 'matchup' | 'news'
+export type TabId = 'retro' | 'preview' | 'approaches' | 'tendencies' | 'details' | 'news'
 
 export type TileSpec = {
   id: string
@@ -23,6 +23,8 @@ export type TileSpec = {
   sub: string
   tab: TabId
   modelId?: string
+  /** The team this tile is about, for its accent. */
+  team?: string
 }
 
 const fav = (p: number, home: string, away: string) => (p >= 0.5 ? home : away)
@@ -58,8 +60,8 @@ function resultTile(g: Game, tab: TabId): TileSpec {
   const pW = w === g.home ? mk : 1 - mk
   if (Math.abs(pW - 0.5) < TOSS_UP) return { id: 'result', label: 'Result', value: 'Toss-up', sub: `${w} won; the market had it ${pct(pW)}`, tab }
   return pW < 0.5
-    ? { id: 'result', label: 'Result', value: 'Upset', sub: `${w} won as a ${pct(pW)} underdog`, tab }
-    : { id: 'result', label: 'Result', value: 'Favorite won', sub: `${w} was ${pct(pW)} in the market`, tab }
+    ? { id: 'result', label: 'Result', value: 'Upset', sub: `${w} won as a ${pct(pW)} underdog`, tab, team: w }
+    : { id: 'result', label: 'Result', value: 'Favorite won', sub: `${w} was ${pct(pW)} in the market`, tab, team: w }
 }
 
 /** How many approaches picked the winner, from the game file's picks. */
@@ -73,7 +75,7 @@ function approachesRight(g: Game): { right: string[]; n: number } {
 // ------------------------------------------------------------------------------------- pregame
 
 function pregameTiles(g: Game, meta: Meta): TileSpec[] {
-  const tiles: TileSpec[] = [pickTile(g), marketTile(g, meta.generated_at), splitTile(g), factorTile(g, meta)]
+  const tiles: TileSpec[] = [pickTile(g), marketTile(g, meta.generated_at), factorTile(g, meta)]
   const absence = absenceTile(g)
   tiles.push(absence ?? edgeTile(g, meta) ?? { id: 'absence', label: 'Key absence', value: 'None listed', sub: g.injuries.length ? 'no one out or doubtful' : 'no injury report yet', tab: 'news' })
   return tiles
@@ -81,8 +83,8 @@ function pregameTiles(g: Game, meta: Meta): TileSpec[] {
 
 function pickTile(g: Game): TileSpec {
   const p = g.models[HEADLINE]?.p_home
-  if (p == null) return { id: 'pick', label: 'The pick', value: '–', sub: 'not scored yet', tab: 'forecast' }
-  return { id: 'pick', label: 'The pick', value: `${fav(p, g.home, g.away)} ${favPct(p)}`, sub: `the ${SHORT[HEADLINE]}'s line`, tab: 'forecast', modelId: HEADLINE }
+  if (p == null) return { id: 'pick', label: 'The pick', value: '–', sub: 'not scored yet', tab: 'approaches' }
+  return { id: 'pick', label: 'The pick', value: `${fav(p, g.home, g.away)} ${favPct(p)}`, sub: `the ${SHORT[HEADLINE]}'s line`, tab: 'approaches', modelId: HEADLINE, team: fav(p, g.home, g.away) }
 }
 
 /** The line's date when it is more than 3 days older than the site data (lines for later weeks lag). */
@@ -100,37 +102,23 @@ function marketTile(g: Game, now: string): TileSpec {
   const mkText = mk == null
     ? 'no market line yet'
     : `market ${fav(mk, g.home, g.away)} ${favPct(mk)}${line != null && Math.abs(line) >= 0.25 ? `, ${line > 0 ? g.home : g.away} −${Math.abs(line)}` : ''}${lineAge(g.market?.as_of, now)}`
-  if (mk == null || p == null) return { id: 'market', label: 'vs the market', value: '–', sub: mkText, tab: 'forecast' }
+  if (mk == null || p == null) return { id: 'market', label: 'vs the market', value: '–', sub: mkText, tab: 'approaches' }
   const d = Math.round(100 * (p - mk))
-  if (fav(p, g.home, g.away) !== fav(mk, g.home, g.away)) return { id: 'market', label: 'vs the market', value: 'Other side', sub: mkText, tab: 'forecast' }
-  if (Math.abs(d) < 3) return { id: 'market', label: 'vs the market', value: 'In line', sub: mkText, tab: 'forecast' }
-  return { id: 'market', label: 'vs the market', value: `${Math.abs(d)} pts more on ${d > 0 ? g.home : g.away}`, sub: mkText, tab: 'forecast' }
-}
-
-/** "3–1 MIN" with the dissenters named. */
-function splitTile(g: Game): TileSpec {
-  const ps = APPROACHES.filter((a) => g.models[a]?.p_home != null)
-  if (ps.length === 0) return { id: 'split', label: 'Approaches', value: '–', sub: 'not scored yet', tab: 'forecast' }
-  const onHome = ps.filter((a) => g.models[a].p_home >= 0.5)
-  const onAway = ps.filter((a) => g.models[a].p_home < 0.5)
-  const [major, minor, side, other] = onHome.length >= onAway.length ? [onHome, onAway, g.home, g.away] : [onAway, onHome, g.away, g.home]
-  return {
-    id: 'split', label: 'Approaches', tab: 'forecast',
-    value: minor.length === 0 ? `All on ${side}` : major.length === minor.length ? 'Split 2–2' : `${major.length}–${minor.length} ${side}`,
-    sub: minor.length === 0 ? `${ps.length} of ${ps.length} agree` : `${minor.map((a) => SHORT[a]).join(', ')} ${minor.length === 1 ? 'takes' : 'take'} ${other}`,
-  }
+  if (fav(p, g.home, g.away) !== fav(mk, g.home, g.away)) return { id: 'market', label: 'vs the market', value: 'Other side', sub: mkText, tab: 'approaches' }
+  if (Math.abs(d) < 3) return { id: 'market', label: 'vs the market', value: 'In line', sub: mkText, tab: 'approaches' }
+  return { id: 'market', label: 'vs the market', value: `${Math.abs(d)} pts more on ${d > 0 ? g.home : g.away}`, sub: mkText, tab: 'approaches' }
 }
 
 /** The group (or home field) that moves the headline line most. */
 function factorTile(g: Game, meta: Meta): TileSpec {
   const c = g.contributions[HEADLINE]
-  if (!c) return { id: 'factor', label: 'Biggest factor', value: '–', sub: 'no breakdown', tab: 'forecast' }
+  if (!c) return { id: 'factor', label: 'Biggest factor', value: '–', sub: 'no breakdown', tab: 'preview' }
   const items = [
     { name: 'Home field', pp: c.home_field_pp ?? 0 },
     ...Object.entries(c.groups).map(([id, x]) => ({ name: groupOf(meta, id)?.name ?? id, pp: x.pp ?? 0 })),
   ]
   const top = items.reduce((a, b) => (Math.abs(b.pp) > Math.abs(a.pp) ? b : a))
-  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${one(top.pp)} pts toward ${top.pp >= 0 ? g.home : g.away}`, tab: 'forecast' }
+  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${one(top.pp)} pts toward ${top.pp >= 0 ? g.home : g.away}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
 }
 
 /** Position weight for "key": the injury file has no importance field, so the position stands in for it. */
@@ -146,16 +134,16 @@ function absenceTile(g: Game): TileSpec | null {
   )
   if (out.length === 0) return null
   const i = out[0]
-  return { id: 'absence', label: 'Key absence', value: i.player, sub: `${i.team}${i.pos ? ` ${i.pos}` : ''}, ${i.status.toLowerCase()}${out.length > 1 ? ` · +${out.length - 1} more` : ''}`, tab: 'news' }
+  return { id: 'absence', label: 'Key absence', value: i.player, sub: `${i.team}${i.pos ? ` ${i.pos}` : ''}, ${i.status.toLowerCase()}${out.length > 1 ? ` · +${out.length - 1} more` : ''}`, tab: 'news', team: i.team }
 }
 
 function edgeTile(g: Game, meta: Meta): TileSpec | null {
   const edges = Object.entries(g.edges)
-    .filter(([, e]) => e.favors && e.strength_pct != null)
+    .filter(([id, e]) => e.favors && e.strength_pct != null && !isContextOnly(meta, id))
     .sort(([, a], [, b]) => (b.strength_pct ?? 0) - (a.strength_pct ?? 0))
   if (edges.length === 0) return null
   const [id, e] = edges[0]
-  return { id: 'edge', label: 'Biggest edge', value: `${e.favors} ${groupOf(meta, id)?.name ?? id}`, sub: `bigger than ${Math.round(e.strength_pct ?? 0)}% of matchups`, tab: 'forecast' }
+  return { id: 'edge', label: 'Biggest edge', value: `${e.favors} ${groupOf(meta, id)?.name ?? id}`, sub: `bigger than ${Math.round(e.strength_pct ?? 0)}% of matchups`, tab: 'preview', team: e.favors ?? undefined }
 }
 
 // ------------------------------------------------------------------------------------ finished
@@ -178,7 +166,7 @@ function finishedTiles(g: Game, r: RetroGame): TileSpec[] {
     plP - 0.5 < TOSS_UP
       ? { id: 'played', label: 'Played like', tab: 'retro', value: 'About even', sub: `${pl.favored} ${pct(plP)} by efficiency` }
       : {
-          id: 'played', label: 'Played like', tab: 'retro',
+          id: 'played', label: 'Played like', tab: 'retro', team: pl.favored,
           value: `${pl.favored} ${pct(plP)}`,
           sub: pl.matches_result == null ? 'the better side; a tie' : pl.matches_result ? 'the better side, and won' : 'the better side, but lost',
         },
@@ -195,7 +183,7 @@ function swingTile(r: RetroGame): TileSpec {
   const pure = pureLuck(r.teams.home) - pureLuck(r.teams.away)
   const side = (x: number) => (x >= 0 ? r.home : r.away)
   return {
-    id: 'swing', label: 'Swing plays', tab: 'retro',
+    id: 'swing', label: 'Swing plays', tab: 'retro', team: Math.abs(net) < 1 ? undefined : side(net),
     value: Math.abs(net) < 1 ? 'Even' : `${side(net)} +${one(net)} pts`,
     sub: Math.abs(pure) < 1 ? 'pure luck about even' : `pure luck ${side(pure)} +${one(pure)}`,
   }
@@ -226,7 +214,7 @@ function surpriseTile(r: RetroGame): TileSpec | null {
   const better = (d > 0) === top.e.higher_is_better
   const per = top.e.metric.includes('dropback') ? 'a dropback' : top.e.metric.includes('rush') ? 'a rush' : 'a play'
   return {
-    id: 'surprise', label: 'Biggest surprise', tab: 'retro',
+    id: 'surprise', label: 'Biggest surprise', tab: 'retro', team: top.team,
     value: `${top.team} ${SURPRISE[top.e.metric]}`,
     sub: `${better ? 'better' : 'worse'} than its season by ${Math.abs(d).toFixed(2)} EPA ${per}`,
   }
@@ -237,12 +225,12 @@ function finishedNoRetroTiles(g: Game, meta: Meta): TileSpec[] {
   const { right, n } = approachesRight(g)
   const tie = winnerOf(g) == null
   return [
-    resultTile(g, 'forecast'),
+    resultTile(g, 'approaches'),
     tie || n === 0
-      ? { id: 'right', label: 'Approaches right', value: '–', sub: tie ? 'a tie' : 'no approach forecasts', tab: 'forecast' }
-      : { id: 'right', label: 'Approaches right', value: `${right.length} of ${n}`, sub: right.length ? right.join(', ') : 'none picked the winner', tab: 'forecast' },
+      ? { id: 'right', label: 'Approaches right', value: '–', sub: tie ? 'a tie' : 'no approach forecasts', tab: 'approaches' }
+      : { id: 'right', label: 'Approaches right', value: `${right.length} of ${n}`, sub: right.length ? right.join(', ') : 'none picked the winner', tab: 'approaches' },
     pickTile(g),
     factorTile(g, meta),
-    { id: 'pending', label: 'Retrospective', value: 'Coming', sub: 'built the morning after a game', tab: 'forecast' },
+    { id: 'pending', label: 'Retrospective', value: 'Coming', sub: 'built the morning after a game', tab: 'approaches' },
   ]
 }
