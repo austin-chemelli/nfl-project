@@ -157,7 +157,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-04 |
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-04 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-04 |
-| [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-04 |
+| [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-05 |
 | [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-04 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
