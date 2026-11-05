@@ -86,7 +86,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| ui | `ui-u4-slate` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: slate cards, tracker) | U1, U2, U3 merged 2026-11-04 (#11, #13, #14), U3 ahead of the first lock at Austin's call; retros and recaps rebuilt on schema 3; U4 slate cards built on `ui-u4-slate` with implementer and reviewer agents, local; job code, so it merges after the Thu 09:00 lock | #11, #13, #14 |
+| ui | `ui-u4-slate` | `~/dev/nfl-project-ui` | round 2: games first, approaches second (`.notes/ui-round2.md` §3–4: slate cards, tracker) | U1, U2, U3 merged 2026-11-04 (#11, #13, #14), U3 ahead of the first lock at Austin's call; retros and recaps rebuilt on schema 3; U4 slate cards in PR #16, built with implementer and reviewer agents | #11, #13, #14, #16 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | `~/dev/nfl-project-model` | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
