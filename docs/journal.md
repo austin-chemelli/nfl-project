@@ -412,3 +412,13 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 **Findings.** 15 of 15 records in the bucket at 06:32Z. All 7 new records used the 4 feed pools and 7 queries; 5 outdoor games also used the forecast. All 7 reached 30 claims from 10 to 14 pages, and team sites and NBC Sports rose among the cited sources, with 15 claims citing Open-Meteo. Games took 26.5 minutes on average (n=7), against about 16 for the four cleanest gaps of the search-only pass. Timing 8 feed pages from one game on the desktop gave about 32 seconds a page and 10 facts, against 21 seconds and about 7 facts in Week 8; at 25 pages against 20 that is about 6 of the 10 extra minutes. Tavily's dashboard showed 51 credits used, so it served the 49 queries. The two `pass started` entries were a manual start, Ctrl+C, and a second start. Quality against the search-only records is not compared yet.
 
 **Lesson.** Resuming worked, but a resume keeps thin records: LA @ WAS stayed at 14 claims until the next pass. Pass length now matters on Saturdays, when the check runs 4.5 hours after the start and uploads come last.
+
+## 2026-11-05: two future plans for narrative research (M6.6, M6.7)
+
+**Why.** Austin asked why the research is a fixed pipeline, and what would make it smarter.
+
+**What changed.** Parked two plans in `docs/tasks.md`, with decision D3 in the hub: one follow-up search per game in the local pipeline (M6.6), or a hosted free-roaming agent on API credits (M6.7), which would need the no-paid-API rule reversed. Nothing built.
+
+**Findings.** A throwaway prompt on 2 Week 8 games proposed 4 distinct follow-up queries: 2 useful, 2 weak status checks, with real citations and the same output on a second run. No searches were run, so whether they find anything is unknown. Credits: one follow-up per game fits (about 885 of 1,000 a month), two don't.
+
+**Lesson.** ADR 0014 ruled out an agent on the 9B by reasoning, not by test; the only agent comparison is the Claude skill, which also uses a far larger model.
