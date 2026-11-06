@@ -4,7 +4,7 @@ Where the project is right now. Chats keep it current as they work ([state-maint
 
 ## Bottom line (as of 2026-11-05)
 
-The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). M13 site walk fixes merged 2026-11-05 (#18). Next: two flights planned 2026-11-05 on Fable, the league page (M14, ADR 0019, this chat's track `league`) and the retro's win-probability chart with a motion pass (M15, ADR 0020, track `pop` in a second chat); then the narrative's previews and evals (M6.3, M6.4).
+The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). Next: two flights planned 2026-11-05 on Fable, the league page (M14, ADR 0019, this chat's track `league`) and the retro's win-probability chart with a motion pass (M15, ADR 0020, track `pop` in a second chat); then the narrative's previews and evals (M6.3, M6.4).
 
 ## What runs where
 
