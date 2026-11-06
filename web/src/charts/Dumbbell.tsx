@@ -9,7 +9,7 @@ import { useWidth } from './useWidth'
 
 export type DumbbellRow = { key: string; label: ReactNode; a: number | null; b: number | null; league: number | null; title?: string; bColor?: string; help?: string }
 
-export function Dumbbell({ rows, aName, bName, aColor = 'var(--series-traditionalist)', bColor = 'var(--series-analyst)', format, domain, rowHeight = 28, labelWidth = 170, legend }: {
+export function Dumbbell({ rows, aName, bName, aColor = 'var(--series-traditionalist)', bColor = 'var(--series-analyst)', format, domain, rowHeight = 28, labelWidth = 170, legend, decorative }: {
   rows: DumbbellRow[]
   aName: string
   bName: string
@@ -21,13 +21,17 @@ export function Dumbbell({ rows, aName, bName, aColor = 'var(--series-traditiona
   labelWidth?: number
   /** Replaces the default legend (when rows color their `b` dot themselves). */
   legend?: ReactNode
+  /** Hides the svg from assistive tech, where the values are printed beside it. */
+  decorative?: boolean
 }) {
   const [ref, width] = useWidth()
   const { box, at, bind, card } = useChartTip()
   const lw = width < 480 ? Math.min(110, labelWidth) : labelWidth
   const vals = rows.flatMap((r) => [r.a, r.b, r.league]).filter((v): v is number => v != null)
   const [d0, d1] = domain ?? [Math.min(...vals, 0), Math.max(...vals, 0.01)]
-  const x = scaleLinear().domain([d0, d1]).range([lw + 8, width - 48]).nice()
+  // a domain passed in is exact, so a caller's "lowest to highest" stays true
+  const x = scaleLinear().domain([d0, d1]).range([lw + 8, width - 48])
+  if (!domain) x.nice()
   const head = 22
   const h = head + rows.length * rowHeight + 4
   const hovered = rows.find((r) => r.key === at?.key)
@@ -41,12 +45,12 @@ export function Dumbbell({ rows, aName, bName, aColor = 'var(--series-traditiona
         </div>
       )}
       <div ref={box} className="relative">
-      <svg width={width} height={h} role="img" className="block text-[12px]">
+      <svg width={width} height={h} {...(decorative ? { 'aria-hidden': true } : { role: 'img' })} className="block text-[12px]">
         {rows.map((r, i) => {
           const y = head + i * rowHeight + rowHeight / 2 - 10
           const pts = [r.a, r.b].filter((v): v is number => v != null)
           return (
-            <g key={r.key} {...bind(r.key)}>
+            <g key={r.key} {...bind(r.key)} {...(decorative ? { tabIndex: -1 } : {})}>
               <rect x={0} y={y - rowHeight / 2} width={width} height={rowHeight} rx={4} fill={hovered?.key === r.key ? 'var(--surface-2)' : 'transparent'} />
               <foreignObject x={0} y={y - rowHeight / 2} width={lw} height={rowHeight}>
                 <div className="flex h-full items-center truncate text-[13px] text-ink-2">{r.label}</div>

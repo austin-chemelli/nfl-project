@@ -1,0 +1,4816 @@
+{
+ "schema_version": "1",
+ "season": 2026,
+ "as_of": "2026-11-03T12:00:00Z",
+ "measures": [
+  {
+   "id": "record",
+   "label": "Record"
+  },
+  {
+   "id": "strength.point_diff_pg",
+   "label": "Point margin"
+  },
+  {
+   "id": "strength.pythag_win_pct",
+   "label": "Expected win rate"
+  },
+  {
+   "id": "strength.epa_off_adj",
+   "label": "Offense"
+  },
+  {
+   "id": "strength.epa_def",
+   "label": "Defense"
+  },
+  {
+   "id": "strength.qb_epa",
+   "label": "QB play"
+  },
+  {
+   "id": "strength.sos",
+   "label": "Schedule"
+  }
+ ],
+ "teams": {
+  "CHI": {
+   "games_played": 7,
+   "record": "5-2",
+   "k_summary": 25,
+   "made_playoffs": 15,
+   "rounds": {
+    "div": 12,
+    "conf": 7,
+    "sb": 5,
+    "champ": 5
+   },
+   "profile": [
+    71,
+    64,
+    40,
+    80,
+    77,
+    55,
+    62
+   ],
+   "pool": {
+    "seasons": [
+     2002,
+     2025
+    ],
+    "n": 768
+   },
+   "nearest": [
+    {
+     "season": 2011,
+     "team": "SD",
+     "dist": 0.6,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      62,
+      69,
+      53,
+      72,
+      58,
+      54,
+      68
+     ],
+     "closest": [
+      "record",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2006,
+     "team": "OAK",
+     "dist": 0.64,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      78,
+      74,
+      53,
+      95,
+      64,
+      43,
+      54
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "STL",
+     "dist": 0.68,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      72,
+      65,
+      53,
+      66,
+      79,
+      42,
+      54
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "CAR",
+     "dist": 0.72,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      68,
+      53,
+      42,
+      98,
+      76,
+      66,
+      43
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "KC",
+     "dist": 0.76,
+     "rec_then": "5-2",
+     "final": "12-5-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      81,
+      74,
+      18,
+      95,
+      50,
+      78,
+      62
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2014,
+     "team": "SEA",
+     "dist": 0.8,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      70,
+      48,
+      48,
+      86,
+      96,
+      48,
+      72
+     ],
+     "closest": [
+      "strength.sos",
+      "record"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2007,
+     "team": "NE",
+     "dist": 0.84,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      71,
+      70,
+      63,
+      89,
+      84,
+      71,
+      53
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2005,
+     "team": "IND",
+     "dist": 0.88,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      72,
+      30,
+      66,
+      98,
+      77,
+      73,
+      59
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2012,
+     "team": "DEN",
+     "dist": 0.92,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      68,
+      58,
+      49,
+      79,
+      75,
+      79,
+      56
+     ],
+     "closest": [
+      "record",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2016,
+     "team": "GB",
+     "dist": 0.96,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      76,
+      62,
+      38,
+      66,
+      91,
+      67,
+      75
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2019,
+     "team": "PHI",
+     "dist": 1.0,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      66,
+      55,
+      42,
+      98,
+      75,
+      46,
+      49
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2017,
+     "team": "MIN",
+     "dist": 1.04,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      64,
+      70,
+      41,
+      69,
+      76,
+      54,
+      48
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2010,
+     "team": "TB",
+     "dist": 1.08,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      88,
+      47,
+      51,
+      91,
+      65,
+      39,
+      70
+     ],
+     "closest": [
+      "record",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2013,
+     "team": "ATL",
+     "dist": 1.12,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      73,
+      59,
+      41,
+      86,
+      89,
+      48,
+      58
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2022,
+     "team": "HOU",
+     "dist": 1.16,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      67,
+      60,
+      42,
+      80,
+      95,
+      43,
+      64
+     ],
+     "closest": [
+      "record",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2021,
+     "team": "DAL",
+     "dist": 1.2,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      70,
+      41,
+      88,
+      95,
+      85,
+      52,
+      32
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "record"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2020,
+     "team": "BAL",
+     "dist": 1.24,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      82,
+      47,
+      18,
+      92,
+      88,
+      41,
+      52
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2023,
+     "team": "LV",
+     "dist": 1.28,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      66,
+      69,
+      43,
+      79,
+      91,
+      39,
+      90
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2015,
+     "team": "CIN",
+     "dist": 1.32,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      81,
+      75,
+      58,
+      83,
+      66,
+      56,
+      56
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2008,
+     "team": "NYG",
+     "dist": 1.36,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      63,
+      57,
+      60,
+      82,
+      85,
+      72,
+      50
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2004,
+     "team": "JAX",
+     "dist": 1.4,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      68,
+      55,
+      16,
+      90,
+      98,
+      40,
+      48
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2003,
+     "team": "TEN",
+     "dist": 1.44,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      77,
+      46,
+      63,
+      84,
+      78,
+      80,
+      58
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2002,
+     "team": "WAS",
+     "dist": 1.48,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      74,
+      51,
+      19,
+      77,
+      71,
+      28,
+      53
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "ARI",
+     "dist": 1.52,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      66,
+      59,
+      29,
+      67,
+      93,
+      36,
+      54
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2024,
+     "team": "CLE",
+     "dist": 1.56,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      71,
+      71,
+      58,
+      85,
+      58,
+      61,
+      47
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    }
+   ],
+   "flags": [
+    {
+     "kind": "red",
+     "measure": "strength.epa_off_adj",
+     "label": "Offense",
+     "rank": 27,
+     "quarter": "bottom",
+     "outcome": "made",
+     "peers": "5-2",
+     "flagged": [
+      11,
+      28
+     ],
+     "others": [
+      58,
+      80
+     ]
+    },
+    {
+     "kind": "red",
+     "measure": "strength.qb_epa",
+     "label": "QB play",
+     "rank": 25,
+     "quarter": "bottom",
+     "outcome": "made",
+     "peers": "5-2",
+     "flagged": [
+      20,
+      60
+     ],
+     "others": [
+      90,
+      130
+     ]
+    },
+    {
+     "kind": "fine",
+     "measure": "strength.luck",
+     "label": "Luck",
+     "rank": 9,
+     "quarter": "bottom",
+     "outcome": "made",
+     "peers": "5-2",
+     "flagged": [
+      22,
+      40
+     ],
+     "others": [
+      48,
+      90
+     ]
+    },
+    {
+     "kind": "strength",
+     "measure": "strength.elo_pre",
+     "label": "Long-run rating",
+     "rank": 3,
+     "quarter": "top",
+     "outcome": "conf",
+     "peers": "5-2",
+     "flagged": [
+      16,
+      40
+     ],
+     "others": [
+      20,
+      110
+     ]
+    }
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
+  },
+  "KC": {
+   "games_played": 7,
+   "record": "6-1",
+   "k_summary": 25,
+   "made_playoffs": 16,
+   "rounds": {
+    "div": 11,
+    "conf": 4,
+    "sb": 3,
+    "champ": 2
+   },
+   "profile": [
+    85,
+    78,
+    70,
+    82,
+    60,
+    90,
+    40
+   ],
+   "pool": {
+    "seasons": [
+     2002,
+     2025
+    ],
+    "n": 768
+   },
+   "nearest": [
+    {
+     "season": 2011,
+     "team": "SD",
+     "dist": 0.6,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      74,
+      81,
+      66,
+      75,
+      73,
+      90,
+      36
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2006,
+     "team": "OAK",
+     "dist": 0.64,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      97,
+      87,
+      81,
+      97,
+      85,
+      98,
+      49
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "STL",
+     "dist": 0.68,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      87,
+      78,
+      84,
+      73,
+      94,
+      98,
+      46
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "CAR",
+     "dist": 0.72,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      83,
+      42,
+      56,
+      95,
+      48,
+      84,
+      39
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "KC",
+     "dist": 0.76,
+     "rec_then": "6-1",
+     "final": "12-5-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      78,
+      80,
+      92,
+      86,
+      97,
+      82,
+      33
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2014,
+     "team": "SEA",
+     "dist": 0.8,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      79,
+      77,
+      82,
+      69,
+      73,
+      90,
+      31
+     ],
+     "closest": [
+      "record",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2007,
+     "team": "NE",
+     "dist": 0.84,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      86,
+      92,
+      51,
+      97,
+      74,
+      98,
+      49
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2005,
+     "team": "IND",
+     "dist": 0.88,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      94,
+      59,
+      56,
+      68,
+      58,
+      81,
+      53
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2012,
+     "team": "DEN",
+     "dist": 0.92,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      82,
+      84,
+      69,
+      51,
+      71,
+      90,
+      41
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2016,
+     "team": "GB",
+     "dist": 0.96,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      78,
+      48,
+      42,
+      98,
+      59,
+      98,
+      41
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2019,
+     "team": "PHI",
+     "dist": 1.0,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      75,
+      80,
+      67,
+      98,
+      66,
+      84,
+      32
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2017,
+     "team": "MIN",
+     "dist": 1.04,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      98,
+      75,
+      60,
+      79,
+      70,
+      81,
+      20
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2010,
+     "team": "TB",
+     "dist": 1.08,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      87,
+      93,
+      86,
+      88,
+      53,
+      57,
+      39
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2013,
+     "team": "ATL",
+     "dist": 1.12,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      86,
+      41,
+      56,
+      73,
+      49,
+      98,
+      58
+     ],
+     "closest": [
+      "strength.sos",
+      "record"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2022,
+     "team": "HOU",
+     "dist": 1.16,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      92,
+      68,
+      73,
+      68,
+      70,
+      97,
+      27
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.sos"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2021,
+     "team": "DAL",
+     "dist": 1.2,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      98,
+      82,
+      88,
+      74,
+      43,
+      98,
+      45
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2020,
+     "team": "BAL",
+     "dist": 1.24,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      83,
+      66,
+      79,
+      98,
+      50,
+      78,
+      44
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2023,
+     "team": "LV",
+     "dist": 1.28,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      89,
+      71,
+      58,
+      82,
+      72,
+      91,
+      39
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2015,
+     "team": "CIN",
+     "dist": 1.32,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      82,
+      94,
+      88,
+      98,
+      51,
+      98,
+      27
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2008,
+     "team": "NYG",
+     "dist": 1.36,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      90,
+      59,
+      81,
+      86,
+      43,
+      85,
+      41
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2004,
+     "team": "JAX",
+     "dist": 1.4,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      81,
+      92,
+      62,
+      91,
+      66,
+      97,
+      29
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2003,
+     "team": "TEN",
+     "dist": 1.44,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      83,
+      61,
+      80,
+      76,
+      85,
+      94,
+      21
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2002,
+     "team": "WAS",
+     "dist": 1.48,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      90,
+      61,
+      73,
+      67,
+      51,
+      82,
+      28
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "ARI",
+     "dist": 1.52,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      88,
+      84,
+      44,
+      90,
+      67,
+      98,
+      21
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2024,
+     "team": "CLE",
+     "dist": 1.56,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      87,
+      69,
+      72,
+      79,
+      59,
+      92,
+      43
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    }
+   ],
+   "flags": [
+    {
+     "kind": "strength",
+     "measure": "strength.qb_epa",
+     "label": "QB play",
+     "rank": 2,
+     "quarter": "top",
+     "outcome": "made",
+     "peers": "6-1",
+     "flagged": [
+      40,
+      45
+     ],
+     "others": [
+      52,
+      60
+     ]
+    }
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
+  },
+  "BUF": {
+   "games_played": 7,
+   "record": "4-3",
+   "k_summary": 25,
+   "made_playoffs": 14,
+   "rounds": {
+    "div": 11,
+    "conf": 4,
+    "sb": 4,
+    "champ": 2
+   },
+   "profile": [
+    55,
+    50,
+    52,
+    60,
+    48,
+    58,
+    45
+   ],
+   "pool": {
+    "seasons": [
+     2002,
+     2025
+    ],
+    "n": 768
+   },
+   "nearest": [
+    {
+     "season": 2011,
+     "team": "SD",
+     "dist": 0.6,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      54,
+      71,
+      41,
+      35,
+      51,
+      67,
+      51
+     ],
+     "closest": [
+      "record",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2006,
+     "team": "OAK",
+     "dist": 0.64,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      58,
+      49,
+      48,
+      74,
+      63,
+      98,
+      44
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "STL",
+     "dist": 0.68,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      54,
+      15,
+      54,
+      49,
+      57,
+      44,
+      45
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "CAR",
+     "dist": 0.72,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      45,
+      42,
+      41,
+      43,
+      36,
+      56,
+      60
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "KC",
+     "dist": 0.76,
+     "rec_then": "4-3",
+     "final": "12-5-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      49,
+      47,
+      57,
+      71,
+      40,
+      65,
+      39
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2014,
+     "team": "SEA",
+     "dist": 0.8,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      69,
+      50,
+      61,
+      56,
+      52,
+      37,
+      16
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2007,
+     "team": "NE",
+     "dist": 0.84,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      56,
+      66,
+      47,
+      45,
+      47,
+      80,
+      44
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2005,
+     "team": "IND",
+     "dist": 0.88,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      49,
+      29,
+      49,
+      77,
+      35,
+      59,
+      61
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2012,
+     "team": "DEN",
+     "dist": 0.92,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      63,
+      54,
+      43,
+      56,
+      56,
+      81,
+      16
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2016,
+     "team": "GB",
+     "dist": 0.96,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      49,
+      33,
+      45,
+      74,
+      51,
+      54,
+      50
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "record"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2019,
+     "team": "PHI",
+     "dist": 1.0,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      53,
+      60,
+      47,
+      56,
+      34,
+      60,
+      45
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2017,
+     "team": "MIN",
+     "dist": 1.04,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      54,
+      34,
+      50,
+      54,
+      37,
+      74,
+      48
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2010,
+     "team": "TB",
+     "dist": 1.08,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      54,
+      68,
+      45,
+      68,
+      45,
+      67,
+      42
+     ],
+     "closest": [
+      "record",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2013,
+     "team": "ATL",
+     "dist": 1.12,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      56,
+      48,
+      51,
+      61,
+      39,
+      40,
+      47
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2022,
+     "team": "HOU",
+     "dist": 1.16,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      58,
+      47,
+      64,
+      64,
+      54,
+      67,
+      35
+     ],
+     "closest": [
+      "record",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2021,
+     "team": "DAL",
+     "dist": 1.2,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      51,
+      23,
+      62,
+      64,
+      47,
+      50,
+      43
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2020,
+     "team": "BAL",
+     "dist": 1.24,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      67,
+      32,
+      70,
+      48,
+      75,
+      75,
+      54
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2023,
+     "team": "LV",
+     "dist": 1.28,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      57,
+      18,
+      48,
+      42,
+      54,
+      38,
+      26
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2015,
+     "team": "CIN",
+     "dist": 1.32,
+     "rec_then": "3-4",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      55,
+      36,
+      45,
+      64,
+      37,
+      54,
+      22
+     ],
+     "closest": [
+      "record",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2008,
+     "team": "NYG",
+     "dist": 1.36,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      66,
+      87,
+      10,
+      65,
+      34,
+      38,
+      26
+     ],
+     "closest": [
+      "record",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2004,
+     "team": "JAX",
+     "dist": 1.4,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      49,
+      57,
+      45,
+      65,
+      54,
+      67,
+      27
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2003,
+     "team": "TEN",
+     "dist": 1.44,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      53,
+      11,
+      74,
+      61,
+      31,
+      56,
+      60
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2002,
+     "team": "WAS",
+     "dist": 1.48,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      55,
+      47,
+      65,
+      51,
+      40,
+      57,
+      52
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.sos"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "ARI",
+     "dist": 1.52,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      55,
+      55,
+      74,
+      51,
+      36,
+      60,
+      44
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2024,
+     "team": "CLE",
+     "dist": 1.56,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      48,
+      31,
+      31,
+      70,
+      48,
+      60,
+      55
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    }
+   ],
+   "flags": [
+    {
+     "kind": "fine",
+     "measure": "strength.turnover_margin_pg",
+     "label": "Turnover margin",
+     "rank": 30,
+     "quarter": "bottom",
+     "outcome": "made",
+     "peers": "4-3",
+     "flagged": [
+      18,
+      40
+     ],
+     "others": [
+      34,
+      80
+     ]
+    }
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
+  },
+  "DET": {
+   "games_played": 7,
+   "record": "4-3",
+   "k_summary": 25,
+   "made_playoffs": 16,
+   "rounds": {
+    "div": 12,
+    "conf": 5,
+    "sb": 2,
+    "champ": 0
+   },
+   "profile": [
+    50,
+    48,
+    45,
+    52,
+    50,
+    49,
+    50
+   ],
+   "pool": {
+    "seasons": [
+     2002,
+     2025
+    ],
+    "n": 768
+   },
+   "nearest": [
+    {
+     "season": 2011,
+     "team": "SD",
+     "dist": 0.6,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      58,
+      61,
+      25,
+      24,
+      48,
+      59,
+      47
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2006,
+     "team": "OAK",
+     "dist": 0.64,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      39,
+      49,
+      38,
+      57,
+      79,
+      42,
+      58
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "STL",
+     "dist": 0.68,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      55,
+      65,
+      54,
+      60,
+      58,
+      53,
+      64
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "CAR",
+     "dist": 0.72,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      49,
+      30,
+      35,
+      33,
+      71,
+      48,
+      33
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "KC",
+     "dist": 0.76,
+     "rec_then": "4-3",
+     "final": "12-5-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      44,
+      49,
+      44,
+      59,
+      61,
+      48,
+      56
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2014,
+     "team": "SEA",
+     "dist": 0.8,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      52,
+      61,
+      53,
+      45,
+      34,
+      33,
+      54
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2007,
+     "team": "NE",
+     "dist": 0.84,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      44,
+      49,
+      66,
+      27,
+      57,
+      52,
+      44
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2005,
+     "team": "IND",
+     "dist": 0.88,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      41,
+      44,
+      32,
+      39,
+      52,
+      44,
+      49
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2012,
+     "team": "DEN",
+     "dist": 0.92,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      48,
+      50,
+      29,
+      88,
+      40,
+      43,
+      62
+     ],
+     "closest": [
+      "record",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2016,
+     "team": "GB",
+     "dist": 0.96,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      47,
+      58,
+      45,
+      43,
+      49,
+      54,
+      70
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2019,
+     "team": "PHI",
+     "dist": 1.0,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      41,
+      40,
+      67,
+      43,
+      23,
+      47,
+      40
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2017,
+     "team": "MIN",
+     "dist": 1.04,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      55,
+      48,
+      77,
+      39,
+      52,
+      48,
+      56
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2010,
+     "team": "TB",
+     "dist": 1.08,
+     "rec_then": "5-2",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      49,
+      63,
+      31,
+      48,
+      52,
+      38,
+      40
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2013,
+     "team": "ATL",
+     "dist": 1.12,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      55,
+      51,
+      36,
+      82,
+      53,
+      76,
+      46
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2022,
+     "team": "HOU",
+     "dist": 1.16,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      49,
+      63,
+      70,
+      40,
+      69,
+      57,
+      66
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2021,
+     "team": "DAL",
+     "dist": 1.2,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      46,
+      63,
+      16,
+      74,
+      60,
+      46,
+      57
+     ],
+     "closest": [
+      "record",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2020,
+     "team": "BAL",
+     "dist": 1.24,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      51,
+      32,
+      33,
+      49,
+      60,
+      47,
+      41
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2023,
+     "team": "LV",
+     "dist": 1.28,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      40,
+      70,
+      28,
+      39,
+      59,
+      30,
+      77
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2015,
+     "team": "CIN",
+     "dist": 1.32,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      53,
+      27,
+      61,
+      48,
+      57,
+      35,
+      54
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2008,
+     "team": "NYG",
+     "dist": 1.36,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      48,
+      29,
+      54,
+      66,
+      47,
+      50,
+      53
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2004,
+     "team": "JAX",
+     "dist": 1.4,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      50,
+      21,
+      54,
+      77,
+      72,
+      60,
+      30
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2003,
+     "team": "TEN",
+     "dist": 1.44,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      52,
+      33,
+      25,
+      43,
+      54,
+      48,
+      30
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2002,
+     "team": "WAS",
+     "dist": 1.48,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      42,
+      60,
+      21,
+      55,
+      40,
+      62,
+      55
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "ARI",
+     "dist": 1.52,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      44,
+      62,
+      35,
+      61,
+      63,
+      42,
+      35
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2024,
+     "team": "CLE",
+     "dist": 1.56,
+     "rec_then": "5-2",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      67,
+      86,
+      51,
+      75,
+      78,
+      48,
+      53
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    }
+   ],
+   "flags": [],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
+  },
+  "SF": {
+   "games_played": 7,
+   "record": "3-4",
+   "k_summary": 25,
+   "made_playoffs": 17,
+   "rounds": {
+    "div": 13,
+    "conf": 7,
+    "sb": 4,
+    "champ": 2
+   },
+   "profile": [
+    30,
+    28,
+    35,
+    25,
+    60,
+    40,
+    70
+   ],
+   "pool": {
+    "seasons": [
+     2002,
+     2025
+    ],
+    "n": 768
+   },
+   "nearest": [
+    {
+     "season": 2011,
+     "team": "SD",
+     "dist": 0.6,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      31,
+      27,
+      34,
+      16,
+      62,
+      39,
+      85
+     ],
+     "closest": [
+      "record",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2006,
+     "team": "OAK",
+     "dist": 0.64,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      22,
+      25,
+      24,
+      24,
+      70,
+      57,
+      47
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "STL",
+     "dist": 0.68,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      21,
+      36,
+      43,
+      11,
+      35,
+      46,
+      58
+     ],
+     "closest": [
+      "strength.sos",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "CAR",
+     "dist": 0.72,
+     "rec_then": "3-4",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      32,
+      53,
+      28,
+      30,
+      76,
+      21,
+      53
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "KC",
+     "dist": 0.76,
+     "rec_then": "3-4",
+     "final": "12-5-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      32,
+      23,
+      38,
+      27,
+      33,
+      45,
+      56
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2014,
+     "team": "SEA",
+     "dist": 0.8,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      27,
+      21,
+      43,
+      15,
+      84,
+      27,
+      97
+     ],
+     "closest": [
+      "strength.sos",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2007,
+     "team": "NE",
+     "dist": 0.84,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      26,
+      29,
+      21,
+      25,
+      77,
+      12,
+      69
+     ],
+     "closest": [
+      "record",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2005,
+     "team": "IND",
+     "dist": 0.88,
+     "rec_then": "3-4",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      24,
+      35,
+      18,
+      36,
+      48,
+      24,
+      69
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2012,
+     "team": "DEN",
+     "dist": 0.92,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      28,
+      17,
+      36,
+      25,
+      49,
+      57,
+      60
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2016,
+     "team": "GB",
+     "dist": 0.96,
+     "rec_then": "4-3",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      34,
+      24,
+      33,
+      2,
+      71,
+      17,
+      89
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2019,
+     "team": "PHI",
+     "dist": 1.0,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      29,
+      44,
+      22,
+      24,
+      60,
+      58,
+      69
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2017,
+     "team": "MIN",
+     "dist": 1.04,
+     "rec_then": "3-4",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      30,
+      17,
+      22,
+      63,
+      46,
+      37,
+      56
+     ],
+     "closest": [
+      "record",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2010,
+     "team": "TB",
+     "dist": 1.08,
+     "rec_then": "4-3",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      20,
+      32,
+      21,
+      12,
+      83,
+      62,
+      64
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2013,
+     "team": "ATL",
+     "dist": 1.12,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      28,
+      12,
+      26,
+      25,
+      46,
+      41,
+      87
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2022,
+     "team": "HOU",
+     "dist": 1.16,
+     "rec_then": "3-4",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      18,
+      14,
+      22,
+      2,
+      41,
+      44,
+      37
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2021,
+     "team": "DAL",
+     "dist": 1.2,
+     "rec_then": "3-4",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      22,
+      22,
+      42,
+      2,
+      69,
+      31,
+      65
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2020,
+     "team": "BAL",
+     "dist": 1.24,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      33,
+      6,
+      6,
+      18,
+      61,
+      48,
+      73
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2023,
+     "team": "LV",
+     "dist": 1.28,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      28,
+      15,
+      48,
+      9,
+      59,
+      24,
+      72
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2015,
+     "team": "CIN",
+     "dist": 1.32,
+     "rec_then": "2-5",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      28,
+      42,
+      33,
+      4,
+      75,
+      37,
+      53
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2008,
+     "team": "NYG",
+     "dist": 1.36,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      35,
+      16,
+      39,
+      39,
+      47,
+      38,
+      85
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2004,
+     "team": "JAX",
+     "dist": 1.4,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      30,
+      19,
+      49,
+      20,
+      22,
+      44,
+      54
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2003,
+     "team": "TEN",
+     "dist": 1.44,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      26,
+      22,
+      38,
+      14,
+      67,
+      62,
+      53
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2002,
+     "team": "WAS",
+     "dist": 1.48,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      40,
+      48,
+      30,
+      14,
+      31,
+      25,
+      81
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "ARI",
+     "dist": 1.52,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      38,
+      14,
+      14,
+      13,
+      69,
+      20,
+      53
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2024,
+     "team": "CLE",
+     "dist": 1.56,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      27,
+      40,
+      48,
+      23,
+      56,
+      34,
+      76
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    }
+   ],
+   "flags": [
+    {
+     "kind": "red",
+     "measure": "strength.pythag_win_pct",
+     "label": "Expected win rate",
+     "rank": 29,
+     "quarter": "bottom",
+     "outcome": "made",
+     "peers": "3-4",
+     "flagged": [
+      6,
+      40
+     ],
+     "others": [
+      26,
+      70
+     ]
+    }
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
+  },
+  "PHI": {
+   "games_played": 7,
+   "record": "7-0",
+   "k_summary": 25,
+   "made_playoffs": 11,
+   "rounds": {
+    "div": 8,
+    "conf": 6,
+    "sb": 4,
+    "champ": 1
+   },
+   "profile": [
+    90,
+    88,
+    85,
+    92,
+    80,
+    86,
+    55
+   ],
+   "pool": {
+    "seasons": [
+     2002,
+     2025
+    ],
+    "n": 768
+   },
+   "nearest": [
+    {
+     "season": 2011,
+     "team": "SD",
+     "dist": 0.6,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      84,
+      98,
+      71,
+      98,
+      62,
+      97,
+      53
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2006,
+     "team": "OAK",
+     "dist": 0.64,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      98,
+      98,
+      79,
+      98,
+      81,
+      83,
+      53
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "STL",
+     "dist": 0.68,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      85,
+      79,
+      86,
+      98,
+      78,
+      98,
+      46
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "CAR",
+     "dist": 0.72,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      95,
+      98,
+      80,
+      96,
+      63,
+      86,
+      63
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.sos"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "KC",
+     "dist": 0.76,
+     "rec_then": "7-0",
+     "final": "12-5-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      94,
+      98,
+      93,
+      79,
+      81,
+      84,
+      66
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2014,
+     "team": "SEA",
+     "dist": 0.8,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      80,
+      84,
+      85,
+      98,
+      88,
+      74,
+      62
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2007,
+     "team": "NE",
+     "dist": 0.84,
+     "rec_then": "6-1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      83,
+      78,
+      72,
+      69,
+      68,
+      62,
+      66
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "record"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2005,
+     "team": "IND",
+     "dist": 0.88,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      92,
+      65,
+      62,
+      98,
+      93,
+      98,
+      46
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2012,
+     "team": "DEN",
+     "dist": 0.92,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      98,
+      89,
+      90,
+      88,
+      88,
+      97,
+      70
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "record"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2016,
+     "team": "GB",
+     "dist": 0.96,
+     "rec_then": "6-1",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      91,
+      97,
+      86,
+      76,
+      52,
+      79,
+      54
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2019,
+     "team": "PHI",
+     "dist": 1.0,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      88,
+      98,
+      93,
+      98,
+      85,
+      91,
+      41
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2017,
+     "team": "MIN",
+     "dist": 1.04,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      94,
+      98,
+      60,
+      95,
+      94,
+      97,
+      56
+     ],
+     "closest": [
+      "strength.sos",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2010,
+     "team": "TB",
+     "dist": 1.08,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      89,
+      77,
+      79,
+      84,
+      72,
+      88,
+      32
+     ],
+     "closest": [
+      "record",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2013,
+     "team": "ATL",
+     "dist": 1.12,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      86,
+      95,
+      63,
+      98,
+      84,
+      96,
+      74
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2022,
+     "team": "HOU",
+     "dist": 1.16,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      91,
+      96,
+      85,
+      92,
+      70,
+      98,
+      58
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "record"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2021,
+     "team": "DAL",
+     "dist": 1.2,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      95,
+      79,
+      70,
+      98,
+      77,
+      90,
+      35
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2020,
+     "team": "BAL",
+     "dist": 1.24,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      80,
+      71,
+      98,
+      89,
+      72,
+      86,
+      33
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "record"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2023,
+     "team": "LV",
+     "dist": 1.28,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      92,
+      98,
+      75,
+      98,
+      79,
+      93,
+      52
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2015,
+     "team": "CIN",
+     "dist": 1.32,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      92,
+      98,
+      87,
+      97,
+      83,
+      87,
+      67
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2008,
+     "team": "NYG",
+     "dist": 1.36,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      98,
+      98,
+      98,
+      85,
+      83,
+      79,
+      61
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2004,
+     "team": "JAX",
+     "dist": 1.4,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      91,
+      93,
+      98,
+      87,
+      83,
+      67,
+      35
+     ],
+     "closest": [
+      "record",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2003,
+     "team": "TEN",
+     "dist": 1.44,
+     "rec_then": "8--1",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      95,
+      76,
+      98,
+      60,
+      97,
+      88,
+      59
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2002,
+     "team": "WAS",
+     "dist": 1.48,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      88,
+      84,
+      85,
+      91,
+      76,
+      41,
+      49
+     ],
+     "closest": [
+      "strength.sos",
+      "record"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "ARI",
+     "dist": 1.52,
+     "rec_then": "7-0",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      84,
+      98,
+      98,
+      92,
+      79,
+      98,
+      68
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2024,
+     "team": "CLE",
+     "dist": 1.56,
+     "rec_then": "7-0",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      84,
+      92,
+      73,
+      82,
+      98,
+      96,
+      72
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    }
+   ],
+   "flags": [
+    {
+     "kind": "strength",
+     "measure": "strength.epa_off_adj",
+     "label": "Offense",
+     "rank": 1,
+     "quarter": "top",
+     "outcome": "made",
+     "peers": "7-0",
+     "flagged": [
+      28,
+      30
+     ],
+     "others": [
+      10,
+      12
+     ]
+    }
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
+  },
+  "MIA": {
+   "games_played": 7,
+   "record": "2-5",
+   "k_summary": 25,
+   "made_playoffs": 16,
+   "rounds": {
+    "div": 12,
+    "conf": 8,
+    "sb": 5,
+    "champ": 1
+   },
+   "profile": [
+    20,
+    25,
+    30,
+    28,
+    15,
+    35,
+    60
+   ],
+   "pool": {
+    "seasons": [
+     2002,
+     2025
+    ],
+    "n": 768
+   },
+   "nearest": [
+    {
+     "season": 2011,
+     "team": "SD",
+     "dist": 0.6,
+     "rec_then": "2-5",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      7,
+      21,
+      41,
+      25,
+      17,
+      13,
+      56
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2006,
+     "team": "OAK",
+     "dist": 0.64,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      17,
+      24,
+      46,
+      16,
+      39,
+      48,
+      55
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "STL",
+     "dist": 0.68,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      26,
+      13,
+      36,
+      7,
+      11,
+      41,
+      58
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "CAR",
+     "dist": 0.72,
+     "rec_then": "2-5",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      17,
+      41,
+      49,
+      40,
+      2,
+      48,
+      61
+     ],
+     "closest": [
+      "record",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2018,
+     "team": "KC",
+     "dist": 0.76,
+     "rec_then": "2-5",
+     "final": "12-5-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      19,
+      24,
+      24,
+      31,
+      17,
+      45,
+      64
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2014,
+     "team": "SEA",
+     "dist": 0.8,
+     "rec_then": "2-5",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      19,
+      33,
+      14,
+      36,
+      8,
+      30,
+      72
+     ],
+     "closest": [
+      "record",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2007,
+     "team": "NE",
+     "dist": 0.84,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      21,
+      12,
+      70,
+      41,
+      37,
+      37,
+      55
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "record"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    },
+    {
+     "season": 2005,
+     "team": "IND",
+     "dist": 0.88,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "champ",
+     "profile": [
+      20,
+      42,
+      32,
+      22,
+      2,
+      30,
+      24
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2012,
+     "team": "DEN",
+     "dist": 0.92,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      30,
+      19,
+      33,
+      25,
+      26,
+      33,
+      69
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2016,
+     "team": "GB",
+     "dist": 0.96,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      16,
+      20,
+      18,
+      27,
+      62,
+      17,
+      62
+     ],
+     "closest": [
+      "strength.point_diff_pg",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2019,
+     "team": "PHI",
+     "dist": 1.0,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      8,
+      13,
+      57,
+      36,
+      2,
+      21,
+      62
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.pythag_win_pct"
+     ]
+    },
+    {
+     "season": 2017,
+     "team": "MIN",
+     "dist": 1.04,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      27,
+      2,
+      32,
+      46,
+      11,
+      52,
+      55
+     ],
+     "closest": [
+      "record",
+      "strength.pythag_win_pct"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2010,
+     "team": "TB",
+     "dist": 1.08,
+     "rec_then": "1-6",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      28,
+      56,
+      31,
+      40,
+      32,
+      68,
+      63
+     ],
+     "closest": [
+      "strength.epa_def",
+      "record"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2013,
+     "team": "ATL",
+     "dist": 1.12,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "sb",
+     "profile": [
+      27,
+      58,
+      32,
+      42,
+      4,
+      41,
+      74
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2022,
+     "team": "HOU",
+     "dist": 1.16,
+     "rec_then": "2-5",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      14,
+      28,
+      30,
+      29,
+      25,
+      27,
+      57
+     ],
+     "closest": [
+      "record",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2021,
+     "team": "DAL",
+     "dist": 1.2,
+     "rec_then": "3-4",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      22,
+      22,
+      18,
+      34,
+      38,
+      39,
+      34
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "record"
+     ]
+    },
+    {
+     "season": 2020,
+     "team": "BAL",
+     "dist": 1.24,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      27,
+      4,
+      25,
+      30,
+      6,
+      32,
+      49
+     ],
+     "closest": [
+      "strength.epa_off_adj",
+      "record"
+     ],
+     "furthest": [
+      "strength.sos"
+     ]
+    },
+    {
+     "season": 2023,
+     "team": "LV",
+     "dist": 1.28,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      18,
+      25,
+      17,
+      29,
+      2,
+      57,
+      64
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "record"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2015,
+     "team": "CIN",
+     "dist": 1.32,
+     "rec_then": "3-4",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      29,
+      44,
+      53,
+      16,
+      4,
+      38,
+      73
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2008,
+     "team": "NYG",
+     "dist": 1.36,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "div",
+     "profile": [
+      23,
+      2,
+      28,
+      5,
+      4,
+      48,
+      67
+     ],
+     "closest": [
+      "strength.qb_epa",
+      "strength.epa_def"
+     ],
+     "furthest": [
+      "strength.point_diff_pg"
+     ]
+    },
+    {
+     "season": 2004,
+     "team": "JAX",
+     "dist": 1.4,
+     "rec_then": "2-5",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      24,
+      39,
+      19,
+      51,
+      40,
+      11,
+      43
+     ],
+     "closest": [
+      "strength.sos",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2003,
+     "team": "TEN",
+     "dist": 1.44,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "conf",
+     "profile": [
+      25,
+      8,
+      24,
+      12,
+      20,
+      57,
+      83
+     ],
+     "closest": [
+      "strength.epa_def",
+      "strength.point_diff_pg"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2002,
+     "team": "WAS",
+     "dist": 1.48,
+     "rec_then": "2-5",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      23,
+      25,
+      15,
+      28,
+      25,
+      26,
+      75
+     ],
+     "closest": [
+      "strength.pythag_win_pct",
+      "strength.epa_off_adj"
+     ],
+     "furthest": [
+      "strength.epa_def"
+     ]
+    },
+    {
+     "season": 2009,
+     "team": "ARI",
+     "dist": 1.52,
+     "rec_then": "2-5",
+     "final": "7-10-0",
+     "playoffs": false,
+     "round": null,
+     "profile": [
+      34,
+      29,
+      36,
+      26,
+      28,
+      26,
+      76
+     ],
+     "closest": [
+      "record",
+      "strength.qb_epa"
+     ],
+     "furthest": [
+      "strength.epa_off_adj"
+     ]
+    },
+    {
+     "season": 2024,
+     "team": "CLE",
+     "dist": 1.56,
+     "rec_then": "2-5",
+     "final": "9-8-0",
+     "playoffs": true,
+     "round": "wc",
+     "profile": [
+      20,
+      34,
+      48,
+      8,
+      4,
+      39,
+      72
+     ],
+     "closest": [
+      "record",
+      "strength.sos"
+     ],
+     "furthest": [
+      "strength.qb_epa"
+     ]
+    }
+   ],
+   "flags": [
+    {
+     "kind": "red",
+     "measure": "strength.epa_off_adj",
+     "label": "Offense",
+     "rank": 30,
+     "quarter": "bottom",
+     "outcome": "made",
+     "peers": "2-5",
+     "flagged": [
+      2,
+      30
+     ],
+     "others": [
+      8,
+      40
+     ]
+    }
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
+  }
+ }
+}

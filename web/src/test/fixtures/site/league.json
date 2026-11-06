@@ -3181,7 +3181,74 @@
     "student": 0.7708,
     "market": 0.7713
    }
+  ],
+  "BUF": [
+   {
+    "week": 5,
+    "student": 0.55,
+    "market": 0.52
+   },
+   {
+    "week": 6,
+    "student": 0.58,
+    "market": 0.55
+   },
+   {
+    "week": 7,
+    "student": 0.62,
+    "market": 0.59
+   }
+  ],
+  "PHI": [
+   {
+    "week": 5,
+    "student": 0.81,
+    "market": 0.78
+   },
+   {
+    "week": 6,
+    "student": 0.78,
+    "market": 0.75
+   },
+   {
+    "week": 7,
+    "student": 0.84,
+    "market": 0.81
+   }
+  ],
+  "SF": [
+   {
+    "week": 5,
+    "student": 0.42,
+    "market": 0.39
+   },
+   {
+    "week": 6,
+    "student": 0.47,
+    "market": 0.44
+   },
+   {
+    "week": 7,
+    "student": 0.44,
+    "market": 0.41
+   }
+  ],
+  "MIA": [
+   {
+    "week": 5,
+    "student": 0.3,
+    "market": 0.27
+   },
+   {
+    "week": 6,
+    "student": 0.26,
+    "market": 0.23
+   },
+   {
+    "week": 7,
+    "student": 0.21,
+    "market": 0.18
+   }
   ]
- },
- "similar": {}
+ }
 }

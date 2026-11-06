@@ -30,6 +30,12 @@
   --critical: #d03b3b;
   --conf-afc: #1f6fd0;
   --conf-nfc: #b8520a;
+  --finish-0: #e9edf2;
+  --finish-1: #c9dcf4;
+  --finish-2: #93bbec;
+  --finish-3: #5a96de;
+  --finish-4: #2b66b8;
+  --finish-5: #0f3a74;
   /* Motion (ADR 0020, site rule 11): every animation reads these; reduced motion zeroes them below. */
   --dur-fast: 120ms;
   --dur-base: 200ms;
@@ -74,6 +80,12 @@
     --div-mid: #313b48;
     --conf-afc: #5aa2f7;
     --conf-nfc: #f0944a;
+  --finish-0: #202731;
+  --finish-1: #2a4465;
+  --finish-2: #3a6aa5;
+  --finish-3: #5f9ee6;
+  --finish-4: #98c6fa;
+  --finish-5: #d4e8fd;
   }
 }
 :root[data-theme="dark"] {
@@ -100,6 +112,12 @@
   --div-mid: #313b48;
   --conf-afc: #5aa2f7;
   --conf-nfc: #f0944a;
+  --finish-0: #202731;
+  --finish-1: #2a4465;
+  --finish-2: #3a6aa5;
+  --finish-3: #5f9ee6;
+  --finish-4: #98c6fa;
+  --finish-5: #d4e8fd;
 }
 
 /* A matchup's two colors, set per game by lib/teamColors.ts for both themes. */
