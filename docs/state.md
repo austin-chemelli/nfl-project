@@ -4,7 +4,7 @@ Where the project is right now. Chats keep it current as they work ([state-maint
 
 ## Bottom line (as of 2026-11-06)
 
-The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). The League page went live 2026-11-05 and 11-06 (#20, #23): playoff odds on two variants, standings, leverage, team charts and slate stakes lines. Next: two flights planned 2026-11-05 on Fable, the league page (M14, ADR 0019, this chat's track `league`) and the retro's win-probability chart with a motion pass (M15, ADR 0020, all three phases live 2026-11-05: #19, #21, #22); then the narrative's previews and evals (M6.3, M6.4).
+The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). The League page went live 2026-11-05 and 11-06 (#20, #23): playoff odds on two variants, standings, leverage, team charts and slate stakes lines. The retro's win-probability chart, motion, drives and pinned result are live too (M15, #19, #21, #22). Next: League phase 3 (similar seasons, M14, track `league`), then the narrative's previews and evals (M6.3, M6.4).
 
 ## What runs where
 
@@ -172,7 +172,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-05 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-04 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-05 |
-| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-05 |
+| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-06 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |
