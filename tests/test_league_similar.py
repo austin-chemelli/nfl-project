@@ -29,6 +29,7 @@ def _synth(past=(2003, 2004, 2005), weeks=16, played=8, seed=1, build=BUILD):
     postseason; the current one has `played` weeks done and features built at `build`. 2005 prints
     LAC as SD. Returns (games, feats)."""
     rng = np.random.default_rng(seed)
+    rng_flags = np.random.default_rng(seed + 1000)  # own stream: the FEATURES draws don't move
     games, feats = [], []
     for s in (*past, SEASON):
         start = datetime(s, 9, 8)
@@ -49,6 +50,9 @@ def _synth(past=(2003, 2004, 2005), weeks=16, played=8, seed=1, build=BUILD):
                     for f in sm.FEATURES:
                         stamp = k - timedelta(hours=2) if s < SEASON or k <= build else build
                         feats.append((s, gid, side, f, float(rng.normal()), stamp))
+                    for f in (x for x in sm.FLAG_FEATURES if x not in sm.FEATURES):
+                        stamp = k - timedelta(hours=2) if s < SEASON or k <= build else build
+                        feats.append((s, gid, side, f, float(rng_flags.normal()), stamp))
         if s < SEASON:  # postseason: 12 teams, each round halves what is left
             alive = [code.get(c, c) for c in rng.permutation(CODES)[:12]]
             for rnd, typ in enumerate(("WC", "DIV", "CON", "SB")):
@@ -70,6 +74,10 @@ def _synth(past=(2003, 2004, 2005), weeks=16, played=8, seed=1, build=BUILD):
         feats, schema=sm.FEATURE_SCHEMA | {"known_as_of": pl.Datetime("us")}, orient="row"
     )
     return g, f
+
+
+def _teams(g, f, season, now):
+    return sm.similar_file(g, f, season, now)["teams"]
 
 
 @pytest.fixture(scope="module")
@@ -109,7 +117,11 @@ def test_past_vectors_come_from_the_next_games_row(world):
         & ((pl.col("home_team") == c.team) | (pl.col("away_team") == c.team))
     ).sort("kickoff_utc")["game_id"][8]  # fmt: skip
     side = "home" if gid.endswith("_" + c.team) else "away"
-    want = f.filter((pl.col("game_id") == gid) & (pl.col("side") == side)).sort("feature")
+    want = f.filter(
+        (pl.col("game_id") == gid)
+        & (pl.col("side") == side)
+        & pl.col("feature").is_in(list(sm.FEATURES))
+    ).sort("feature")
     order = sorted(sm.FEATURES)
     assert [x for _, x in sorted(zip(sm.FEATURES, c.x[1:], strict=True))] == want["value"].to_list()
     assert order == want["feature"].to_list()
@@ -118,21 +130,21 @@ def test_past_vectors_come_from_the_next_games_row(world):
 def test_current_season_and_same_team_season_are_excluded(world):
     g, f = world
     assert {c.season for c in sm.candidates(g, f, SEASON)} == {2003, 2004, 2005}
-    out = sm.similar_file(g, f, SEASON, NOW)
+    out = _teams(g, f, SEASON, NOW)
     for e in out.values():
-        assert all(n["season"] < SEASON for n in e["neighbours"])
+        assert all(n["season"] < SEASON for n in e["nearest"])
 
 
 def test_every_team_gets_an_entry_with_the_contract_shape(world):
     g, f = world
-    out = sm.similar_file(g, f, SEASON, NOW)
+    out = _teams(g, f, SEASON, NOW)
     assert sorted(out) == CODES
     for e in out.values():
-        lb.Similar.model_validate(e)
+        lb.SimilarTeam.model_validate(e)
         assert e["games_played"] == 8 and e["k_summary"] == sm.K_SUMMARY
-        d = [n["dist"] for n in e["neighbours"]]
-        assert len(d) == sm.K_SHOWN and d == sorted(d)
-        assert all(len(n["final"].split("-")) == 3 for n in e["neighbours"])
+        d = [n["dist"] for n in e["nearest"]]
+        assert len(d) == sm.K_SUMMARY and d == sorted(d)
+        assert all(len(n["final"].split("-")) == 3 for n in e["nearest"])
     json.dumps(out, allow_nan=False)
 
 
@@ -140,26 +152,26 @@ def test_historical_codes_print_as_they_were(world):
     g, f = world
     shown = {
         n["team"]
-        for e in sm.similar_file(g, f, SEASON, NOW).values()
-        for n in e["neighbours"]
+        for e in _teams(g, f, SEASON, NOW).values()
+        for n in e["nearest"]
         if n["season"] == 2005
     }
     pool = {c.team for c in sm.candidates(g, f, SEASON) if c.season == 2005}
     assert "SD" in pool and "LAC" not in pool
     assert "LAC" not in shown
     # and the key stays today's code, found through the current game's own printed code
-    assert "LAC" in sm.similar_file(g, f, SEASON, NOW)
+    assert "LAC" in _teams(g, f, SEASON, NOW)
 
 
 def test_summary_equals_a_brute_force_count(world):
     g, f = world
-    out = sm.similar_file(g, f, SEASON, NOW)
+    out = _teams(g, f, SEASON, NOW)
     pool = [c for c in sm.candidates(g, f, SEASON) if c.n == 8]
-    cur = sm._current(g, f, SEASON, NOW)
+    cur, _ = sm._current(g, f, SEASON, NOW)
     post = g.filter(pl.col("game_type") != "REG")
     rank = {"WC": 1, "DIV": 2, "CON": 3, "SB": 4}
     for team in ("KC", "CHI", "LAC"):
-        near = sm._nearest(pool, cur[team][2], sm.K_SUMMARY)
+        near = sm._nearest(pool, cur[team].x, sm.K_SUMMARY)
         made = div = conf = sb = champ = 0
         for _, c in near:
             mine = post.filter((pl.col("season") == c.season) & ((pl.col("home_team") == c.team) | (pl.col("away_team") == c.team)))  # fmt: skip
@@ -178,17 +190,17 @@ def test_summary_equals_a_brute_force_count(world):
         assert e["made_playoffs"] == made
         assert e["rounds"] == {"div": div, "conf": conf, "sb": sb, "champ": champ}
         # the printed round is the furthest one, and a title is "champ"
-        for n in e["neighbours"]:
+        for n in e["nearest"]:
             assert (n["round"] is not None) == n["playoffs"]
 
 
 def test_a_team_under_min_games_has_no_entry():
     two = KICK + timedelta(days=7 * 2 + 3)  # built after week 3's games, before week 4's
     g, f = _synth(played=3, build=two)
-    assert sm.similar_file(g, f, SEASON, two + timedelta(days=1)) == {}
+    assert _teams(g, f, SEASON, two + timedelta(days=1)) == {}
     four = KICK + timedelta(days=7 * 3 + 3)
     g, f = _synth(played=sm.MIN_GAMES, build=four)
-    out = sm.similar_file(g, f, SEASON, four + timedelta(days=1))
+    out = _teams(g, f, SEASON, four + timedelta(days=1))
     assert len(out) == 32 and {e["games_played"] for e in out.values()} == {sm.MIN_GAMES}
 
 
@@ -201,7 +213,7 @@ def test_a_missing_value_leaves_the_team_out_and_drops_candidates(world):
     )["game_id"][0]  # fmt: skip
     side = "home" if nxt.endswith("_CHI") else "away"
     cut = f.filter(~((pl.col("game_id") == nxt) & (pl.col("side") == side) & (pl.col("feature") == sm.FEATURES[3])))  # fmt: skip
-    out = sm.similar_file(g, cut, SEASON, NOW)
+    out = _teams(g, cut, SEASON, NOW)
     assert "CHI" not in out and len(out) == 31
     # a past candidate with a null at its n drops out
     n_all = sum(c.n == 8 for c in sm.candidates(g, f, SEASON))
@@ -231,23 +243,378 @@ def test_after_the_last_game_the_last_row_is_used_with_n_before_it():
     # vector is its week-16 row and n = 15. That row doesn't contain the final game.
     end = KICK + timedelta(days=7 * 15 + 1)
     g, f = _synth(played=16, build=end)
-    out = sm.similar_file(g, f, SEASON, end + timedelta(days=2))
+    out = _teams(g, f, SEASON, end + timedelta(days=2))
     assert len(out) == 32 and {e["games_played"] for e in out.values()} == {15}
 
 
 def test_rebuild_with_no_new_data_is_identical_and_a_new_build_moves_it(world):
     g, f = world
-    a = sm.similar_file(g, f, SEASON, NOW)
+    a = _teams(g, f, SEASON, NOW)
     # a game kicks off (week 9, no new feature build): nothing moves
     late = BUILD + timedelta(days=3)
-    assert json.dumps(sm.similar_file(g, f, SEASON, late)) == json.dumps(a)
-    assert json.dumps(sm.similar_file(g, f, SEASON, NOW)) == json.dumps(a)
+    assert json.dumps(_teams(g, f, SEASON, late)) == json.dumps(a)
+    assert json.dumps(_teams(g, f, SEASON, NOW)) == json.dumps(a)
     # week 9 is played and features are rebuilt: n and the numbers move
     b9 = KICK + timedelta(days=56 + 1)
     g2, f2 = _synth(played=9, build=b9)
-    b = sm.similar_file(g2, f2, SEASON, b9 + timedelta(hours=6))
+    b = _teams(g2, f2, SEASON, b9 + timedelta(hours=6))
     assert {e["games_played"] for e in b.values()} == {9}
     assert json.dumps(b) != json.dumps(a)
+
+
+def test_the_file_validates_and_has_nothing_non_finite(world):
+    g, f = world
+    out = sm.similar_file(g, f, SEASON, NOW)
+    lb.SimilarFile.model_validate(out)
+    json.dumps(out, allow_nan=False)
+    assert [m["id"] for m in out["measures"]] == ["record", *sm.FEATURES]
+    assert [m["label"] for m in out["measures"]][:3] == ["Record", "Offense", "Defense"]
+    e = out["teams"]["KC"]
+    assert len(e["profile"]) == 7 and all(0 <= p <= 100 for p in e["profile"])
+    assert e["pool"]["n"] == sum(c.n == 8 for c in sm.candidates(g, f, SEASON))
+    assert e["pool"]["seasons"] == [2003, 2005]
+    for n in e["nearest"]:
+        assert len(n["profile"]) == 7 and len(n["closest"]) == 2 and len(n["furthest"]) == 1
+
+
+# --- profile and gaps
+
+
+def _x(*v):
+    return np.array(v, dtype=float)
+
+
+def test_profile_percentiles_are_oriented_and_defense_is_flipped():
+    # five teams; column j = measure j. Everyone's value is the pool's maximum or minimum.
+    pool = np.array([[0.1 * i, i, i, i, i, i, i] for i in range(5)], dtype=float)
+    top = sm.profile(pool, pool[4])
+    low = sm.profile(pool, pool[0])
+    # offense (index 1): highest value is best; defense (index 2) is lower-is-better: highest is worst
+    assert top[1] == 90 and low[1] == 10
+    assert top[2] == 10 and low[2] == 90
+    assert (
+        top[0] == 90 and top[6] == 90
+    )  # record up; schedule: 100 is the hardest, so the top is high
+    assert sm.profile(pool, pool[2]) == [50] * 7  # the middle, ties count half
+
+
+def test_closest_and_furthest_on_a_hand_made_case():
+    # pool sd per column is 1, 2, 1, 1, 1, 1, 1 (column 1 has spread 2)
+    pool = np.zeros((4, 7))
+    pool[:, 0] = [-1, 1, -1, 1]
+    pool[:, 1] = [-2, 2, -2, 2]
+    for j in range(2, 7):
+        pool[:, j] = [-1, 1, -1, 1]
+    me = _x(0, 0, 0, 0, 0, 0, 0)
+    them = _x(0.5, 1.0, 3.0, 0.1, 0.2, 5.0, 0.4)  # gaps in sd: .5, .5, 3, .1, .2, 5, .4
+    closest, furthest = sm.gaps(pool, me, them)
+    assert closest == ["strength.point_diff_pg", "strength.pythag_win_pct"]
+    assert furthest == ["strength.qb_epa"]
+
+
+# --- current-season edge cases
+
+
+def test_a_postseason_row_keeps_the_team():
+    # Season over: features built after week 16, and the Wild Card games already have feature rows.
+    # Passing those games to team_latest made the playoff teams' vector a postseason row at n = 16,
+    # where there is no pool, and dropped them until August.
+    end = KICK + timedelta(days=7 * 15 + 1)
+    g, f = _synth(played=16, build=end)
+    wc = end + timedelta(days=5)
+    post = pl.DataFrame(
+        [{
+            "game_id": "2026_WC_KC_CHI", "season": SEASON, "week": 19, "game_type": "WC",
+            "kickoff_utc": wc, "home_team": "CHI", "away_team": "KC", "home_score": None,
+            "away_score": None,
+        }],
+        schema_overrides={"kickoff_utc": pl.Datetime("us"), "home_score": pl.Int64, "away_score": pl.Int64},
+    )  # fmt: skip
+    rows = [
+        (SEASON, "2026_WC_KC_CHI", side, ft, 0.5, end + timedelta(hours=1))
+        for side in ("home", "away")
+        for ft in sm.FEATURES
+    ]
+    f2 = pl.concat([f, pl.DataFrame(rows, schema=sm.FEATURE_SCHEMA, orient="row")])
+    g2 = pl.concat([g, post.select(g.columns)])
+    out = _teams(g2, f2, SEASON, end + timedelta(days=2))
+    assert len(out) == 32
+    assert out["CHI"]["games_played"] == 15 and out["KC"]["games_played"] == 15
+
+
+def test_a_kickoff_with_no_score_on_file_keeps_the_team():
+    # CHI's week-8 game has kicked off but its score isn't on file; features were built after it.
+    g, f = _synth(played=8)
+    gid = g.filter(
+        (pl.col("season") == SEASON) & (pl.col("week") == 8) & (pl.col("home_team") == "CHI")
+    )["game_id"]
+    if gid.is_empty():
+        gid = g.filter(
+            (pl.col("season") == SEASON) & (pl.col("week") == 8) & (pl.col("away_team") == "CHI")
+        )["game_id"]
+    cut = g.with_columns(
+        pl.when(pl.col("game_id") == gid[0]).then(None).otherwise(pl.col("home_score")).alias("home_score"),
+        pl.when(pl.col("game_id") == gid[0]).then(None).otherwise(pl.col("away_score")).alias("away_score"),
+    )  # fmt: skip
+    out = _teams(cut, f, SEASON, NOW)
+    assert len(out) == 32
+    # n counts scored games only: the team is one game behind its vector, others are not
+    assert out["CHI"]["games_played"] == 7 and out["KC"]["games_played"] in (7, 8)
+
+
+# --- flag rules, on hand-made histories
+
+
+def _cand(i, v, made, conf, rec=(5, 3, 0), n=8, measures=None, season=2010):
+    fv = {m: v for m in (measures or [])}
+    oc = sm.Outcome(9, 8, 0, bool(made), 3 if conf else 1 if made else 0, False)
+    return sm.Candidate(season, "T", n, rec, np.zeros(7), oc, fv)
+
+
+def _spec(measure, end):
+    return next(s for s in sm.FLAG_SPECS if s.measure == measure and s.end == end)
+
+
+RED = _spec("strength.epa_off_adj", "lo")
+OFF = "strength.epa_off_adj"
+
+
+def _line(pool_fn, n_pool=100, **kw):
+    """100 candidates with offense values 0..99 (worst quarter = the first 25)."""
+    return [pool_fn(i) for i in range(n_pool)]
+
+
+def _cur(v, rec=(5, 3, 0), measures=(OFF,)):
+    return sm.Current(8, rec, np.zeros(7), {m: v for m in measures})
+
+
+def _ranks(measures=(OFF,), rank=30):
+    """This team's rank among 32: 30 is bottom quarter, 2 top quarter, 16 neither."""
+    return {m: {"T": rank, **{f"X{i}": 0 for i in range(31)}} for m in measures}
+
+
+def test_the_quarter_is_within_each_season_not_across_them():
+    # EPA drifts: the same 0.3 is a bottom-quarter offense in a high season, ordinary in a low one
+    high = [_cand(i, 0.3 + i / 100, 1, 0, measures=[OFF], season=2020) for i in range(32)]
+    low = [_cand(i, -0.1 + i / 100, 1, 0, measures=[OFF], season=2004) for i in range(32)]
+    t = sm.FlagTable(high + low)
+    inq = t.column(RED)[2]
+    assert inq[:32].sum() == 8 and inq[32:].sum() == 8
+    assert inq[0] and not inq[31]  # 0.30 in 2020 is its season's worst
+    assert inq[32] and not inq[63]
+
+
+def test_a_rank_and_its_quarter_always_agree():
+    top = _spec("strength.epa_off_adj", "hi")
+    assert sm.in_quarter(RED, 25, 32) and not sm.in_quarter(RED, 24, 32)
+    assert sm.in_quarter(top, 8, 32) and not sm.in_quarter(top, 9, 32)
+    luck = _spec("strength.luck", "lo")  # neutral: rank 1 is the highest, so low luck is rank 32
+    assert sm.in_quarter(luck, 32, 32) and not sm.in_quarter(luck, 1, 32)
+
+
+def test_defense_worst_quarter_is_the_highest_epa_allowed():
+    spec = _spec("strength.epa_def", "lo")
+    t = sm.FlagTable([_cand(i, i / 100, 1, 0, measures=["strength.epa_def"]) for i in range(100)])
+    inq = t.column(spec)[2]
+    assert inq[99] and not inq[0] and inq.sum() == 25
+
+
+def test_a_fine_card_needs_a_rate_worth_talking_about():
+    """At 0-7 nobody made it, flagged or not: 0 against 0 is not reassurance."""
+    m = "strength.epa_def"
+
+    def table(flagged_made, others_made):
+        pool = [_cand(i, 1.0 if i < 30 else 0.0, i < flagged_made or 30 <= i < 30 + others_made, 0, measures=[m]) for i in range(100)]  # fmt: skip
+        return sm.FlagTable(pool)
+
+    cur, rk = _cur(-5.0, measures=(m,)), _ranks((m,))
+    assert sm.flag_cards(table(0, 0), cur, rk, "T") == []
+    assert sm.flag_cards(table(0, 20), cur, rk, "T") == []  # none of the flagged teams made it
+    assert sm.flag_cards(table(1, 2), cur, rk, "T") == []  # the rest barely did either
+    assert sm.flag_cards(table(12, 30), cur, rk, "T")[0]["kind"] == "fine"
+
+
+def test_flags_count_same_record_peers_and_the_card_reads_its_counts():
+    # flagged (first 25): 8 of 25 made; others: 60 of 75 made, all at the team's 5-3
+    pool = _line(lambda i: _cand(i, i, i % 25 < 8 if i < 25 else i % 5 != 0, 0, measures=[OFF]))
+    cards = sm.flag_cards(sm.FlagTable(pool), _cur(-5.0), _ranks(), "T")
+    assert len(cards) == 1
+    c = cards[0]
+    assert c["kind"] == "red" and c["quarter"] == "bottom" and c["outcome"] == "made"
+    assert c["flagged"] == [8, 25] and c["others"] == [60, 75] and not c["widened"]
+    assert c["peers"] == "5-3" and c["rank"] == 30 and c["label"] == "Offense"
+    # a team outside the quarter has no card
+    assert sm.flag_cards(sm.FlagTable(pool), _cur(50.0), _ranks(rank=16), "T") == []
+
+
+def test_peers_widen_one_win_either_way_when_short_and_say_so():
+    # 100 teams, offense values 0..99 (worst quarter = values 0..24). Only 10 sit at 5-3 and just
+    # 3 of those are flagged; 4-4 and 6-2 hold the rest of the neighbourhood; 3-5 is out of reach.
+    def rec(i):
+        if i in (0, 1, 2, 50, 51, 52, 53, 54, 55, 56):
+            return (5, 3, 0)
+        return (4, 4, 0) if i < 30 else (6, 2, 0) if i < 90 else (3, 5, 0)
+
+    pool = [_cand(i, i, i % 3 == 0, 0, rec=rec(i), measures=[OFF]) for i in range(100)]
+    t = sm.FlagTable(pool)
+    assert t.counts(RED, 10, 0) is None  # 3 flagged at 5-3
+    got = t.counts(RED, 10, 2)
+    near = [c for c in pool if c.rec != (3, 5, 0)]
+    flagged = [c for c in near if c.fv[OFF] < 25]
+    others = [c for c in near if c.fv[OFF] >= 25]
+    assert got == (
+        [sum(c.outcome.playoffs for c in flagged), len(flagged)],
+        [sum(c.outcome.playoffs for c in others), len(others)],
+    )
+    assert len(flagged) >= sm.MIN_FLAGGED and len(others) >= sm.MIN_OTHERS
+    # exact peers are enough in a pool with 8 flagged and 15 others at the record
+    full = [_cand(i, i, 1, 0, rec=(5, 3, 0), measures=[OFF]) for i in range(100)]
+    assert sm.FlagTable(full).counts(RED, 10, 0) is not None
+    # the card carries the flag: red needs flagged teams to do worse, so make them
+    worse = [_cand(i, i, i >= 25, 0, rec=rec(i), measures=[OFF]) for i in range(100)]
+    cards = sm.flag_cards(sm.FlagTable(worse), _cur(-5.0), _ranks(), "T")
+    assert len(cards) == 1 and cards[0]["widened"] is True
+    assert sm.flag_cards(sm.FlagTable([_cand(i, i, i >= 25, 0, measures=[OFF]) for i in range(100)]), _cur(-5.0), _ranks(), "T")[0]["widened"] is False  # fmt: skip
+
+
+def test_no_card_when_peers_are_still_short_after_widening():
+    # only 10 teams anywhere near the record
+    pool = [
+        _cand(i, i, 1, 0, rec=(5, 3, 0) if i < 10 else (1, 7, 0), measures=[OFF])
+        for i in range(100)
+    ]
+    t = sm.FlagTable(pool)
+    assert t.counts(RED, 10, 2) is None
+    assert sm.flag_cards(t, _cur(-5.0), _ranks(), "T") == []
+
+
+def test_a_card_is_hidden_when_its_own_counts_disagree_with_its_kind():
+    def pool(flag_rate, other_rate):
+        def mk(i):
+            if i < 25:
+                made = i < round(flag_rate * 25)
+            else:
+                made = (i - 25) < round(other_rate * 75)
+            return _cand(i, i, made, 0, measures=[OFF])
+
+        return sm.FlagTable([mk(i) for i in range(100)])
+
+    # red but the flagged teams did better: no card
+    assert sm.flag_cards(pool(0.8, 0.4), _cur(-5.0), _ranks(), "T") == []
+    assert len(sm.flag_cards(pool(0.2, 0.6), _cur(-5.0), _ranks(), "T")) == 1
+    # strength but the top quarter did worse
+    top = _spec(OFF, "hi")
+    assert top.kind == "strength"
+
+    def strength(flag_rate):
+        def mk(i):  # the top quarter is i >= 74
+            made = (i - 74) < round(flag_rate * 26) if i >= 74 else (i % 5 != 0)
+            return _cand(i, i, made, 0, measures=[OFF])
+
+        return sm.FlagTable([mk(i) for i in range(100)])
+
+    assert sm.flag_cards(strength(0.9), _cur(500.0), _ranks(rank=2), "T")[0]["kind"] == "strength"
+    assert sm.flag_cards(strength(0.2), _cur(500.0), _ranks(rank=2), "T") == []
+
+    # fine: a gap of -5 points shows, -20 does not; any better gap shows
+    fine_m = "strength.luck"
+
+    def fine(flag_rate, other_rate=0.5):
+        def mk(i):
+            made = (i < round(flag_rate * 25)) if i < 25 else ((i - 25) < round(other_rate * 75))
+            return _cand(i, i, made, 0, measures=[fine_m])
+
+        return sm.FlagTable([mk(i) for i in range(100)])
+
+    cur = _cur(-5.0, measures=(fine_m,))
+    rk = _ranks((fine_m,))
+    assert sm.flag_cards(fine(0.44), cur, rk, "T")[0]["kind"] == "fine"  # 44% vs 50%
+    assert sm.flag_cards(fine(0.28), cur, rk, "T") == []  # 28% vs 50%
+    assert sm.flag_cards(fine(0.8), cur, rk, "T")[0]["kind"] == "fine"
+
+
+def test_outcome_is_conference_game_for_rating_and_margin_and_made_otherwise():
+    elo, pd_, qb = "strength.elo_pre", "strength.point_diff_pg", "strength.qb_epa"
+    ms = [elo, pd_, qb]
+
+    # the top quarter is rank/N >= .75 (26 of 100): about 4 in 5 make it, 1 in 5 reach a conference
+    # game; the others 40% and 10%
+    def mk(i):
+        top = i >= 74
+        made = (i % 5 != 0) if top else (i % 5 < 2)
+        conf = (i % 5 == 0) if top else (i % 10 == 0)
+        return _cand(i, i, made, conf, measures=ms)
+
+    t = sm.FlagTable([mk(i) for i in range(100)])
+    cards = {
+        c["measure"]: c for c in sm.flag_cards(t, _cur(500.0, measures=ms), _ranks(ms, rank=2), "T")
+    }
+    assert cards[elo]["outcome"] == "conf" and cards[pd_]["outcome"] == "conf"
+    assert cards[qb]["outcome"] == "made"
+    top = [mk(i) for i in range(75, 100)]
+    assert cards[elo]["flagged"] == [sum(c.outcome.rank >= 3 for c in top), 25]
+    assert cards[qb]["flagged"] == [sum(c.outcome.playoffs for c in top), 25]
+    assert cards[elo]["flagged"][0] != cards[qb]["flagged"][0]
+
+
+def test_at_most_three_cards_a_group_biggest_gap_first():
+    ms = [s.measure for s in sm.FLAG_SPECS if s.kind == "strength"]
+    assert len(set(ms)) == 4
+
+    def mk(i):
+        top = i >= 74
+        made = (i % 25 != 0) if top else (i % 5 == 0)  # about 96% vs 20%
+        conf = (i % 2 == 0) if top else (i % 20 == 0)  # about 50% vs 5%
+        return _cand(i, i, made, conf, measures=ms)
+
+    t = sm.FlagTable([mk(i) for i in range(100)])
+    cards = sm.flag_cards(t, _cur(500.0, measures=ms), _ranks(ms, rank=2), "T")
+    assert [c["kind"] for c in cards] == ["strength"] * 3
+    # made-based first (bigger gap; ties by measure id), then the better of the two conf ones
+    assert [c["measure"] for c in cards] == [
+        "strength.epa_off_adj", "strength.qb_epa", "strength.elo_pre",
+    ]  # fmt: skip
+
+
+def test_groups_come_out_in_the_pages_order():
+    ms = [OFF, "strength.luck"]
+
+    # the offense measure is both worst-quarter (red) and the luck measure low (fine) for the team
+    def mk(i):
+        low = i < 25
+        made = (i % 25 < 5) if low else (i % 2 == 0)
+        return _cand(i, i, made, 0, measures=ms)
+
+    t = sm.FlagTable([mk(i) for i in range(100)])
+    cards = sm.flag_cards(t, _cur(-3.0, measures=ms), _ranks(ms), "T")
+    assert [c["kind"] for c in cards] == ["red"] + ["fine"] * (len(cards) - 1)
+    assert cards[0]["measure"] == OFF
+
+
+def test_rank_is_best_first_by_direction_and_highest_first_when_neutral(world):
+    g, f = world
+    _, ranks = sm._current(g, f, SEASON, NOW)
+    # every team has a row, so each flag measure ranks 32 teams 1..32 (no ties in random data)
+    assert sorted(ranks["strength.epa_def"].values()) == list(range(1, 33))
+    latest = {
+        t: v
+        for t, v in sm.team_latest(
+            f.filter(pl.col("season") == SEASON),
+            sm._naive(g.filter((pl.col("season") == SEASON) & (pl.col("game_type") == "REG"))),
+            NOW,
+        )
+        .filter(pl.col("feature") == "strength.epa_def")
+        .select("team", "value")
+        .iter_rows()
+    }
+    best = min(latest, key=latest.get)  # lower EPA allowed is better
+    assert ranks["strength.epa_def"][best] == 1
+    assert ranks["strength.luck"] is not None
+
+
+def test_a_history_with_no_pool_makes_no_flags():
+    t = sm.FlagTable([])
+    assert sm.flag_cards(t, _cur(0.0), _ranks(), "T") == []
 
 
 # ---------------------------------------------------------------------------------- real data
@@ -280,3 +647,32 @@ def test_leave_one_season_out_brier_on_real_data():
     brier, base, n = _loso_brier(cands)
     print(f"\nLOSO Brier made-playoffs, k=25, 8 games: {brier:.4f} (base {base:.4f}, n={n})")
     assert n > 600 and brier <= 0.140
+
+
+def test_real_data_every_team_has_an_entry_and_the_file_validates():
+    from nfl.config import current_season, now_utc
+    from nfl.features import store
+
+    paths = get_paths()
+    if not (paths.marts / "features").exists() or not (paths.curated / "games").exists():
+        pytest.skip("needs the feature store and curated games (NFL_DATA_ROOT)")
+    season = current_season()
+    games = store.games_frame(paths)
+    now = now_utc().replace(tzinfo=None, microsecond=0)
+    played = games.filter(
+        (pl.col("season") == season)
+        & (pl.col("game_type") == "REG")
+        & pl.col("home_score").is_not_null()
+    )
+    if played.height < 32 * sm.MIN_GAMES // 2:
+        pytest.skip("not in season: fewer than MIN_GAMES played")
+    out = sm.similar_file(games, sm.load_features(paths, season), season, now)
+    lb.SimilarFile.model_validate(out)
+    json.dumps(out, allow_nan=False)
+    assert len(out["teams"]) == 32
+    for e in out["teams"].values():
+        assert len(e["nearest"]) == sm.K_SUMMARY and len(e["profile"]) == 7
+        assert all(len(f["flagged"]) == 2 and f["rank"] <= 32 for f in e["flags"])
+    # a rebuild on the same inputs is identical
+    again = sm.similar_file(games, sm.load_features(paths, season), season, now)
+    assert json.dumps(again) == json.dumps(out)

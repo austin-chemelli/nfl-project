@@ -205,6 +205,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 
 ### 3.6d League artifacts (ADR 0019, M14)
 
+- `site/similar.json`: each team's 25 nearest past team-seasons, its seven-measure profile and its flag cards (ADR 0019).
 - `site/teams.json`: every team's latest season-to-date value, league percentile and rank for every team-level feature, from each team's next-game row as of the last feature build (`nfl.league.teams.team_latest`), plus conference, division, record and games. `feature_bands` reads the same table.
 - `site/league.json`: standings with "seed today", playoff odds per team for two variants (Student, market), game leverage, odds history and similar seasons. Built by `nfl.league.build` at the end of `site.build`.
 - `marts/league/season=YYYY/snapshots.parquet`: append-only odds snapshots (as_of, kind refresh|lock, variant, team, outputs, model_version, n_sims, seed), written on the Tuesday refresh and after each real lock, never backfilled.

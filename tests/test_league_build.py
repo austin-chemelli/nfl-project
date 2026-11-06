@@ -232,14 +232,91 @@ def test_an_invalid_file_writes_no_snapshot(tmp_path, monkeypatch):
     assert not lb.snapshot_path(paths, 2026).exists()
 
 
-def test_a_similar_seasons_failure_keeps_the_odds(monkeypatch, capsys):
-    def fail(*a):
-        raise RuntimeError("boom")
+def _min_similar(season=2026):
+    return {
+        "schema_version": "1", "season": season, "as_of": "2026-11-03T12:00:00Z",
+        "measures": [{"id": "record", "label": "Record"}], "teams": {},
+    }  # fmt: skip
 
-    monkeypatch.setattr(lb.similar, "similar_file", fail)
-    games = _games()
-    obj, _ = lb.league_file(
-        games, _inputs(games), 2026, NOW, n_runs=RUNS, past=(games, pl.DataFrame())
-    )
-    assert obj["similar"] == {} and obj["odds"]["student"]["teams"]
-    assert "similar seasons failed" in capsys.readouterr().out
+
+def test_league_json_has_no_similar_and_similar_json_is_written(tmp_path, monkeypatch):
+    paths = _paths(tmp_path, monkeypatch)
+    monkeypatch.setattr(lb.similar, "similar_file", lambda *a: _min_similar())
+    out = lb.build(paths, 2026, now=NOW, n_runs=RUNS)
+    assert "similar" not in json.loads((paths.site / "league.json").read_text())
+    text = (paths.site / "similar.json").read_text()
+    lb.SimilarFile.model_validate_json(text)
+    assert " " not in text and out["similar_bytes"] == len(text)  # compact
+    assert not list(paths.site.glob("*.tmp"))
+
+
+def test_a_similar_failure_leaves_league_json_and_the_old_similar_json(
+    tmp_path, monkeypatch, capsys
+):
+    paths = _paths(tmp_path, monkeypatch)
+    monkeypatch.setattr(lb.similar, "similar_file", lambda *a: _min_similar())
+    lb.build(paths, 2026, now=NOW, n_runs=RUNS)
+    old = (paths.site / "similar.json").read_text()
+    (paths.site / "league.json").unlink()
+
+    # a real raise from inside the module, not a stubbed writer: the feature read fails
+    for err in (RuntimeError("mount gone"), pl.exceptions.PanicException("panic")):
+
+        def boom(*a, _e=err, **k):
+            raise _e
+
+        monkeypatch.setattr(lb.similar, "load_features", boom)
+        lb.build(paths, 2026, now=NOW + timedelta(hours=1), n_runs=RUNS)
+        assert "league: SIMILAR NOT UPDATED" in capsys.readouterr().out
+        assert (paths.site / "league.json").exists()
+        assert (paths.site / "similar.json").read_text() == old
+        (paths.site / "league.json").unlink()
+
+
+def test_an_invalid_similar_file_is_not_written(tmp_path, monkeypatch, capsys):
+    paths = _paths(tmp_path, monkeypatch)
+    bad = _min_similar() | {"teams": {"KC": {"games_played": 8}}}
+    monkeypatch.setattr(lb.similar, "similar_file", lambda *a: bad)
+    lb.build(paths, 2026, now=NOW, n_runs=RUNS)
+    assert "SIMILAR NOT UPDATED" in capsys.readouterr().out
+    assert not (paths.site / "similar.json").exists()
+    assert (paths.site / "league.json").exists()
+
+
+def test_publish_picks_up_similar_json(tmp_path):
+    from nfl import publish
+    from nfl.config import Paths
+
+    paths = Paths(tmp_path)
+    paths.site.mkdir(parents=True)
+    (paths.site / "similar.json").write_text("{}")
+    assert "site/similar.json" in publish.plan(paths, repo=tmp_path)
+
+
+def test_history_over_three_tuesdays_with_a_lock_and_a_rerun(tmp_path):
+    """One point a week from the Tuesday series: a lock row never enters it, and a second refresh in
+    the same week replaces the first. Weeks come in order."""
+    path = tmp_path / "snapshots.parquet"
+    tue = [NOW, NOW + timedelta(days=7), NOW + timedelta(days=14)]
+    want = {}
+    for i, played in enumerate((4, 5, 6)):
+        games = _games(played=played)
+        obj, sims = lb.league_file(games, _inputs(games), 2026, tue[i], n_runs=RUNS)
+        lb.append_snapshot(path, lb.snapshot_rows(obj, sims, _inputs(games), "refresh", tue[i]))
+        if i == 1:  # a lock on Thursday, then a later refresh in the same week on other inputs
+            lb.append_snapshot(
+                path,
+                lb.snapshot_rows(obj, sims, _inputs(games), "lock", tue[i] + timedelta(days=2)),
+            )
+            games2 = _games(played=played)
+            obj, sims = lb.league_file(games2, _inputs(games2, 0.5), 2026, tue[i], n_runs=RUNS)
+            later = tue[i] + timedelta(hours=5)
+            lb.append_snapshot(
+                path, lb.snapshot_rows(obj, sims, _inputs(games2, 0.5), "refresh", later)
+            )
+        want[i] = obj["odds"]["student"]["teams"]["KC"]["playoffs"]
+    series = lb.history(path)["KC"]
+    assert [p["week"] for p in series] == [5, 6, 7]
+    assert series[1]["student"] == want[1]  # the later refresh of week 6
+    assert series[0]["student"] != series[1]["student"] != series[2]["student"]
+    assert len(lb.history(path)) == 32

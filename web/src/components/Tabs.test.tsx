@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
@@ -69,5 +69,17 @@ describe('Tabs', () => {
   it('the panel carries the fade class (opacity only, no transform)', () => {
     setup()
     expect(screen.getByRole('tabpanel')).toHaveClass('tab-panel-in')
+  })
+
+  it('scrolls the tab strip, not the page, to an active tab that is off-screen', () => {
+    const left = vi.spyOn(HTMLElement.prototype, 'offsetLeft', 'get').mockReturnValue(500)
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(100)
+    const client = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(300)
+    setup('/g?tab=c')
+    const strip = screen.getByRole('tablist').parentElement!
+    expect(strip.scrollLeft).toBe(300)
+    left.mockRestore()
+    width.mockRestore()
+    client.mockRestore()
   })
 })

@@ -21,6 +21,7 @@ function schemaFor(rel: string) {
   if (base === 'audit.json') return C.Audit
   if (base === 'teams.json') return C.TeamsFile
   if (base === 'league.json') return C.LeagueFile
+  if (base === 'similar.json') return C.SimilarFile
   return null
 }
 
@@ -72,36 +73,20 @@ describe('contract: league.json', () => {
     expect(C.LeagueFile.parse(f).odds.student.sources).toEqual({ locked: 1, something_new: 2 })
   })
 
-  it('defaults empty swings, history, similar and a missing seed_today', () => {
+  it('defaults empty swings, history and a missing seed_today', () => {
     const f = raw()
     delete f.games[0].swings
     delete f.history
-    delete f.similar
     delete f.teams[0].seed_today
     const p = C.LeagueFile.parse(f)
     expect(p.games[0].swings).toEqual([])
     expect(p.history).toEqual({})
-    expect(p.similar).toEqual({})
     expect(p.teams[0].seed_today).toBeNull()
   })
 
-  it('types similar and history, and defaults a neighbour without a round', () => {
-    const f = raw()
-    const p = C.LeagueFile.parse(f)
-    expect(Object.keys(p.similar).length).toBeGreaterThan(3)
-    expect(Object.keys(p.similar).length).toBeLessThan(32) // a team under four games has no entry
-    expect(p.similar.CHI.neighbours).toHaveLength(10)
-    expect(p.similar.CHI.rounds).toMatchObject({ div: 4, conf: 2, sb: 1, champ: 0 })
+  it('types history', () => {
+    const p = C.LeagueFile.parse(raw())
     expect(p.history.CHI).toHaveLength(3)
-    delete f.similar.CHI.neighbours[0].round
-    delete f.similar.CHI.neighbours
-    expect(C.LeagueFile.parse(f).similar.CHI.neighbours).toEqual([])
-  })
-
-  it('rejects a similar entry without its summary', () => {
-    const f = raw()
-    delete f.similar.CHI.made_playoffs
-    expect(C.LeagueFile.safeParse(f).success).toBe(false)
   })
 
   it('rejects a file without odds', () => {
@@ -217,5 +202,41 @@ describe('contract: recap bold calls', () => {
     const r = raw()
     r.models.push({ model_id: 'ensemble', label: 'Ensemble', kind: 'ensemble', n: 13, right: 9, log_loss: 0.6, vs_market: -0.02, rank: 1 })
     expect(C.WeekRecap.parse(r).models.some((m: { kind: string }) => m.kind === 'ensemble')).toBe(true)
+  })
+})
+
+describe('contract: similar.json', () => {
+  const raw = () => JSON.parse(fs.readFileSync(path.join(FIX, 'similar.json'), 'utf8'))
+  it('parses the fixture: 25 nearest, flags, a pool, old team codes kept', () => {
+    const p = C.SimilarFile.parse(raw())
+    expect(p.measures).toHaveLength(7)
+    expect(p.teams.CHI.nearest).toHaveLength(25)
+    expect(p.teams.CHI.pool).toEqual({ seasons: [2002, 2025], n: 768 })
+    expect(p.teams.CHI.flags[0].flagged).toEqual([11, 28])
+    expect(p.teams.CHI.nearest.map((n) => n.team)).toEqual(expect.arrayContaining(['SD', 'OAK', 'STL']))
+    expect(p.teams.DET.flags).toEqual([])
+    expect(p.teams.NO).toBeUndefined()
+  })
+  it('defaults a missing round, flags and widened', () => {
+    const f = raw()
+    delete f.teams.CHI.nearest[0].round
+    delete f.teams.CHI.flags
+    delete f.teams.KC.flags[0].widened
+    const p = C.SimilarFile.parse(f)
+    expect(p.teams.CHI.nearest[0].round).toBeNull()
+    expect(p.teams.CHI.flags).toEqual([])
+    expect(p.teams.KC.flags[0].widened).toBe(false)
+  })
+  it('rejects an entry without its summary or a flag with an unknown kind', () => {
+    const f = raw()
+    delete f.teams.CHI.made_playoffs
+    expect(C.SimilarFile.safeParse(f).success).toBe(false)
+    const g = raw()
+    g.teams.CHI.flags[0].kind = 'purple'
+    expect(C.SimilarFile.safeParse(g).success).toBe(false)
+  })
+  it('is no longer part of league.json', () => {
+    expect('similar' in raw()).toBe(false)
+    expect('similar' in JSON.parse(fs.readFileSync(path.join(FIX, 'league.json'), 'utf8'))).toBe(false)
   })
 })

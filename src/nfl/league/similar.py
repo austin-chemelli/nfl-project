@@ -17,15 +17,16 @@ from datetime import datetime
 import duckdb
 import numpy as np
 import polars as pl
+from scipy.stats import rankdata
 
 from nfl.config import Paths
 from nfl.league.standings import canon
 from nfl.league.teams import team_latest
 
+SCHEMA_VERSION = "1"
 FIRST_CANDIDATE = 2002
 MIN_GAMES = 4  # fewer and the record says little, and the vector is mostly last season
 K_SUMMARY = 25
-K_SHOWN = 10
 RECORD_WEIGHT = 2.0
 FEATURES = (
     "strength.epa_off_adj",
@@ -35,6 +36,60 @@ FEATURES = (
     "strength.qb_epa",
     "strength.sos",
 )
+# The seven axes of the profile chart, in fixed order: (id, label, better). `profile` percentiles
+# are oriented so 100 is best where `better` is set; defense is lower-is-better, so it is flipped.
+# Schedule has no good direction: 100 is the hardest schedule, 0 the easiest. Record is first and
+# is the only axis that is not a feature (win pct after n games).
+MEASURES = (
+    ("record", "Record", "higher"),
+    ("strength.epa_off_adj", "Offense", "higher"),
+    ("strength.epa_def_adj", "Defense", "lower"),
+    ("strength.point_diff_pg", "Point margin", "higher"),
+    ("strength.pythag_win_pct", "Expected win rate", "higher"),
+    ("strength.qb_epa", "QB play", "higher"),
+    ("strength.sos", "Schedule", None),
+)  # fmt: skip
+
+
+@dataclass(frozen=True)
+class FlagSpec:
+    kind: str  # red | fine | strength
+    measure: str
+    end: str  # "lo": worst quarter on the oriented scale (low end if neutral); "hi": best quarter
+    label: str
+    outcome: str  # "made" the playoffs, or reached a conference game ("conf")
+    better: str | None  # "higher" | "lower" | None (neutral)
+
+
+# The flags the page may show, and nothing else: the page never searches for patterns at build
+# time. This list is what survived the same-record test (season bootstrap, Benjamini-Hochberg at
+# 10%) and the 2002-13 vs 2014-25 split-half check, run 2026-11-06 on teams at 6, 8, 10 and 12
+# games, 2002-2025. Table and method: .notes/plans/similar-insights.md and scripts/league_flags.py.
+# Each says what the team's own quarter does against same-record peers, never that the measure
+# matters on its own. Rejected: luck high, EPA trend, rushing offense, special teams.
+FLAG_SPECS = (
+    FlagSpec("red", "strength.epa_off_adj", "lo", "Offense", "made", "higher"),
+    FlagSpec("red", "strength.pythag_win_pct", "lo", "Expected win rate", "made", "higher"),
+    FlagSpec("red", "strength.qb_epa", "lo", "QB play", "made", "higher"),
+    FlagSpec("strength", "strength.elo_pre", "hi", "Long-run rating", "conf", "higher"),
+    FlagSpec("strength", "strength.qb_epa", "hi", "QB play", "made", "higher"),
+    FlagSpec("strength", "strength.epa_off_adj", "hi", "Offense", "made", "higher"),
+    FlagSpec("strength", "strength.point_diff_pg", "hi", "Point margin", "conf", "higher"),
+    FlagSpec("fine", "strength.luck", "lo", "Luck", "made", None),  # record undersells them
+    FlagSpec("fine", "strength.epa_def", "lo", "Defense", "made", "lower"),
+    FlagSpec("fine", "form.last3_win_pct", "lo", "Last three games", "made", "higher"),
+    FlagSpec("fine", "form.streak", "lo", "Streak", "made", "higher"),
+    FlagSpec("fine", "decisions.turnover_margin_pg", "lo", "Turnover margin", "made", "higher"),
+)  # fmt: skip
+FLAG_FEATURES = tuple(dict.fromkeys(f.measure for f in FLAG_SPECS))
+FLAG_KINDS = ("red", "fine", "strength")  # the page's group order
+MIN_FLAGGED = 8
+MIN_OTHERS = 15
+FINE_TOLERANCE = 0.08  # a "fine" card may show a gap no worse than this many points
+MIN_FINE_RATE = 0.10  # below this the record itself decided it, and "fine" says nothing
+QUARTER = 0.25  # of that season's teams, so a rank and its quarter always agree
+MAX_CARDS = 3
+LOAD_FAMILIES = ("strength", "form", "decisions")
 ROUND_RANK = {"WC": 1, "DIV": 2, "CON": 3, "SB": 4}
 ROUND_NAME = {1: "wc", 2: "div", 3: "conf", 4: "sb"}
 FEATURE_SCHEMA = {
@@ -44,18 +99,22 @@ FEATURE_SCHEMA = {
 
 
 def load_features(paths: Paths, season: int) -> pl.DataFrame:
-    """Only what this module reads: its features, the strength family, candidate seasons through
-    `season`. Filters go into the read, so the bucket mount serves a few columns of one file a season."""
-    root = (paths.marts / "features").as_posix()
-    files = f"{root}/season=*/strength.parquet"
-    if not any((paths.marts / "features").glob("season=*/strength.parquet")):
+    """Only what this module reads: its features from the strength, form and decisions families,
+    candidate seasons through `season`. Filters go into the read, so the bucket mount serves a few
+    columns of a few files a season."""
+    root = paths.marts / "features"
+    files = [
+        f.as_posix() for fam in LOAD_FAMILIES for f in sorted(root.glob(f"season=*/{fam}.parquet"))
+    ]
+    if not files:
         return pl.DataFrame(schema=FEATURE_SCHEMA)
-    names = ",".join(f"'{f}'" for f in FEATURES)
+    names = ",".join(f"'{f}'" for f in (*FEATURES, *FLAG_FEATURES))
+    listing = ",".join(f"'{f}'" for f in files)
     con = duckdb.connect()
     return con.sql(
         "select cast(season as bigint) as season, game_id, side, feature, "
         "cast(value as double) as value, cast(known_as_of as timestamp) as known_as_of "
-        f"from read_parquet('{files}', hive_partitioning=true) "
+        f"from read_parquet([{listing}], hive_partitioning=true) "
         f"where season between {FIRST_CANDIDATE} and {int(season)} "
         f"and feature in ({names}) and side in ('home', 'away')"
     ).pl()
@@ -158,6 +217,7 @@ class Candidate:
     rec: tuple[int, int, int]
     x: np.ndarray  # win pct, then FEATURES
     outcome: Outcome
+    fv: dict[str, float]  # FLAG_FEATURES known at this point (any may be missing)
 
 
 def candidates(games: pl.DataFrame, feats: pl.DataFrame, season: int) -> list[Candidate]:
@@ -182,16 +242,22 @@ def candidates(games: pl.DataFrame, feats: pl.DataFrame, season: int) -> list[Ca
             if rec is None or v is None or any(f not in v for f in FEATURES):
                 continue
             x = np.array([_pct(rec, n), *(v[f] for f in FEATURES)], dtype=float)
-            out.append(Candidate(s, team, n, rec, x, oc))
+            fv = {f: v[f] for f in FLAG_FEATURES if f in v}
+            out.append(Candidate(s, team, n, rec, x, oc, fv))
     return out
+
+
+def _sd(A: np.ndarray) -> np.ndarray:
+    sd = A.std(0)
+    sd[sd == 0] = 1.0
+    return sd
 
 
 def _nearest(cands: list[Candidate], x: np.ndarray, k: int) -> list[tuple[float, Candidate]]:
     """The k nearest of `cands` (all at one n) to x: standardized over the candidates, record
     weighted RECORD_WEIGHT. Ties break on the newer season, then the team code."""
     A = np.vstack([c.x for c in cands])
-    sd = A.std(0)
-    sd[sd == 0] = 1.0
+    sd = _sd(A)
     w = np.ones(A.shape[1])
     w[0] = RECORD_WEIGHT
     d = np.sqrt((((A - x) / sd * w) ** 2).sum(1))
@@ -201,11 +267,37 @@ def _nearest(cands: list[Candidate], x: np.ndarray, k: int) -> list[tuple[float,
     return [(float(d[i]), cands[i]) for i in order]
 
 
-def _row(d: float, c: Candidate) -> dict:
+def _rec_str(rec: tuple[int, int, int]) -> str:
+    return f"{rec[0]}-{rec[1]}" + (f"-{rec[2]}" if rec[2] else "")
+
+
+def profile(pool_x: np.ndarray, x: np.ndarray) -> list[int]:
+    """x's percentile (0 to 100) against each column of `pool_x`, in MEASURES order, oriented so
+    100 is best where a measure has a direction (a lower-is-better measure is flipped). Ties count
+    half. Schedule has no good direction, so 100 is the hardest."""
+    out = []
+    for j, (_id, _label, better) in enumerate(MEASURES):
+        col = pool_x[:, j]
+        p = 100 * ((col < x[j]).sum() + 0.5 * (col == x[j]).sum()) / len(col)
+        out.append(round(100 - p if better == "lower" else p))
+    return out
+
+
+def gaps(pool_x: np.ndarray, x: np.ndarray, y: np.ndarray) -> tuple[list[str], list[str]]:
+    """(closest two, furthest one) measure ids between teams x and y: |difference| in pool standard
+    deviations, record included and unweighted. Ties go to the earlier measure."""
+    g = np.abs(x - y) / _sd(pool_x)
+    asc = np.argsort(g, kind="stable")
+    desc = np.argsort(-g, kind="stable")
+    return [MEASURES[i][0] for i in asc[:2]], [MEASURES[desc[0]][0]]
+
+
+def _nearest_row(d: float, c: Candidate, pool_x: np.ndarray, x: np.ndarray) -> dict:
+    closest, furthest = gaps(pool_x, x, c.x)
     return {
-        "season": c.season, "team": c.team, "dist": round(d, 2),
-        "rec_then": f"{c.rec[0]}-{c.rec[1]}" + (f"-{c.rec[2]}" if c.rec[2] else ""),
+        "season": c.season, "team": c.team, "dist": round(d, 2), "rec_then": _rec_str(c.rec),
         "final": c.outcome.final, "playoffs": c.outcome.playoffs, "round": c.outcome.round,
+        "profile": profile(pool_x, c.x), "closest": closest, "furthest": furthest,
     }  # fmt: skip
 
 
@@ -223,64 +315,190 @@ def summary(near: list[tuple[float, Candidate]]) -> dict:
     }
 
 
+@dataclass
+class Current:
+    n: int
+    rec: tuple[int, int, int]
+    x: np.ndarray
+    fv: dict[str, float]  # FLAG_FEATURES from the same game's row as x
+
+
 def _current(
     games: pl.DataFrame, feats: pl.DataFrame, season: int, now: datetime
-) -> dict[str, tuple[int, tuple[int, int, int], np.ndarray]]:
-    """team -> (n, record to date, vector) from `team_latest`. A team with no row for one of the
-    features, or rows for different games, is left out."""
-    cur = _naive(games.filter(pl.col("season") == season))
+) -> tuple[dict[str, Current], dict[str, dict[str, int]]]:
+    """(team -> Current, measure -> team -> rank among the teams with a row, 1 = best by the
+    measure's direction, highest first when it has none) from `team_latest`. A team with no row for
+    one of the FEATURES, or rows for different games, is left out.
+
+    Only regular-season games go to `team_latest`: once a playoff team's next row is a postseason
+    game there is no pool at that n, and the team would drop out until August."""
+    none: tuple[dict, dict] = ({}, {})
+    cur = _naive(games.filter((pl.col("season") == season) & (pl.col("game_type") == "REG")))
     if feats.is_empty() or cur.is_empty():
-        return {}
+        return none
     latest = team_latest(feats.filter(pl.col("season") == season), cur, now)
     if latest.is_empty():
-        return {}
+        return none
     by_team: dict[str, dict[str, tuple[float, str, datetime]]] = {}
     for f, t, v, gid, k in latest.select("feature", "team", "value", "game_id", "kickoff_utc").iter_rows():  # fmt: skip
         by_team.setdefault(t, {})[f] = (v, gid, k)
+    ranks: dict[str, dict[str, int]] = {}
+    for spec in FLAG_SPECS:
+        vals = {t: fv[spec.measure][0] for t, fv in by_team.items() if spec.measure in fv}
+        sign = -1.0 if spec.better == "lower" else 1.0
+        ranks[spec.measure] = {
+            t: 1 + sum(sign * u > sign * v for u in vals.values()) for t, v in vals.items()
+        }
     tg = _team_games(cur)
     out = {}
     for team, fv in by_team.items():
         if any(f not in fv for f in FEATURES) or len({fv[f][1] for f in FEATURES}) != 1:
             continue
         gid, kick = fv[FEATURES[0]][1], fv[FEATURES[0]][2]
-        rows = tg.get((season, team), [])
-        reg = [r for r in rows if r[2]]
         if kick is None:
             continue
-        # Position of the row's game among the team's regular-season games. After a team's last
-        # game there is no next row, so team_latest hands back its last one: n is then the games
-        # before it, and the final game is not in that vector.
-        n = sum((r[0] is not None and (r[0], r[1]) < (kick, gid)) for r in reg)
-        rec = _record_to(reg, n)
+        # Position of the row's game among the team's scored regular-season games. After a team's
+        # last game there is no next row, so team_latest hands back its last one: n is then the
+        # games before it, and the final game is not in that vector. Only scored games count, so
+        # a kickoff with no score yet doesn't drop the team. A late score can leave n one ahead of
+        # the vector until the next feature build; that is accepted.
+        scored = [r for r in tg.get((season, team), []) if r[2] and r[4] is not None]
+        n = sum(r[0] is not None and (r[0], r[1]) < (kick, gid) for r in scored)
+        rec = _record_to(scored, n)
         if rec is None or n < MIN_GAMES:
             continue
         x = np.array([_pct(rec, n), *(fv[f][0] for f in FEATURES)], dtype=float)
-        out[team] = (n, rec, x)
+        flag_vals = {f: fv[f][0] for f in FLAG_FEATURES if f in fv and fv[f][1] == gid}
+        out[team] = Current(n, rec, x, flag_vals)
+    return out, ranks
+
+
+class FlagTable:
+    """The history at one games-played count, as arrays, for the flag rules."""
+
+    def __init__(self, pool: list[Candidate]):
+        self.pool = pool
+        self.key = np.array([2 * c.rec[0] + c.rec[2] for c in pool])  # wins, ties half, doubled
+        self.made = np.array([c.outcome.playoffs for c in pool], dtype=float)
+        self.conf = np.array([c.outcome.rank >= 3 for c in pool], dtype=float)
+        self._cache: dict[tuple[str, str], tuple] = {}
+
+    def column(self, spec: FlagSpec) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """(has a value, oriented value, in the spec's quarter) over the pool. Oriented: higher is
+        better where the measure has a direction. The quarter is within each season at this n: EPA
+        levels drift over the years, and "bottom quarter" has to mean the same as a team's rank."""
+        hit = self._cache.get((spec.measure, spec.end))
+        if hit is None:
+            sign = -1.0 if spec.better == "lower" else 1.0
+            has = np.array([spec.measure in c.fv for c in self.pool])
+            x = np.array([sign * c.fv.get(spec.measure, np.nan) for c in self.pool])
+            inq = np.zeros(len(self.pool), dtype=bool)
+            seasons = np.array([c.season for c in self.pool])
+            for s in np.unique(seasons[has]):
+                m = has & (seasons == s)
+                r = rankdata(x[m] if spec.end == "lo" else -x[m], method="average")
+                inq[m] = r / m.sum() <= QUARTER
+            hit = self._cache[(spec.measure, spec.end)] = (has, x, inq)
+        return hit
+
+    def counts(self, spec: FlagSpec, rec_key: int, widen: int) -> tuple | None:
+        """([k, n] flagged, [k, n] others) among same-record peers (wins within `widen` half-win
+        units), or None if short of MIN_FLAGGED or MIN_OTHERS."""
+        has, _, inq = self.column(spec)
+        y = self.conf if spec.outcome == "conf" else self.made
+        peers = has & (np.abs(self.key - rec_key) <= widen)
+        f, o = peers & inq, peers & ~inq
+        if f.sum() < MIN_FLAGGED or o.sum() < MIN_OTHERS:
+            return None
+        return [int(y[f].sum()), int(f.sum())], [int(y[o].sum()), int(o.sum())]
+
+
+def in_quarter(spec: FlagSpec, rank: int, n: int) -> bool:
+    """This team's quarter among this season's teams. Rank 1 is the best, or the highest on a
+    neutral measure, so a low end is a high rank number either way."""
+    return (n - rank + 1 if spec.end == "lo" else rank) / n <= QUARTER
+
+
+def flag_cards(
+    table: FlagTable, cur: Current, rank_of: dict[str, dict[str, int]], team: str
+) -> list[dict]:
+    """The cards for one team, in the page's group order, at most MAX_CARDS a group, biggest gap
+    first. Peers: same games played and wins; below MIN_FLAGGED flagged or MIN_OTHERS others they
+    widen to one win either way, then no card. A card shows only if its own counts agree with its
+    kind: red a lower rate than the others, strength a higher one, fine no worse than
+    FINE_TOLERANCE below, with a rate worth talking about."""
+    key = 2 * cur.rec[0] + cur.rec[2]
+    cards = []
+    for spec in FLAG_SPECS:
+        v = cur.fv.get(spec.measure)
+        if v is None or team not in rank_of.get(spec.measure, {}) or not table.pool:
+            continue
+        if not in_quarter(spec, rank_of[spec.measure][team], len(rank_of[spec.measure])):
+            continue
+        widened = False
+        got = table.counts(spec, key, 0)
+        if got is None:
+            widened, got = True, table.counts(spec, key, 2)
+        if got is None:
+            continue
+        (fk, fn), (ok, on) = got
+        gap = fk / fn - ok / on
+        # "fine" needs something to be fine about: at 0-7 nobody made it, flagged or not
+        fine = gap >= -FINE_TOLERANCE and fk >= 1 and max(fk / fn, ok / on) >= MIN_FINE_RATE
+        agree = {"red": gap < 0, "strength": gap > 0, "fine": fine}[spec.kind]
+        if not agree:
+            continue
+        cards.append((
+            abs(gap), spec.measure,
+            {
+                "kind": spec.kind, "measure": spec.measure, "label": spec.label,
+                "rank": rank_of[spec.measure][team],
+                "quarter": "bottom" if spec.end == "lo" else "top", "outcome": spec.outcome,
+                "peers": _rec_str(cur.rec), "widened": widened,
+                "flagged": [fk, fn], "others": [ok, on],
+            },
+        ))  # fmt: skip
+    out = []
+    for kind in FLAG_KINDS:
+        mine = sorted((c for c in cards if c[2]["kind"] == kind), key=lambda c: (-c[0], c[1]))
+        out += [c[2] for c in mine[:MAX_CARDS]]
     return out
 
 
-def similar_file(
-    games: pl.DataFrame, feats: pl.DataFrame, season: int, now: datetime
-) -> dict[str, dict]:
-    """The `similar` object of league.json. `games` carries every season from FIRST_CANDIDATE
-    through `season`; `feats` is `load_features`' output. Teams with nothing to show are absent."""
+def similar_file(games: pl.DataFrame, feats: pl.DataFrame, season: int, now: datetime) -> dict:
+    """The site/similar.json object. `games` carries every season from FIRST_CANDIDATE through
+    `season`; `feats` is `load_features`' output. Teams with nothing to show are absent."""
+    out: dict = {
+        "schema_version": SCHEMA_VERSION,
+        "season": season,
+        "as_of": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "measures": [{"id": i, "label": label} for i, label, _ in MEASURES],
+        "teams": {},
+    }
     if feats.is_empty() or games.is_empty():
-        return {}
-    cur = _current(games, feats, season, now)
+        return out
+    cur, ranks = _current(games, feats, season, now)
     if not cur:
-        return {}
+        return out
     by_n: dict[int, list[Candidate]] = {}
     for c in candidates(games, feats, season):
         by_n.setdefault(c.n, []).append(c)
-    out = {}
-    for team, (n, _rec, x) in sorted(cur.items()):
-        pool = by_n.get(n, [])
+    tables: dict[int, FlagTable] = {}
+    for team, c in sorted(cur.items()):
+        pool = by_n.get(c.n, [])
         if len(pool) < K_SUMMARY:
             continue
-        near = _nearest(pool, x, K_SUMMARY)
-        out[canon(team)] = {
-            "games_played": n,
+        pool_x = np.vstack([p.x for p in pool])
+        near = _nearest(pool, c.x, K_SUMMARY)
+        table = tables.setdefault(c.n, FlagTable(pool))
+        seasons = [p.season for p in pool]
+        out["teams"][canon(team)] = {
+            "games_played": c.n,
+            "record": _rec_str(c.rec),
             **summary(near),
-            "neighbours": [_row(d, c) for d, c in near[:K_SHOWN]],
+            "pool": {"seasons": [min(seasons), max(seasons)], "n": len(pool)},
+            "profile": profile(pool_x, c.x),
+            "nearest": [_nearest_row(d, p, pool_x, c.x) for d, p in near],
+            "flags": flag_cards(table, c, ranks, team),
         }
     return out

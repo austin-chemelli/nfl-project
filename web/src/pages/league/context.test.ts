@@ -1,24 +1,16 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { LeagueFile, TeamsFile, type SimilarTeam } from '../../data/contract'
-import { teamInfo } from '../../lib/teams'
+import { LeagueFile, TeamsFile } from '../../data/contract'
 import {
   compareDomain,
   compareGroups,
-  defaultSimilarTeam,
   edgeOf,
   firstSort,
   hasSpark,
-  outcomeText,
   rankColumns,
-  recordFrom,
-  resolveSimilarTeam,
   resolveVs,
   shadeFor,
-  similarHeadline,
-  similarRows,
-  similarTiles,
   sortTeams,
   sparkLabel,
   sparkSeries,
@@ -27,74 +19,6 @@ import {
 const FIX = path.resolve(import.meta.dirname, '../../test/fixtures/site')
 const league = LeagueFile.parse(JSON.parse(fs.readFileSync(path.join(FIX, 'league.json'), 'utf8')))
 const teams = TeamsFile.parse(JSON.parse(fs.readFileSync(path.join(FIX, 'teams.json'), 'utf8')))
-
-const sim: SimilarTeam = {
-  games_played: 8,
-  k_summary: 25,
-  made_playoffs: 9,
-  rounds: { div: 4, conf: 2, sb: 1, champ: 0 },
-  neighbours: [
-    { season: 2018, team: 'CAR', dist: 0.79, rec_then: '6-2', final: '7-9-0', playoffs: false, round: null },
-    { season: 2011, team: 'SD', dist: 0.8, rec_then: '5-3', final: '8-7-1', playoffs: true, round: 'wc' },
-  ],
-}
-
-describe('similar seasons', () => {
-  it('prints records with an en dash and drops a zero tie count', () => {
-    expect(recordFrom('7-9-0')).toBe('7–9')
-    expect(recordFrom('8-7-1')).toBe('8–7–1')
-    expect(recordFrom('6-2')).toBe('6–2')
-  })
-
-  it('says the round reached in words, for every round and for a miss', () => {
-    const o = (playoffs: boolean, round: string | null) => outcomeText({ playoffs, round })
-    expect(o(false, null)).toBe('Missed the playoffs')
-    expect(o(true, 'wc')).toBe('Lost in the wild-card round')
-    expect(o(true, 'div')).toBe('Lost in the divisional round')
-    expect(o(true, 'conf')).toBe('Lost the conference game')
-    expect(o(true, 'sb')).toBe('Lost the Super Bowl')
-    expect(o(true, 'champ')).toBe('Won the Super Bowl')
-    expect(o(true, null)).toBe('Made the playoffs')
-    expect(o(true, 'something-new')).toBe('Made the playoffs')
-  })
-
-  it('summarizes as counts of the nearest, not percentages', () => {
-    expect(similarHeadline(sim)).toBe('9 of 25 made the playoffs')
-    expect(similarTiles(sim).map((t) => [t.label, t.value])).toEqual([
-      ['Made the playoffs', '9 of 25'],
-      ['Reached the divisional round', '4 of 25'],
-      ['Reached the conference game', '2 of 25'],
-      ['Reached the Super Bowl', '1 of 25'],
-      ['Won the Super Bowl', '0 of 25'],
-    ])
-  })
-
-  it('builds the rows, keeping the team as printed', () => {
-    expect(similarRows(sim).map((r) => [r.season, r.team, r.then, r.final, r.outcome])).toEqual([
-      [2018, 'CAR', '6–2', '7–9', 'Missed the playoffs'],
-      [2011, 'SD', '5–3', '8–7–1', 'Lost in the wild-card round'],
-    ])
-  })
-
-  it('picks the best playoff chance among teams with an entry, and never a team without one', () => {
-    const best = Object.keys(league.similar).sort((a, b) => league.odds.student.teams[b].playoffs - league.odds.student.teams[a].playoffs)[0]
-    expect(defaultSimilarTeam(league)).toBe(best)
-    expect(defaultSimilarTeam({ ...league, similar: {} })).toBeNull()
-  })
-
-  it('resolves ?team= to a team in the file, else the default; hasOwn guards the prototype', () => {
-    expect(resolveSimilarTeam(league, 'MIA')).toBe('MIA')
-    expect(resolveSimilarTeam(league, 'NO')).toBe('NO') // a real team with no entry stays picked
-    expect(resolveSimilarTeam(league, 'constructor')).toBe(defaultSimilarTeam(league))
-    expect(resolveSimilarTeam(league, null)).toBe(defaultSimilarTeam(league))
-  })
-
-  it('names old franchise codes as the franchise', () => {
-    expect(teamInfo('SD').name).toBe('Los Angeles Chargers')
-    expect(teamInfo('OAK').name).toBe('Las Vegas Raiders')
-    expect(teamInfo('STL').name).toBe('Los Angeles Rams')
-  })
-})
 
 describe('compare', () => {
   it('reads the better side by direction: lower is better, null has no edge', () => {
@@ -134,10 +58,19 @@ describe('compare', () => {
     const rows = compareGroups(teams, 'KC', 'BUF').flatMap((g) => g.rows)
     const lower = rows.find((r) => r.feature.better === 'lower')!
     const higher = rows.find((r) => r.feature.better === 'higher')!
-    const [l0, l1] = compareDomain(lower)
-    const [h0, h1] = compareDomain(higher)
+    const [l0, l1] = compareDomain(teams, lower)
+    const [h0, h1] = compareDomain(teams, higher)
     expect(l0).toBeGreaterThan(l1)
     expect(h0).toBeLessThan(h1)
+  })
+
+  it('spans the true league range, whoever the opponent is', () => {
+    const rows = compareGroups(teams, 'KC', 'BUF').flatMap((g) => g.rows)
+    const r = rows.find((x) => x.feature.better === 'higher')!
+    const all = Object.values(teams.teams).map((t) => t.values[r.feature.id]).filter((v): v is number => v != null)
+    expect(compareDomain(teams, r)).toEqual([Math.min(...all), Math.max(...all)])
+    const other = compareGroups(teams, 'KC', 'MIA').flatMap((g) => g.rows).find((x) => x.feature.id === r.feature.id)!
+    expect(compareDomain(teams, other)).toEqual(compareDomain(teams, r))
   })
 
   it('ignores an unknown, repeated or missing ?vs=', () => {

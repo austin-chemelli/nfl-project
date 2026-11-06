@@ -92,6 +92,7 @@ export function fmtValue(v: number | null | undefined, f: TeamFeature): string {
     case 'pct': return gap ? `${signed(100 * v, 1)}%` : `${(100 * v).toFixed(1)}%`
     case 'pp': return `${signed(v, 1)}%`
     case 'prob_diff': return `${signed(100 * v, 1)}%`
+    case 'count': return f.id.includes('turnover_margin') || f.id.endsWith('streak') ? signed(v, Number.isInteger(v) ? 0 : 1) : fmtUnit(v, f.unit)
     case 'seconds': return gap ? `${signed(v, 2)} s` : fmtUnit(v, f.unit)
     default: return fmtUnit(v, f.unit)
   }

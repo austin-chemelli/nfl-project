@@ -64,4 +64,30 @@ describe('Teams tab: compare', () => {
     expect(section.querySelector('[style*="var(--team-home)"]')).not.toBeNull()
     expect(c.querySelector('section[data-matchup] circle[fill="var(--team-away)"]')).not.toBeNull()
   })
+
+  it('moves focus to the comparison when it opens and back to the compare select when stopped', async () => {
+    await open('/league?tab=teams&team=KC')
+    await userEvent.selectOptions(screen.getByLabelText('Compare with'), 'BUF')
+    const section = await screen.findByRole('region', { name: /compared with/ })
+    expect(section).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Stop comparing' }))
+    expect(screen.getByLabelText('Compare with')).toHaveFocus()
+  })
+
+  it('forgets the comparison team when it is picked as the team', async () => {
+    await open('/league?tab=teams&team=KC&vs=BUF')
+    await screen.findByRole('region', { name: /compared with/ })
+    await userEvent.selectOptions(screen.getByLabelText('Find a team'), 'BUF')
+    expect(screen.queryByRole('region', { name: /compared with/ })).toBeNull()
+    await userEvent.selectOptions(screen.getByLabelText('Find a team'), 'KC')
+    expect(screen.queryByRole('region', { name: /compared with/ })).toBeNull()
+  })
+
+  it('hides the row charts from assistive tech, since the values are printed, and says the line spans the whole league', async () => {
+    await open('/league?tab=teams&team=KC&vs=BUF')
+    const section = await screen.findByRole('region', { name: /compared with/ })
+    expect(within(section).queryAllByRole('img')).toHaveLength(0)
+    expect(section.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+    expect(section).toHaveTextContent('lowest to the highest team in the league')
+  })
 })

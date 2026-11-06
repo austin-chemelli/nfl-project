@@ -5,11 +5,13 @@ import { teamInfo } from '../../lib/teams'
 import { recordText, resultText } from './helpers'
 
 /** The selected team: record, every game linking to its page, the next one marked, the scheme profile. */
-export function Panel({ code, team, onClose, ref, compare }: {
+export function Panel({ code, team, onClose, ref, compare, compareRef }: {
   code: string
   team: TeamRow
   onClose: () => void
   ref?: Ref<HTMLElement>
+  /** The compare select, so the page can return focus to it. */
+  compareRef?: Ref<HTMLSelectElement>
   /** The "Compare" control: the other teams to pick from and the one picked (null for none). Omitted, no control. */
   compare?: { options: { code: string; name: string }[]; value: string | null; onChange: (code: string | null) => void }
 }) {
@@ -34,6 +36,7 @@ export function Panel({ code, team, onClose, ref, compare }: {
             Compare with
           </label>
           <select
+            ref={compareRef}
             id={compareId}
             value={compare.value ?? ''}
             onChange={(e) => compare.onChange(e.target.value || null)}

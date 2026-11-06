@@ -1,5 +1,5 @@
 /** URL-synced tabs (`?tab=<id>`), WAI-ARIA tabs pattern: roving tabindex, Left/Right/Home/End. Only the active panel renders. */
-import { useCallback, useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
 
 export type TabDef = { id: string; label: ReactNode; content: ReactNode }
@@ -40,6 +40,18 @@ export function Tabs({ tabs, default: defaultId, label }: { tabs: TabDef[]; defa
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
   const current = tabs.find((t) => t.id === active)
 
+  // On a phone the tab strip scrolls sideways: keep the active tab in view (a ?tab= link can name one off-screen).
+  useEffect(() => {
+    const tab = refs.current[active]
+    const box = tab?.parentElement?.parentElement
+    if (!tab || !box) return
+    // scroll the strip itself, not the page: scrollIntoView would also move the page when the strip is off-screen
+    const left = tab.offsetLeft
+    const right = left + tab.offsetWidth
+    if (left < box.scrollLeft) box.scrollLeft = left
+    else if (right > box.scrollLeft + box.clientWidth) box.scrollLeft = right - box.clientWidth
+  }, [active])
+
   function onKey(e: KeyboardEvent) {
     const i = ids.indexOf(active)
     let n = -1
@@ -55,7 +67,7 @@ export function Tabs({ tabs, default: defaultId, label }: { tabs: TabDef[]; defa
 
   return (
     <div>
-      <div className="overflow-x-auto border-b border-line">
+      <div className="relative overflow-x-auto border-b border-line">
         <div role="tablist" aria-label={label} onKeyDown={onKey} className="flex min-w-max gap-1">
           {tabs.map((t) => {
             const on = t.id === active

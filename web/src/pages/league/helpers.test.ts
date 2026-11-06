@@ -118,3 +118,13 @@ describe('resolveAxes', () => {
     expect([a?.x.id, a?.y.id]).toEqual(['strength.epa_off', 'strength.epa_def'])
   })
 })
+
+describe('fmtValue signed counts', () => {
+  it('prints turnover margin and streak with a sign and a true minus', () => {
+    expect(fmtValue(-0.2, f('decisions.turnover_margin_pg'))).toBe('−0.2')
+    expect(fmtValue(0.3, f('decisions.turnover_margin_pg'))).toBe('+0.3')
+    expect(fmtValue(0, f('decisions.turnover_margin_pg'))).toBe('0')
+    expect(fmtValue(-3, { ...f('decisions.turnover_margin_pg'), id: 'form.streak' })).toBe('−3')
+    expect(fmtValue(4, { ...f('decisions.turnover_margin_pg'), id: 'form.streak' })).toBe('+4')
+  })
+})

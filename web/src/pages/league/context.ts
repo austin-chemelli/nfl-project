@@ -1,89 +1,9 @@
-/** Pure helpers for the League page's context features (ADR 0019, M14 phase 3): similar seasons, two-team compare, rank table, odds history. */
-import type { LeagueFile, SimilarNeighbour, SimilarTeam, TeamFeature, TeamsFile } from '../../data/contract'
+/** Pure helpers for the League page's context features (ADR 0019, M14 phase 3): two-team compare, rank table, odds history. */
+import type { LeagueFile, TeamFeature, TeamsFile } from '../../data/contract'
 import { teamInfo } from '../../lib/teams'
 import { groupFeatures, hasData, usableFeatures } from './helpers'
 import { PRESETS } from './presets'
 import { fmtProb, type View } from './playoffs'
-
-// ------------------------------------------------------------------------------ similar seasons
-
-/** "6-2" and "7-9-0" as "6–2" and "7–9": a trailing zero-tie count is dropped. */
-export function recordFrom(raw: string): string {
-  const parts = raw.split('-')
-  if (parts.length === 3 && Number(parts[2]) === 0) parts.pop()
-  return parts.join('–')
-}
-
-/** The furthest round a past team reached, in words. A missing round for a playoff team still reads as making it. */
-export function outcomeText(n: Pick<SimilarNeighbour, 'playoffs' | 'round'>): string {
-  if (!n.playoffs) return 'Missed the playoffs'
-  switch (n.round) {
-    case 'wc': return 'Lost in the wild-card round'
-    case 'div': return 'Lost in the divisional round'
-    case 'conf': return 'Lost the conference game'
-    case 'sb': return 'Lost the Super Bowl'
-    case 'champ': return 'Won the Super Bowl'
-    default: return 'Made the playoffs'
-  }
-}
-
-export type SimilarTile = { key: string; label: string; value: string }
-
-/** The tile row: how many of the nearest seasons made the playoffs, then reached each round or beyond. */
-export function similarTiles(s: SimilarTeam): SimilarTile[] {
-  const of = `of ${s.k_summary}`
-  const tile = (key: string, label: string, n: number): SimilarTile => ({ key, label, value: `${n} ${of}` })
-  return [
-    tile('playoffs', 'Made the playoffs', s.made_playoffs),
-    tile('div', 'Reached the divisional round', s.rounds.div),
-    tile('conf', 'Reached the conference game', s.rounds.conf),
-    tile('sb', 'Reached the Super Bowl', s.rounds.sb),
-    tile('champ', 'Won the Super Bowl', s.rounds.champ),
-  ]
-}
-
-/** "9 of 25 made the playoffs": the one-line summary. */
-export function similarHeadline(s: SimilarTeam): string {
-  return `${s.made_playoffs} of ${s.k_summary} made the playoffs`
-}
-
-export type SimilarRow = { key: string; season: number; team: string; then: string; final: string; outcome: string; playoffs: boolean }
-
-export function similarRows(s: SimilarTeam): SimilarRow[] {
-  return s.neighbours.map((n, i) => ({
-    key: `${n.season}-${n.team}-${i}`,
-    season: n.season,
-    team: n.team,
-    then: recordFrom(n.rec_then),
-    final: recordFrom(n.final),
-    outcome: outcomeText(n),
-    playoffs: n.playoffs,
-  }))
-}
-
-/** Teams of the league file in name order, flagged by whether they have a similar-seasons entry. */
-export function similarOptions(file: LeagueFile): { code: string; name: string; has: boolean }[] {
-  return file.teams
-    .map((t) => ({ code: t.team, name: teamInfo(t.team).name || t.team, has: Object.hasOwn(file.similar, t.team) }))
-    .sort((a, b) => a.name.localeCompare(b.name))
-}
-
-/**
- * The team shown when none is picked: the Student's best chance of the playoffs among the teams that
- * have an entry, else the first with an entry by name, else null. Tied chances go by name.
- */
-export function defaultSimilarTeam(file: LeagueFile): string | null {
-  const opts = similarOptions(file).filter((o) => o.has)
-  if (opts.length === 0) return null
-  const p = (c: string) => file.odds.student.teams[c]?.playoffs ?? -1
-  return [...opts].sort((a, b) => p(b.code) - p(a.code) || a.name.localeCompare(b.name))[0].code
-}
-
-/** The picked team if it is a team in the file (`hasOwn` on the entry map isn't enough: an entry may be missing by design), else the default. */
-export function resolveSimilarTeam(file: LeagueFile, raw: string | null): string | null {
-  if (raw && file.teams.some((t) => t.team === raw)) return raw
-  return defaultSimilarTeam(file)
-}
 
 // ------------------------------------------------------------------------------------- compare
 
@@ -115,10 +35,14 @@ export function compareGroups(file: TeamsFile, a: string, b: string): CompareGro
   return out
 }
 
-/** The axis for a row: the league's range with the better side on the right, so "right is better" holds wherever a measure has a direction. */
-export function compareDomain(r: CompareRow): [number, number] {
+/**
+ * The axis for a row: the league's true range on this measure (min and max over every team, not the
+ * p10 and p90 the registry keeps), so a value sits in the same place whoever it is compared with, and the
+ * better side on the right where a measure has a direction.
+ */
+export function compareDomain(file: TeamsFile, r: CompareRow): [number, number] {
   const f = r.feature
-  const vals = [f.lo, f.hi, r.a, r.b].filter((v): v is number => v != null)
+  const vals = [...Object.values(file.teams).map((t) => t.values[f.id]), r.a, r.b].filter((v): v is number => v != null)
   let lo = Math.min(...vals)
   let hi = Math.max(...vals)
   if (lo === hi) { lo -= 0.5; hi += 0.5 }

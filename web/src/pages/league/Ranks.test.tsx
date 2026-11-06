@@ -61,4 +61,14 @@ describe('Teams tab: rank table', () => {
     const { table } = await open()
     expect(table.closest('.overflow-x-auto')).not.toBeNull()
   })
+
+  it('does not call 1 the best where a measure has no good direction, and keeps ranks in full ink on shaded cells', async () => {
+    const { table } = await open()
+    const note = document.body.textContent ?? ''
+    expect(note).toMatch(/where it has none \(such as Luck or Schedule strength\), 1 is the highest/)
+    expect(note).not.toMatch(/1 the best/)
+    const shaded = table.querySelector('td[data-shade] span') as HTMLElement
+    expect(shaded.className).toContain('text-ink')
+    expect(shaded.className).not.toContain('text-ink-3')
+  })
 })

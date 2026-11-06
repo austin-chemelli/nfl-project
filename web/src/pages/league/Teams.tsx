@@ -65,6 +65,9 @@ export function Teams({ file }: { file: TeamsFile }) {
   const panel = useRef<HTMLElement>(null)
   const picker = useRef<HTMLSelectElement>(null)
   const shown = useRef(team)
+  const compareBox = useRef<HTMLElement>(null)
+  const compareSelect = useRef<HTMLSelectElement>(null)
+  const shownVs = useRef<string | null>(null)
   useEffect(() => {
     if (team && team !== shown.current) {
       panel.current?.scrollIntoView?.({ block: 'nearest' })
@@ -75,6 +78,14 @@ export function Teams({ file }: { file: TeamsFile }) {
 
   // An unknown or repeated ?vs= is ignored, as ?team= is; a comparison needs a team picked first.
   const vs = resolveVs(file, team, params.get('vs'))
+  // Compare opens below the fold: bring it into view and move focus to it, as the panel does.
+  useEffect(() => {
+    if (vs && vs !== shownVs.current) {
+      compareBox.current?.scrollIntoView?.({ block: 'nearest' })
+      compareBox.current?.focus({ preventScroll: true })
+    }
+    shownVs.current = vs
+  }, [vs])
 
   const axes = resolveAxes(file, params.get('x'), params.get('y'))
   if (!axes) return <p className="text-ink-2">Team charts appear after the next data update.</p>
@@ -133,7 +144,7 @@ export function Teams({ file }: { file: TeamsFile }) {
           <select
             ref={picker}
             value={team ?? ''}
-            onChange={(e) => update((n) => { if (e.target.value) n.set('team', e.target.value); else { n.delete('team'); n.delete('vs') } })}
+            onChange={(e) => update((n) => { if (e.target.value) { n.set('team', e.target.value); if (n.get('vs') === e.target.value) n.delete('vs') } else { n.delete('team'); n.delete('vs') } })}
             className={`${field} max-w-full`}
           >
             <option value="">All teams</option>
@@ -189,7 +200,7 @@ export function Teams({ file }: { file: TeamsFile }) {
         y={axis(y)}
         quadrants={quadrantsFor(x, y)}
         selected={team}
-        onSelect={(k) => update((n) => n.set('team', k))}
+        onSelect={(k) => update((n) => { n.set('team', k); if (n.get('vs') === k) n.delete('vs') })}
         tip={tip}
       />
       {missing.length > 0 && <p className="text-[13px] text-ink-3">Not shown: {missing.join(', ')} (no value yet on one of these measures).</p>}
@@ -197,6 +208,7 @@ export function Teams({ file }: { file: TeamsFile }) {
       {team && (
         <Panel
           ref={panel}
+          compareRef={compareSelect}
           code={team}
           team={file.teams[team]}
           onClose={() => { update((n) => { n.delete('team'); n.delete('vs') }); picker.current?.focus() }}
@@ -207,7 +219,7 @@ export function Teams({ file }: { file: TeamsFile }) {
           }}
         />
       )}
-      {team && vs && <Compare file={file} a={team} b={vs} onClose={() => update((n) => n.delete('vs'))} />}
+      {team && vs && <Compare ref={compareBox} file={file} a={team} b={vs} onClose={() => { update((n) => n.delete('vs')); compareSelect.current?.focus() }} />}
 
       <DataTable>
         <table className="w-full border-collapse text-[13px]">

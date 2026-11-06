@@ -1,3 +1,4 @@
+import type { Ref } from 'react'
 import { Dumbbell } from '../../charts'
 import type { TeamFeature, TeamsFile } from '../../data/contract'
 import { matchupVars } from '../../lib/teamColors'
@@ -30,7 +31,8 @@ function Row({ row, a, b, file }: { row: CompareRow; a: string; b: string; file:
         aColor="var(--team-away)"
         bColor="var(--team-home)"
         format={(v) => fmtValue(v, f)}
-        domain={compareDomain(row)}
+        domain={compareDomain(file, row)}
+        decorative
         labelWidth={0}
         legend={NONE}
       />
@@ -43,12 +45,12 @@ function Row({ row, a, b, file }: { row: CompareRow; a: string; b: string; file:
  * Two teams on every published measure (ADR 0019), one dumbbell per measure on the league's range, in
  * the registry's groups. A group is a disclosure and the first is open, so 45 rows stay short on a phone.
  */
-export function Compare({ file, a, b, onClose }: { file: TeamsFile; a: string; b: string; onClose: () => void }) {
+export function Compare({ file, a, b, onClose, ref }: { file: TeamsFile; a: string; b: string; onClose: () => void; ref?: Ref<HTMLElement> }) {
   const groups = compareGroups(file, a, b)
   const an = teamInfo(a).name
   const bn = teamInfo(b).name
   return (
-    <section aria-label={`${an} compared with ${bn}`} data-matchup style={matchupVars(a, b)} className="mt-4 rounded-lg border border-line bg-surface-1 p-3 text-[13px]">
+    <section ref={ref} tabIndex={-1} aria-label={`${an} compared with ${bn}`} data-matchup style={matchupVars(a, b)} className="mt-4 rounded-lg border border-line bg-surface-1 p-3 text-[13px] outline-none">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-[15px] font-medium text-ink">
@@ -67,7 +69,7 @@ export function Compare({ file, a, b, onClose }: { file: TeamsFile; a: string; b
               <span aria-hidden className="inline-block h-3 w-0.5 bg-[var(--text-muted)]" /> League average
             </span>
           </p>
-          <p className="mt-1 text-[12px] text-ink-3">Each line spans the league's range for that measure. Where a measure has a good direction, better is to the right.</p>
+          <p className="mt-1 text-[12px] text-ink-3">Each line spans the lowest to the highest team in the league on that measure. Where a measure has a good direction, better is to the right.</p>
         </div>
         <button type="button" onClick={onClose} aria-label="Stop comparing" className="shrink-0 rounded px-2 py-1 text-ink-2 hover:text-ink">
           ✕
@@ -78,7 +80,10 @@ export function Compare({ file, a, b, onClose }: { file: TeamsFile; a: string; b
         {groups.map((g, i) => (
           <details key={g.name} open={i === 0} className="group border-t border-line">
             <summary className="flex cursor-pointer flex-wrap items-baseline justify-between gap-x-3 py-2 text-ink hover:text-ink">
-              <span className="font-medium">{g.name}</span>
+              <span className="inline-flex items-baseline">
+                <span aria-hidden className="mr-1.5 inline-block text-[10px] text-ink-3 transition-transform duration-[var(--dur-fast)] group-open:rotate-90">▶</span>
+                <span className="font-medium">{g.name}</span>
+              </span>
               <span className="tabular text-[12px] text-ink-3">
                 {g.rows.length} measures{g.aAhead + g.bAhead > 0 ? ` · ${a} ahead on ${g.aAhead}, ${b} on ${g.bAhead}` : ''}
               </span>

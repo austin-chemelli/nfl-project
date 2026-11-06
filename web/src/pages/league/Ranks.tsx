@@ -43,7 +43,7 @@ export function Ranks({ file }: { file: TeamsFile }) {
   const codes = sortTeams(file, sort)
   return (
     <DataTable summary="Show the ranks">
-      <p className="mb-2 text-ink-3">Click a heading to sort. Each cell is the value and the league rank, 1 the best. Darker shading is a better rank; measures with no good or bad direction are shaded by size, highest darkest.</p>
+      <p className="mb-2 text-ink-3">Click a heading to sort. Each cell is the value and its league rank. Where a measure has a good direction, 1 is the best and darker shading is a better rank; where it has none (such as Luck or Schedule strength), 1 is the highest and darker shading is higher.</p>
       <table className="w-full border-collapse text-[13px]">
         <caption className="sr-only">Every team on the starting-view measures</caption>
         <thead>
@@ -73,7 +73,7 @@ export function Ranks({ file }: { file: TeamsFile }) {
                       className={`${td} tabular whitespace-nowrap text-right ${shade == null ? '' : shadeClass(f)}`}
                     >
                       {fmtValue(t.values[f.id], f)}
-                      {rank != null && <span className="ml-1 text-ink-3">{rank}</span>}
+                      {rank != null && <span className={`ml-1 ${shade == null ? 'text-ink-3' : 'text-ink'}`}>{rank}</span>}
                     </td>
                   )
                 })}
