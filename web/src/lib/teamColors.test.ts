@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { contrast, cvdDistance, distance, matchupColors, matchupVars, MIN_CVD_DISTANCE, SURFACE, teamColor } from './teamColors'
+import { contrast, cvdDistance, distance, matchupColors, matchupVars, MIN_CVD_DISTANCE, SURFACE, teamColor, teamDot, teamDotVars } from './teamColors'
 
 const TEAMS = 'ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC LA LAC LV MIA MIN NE NO NYG NYJ PHI PIT SEA SF TB TEN WAS'.split(' ')
 const MODES = ['light', 'dark'] as const
@@ -53,5 +53,30 @@ describe('team colors', () => {
 
   it('hands both themes to the CSS', () => {
     expect(Object.keys(matchupVars('JAX', 'BAL'))).toEqual(['--team-away-light', '--team-away-dark', '--team-home-light', '--team-home-dark'])
+  })
+})
+
+describe('team dots', () => {
+  it('keeps the main color as the fill', () => {
+    for (const t of TEAMS) expect(teamDot(t).fill).toEqual(teamColor(t))
+  })
+  it('draws both colors clear of the page and of each other, in both themes', () => {
+    for (const t of TEAMS)
+      for (const m of MODES) {
+        const d = teamDot(t)
+        expect(contrast(d.ring[m], SURFACE[m]), `${t} ${m}`).toBeGreaterThanOrEqual(3)
+        expect(distance(d.fill[m], d.ring[m]), `${t} ${m}`).toBeGreaterThanOrEqual(12)
+      }
+  })
+  it('tells apart the teams whose main colors are identical', () => {
+    for (const [a, b] of [['DAL', 'NE'], ['ATL', 'TB'], ['CIN', 'DEN']])
+      for (const m of MODES) {
+        expect(teamDot(a).fill[m]).toEqual(teamDot(b).fill[m])
+        expect(distance(teamDot(a).ring[m], teamDot(b).ring[m]), `${a} ${b} ${m}`).toBeGreaterThanOrEqual(15)
+      }
+  })
+  it('fills the slots index.css reads for each theme', () => {
+    const d = teamDot('KC')
+    expect(teamDotVars('KC')).toMatchObject({ '--team-home-dark': d.fill.dark, '--team-away-light': d.ring.light })
   })
 })

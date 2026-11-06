@@ -17,6 +17,8 @@ product boundary. Everything lands in marts/site/:
                              summary with CIs, reliability bins, divergence buckets, ledger, weeks
                              tracked live
   audit.json                 data freshness and null-rate audit
+  teams.json                 every team's latest value, percentile and rank per team-level feature,
+                             record and games (ADR 0019; nfl.league.teams)
 
 Numbers are rounded for display (4 decimals for probabilities); parquet keeps full precision.
 
@@ -40,6 +42,7 @@ import polars as pl
 from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
 from nfl.features.groups import FEATURE_GROUP, GROUPS, HEADINGS, REGISTRY_VERSION
+from nfl.league.teams import team_latest, teams_file
 
 RETRO_PUBLISH_SEASONS = {2026}  # retros are published for these seasons only (ADR 0016)
 SCHEMA_VERSION = "2"  # v2 2026-10-27: one line per approach; no log-odds; descriptions + units
@@ -115,9 +118,10 @@ def _ts(x: datetime | None) -> str | None:
     return None if x is None else x.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _write(path: Path, obj) -> None:
+def _write(path: Path, obj, compact: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, indent=1, default=str))
+    kw = {"separators": (",", ":")} if compact else {"indent": 1}
+    path.write_text(json.dumps(obj, default=str, **kw))
 
 
 def _read(paths: Paths, name: str) -> pl.DataFrame:
@@ -491,6 +495,12 @@ def build(paths: Paths, season: int | None = None) -> dict:
     )
     _write(site / "tracker.json", tracker(paths, season, reg))
     _write(site / "audit.json", audit(paths))
+    try:  # additive page data (ADR 0019): a failure must never stop the site build
+        teams = teams_file(feats, games, now, current_week)
+        if teams is not None:
+            _write(site / "teams.json", teams, compact=True)  # 236 KB at indent=1, 178 KB compact
+    except Exception as e:  # noqa: BLE001
+        print(f"site: teams.json failed, continuing: {e!r}")
     try:
         write_retro(paths, season)
     except Exception as e:  # noqa: BLE001  retros must never break the site build
@@ -500,27 +510,13 @@ def build(paths: Paths, season: int | None = None) -> dict:
 
 def feature_bands(feats: pl.DataFrame, games: pl.DataFrame, now: datetime) -> dict[str, dict]:
     """League spread per team-level feature for the game page's Details tab: p10, the quartiles and
-    p90 of each team's latest value known now. One band per feature for the whole season, so an old
-    game's values sit on today's league, which is fine for display only."""
+    p90 of each team's value entering its next game (`team_latest`; ADR 0019). One band per feature
+    for the whole season, so an old game's values sit on today's league, display only."""
     import numpy as np
 
     if feats.is_empty() or games.is_empty():
         return {}
-    teams = games.select("game_id", "kickoff_utc", "home_team", "away_team")
-    latest = (
-        store.as_of(feats, now)
-        .filter(pl.col("side").is_in(["home", "away"]) & pl.col("value").is_finite())
-        .join(teams, on="game_id")
-        .with_columns(
-            pl.when(pl.col("side") == "home")
-            .then(pl.col("home_team"))
-            .otherwise(pl.col("away_team"))
-            .alias("team")
-        )
-        .sort("kickoff_utc")
-        .group_by("feature", "team", maintain_order=True)
-        .last()
-    )
+    latest = team_latest(feats, games, now)
     out: dict[str, dict] = {}
     for (feature,), part in latest.group_by(["feature"]):
         if part.height >= FEATURE_BAND_MIN_TEAMS:

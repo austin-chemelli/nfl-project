@@ -41,6 +41,13 @@ HAND_WRITTEN = {  # the web tests' examples; tests/fixtures/retro is the source 
 }
 N_DIY = 400  # matrix rows kept (most recent seasons)
 N_PEOPLE = 6
+TEAMS_FEATURES = [  # the League page's presets (web/src/pages/league/presets.ts) plus two
+    "strength.epa_off", "strength.epa_def", "decisions.pass_rate_oe", "strength.success_off",
+    "strength.point_diff_pg", "strength.luck", "strength.epa_pass_off", "strength.epa_rush_off",
+    "strength.epa_pass_def", "strength.epa_rush_def", "strength.elo_pre", "strength.sos",
+    "strength.sack_rate_off", "strength.sack_rate_def", "form.epa_trend",
+    "decisions.turnover_margin_pg", "front.blitz_rate",
+]  # fmt: skip
 
 
 def _load(src: Path, name: str) -> dict:
@@ -75,6 +82,8 @@ def main() -> None:
 
     _dump(_load(src, "tracker.json"), "tracker.json")
 
+    _dump(teams_fixture(_load(src, "teams.json")), "teams.json")
+
     hyp = _load(src, "hypotheses.json")
     hyp["features"] = hyp["features"][:12]
     keep = list(hyp["by_season"]["items"])[:8]
@@ -103,6 +112,16 @@ def main() -> None:
 
     total = sum(p.stat().st_size for p in OUT.rglob("*.json"))
     print(f"wrote {len(list(OUT.rglob('*.json')))} fixtures to {OUT} ({total / 1024:.0f} KB)")
+
+
+def teams_fixture(teams: dict) -> dict:
+    """teams.json trimmed to TEAMS_FEATURES (registry order kept), all 32 teams."""
+    keep = set(TEAMS_FEATURES)
+    teams["features"] = [f for f in teams["features"] if f["id"] in keep]
+    for t in teams["teams"].values():
+        for k in ("values", "pct", "rank"):
+            t[k] = {f: v for f, v in t[k].items() if f in keep}
+    return teams
 
 
 def retro_fixtures(src: Path) -> None:
