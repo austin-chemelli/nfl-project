@@ -81,6 +81,20 @@ def test_feature_bands_ignore_rows_not_known_yet_and_thin_features():
     assert site.feature_bands(feats, games, datetime(2026, 10, 20)) == {}
 
 
+def test_feature_bands_use_next_game_values_not_last_kickoff():
+    """Week 3 is the next game; week 4 (a later kickoff, e.g. a Week 18 row) must not set the band."""
+    known = datetime(2026, 10, 1)
+    games, feats = [], []
+    for week, kick in ((3, datetime(2026, 10, 25)), (4, datetime(2026, 11, 1))):
+        for i in range(0, 32, 2):
+            gid = f"{week}_{i}"
+            games.append({"game_id": gid, "kickoff_utc": kick, "home_team": f"T{i}", "away_team": f"T{i + 1}"})  # fmt: skip
+            for side, v in (("home", i), ("away", i + 1)):
+                feats.append({"game_id": gid, "feature": "f.x", "side": side, "value": float(v) + (1000 if week == 4 else 0), "known_as_of": known})  # fmt: skip
+    bands = site.feature_bands(pl.DataFrame(feats), pl.DataFrame(games), datetime(2026, 10, 20))
+    assert bands["f.x"]["med"] == 15.5 and bands["f.x"]["hi"] == 27.9  # week 3's values
+
+
 @pytest.mark.skipif(
     not (DATA.site / "meta.json").exists(), reason="needs marts/site (run nfl site)"
 )

@@ -612,7 +612,7 @@ export type TeamRetro = z.infer<typeof TeamRetro>
 export const TeamFeature = z.looseObject({
   id: z.string(),
   label: z.string(),
-  short: z.string(), // axis label, at most 20 characters
+  short: z.string(), // axis label, at most 22 characters
   description: z.string(),
   unit: z.string(),
   group: z.string(),

@@ -28,6 +28,8 @@
   --good: #0ca30c;
   --warning: #fab219;
   --critical: #d03b3b;
+  --conf-afc: #1f6fd0;
+  --conf-nfc: #b8520a;
   /* Motion (ADR 0020, site rule 11): every animation reads these; reduced motion zeroes them below. */
   --dur-fast: 120ms;
   --dur-base: 200ms;
@@ -70,6 +72,8 @@
     --div-pos: #3987e5;
     --div-neg: #e66767;
     --div-mid: #313b48;
+    --conf-afc: #5aa2f7;
+    --conf-nfc: #f0944a;
   }
 }
 :root[data-theme="dark"] {
@@ -94,6 +98,8 @@
   --div-pos: #3987e5;
   --div-neg: #e66767;
   --div-mid: #313b48;
+  --conf-afc: #5aa2f7;
+  --conf-nfc: #f0944a;
 }
 
 /* A matchup's two colors, set per game by lib/teamColors.ts for both themes. */
