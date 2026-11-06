@@ -6,7 +6,7 @@
      "weight": 0.3,
      "miss": 16.1,
      "league_miss": 27.7,
-     "cases": 429
+     "cases": 93
     },
     "no_huddle_rate": {
      "weight": 0.0,
@@ -60,79 +60,79 @@
    "same_caller_new_qb": {
     "*": {
      "weight": 0.7,
-     "miss": 19.4,
-     "league_miss": 24.5,
-     "cases": 236
+     "miss": 19.5,
+     "league_miss": 24.4,
+     "cases": 51
     },
     "no_huddle_rate": {
      "weight": 0.9,
-     "miss": 20.2,
+     "miss": 20.9,
      "league_miss": 24.5,
-     "cases": 52
+     "cases": 51
     },
     "pass_rate": {
      "weight": 0.2,
-     "miss": 25.2,
-     "league_miss": 25.5,
-     "cases": 52
+     "miss": 25.5,
+     "league_miss": 25.0,
+     "cases": 51
     },
     "shotgun_rate": {
-     "weight": 1.0,
-     "miss": 13.7,
+     "weight": 0.8,
+     "miss": 14.0,
      "league_miss": 23.3,
-     "cases": 52
+     "cases": 51
     }
    },
    "moved_team": {
     "*": {
-     "weight": 0.6,
-     "miss": 24.7,
-     "league_miss": 25.8,
-     "cases": 141
+     "weight": 0.9,
+     "miss": 25.3,
+     "league_miss": 26.4,
+     "cases": 27
     },
     "no_huddle_rate": {
-     "weight": 0.9,
-     "miss": 26.3,
-     "league_miss": 25.5,
-     "cases": 32
+     "weight": 1.0,
+     "miss": 23.7,
+     "league_miss": 25.9,
+     "cases": 27
     },
     "pass_rate": {
      "weight": 0.2,
-     "miss": 20.6,
-     "league_miss": 24.5,
-     "cases": 32
+     "miss": 21.5,
+     "league_miss": 25.2,
+     "cases": 27
     },
     "shotgun_rate": {
-     "weight": 0.6,
-     "miss": 22.9,
-     "league_miss": 28.6,
-     "cases": 32
+     "weight": 0.9,
+     "miss": 22.0,
+     "league_miss": 30.4,
+     "cases": 27
     }
    },
    "outside_first_time": {
     "*": {
      "weight": 0.0,
-     "miss": 22.7,
-     "league_miss": 23.1,
-     "cases": 214
+     "miss": 22.8,
+     "league_miss": 22.8,
+     "cases": 26
     },
     "no_huddle_rate": {
      "weight": 0.0,
-     "miss": 19.8,
-     "league_miss": 22.5,
-     "cases": 48
+     "miss": 18.1,
+     "league_miss": 23.8,
+     "cases": 26
     },
     "pass_rate": {
      "weight": 0.0,
-     "miss": 26.5,
-     "league_miss": 24.0,
-     "cases": 48
+     "miss": 25.4,
+     "league_miss": 21.0,
+     "cases": 26
     },
     "shotgun_rate": {
      "weight": 0.0,
-     "miss": 18.0,
-     "league_miss": 22.4,
-     "cases": 48
+     "miss": 18.5,
+     "league_miss": 21.9,
+     "cases": 26
     }
    }
   },
@@ -140,13 +140,7 @@
    "same_caller": {
     "*": {
      "weight": 1.0,
-     "miss": 19.1,
-     "league_miss": 25.9,
-     "cases": 200
-    },
-    "blitz_rate": {
-     "weight": 0.9,
-     "miss": 15.4,
+     "miss": 20.5,
      "league_miss": 25.9,
      "cases": 50
     },
@@ -168,22 +162,6 @@
      "league_miss": 25.2,
      "cases": 50
     }
-   },
-   "moved_team": {
-    "*": {
-     "weight": 0.2,
-     "miss": 26.9,
-     "league_miss": 24.4,
-     "cases": 32
-    }
-   },
-   "outside_first_time": {
-    "*": {
-     "weight": 0.0,
-     "miss": 30.3,
-     "league_miss": 23.1,
-     "cases": 52
-    }
    }
   }
  },
@@ -194,7 +172,7 @@
      "weight": 0.4,
      "miss": 17.4,
      "league_miss": 26.3,
-     "cases": 558
+     "cases": 93
     },
     "pers_11_share": {
      "weight": 0.4,
@@ -238,131 +216,131 @@
      "weight": 1.0,
      "miss": 20.5,
      "league_miss": 25.6,
-     "cases": 312
+     "cases": 51
     },
     "pers_11_share": {
-     "weight": 0.5,
-     "miss": 19.1,
-     "league_miss": 27.8,
-     "cases": 52
+     "weight": 1.0,
+     "miss": 18.5,
+     "league_miss": 27.5,
+     "cases": 51
     },
     "pers_12_share": {
      "weight": 1.0,
-     "miss": 20.3,
-     "league_miss": 24.8,
-     "cases": 52
+     "miss": 19.8,
+     "league_miss": 25.2,
+     "cases": 51
     },
     "pers_heavy_share": {
      "weight": 1.0,
-     "miss": 18.2,
-     "league_miss": 28.1,
-     "cases": 52
+     "miss": 18.6,
+     "league_miss": 27.9,
+     "cases": 51
     },
     "pressure_allowed_rate": {
      "weight": 1.0,
-     "miss": 27.8,
-     "league_miss": 24.5,
-     "cases": 52
+     "miss": 28.2,
+     "league_miss": 24.4,
+     "cases": 51
     },
     "shotgun_share": {
-     "weight": 1.0,
-     "miss": 13.7,
+     "weight": 0.8,
+     "miss": 14.0,
      "league_miss": 23.3,
-     "cases": 52
+     "cases": 51
     },
     "time_to_throw": {
      "weight": 1.0,
-     "miss": 25.0,
-     "league_miss": 25.3,
-     "cases": 52
+     "miss": 25.3,
+     "league_miss": 25.0,
+     "cases": 51
     }
    },
    "moved_team": {
     "*": {
-     "weight": 0.7,
-     "miss": 20.1,
-     "league_miss": 25.1,
-     "cases": 192
+     "weight": 0.8,
+     "miss": 21.5,
+     "league_miss": 26.0,
+     "cases": 27
     },
     "pers_11_share": {
      "weight": 0.9,
-     "miss": 16.3,
-     "league_miss": 26.5,
-     "cases": 32
+     "miss": 16.5,
+     "league_miss": 27.5,
+     "cases": 27
     },
     "pers_12_share": {
-     "weight": 0.5,
-     "miss": 20.5,
-     "league_miss": 23.1,
-     "cases": 32
+     "weight": 0.7,
+     "miss": 22.9,
+     "league_miss": 24.5,
+     "cases": 27
     },
     "pers_heavy_share": {
-     "weight": 0.8,
-     "miss": 19.7,
-     "league_miss": 27.5,
-     "cases": 32
+     "weight": 0.9,
+     "miss": 21.2,
+     "league_miss": 28.3,
+     "cases": 27
     },
     "pressure_allowed_rate": {
      "weight": 0.6,
-     "miss": 22.5,
-     "league_miss": 23.2,
-     "cases": 32
+     "miss": 23.3,
+     "league_miss": 22.5,
+     "cases": 27
     },
     "shotgun_share": {
-     "weight": 0.6,
-     "miss": 22.9,
-     "league_miss": 28.6,
-     "cases": 32
+     "weight": 0.9,
+     "miss": 22.0,
+     "league_miss": 30.4,
+     "cases": 27
     },
     "time_to_throw": {
-     "weight": 0.6,
-     "miss": 21.8,
-     "league_miss": 21.7,
-     "cases": 32
+     "weight": 0.7,
+     "miss": 21.7,
+     "league_miss": 23.1,
+     "cases": 27
     }
    },
    "outside_first_time": {
     "*": {
      "weight": 0.0,
-     "miss": 23.9,
-     "league_miss": 25.4,
-     "cases": 288
+     "miss": 24.1,
+     "league_miss": 24.7,
+     "cases": 26
     },
     "pers_11_share": {
      "weight": 0.0,
-     "miss": 24.7,
-     "league_miss": 26.8,
-     "cases": 48
+     "miss": 23.1,
+     "league_miss": 27.2,
+     "cases": 26
     },
     "pers_12_share": {
      "weight": 0.0,
-     "miss": 29.7,
-     "league_miss": 25.1,
-     "cases": 48
+     "miss": 33.9,
+     "league_miss": 25.2,
+     "cases": 26
     },
     "pers_heavy_share": {
      "weight": 0.0,
-     "miss": 24.0,
-     "league_miss": 25.9,
-     "cases": 48
+     "miss": 23.6,
+     "league_miss": 25.5,
+     "cases": 26
     },
     "pressure_allowed_rate": {
      "weight": 0.0,
-     "miss": 24.3,
-     "league_miss": 23.7,
-     "cases": 48
+     "miss": 24.6,
+     "league_miss": 23.6,
+     "cases": 26
     },
     "shotgun_share": {
      "weight": 0.0,
-     "miss": 18.0,
-     "league_miss": 22.4,
-     "cases": 48
+     "miss": 18.5,
+     "league_miss": 21.9,
+     "cases": 26
     },
     "time_to_throw": {
      "weight": 0.0,
-     "miss": 22.9,
-     "league_miss": 28.6,
-     "cases": 48
+     "miss": 21.0,
+     "league_miss": 25.1,
+     "cases": 26
     }
    }
   },
@@ -372,7 +350,7 @@
      "weight": 0.6,
      "miss": 19.9,
      "league_miss": 25.2,
-     "cases": 580
+     "cases": 164
     },
     "blitz_rate": {
      "weight": 0.8,
@@ -402,33 +380,65 @@
    "moved_team": {
     "*": {
      "weight": 0.5,
-     "miss": 25.0,
-     "league_miss": 26.2,
-     "cases": 128
+     "miss": 25.2,
+     "league_miss": 26.5,
+     "cases": 36
     },
     "blitz_rate": {
-     "weight": 0.5,
-     "miss": 26.2,
+     "weight": 0.6,
+     "miss": 26.5,
      "league_miss": 26.2,
-     "cases": 38
+     "cases": 36
     },
     "pressure_rate": {
      "weight": 0.3,
-     "miss": 25.3,
-     "league_miss": 26.1,
-     "cases": 38
+     "miss": 26.0,
+     "league_miss": 26.7,
+     "cases": 36
     },
     "man_rate": {
      "weight": 0.9,
-     "miss": 27.9,
-     "league_miss": 27.6,
-     "cases": 26
+     "miss": 26.7,
+     "league_miss": 27.1,
+     "cases": 25
     },
     "two_high_rate": {
      "weight": 0.5,
-     "miss": 21.8,
-     "league_miss": 25.0,
-     "cases": 26
+     "miss": 22.4,
+     "league_miss": 25.8,
+     "cases": 25
+    }
+   },
+   "outside_first_time": {
+    "*": {
+     "weight": 0.0,
+     "miss": 26.5,
+     "league_miss": 22.8,
+     "cases": 33
+    },
+    "blitz_rate": {
+     "weight": 0.0,
+     "miss": 26.6,
+     "league_miss": 23.6,
+     "cases": 33
+    },
+    "man_rate": {
+     "weight": 0.0,
+     "miss": 25.9,
+     "league_miss": 24.0,
+     "cases": 33
+    },
+    "pressure_rate": {
+     "weight": 0.0,
+     "miss": 25.5,
+     "league_miss": 22.7,
+     "cases": 33
+    },
+    "two_high_rate": {
+     "weight": 0.0,
+     "miss": 28.1,
+     "league_miss": 20.9,
+     "cases": 33
     }
    }
   }

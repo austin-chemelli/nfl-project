@@ -19,6 +19,8 @@ def frame(*rows):
     return pl.DataFrame(list(rows), schema=coaches._SPELL_SCHEMA)
 
 
+UNCONFIRMED_2022_ON = 35
+
 HANDOFF = frame(
     spell("HC", "Antonio Pierce"),
     spell("OC", "Luke Getsy", end=9),
@@ -100,9 +102,59 @@ def test_every_team_season_starts_with_a_head_coach():
     assert (first["start_week"] == 1).all()
 
 
-def test_a_caller_who_left_with_no_known_successor_still_counts_as_a_change():
+def test_a_caller_who_left_with_no_known_successor_is_a_change_and_not_named():
     s = frame(spell("HC", "A"), spell("OFF_PC", "B", end=13))
-    assert coordinators_view(s)["changed_midseason"].to_list() == [True]
+    v = coordinators_view(s).row(0, named=True)
+    assert v["changed_midseason"] is True
+    assert v["off_play_caller"] is None
+
+
+def test_a_real_caller_who_left_early_gives_the_unit_to_the_coordinator():
+    a = coaches.assignments().filter(
+        (pl.col("season") == 2024) & (pl.col("team") == "LV") & (pl.col("side") == "off")
+    )
+    assert a["person"].to_list() == ["Scott Turner"]
+    assert a["source"].to_list() == ["coordinator"]
+
+
+def test_a_title_moving_under_a_confirmed_caller_is_not_a_change():
+    a = coaches.assignments().filter(
+        (pl.col("season") == 2025) & (pl.col("team") == "NYG") & (pl.col("side") == "off")
+    )
+    assert a["person"].to_list() == ["Mike Kafka"]
+    assert a["changed_midseason"].to_list() == [False]
+
+
+def test_a_spell_reaching_the_last_week_runs_through_the_playoffs():
+    s = load_spells().filter((pl.col("season") == 2023) & (pl.col("team") == "PIT"))
+    assert (s.filter(pl.col("role") == "OFF_PC")["end_week"].is_null()).any()
+    assert people(staff_at(2023, "PIT", 19, s), "OFF_PC") == ["Mike Sullivan"]
+
+
+def test_a_caller_never_outlasts_his_only_job():
+    s = load_spells()
+    keys = ["season", "team", "person"]
+    jobs = (
+        s.filter(pl.col("role").is_in(["HC", "OC", "DC"]))
+        .group_by(keys)
+        .agg(pl.col("end_week").is_null().any().alias("open"), pl.col("end_week").max().alias("last"))
+    )
+    callers = s.filter(pl.col("role").is_in(["OFF_PC", "DEF_PC"])).join(jobs, on=keys)
+    bad = callers.filter(
+        ~pl.col("open") & (pl.col("end_week").is_null() | (pl.col("end_week") > pl.col("last")))
+    )
+    assert bad.is_empty(), bad.select(*keys, "role").to_dicts()
+
+
+def test_the_unconfirmed_callers_are_counted():
+    """M17.1: the public rule's backlog, 2022+. These can't print as play-callers (test_staff_context);
+    this ceiling only says the list must not grow."""
+    s = load_spells().filter(
+        (pl.col("season") >= 2022)
+        & pl.col("role").is_in(["OFF_PC", "DEF_PC"])
+        & ~pl.col("evidence").is_in(CONFIRMED)
+    )
+    assert s.height <= UNCONFIRMED_2022_ON, s.select("season", "team", "role", "person").to_dicts()
 
 
 @requires_data

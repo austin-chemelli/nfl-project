@@ -87,19 +87,53 @@ def test_blend_falls_back_from_metric_to_situation():
     assert ctx.blend_cell(blend, "live", "off", "same_caller", "x") is None
 
 
-def test_backup_weeks_list_the_games_the_main_starter_missed():
+def test_other_starter_weeks_are_measured_from_week_one():
     g = pl.DataFrame({
         "week": [1, 2, 3, 4], "home_team": ["AAA", "BBB", "AAA", "AAA"],
         "away_team": ["BBB", "AAA", "CCC", "CCC"], "home_score": [10, 20, 30, None],
         "home_qb_name": ["Starter", "X", "Backup", None], "away_qb_name": ["Y", "Starter", "Z", None],
     })  # fmt: skip
-    assert ctx.backup_weeks(g, "AAA") == [{"week": 3, "qb": "Backup"}]
+    assert ctx.other_starter_weeks(g, "AAA") == [{"week": 3, "qb": "Backup"}]
+
+
+def spell(person, evidence="news", role="OFF_PC"):
+    return {"person": person, "evidence": evidence, "source_url": "https://x", "role": role,
+            "start_week": 1, "end_week": None, "note": "working note"}  # fmt: skip
 
 
 def test_an_unconfirmed_caller_shows_as_the_coordinator():
-    u = {"person": "Head Coach"}
-    spell = {"evidence": "inferred", "source_url": "https://x"}
-    c = ctx._caller("off", u, None, "The OC", "Head Coach", spell)
+    c = ctx._caller(spell("Head Coach", "inferred"), "The OC", "Head Coach", None)
     assert c["name"] == "The OC" and c["confirmed"] is False and c["is_head_coach"] is False
-    c = ctx._caller("off", u, None, "The OC", "Head Coach", {**spell, "evidence": "news"})
+    assert c["source_url"] is None
+    c = ctx._caller(spell("Head Coach"), "The OC", "Head Coach", None)
     assert c["name"] == "Head Coach" and c["confirmed"] is True and c["is_head_coach"] is True
+
+
+def test_an_unconfirmed_caller_with_no_coordinator_prints_no_name():
+    assert ctx._caller(spell("Guess", "inferred"), None, "HC", None) is None
+
+
+def test_public_staff_drops_unconfirmed_callers_and_working_notes():
+    rows = [spell("Guess", "wiki"), spell("Named"), spell("Titled", "wiki", role="OC")]
+    out = ctx._public(rows)
+    assert [r["name"] for r in out] == ["Named", "Titled"]
+    assert all("note" not in r for r in out)
+
+
+STAFF = pl.DataFrame(
+    [{"season": 2030, "team": "AAA", "role": "HC", "person": "Hal"}],
+    schema={"season": pl.Int64, "team": pl.Utf8, "role": pl.Utf8, "person": pl.Utf8},
+)
+
+
+def test_a_caller_already_on_the_staff_took_over_rather_than_moved():
+    rows = [unit(2029, "BBB", "Hal"), unit(2030, "AAA", "Ann"), unit(2031, "AAA", "Hal")]
+    out = ctx.unit_situations(pl.DataFrame(rows), {}, STAFF)
+    got = {(r["season"], r["team"]): r["situation"] for r in out.to_dicts()}
+    assert got[(2031, "AAA")] == "took_over"
+
+
+def test_a_first_timer_from_the_staff_is_promoted():
+    rows = [unit(2030, "AAA", "Ann"), unit(2031, "AAA", "Hal")]
+    out = ctx.unit_situations(pl.DataFrame(rows), {}, STAFF)
+    assert out.filter(pl.col("season") == 2031)["situation"].item() == "promoted_first_time"

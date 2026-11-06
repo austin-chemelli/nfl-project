@@ -20,8 +20,8 @@ season,team,role,person,start_week,end_week,evidence,source_url,note
 2016,BUF,OC,Greg Roman,1,2,wiki,https://en.wikipedia.org/wiki/2016_Buffalo_Bills_season,
 2016,BUF,OC,Anthony Lynn,3,,wiki,https://en.wikipedia.org/wiki/2016_Buffalo_Bills_season,OC Greg Roman fired after week 2; Anthony Lynn OC from week 3; Ryan fired Dec 27 and Lynn interim HC wk 17. DC play-caller unverified
 2016,BUF,DC,Dennis Thurman,1,,wiki,https://en.wikipedia.org/wiki/2016_Buffalo_Bills_season,
-2016,BUF,OFF_PC,Anthony Lynn,1,,inferred,https://en.wikipedia.org/wiki/2016_Buffalo_Bills_season,
-2016,BUF,DEF_PC,Rex Ryan,1,,inferred,https://en.wikipedia.org/wiki/2016_Buffalo_Bills_season,
+2016,BUF,OFF_PC,Anthony Lynn,3,,inferred,https://en.wikipedia.org/wiki/2016_Buffalo_Bills_season,
+2016,BUF,DEF_PC,Rex Ryan,1,16,inferred,https://en.wikipedia.org/wiki/2016_Buffalo_Bills_season,
 2016,CAR,HC,Ron Rivera,1,,wiki,https://en.wikipedia.org/wiki/2016_Carolina_Panthers_season,OC play-caller from general knowledge
 2016,CAR,OC,Mike Shula,1,,wiki,https://en.wikipedia.org/wiki/2016_Carolina_Panthers_season,
 2016,CAR,DC,Sean McDermott,1,,news,https://www.profootballrumors.com/2017/01/2017-offensivedefensive-coordinator-tracker,
@@ -215,7 +215,7 @@ season,team,role,person,start_week,end_week,evidence,source_url,note
 2017,DEN,OC,Mike McCoy,1,11,roundup,https://africa.espn.com/nfl/story/_/page/32for32x17115/nfl-2017-playcallers-all-32-nfl-teams-how-their-offense-ranks,"""McCoy is in his second stint as the Broncos' offensive coordinator""). End week (Nov 20 firing) from input, not independently sourced"
 2017,DEN,OC,Bill Musgrave,12,,news,https://www.profootballrumors.com/2018/01/2018-nfl-offensivedefensive-coordinator-tracker,Start week from input
 2017,DEN,DC,Joe Woods,1,,news,https://www.profootballrumors.com/2017/01/2017-offensivedefensive-coordinator-tracker,promoted Joe Woods)
-2017,DEN,OFF_PC,Bill Musgrave,1,,inferred,https://en.wikipedia.org/wiki/2017_Denver_Broncos_season,
+2017,DEN,OFF_PC,Bill Musgrave,12,,inferred,https://en.wikipedia.org/wiki/2017_Denver_Broncos_season,
 2017,DEN,DEF_PC,Joe Woods,1,,inferred,https://en.wikipedia.org/wiki/2017_Denver_Broncos_season,
 2017,DET,HC,Jim Caldwell,1,,wiki,https://en.wikipedia.org/wiki/2017_Detroit_Lions_season,
 2017,DET,OC,Jim Bob Cooter,1,,roundup,https://africa.espn.com/nfl/story/_/page/32for32x17115/nfl-2017-playcallers-all-32-nfl-teams-how-their-offense-ranks,
@@ -293,7 +293,7 @@ season,team,role,person,start_week,end_week,evidence,source_url,note
 2017,OAK,OC,Todd Downing,1,,roundup,https://africa.espn.com/nfl/story/_/page/32for32x17115/nfl-2017-playcallers-all-32-nfl-teams-how-their-offense-ranks,
 2017,OAK,DC,John Pagano,12,,news,https://www.profootballrumors.com/2018/01/2018-nfl-offensivedefensive-coordinator-tracker,"""Out: John Pagano"" as Raiders DC"
 2017,OAK,OFF_PC,Todd Downing,1,,roundup,https://africa.espn.com/nfl/story/_/page/32for32x17115/nfl-2017-playcallers-all-32-nfl-teams-how-their-offense-ranks,"ESPN 2017 entry: Raiders entry (label): ""The first-year offensive coordinator was promoted from quarterbacks coach"""
-2017,OAK,DEF_PC,John Pagano,1,,inferred,https://en.wikipedia.org/wiki/2017_Oakland_Raiders_season,
+2017,OAK,DEF_PC,John Pagano,12,,inferred,https://en.wikipedia.org/wiki/2017_Oakland_Raiders_season,
 2017,PHI,HC,Doug Pederson,1,,roundup,https://africa.espn.com/nfl/story/_/page/32for32x17115/nfl-2017-playcallers-all-32-nfl-teams-how-their-offense-ranks,
 2017,PHI,OC,Frank Reich,1,,news,https://www.profootballrumors.com/2018/01/2018-nfl-offensivedefensive-coordinator-tracker,
 2017,PHI,DC,Jim Schwartz,1,,wiki,https://en.wikipedia.org/wiki/2017_Philadelphia_Eagles_season,
@@ -392,7 +392,7 @@ season,team,role,person,start_week,end_week,evidence,source_url,note
 2018,GB,HC,Joe Philbin,14,,news,https://www.cbssports.com/nfl/news/green-bay-packers-fire-mike-mccarthy-after-horrible-loss-to-cardinals-joe-philbin-named-interim-coach,McCarthy fired Dec 2 2018 after week 13; Philbin interim HC (also OC). Play-caller after McCarthy unverified (likely Philbin)
 2018,GB,OC,Joe Philbin,1,,roundup,https://www.rotowire.com/football/article.php?id=38101,
 2018,GB,DC,Mike Pettine,1,,roundup,https://www.rotowire.com/football/article.php?id=38101,
-2018,GB,OFF_PC,Mike McCarthy,1,,inferred,https://en.wikipedia.org/wiki/2018_Green_Bay_Packers_season,
+2018,GB,OFF_PC,Mike McCarthy,1,13,inferred,https://en.wikipedia.org/wiki/2018_Green_Bay_Packers_season,
 2018,GB,DEF_PC,Mike Pettine,1,,inferred,https://en.wikipedia.org/wiki/2018_Green_Bay_Packers_season,
 2018,HOU,HC,Bill O'Brien,1,,roundup,https://www.rotowire.com/football/article.php?id=38101,
 2018,HOU,DC,Romeo Crennel,1,,roundup,https://www.rotowire.com/football/article.php?id=38101,
@@ -753,7 +753,7 @@ season,team,role,person,start_week,end_week,evidence,source_url,note
 2020,LV,DC,Paul Guenther,1,14,news,https://www.cbssports.com/nfl/news/raiders-fire-defensive-coordinator-paul-guenther-after-giving-up-44-points-to-colts-in-week-14,
 2020,LV,DC,Rod Marinelli,15,,news,https://www.cbssports.com/nfl/news/raiders-fire-defensive-coordinator-paul-guenther-after-giving-up-44-points-to-colts-in-week-14,DC Paul Guenther fired Dec 13 2020 (after week 14 loss to Colts); Rod Marinelli interim DC rest of season
 2020,LV,OFF_PC,Jon Gruden,1,,inferred,https://en.wikipedia.org/wiki/2020_Las_Vegas_Raiders_season ; https://www.cbssports.com/nfl/news/raiders-fire-defensive-coordinator-paul-guenther-after-giving-up-44-points-to-colts-in-week-14,
-2020,LV,DEF_PC,Rod Marinelli,1,,inferred,https://en.wikipedia.org/wiki/2020_Las_Vegas_Raiders_season ; https://www.cbssports.com/nfl/news/raiders-fire-defensive-coordinator-paul-guenther-after-giving-up-44-points-to-colts-in-week-14,
+2020,LV,DEF_PC,Rod Marinelli,15,,inferred,https://en.wikipedia.org/wiki/2020_Las_Vegas_Raiders_season ; https://www.cbssports.com/nfl/news/raiders-fire-defensive-coordinator-paul-guenther-after-giving-up-44-points-to-colts-in-week-14,
 2020,MIA,HC,Brian Flores,1,,roundup,https://www.rotowire.com/football/article/coaches-and-coordinators-tracking-nfl-decision-makers-49759,
 2020,MIA,OC,Chan Gailey,1,,roundup,https://www.rotowire.com/football/article/coaches-and-coordinators-tracking-nfl-decision-makers-49759,
 2020,MIA,DC,Josh Boyer,1,,roundup,https://www.rotowire.com/football/article/coaches-and-coordinators-tracking-nfl-decision-makers-49759,
@@ -1601,7 +1601,7 @@ season,team,role,person,start_week,end_week,evidence,source_url,note
 2025,MIA,OC,Frank Smith,1,,news,https://www.si.com/nfl/dolphins/onsi/news/miami-dolphins-hiring-frank-smith-as-offensive-coordinator,
 2025,MIA,DC,Anthony Weaver,1,,news,https://www.miamidolphins.com/news/dolphins-name-weaver-defensive-coordinator,
 2025,MIA,OFF_PC,Mike McDaniel,1,,roundup,https://www.espn.com/nfl/story/_/id/46970963/nfl-offensive-coordinators-playcallers-josh-mcdaniels-dan-campbell,"""Playcaller: Mike McDaniel"" (ESPN midseason report, 2025-11-17; no change reported)"
-2025,MIA,DEF_PC,Anthony Weaver,1,,official,https://www.miamidolphins.com/news/dolphins-name-weaver-defensive-coordinator,2024 hire reported as the Dolphins' defensive play-caller (2024 source; no 2025-specific sentence found)
+2025,MIA,DEF_PC,Anthony Weaver,1,,inferred,https://www.miamidolphins.com/news/dolphins-name-weaver-defensive-coordinator,2024 hire reported as the Dolphins' defensive play-caller (2024 source; no 2025-specific sentence found)
 2025,MIN,HC,Kevin O'Connell,1,,roundup,https://www.espn.com/nfl/story/_/id/46137832/nfl-playcallers-32-teams-mike-mcdaniel-sean-mcvay-brian-schottenheimer,named as HC in ESPN preseason roundup
 2025,MIN,OC,Wes Phillips,1,,wiki,https://en.wikipedia.org/wiki/2025_Minnesota_Vikings_season,
 2025,MIN,DC,Brian Flores,1,,news,https://www.cbssports.com/nfl/news/top-10-offensive-and-defensive-play-callers/,"weak, CBS 2026 piece"

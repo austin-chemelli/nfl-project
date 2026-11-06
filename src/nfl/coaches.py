@@ -45,8 +45,13 @@ _UNIT_ROLES = ("OC", "DC", "OFF_PC", "DEF_PC")
 def load_spells() -> pl.DataFrame:
     """Every spell. `end_week` null means through the end of the season, playoffs included."""
     data = resources.files("nfl.data").joinpath("staff_spells.csv").read_bytes()
-    return pl.read_csv(data, schema_overrides=_SPELL_SCHEMA).with_columns(
+    spells = pl.read_csv(data, schema_overrides=_SPELL_SCHEMA).with_columns(
         pl.col(pl.Utf8).replace("", None)
+    )
+    last = pl.when(pl.col("season") <= 2020).then(17).otherwise(18)
+    # A spell that reached the final regular-season week runs through the playoffs too.
+    return spells.with_columns(
+        pl.when(pl.col("end_week") >= last).then(None).otherwise(pl.col("end_week")).alias("end_week")
     )
 
 
@@ -70,10 +75,11 @@ def _changed_hands() -> pl.Expr:
 def coordinators_view(spells: pl.DataFrame) -> pl.DataFrame:
     """One row per (season, team): who held each role at the end of the regular season.
 
-    The latest-starting spell wins; co-coordinators who started together resolve to the first row
-    in the file (the others stay in the spells). `changed_midseason` is true when a coordinator or
-    play-caller spell starts or ends in season; a head-coach change alone doesn't set it. `notes` joins
-    the team-season's spell notes."""
+    The latest-starting spell wins, unless it ended early with no successor established: then the
+    role is null, since that person had gone. Co-coordinators who started together resolve to the
+    first row in the file (the others stay in the spells). `changed_midseason` is true when a
+    coordinator or play-caller spell starts or ends in season; a head-coach change alone doesn't
+    set it. `notes` joins the team-season's spell notes."""
     keys = ["season", "team"]
     meta = spells.group_by(keys, maintain_order=True).agg(
         (pl.col("role").is_in(_UNIT_ROLES) & _changed_hands()).any().alias("changed_midseason"),
@@ -83,6 +89,7 @@ def coordinators_view(spells: pl.DataFrame) -> pl.DataFrame:
     latest = spells.filter(
         pl.col("start_week") == pl.col("start_week").max().over(*keys, "role")
     ).unique(subset=[*keys, "role"], keep="first", maintain_order=True)
+    latest = latest.filter(pl.col("end_week").is_null())
     out = meta
     for role, column in ROLE_COLUMNS.items():
         held = latest.filter(pl.col("role") == role).select(*keys, pl.col("person").alias(column))
@@ -318,18 +325,34 @@ def assignments() -> pl.DataFrame:
     DC. `source` says which ('play_caller' | 'coordinator'). `team` is the franchise code (OAK->LV,
     SD->LAC, STL->LA); `team_printed` keeps the table's code. Mid-season changes use the
     end-of-season person; `changed_midseason` is per unit, so a new defensive caller doesn't touch
-    the offense. Units with nobody established are dropped."""
+    the offense. Where every play-caller spell is confirmed only those count, so a title moving
+    while the same person calls plays isn't a change; otherwise title changes count too. Units with
+    nobody established are dropped."""
     spells = load_spells()
     df = coordinators_view(spells)
     parts = []
-    for side, caller, coord, roles in (
-        ("off", "off_play_caller", "offensive_coordinator", ("OC", "OFF_PC")),
-        ("def", "def_play_caller", "defensive_coordinator", ("DC", "DEF_PC")),
+    keys = ["season", "team"]
+    for side, caller, coord, title, pc in (
+        ("off", "off_play_caller", "offensive_coordinator", "OC", "OFF_PC"),
+        ("def", "def_play_caller", "defensive_coordinator", "DC", "DEF_PC"),
     ):
+        callers = spells.filter(pl.col("role") == pc)
+        settled = (
+            callers.group_by(keys)
+            .agg(pl.col("evidence").is_in(CONFIRMED).all().alias("ok"))
+            .filter("ok")
+            .select(keys)
+        )
+        titles = spells.filter((pl.col("role") == title) & _changed_hands())
         changed = (
-            spells.filter(pl.col("role").is_in(roles) & _changed_hands())
-            .select("season", "team", pl.lit(True).alias("unit_changed"))
+            pl.concat(
+                [
+                    callers.filter(_changed_hands()).select(keys),
+                    titles.join(settled, on=keys, how="anti").select(keys),
+                ]
+            )
             .unique()
+            .with_columns(pl.lit(True).alias("unit_changed"))
         )
         parts.append(
             df.join(changed, on=["season", "team"], how="left").select(

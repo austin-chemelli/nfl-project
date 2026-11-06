@@ -24,7 +24,8 @@ from nfl.config import get_paths
 DECAYS = (0.5, 0.7, 0.85, 1.0)
 WEIGHTS = [i / 10 for i in range(11)]
 FIRST_TARGET = 2017
-MIN_CELL = 25  # cases behind a measured weight; a metric with fewer uses its situation's weight
+FIRST_TIME_FROM = 2020
+MIN_CELL = 25  # unit-seasons behind a measured weight; a metric with fewer uses its situation's
 BLEND_FILE = "src/nfl/data/coach_blend.json"
 SITUATIONS = tuple(ctx.SITUATION_TEXT)
 
@@ -69,16 +70,22 @@ def loso_blend(df: pl.DataFrame) -> tuple[float, float]:
     return best_weight(df), round(pl.concat(errs).mean() * 100, 1)
 
 
+def units(d: pl.DataFrame) -> int:
+    return d.select("season", "team").unique().height
+
+
 def cell(d: pl.DataFrame) -> dict | None:
-    """Weight, held-out miss and the league-middle miss for one group of cases."""
+    """Weight, held-out miss and the league-middle miss for one group of cases. Sizes count
+    unit-seasons, not unit-by-metric rows."""
     have = d.filter(pl.col("prior").is_not_null())
-    if have.height >= MIN_CELL:
+    if units(have) >= MIN_CELL:
         weight, miss = loso_blend(have)
         return {"weight": weight, "miss": miss, "league_miss": mae(have, pl.lit(0.5)),
-                "cases": have.height}  # fmt: skip
-    if have.is_empty() and d.height >= MIN_CELL:  # no past at all: the team's last season alone
-        return {"weight": 0.0, "miss": mae(d, pl.col("team_prev")),
-                "league_miss": mae(d, pl.lit(0.5)), "cases": d.height}  # fmt: skip
+                "cases": units(have)}  # fmt: skip
+    rest = d.filter(pl.col("prior").is_null())  # no past of his own: the team's last season alone
+    if units(rest) >= MIN_CELL:
+        return {"weight": 0.0, "miss": mae(rest, pl.col("team_prev")),
+                "league_miss": mae(rest, pl.lit(0.5)), "cases": units(rest)}  # fmt: skip
     return None
 
 
@@ -109,14 +116,15 @@ def table(c: pl.DataFrame, title: str) -> list[str]:
             d = c.filter((pl.col("side") == side) & (pl.col("situation") == sit))
             if d.is_empty():
                 continue
-            units = d.select("season", "team").unique().height
             have = d.filter(pl.col("prior").is_not_null())
-            caller = mae(have, pl.col("prior")) if have.height else None
-            team = mae(d, pl.col("team_prev"))
-            mid = mae(d, pl.lit(0.5))
-            w, blend = loso_blend(have) if have.height >= MIN_CELL else (None, None)
+            scored = units(have) >= MIN_CELL or units(have) > units(d) / 2
+            same = have if scored else d  # every column on the same cases
+            caller = mae(have, pl.col("prior")) if scored else None
+            team = mae(same, pl.col("team_prev"))
+            mid = mae(same, pl.lit(0.5))
+            w, blend = loso_blend(have) if units(have) >= MIN_CELL else (None, None)
             lines.append(
-                f"| {side} | {sit} | {units} | {d.height} | {caller if caller is not None else '–'} "
+                f"| {side} | {sit} | {units(same)} | {same.height} | {caller if caller is not None else '–'} "
                 f"| {team} | {mid} | {blend if blend is not None else '–'} "
                 f"| {w if w is not None else '–'} |"
             )
@@ -132,6 +140,8 @@ def main() -> None:
     labels = ctx.unit_situations(assign, ctx.primary_qbs(paths)).filter(
         (pl.col("season") >= FIRST_TARGET) & (pl.col("season") < coaches.current_season())
         & ~pl.col("unsettled")
+        # The table starts in 2016, so before this anyone with an older career looks first-time.
+        & ((pl.col("season") >= FIRST_TIME_FROM) | ~pl.col("situation").str.ends_with("first_time"))
     )  # fmt: skip
     sets = {"Live set (weekly in season)": ctx.live_rates(paths),
             "Charted set (participation, one drop a year)": ctx.charted_rates(paths)}  # fmt: skip
@@ -157,7 +167,7 @@ def main() -> None:
         rows = []
         for (side, metric), g in per.group_by(["side", "metric"], maintain_order=True):
             moved = g.filter(pl.col("situation") == "moved_team")
-            if moved.height:
+            if moved.height:  # `per` holds only cases with a prior, so both columns match
                 rows.append((side, metric, moved.height, mae(moved, pl.col("prior")),
                              mae(moved, pl.col("team_prev"))))  # fmt: skip
         out += ["### Caller moved, by metric", "", "| Side | Metric | Cases | Caller's past | Team's last season |",
