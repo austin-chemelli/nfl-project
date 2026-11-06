@@ -86,7 +86,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| league | `league-context` | `~/dev/nfl-project-league` | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | phases 1 and 2 live (#20, #23). Phase 3 (similar seasons, compare, ranks, sparkline) reviewed on `league-context`, PR open. The first real snapshot lands with Saturday's lock: check the job log for `SNAPSHOT NOT SAVED` | #20, #23 merged |
+| league | `league-context` | `~/dev/nfl-project-league` | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | phases 1 and 2 live (#20, #23). Phase 3 (similar seasons, compare, ranks, sparkline) reviewed on `league-context`, PR #24 open. The first real snapshot lands with Saturday's lock: check the job log for `SNAPSHOT NOT SAVED` | #20, #23 merged, #24 |
 | pop | `retro-wp`, `retro-drives`, `retro-story` | removed | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; pinned result | merged 2026-11-05, all three phases live; `nfl-retro` run by hand on d969ab3, retros on schema 6; worktree and branches removed. M15.10 route crossfades optional, not built | #19, #21, #22 |
 | ui | `ui-next` | `~/dev/nfl-project-ui` | M13 site walk fixes merged 2026-11-05 (#18); round 2 done; later items in `.notes/ui-round2.md` §9 (tendencies across situations, H4 injuries and news tab, open-bets list once live bets exist) | U1 to U5 merged and live (#11, #13, #14, #16, #17); `nfl-retro` and `nfl-site` run by hand on 041a83a, 2026-11-05 | #11, #13, #14, #16, #17 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
@@ -109,7 +109,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M10 site v2, one answer first (ADR 0017) | done 2026-11-04 (PR #4) |
 | M11 model wave 2 (ADR 0018) | done 2026-11-04 (PR #12), live before the first public lock |
 | M13 site walk fixes (review §10) | done 2026-11-05 (PR #18), live; retros on schema 5 |
-| M14 league page (ADR 0019) | phases 1 and 2 live (#20, #23); phase 3 PR open; track `league` |
+| M14 league page (ADR 0019) | phases 1 and 2 live (#20, #23); phase 3 in PR #24; track `league` |
 | M15 retro win probability, motion, drives, story (ADR 0020) | done 2026-11-05 (#19, #21, #22), live; retros on schema 6; M15.10 route crossfades optional, not built |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
@@ -168,7 +168,7 @@ Current docs, what each is for, and when it was last verified against the code o
 |---|---|---|
 | [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-05 |
 | [adr/](adr/) | before re-opening a decision; ADR 0020 is the newest (0019 league page, 0020 retro win probability and motion) | 2026-11-05 |
-| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-05 |
+| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-06 |
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-06 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-04 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-05 |
