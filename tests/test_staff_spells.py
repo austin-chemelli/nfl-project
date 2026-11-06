@@ -19,7 +19,7 @@ def frame(*rows):
     return pl.DataFrame(list(rows), schema=coaches._SPELL_SCHEMA)
 
 
-UNCONFIRMED_2022_ON = 35
+UNCONFIRMED_2022_ON = 24
 
 HANDOFF = frame(
     spell("HC", "Antonio Pierce"),
@@ -111,10 +111,16 @@ def test_a_caller_who_left_with_no_known_successor_is_a_change_and_not_named():
 
 def test_a_real_caller_who_left_early_gives_the_unit_to_the_coordinator():
     a = coaches.assignments().filter(
-        (pl.col("season") == 2024) & (pl.col("team") == "LV") & (pl.col("side") == "off")
+        (pl.col("season") == 2020) & (pl.col("team") == "HOU") & (pl.col("side") == "off")
     )
-    assert a["person"].to_list() == ["Scott Turner"]
+    assert a["person"].to_list() == ["Tim Kelly"]
     assert a["source"].to_list() == ["coordinator"]
+
+
+def test_the_raiders_caller_after_getsy():
+    s = load_spells()
+    assert people(staff_at(2024, "LV", 8, s), "OFF_PC") == ["Luke Getsy"]
+    assert people(staff_at(2024, "LV", 12, s), "OFF_PC") == ["Scott Turner"]
 
 
 def test_a_title_moving_under_a_confirmed_caller_is_not_a_change():

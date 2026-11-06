@@ -548,5 +548,7 @@ The last review recounted all 62 cards exactly and still found the page claiming
 
 The table's head coaches now match the nflverse schedule on all 256 team-seasons through 2023, apart from one nflverse typo; that check is a test.
 
+**Second pass.** Gap lists instead of whole seasons, and reading team coaching pages directly instead of searching, took 2026 titles from 33 to 96 of 96 on official or news sources in about 30 searches. It also settled the 2024 Raiders (Turner called plays from Week 11, after the bye) and Parker's conflict (he calls the defense; only his seat moved). No person or week from the first pass was contradicted.
+
 **Lesson.** My first spot check called HC, OC and DC "probably mostly fine", and I gave Austin a wrong count (23 of 64) and made-up ranks in a worked example (McDaniel's motion): an example in a plan reads as a measurement, so measure it or don't print a number. Research agents hit a shared search limit well short of their budgets, so a verification plan needs to ask how many lookups it can really make. A finding from a half-corrected table moved when the table was finished (time to throw): rerun before writing conclusions down. The review then caught what tests hadn't: "New here" on a head coach who'd been there for years, a name and a confirmation taken from different rows, and a public file with no evidence filter, which I'd just told Austin was harmless.
 
