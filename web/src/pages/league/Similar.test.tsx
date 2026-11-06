@@ -72,7 +72,7 @@ describe('Similar seasons tab', () => {
     await userEvent.selectOptions(screen.getByLabelText('Team'), 'BUF')
     expect(screen.getByLabelText('Team')).toHaveValue('BUF')
     expect(screen.getByRole('tab', { name: 'Similar seasons' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText(/looked like Buffalo Bills after/)).toBeInTheDocument()
+    expect(screen.getByText(/looked like the Buffalo Bills after/)).toBeInTheDocument()
   })
 
   it('ignores an unknown ?team=', async () => {

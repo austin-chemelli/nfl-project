@@ -32,7 +32,7 @@ export function Similar({ file }: { file: LeagueFile }) {
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <p className="text-ink-2">
-        {entry ? `Teams that looked like the ${name} after ${entry.games_played} games finished like this.` : 'Teams that looked like the this after a number of games finished like this.'} This describes the past and isn't a forecast; the{' '}
+        {entry ? `Teams that looked like the ${name} after ${entry.games_played} games finished like this.` : 'Teams that looked like this after a number of games finished like this.'} This describes the past and isn't a forecast; the{' '}
         <Link to={{ search: '?tab=odds' }}>playoff odds</Link> are the forecast.
       </p>
 
