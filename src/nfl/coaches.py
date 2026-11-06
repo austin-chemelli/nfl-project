@@ -1,7 +1,9 @@
-"""Coordinator / play-caller table (2016-2026), one row per (season, team).
+"""Coaching staffs (2016-2026) and scheme profiles.
 
-The CSV is hand-researched (see .notes/coordinators-validation.md); empty cells mean "not
-established", never a guess.
+`data/staff_spells.csv` is the ground truth: one row per spell, a person in a role for a run of
+weeks, with an evidence grade and a source (ADR 0021; verification notes in
+.notes/staff-verification/). Nothing is guessed: a role with no row is "not established".
+`load_coordinators` is the one-row-per-team-season view the profiles and features read.
 """
 
 from __future__ import annotations
@@ -15,33 +17,81 @@ import polars as pl
 from nfl.config import Paths, current_season, now_utc
 from nfl.models.elo import TEAM_ALIASES
 
-_SCHEMA = {
+_SPELL_SCHEMA = {
     "season": pl.Int64,
     "team": pl.Utf8,
-    "head_coach": pl.Utf8,
-    "offensive_coordinator": pl.Utf8,
-    "defensive_coordinator": pl.Utf8,
-    "off_play_caller": pl.Utf8,
-    "def_play_caller": pl.Utf8,
-    "changed_midseason": pl.Boolean,
-    "notes": pl.Utf8,
+    "role": pl.Utf8,
+    "person": pl.Utf8,
+    "start_week": pl.Int64,
+    "end_week": pl.Int64,
+    "evidence": pl.Utf8,
     "source_url": pl.Utf8,
+    "note": pl.Utf8,
 }
-_PERSON_COLS = [
-    "head_coach",
-    "offensive_coordinator",
-    "defensive_coordinator",
-    "off_play_caller",
-    "def_play_caller",
-]
+ROLE_COLUMNS = {
+    "HC": "head_coach",
+    "OC": "offensive_coordinator",
+    "DC": "defensive_coordinator",
+    "OFF_PC": "off_play_caller",
+    "DEF_PC": "def_play_caller",
+}
+EVIDENCE = ("official", "news", "roundup", "wiki", "inferred")
+# Grades that let a name appear on the site as a play-caller (ADR 0021): a source says who calls.
+CONFIRMED = ("official", "news", "roundup")
+_PERSON_COLS = list(ROLE_COLUMNS.values())
+_UNIT_ROLES = ("OC", "DC", "OFF_PC", "DEF_PC")
+
+
+def load_spells() -> pl.DataFrame:
+    """Every spell. `end_week` null means through the end of the season, playoffs included."""
+    data = resources.files("nfl.data").joinpath("staff_spells.csv").read_bytes()
+    return pl.read_csv(data, schema_overrides=_SPELL_SCHEMA).with_columns(
+        pl.col(pl.Utf8).replace("", None)
+    )
+
+
+def staff_at(season: int, team: str, week: int, spells: pl.DataFrame | None = None) -> pl.DataFrame:
+    """The spells in force for (season, team) in `week`. Accepts old or new franchise codes."""
+    s = load_spells() if spells is None else spells
+    franchise = TEAM_ALIASES.get(team, team)
+    return s.filter(
+        (pl.col("season") == season)
+        & (_canon(pl.col("team")) == franchise)
+        & (pl.col("start_week") <= week)
+        & (pl.col("end_week").is_null() | (pl.col("end_week") >= week))
+    )
+
+
+def coordinators_view(spells: pl.DataFrame) -> pl.DataFrame:
+    """One row per (season, team): who held each role at the end of the regular season.
+
+    The latest-starting spell wins; co-coordinators who started together resolve to the first row
+    in the file (the others stay in the spells). `changed_midseason` is true when a coordinator or
+    play-caller spell starts after Week 1; a head-coach change alone doesn't set it. `notes` joins
+    the team-season's spell notes."""
+    keys = ["season", "team"]
+    meta = spells.group_by(keys, maintain_order=True).agg(
+        (pl.col("role").is_in(_UNIT_ROLES) & (pl.col("start_week") > 1))
+        .any()
+        .alias("changed_midseason"),
+        pl.col("note").drop_nulls().unique(maintain_order=True).str.join("; ").alias("notes"),
+        pl.col("source_url").drop_nulls().first().alias("source_url"),
+    )
+    latest = spells.filter(
+        pl.col("start_week") == pl.col("start_week").max().over(*keys, "role")
+    ).unique(subset=[*keys, "role"], keep="first", maintain_order=True)
+    out = meta
+    for role, column in ROLE_COLUMNS.items():
+        held = latest.filter(pl.col("role") == role).select(*keys, pl.col("person").alias(column))
+        out = out.join(held, on=keys, how="left")
+    return out.select(
+        *keys, *_PERSON_COLS, "changed_midseason", pl.col("notes").replace("", None), "source_url"
+    )
 
 
 def load_coordinators() -> pl.DataFrame:
-    """All season-team rows; empty cells are null."""
-    data = resources.files("nfl.data").joinpath("coordinators.csv").read_bytes()
-    return pl.read_csv(data, schema_overrides=_SCHEMA).with_columns(
-        pl.col(pl.Utf8).replace("", None)
-    )
+    """All season-team rows; roles nobody established are null."""
+    return coordinators_view(load_spells())
 
 
 def coordinator_seasons(name: str) -> pl.DataFrame:
@@ -263,16 +313,23 @@ def assignments() -> pl.DataFrame:
 
     Offense uses `off_play_caller` when present, else the OC; defense `def_play_caller`, else the
     DC. `source` says which ('play_caller' | 'coordinator'). `team` is the franchise code (OAK->LV,
-    SD->LAC, STL->LA); `team_printed` keeps the CSV's code. Mid-season changes use the CSV's
-    end-of-season person. Units with nobody established are dropped."""
-    df = load_coordinators()
+    SD->LAC, STL->LA); `team_printed` keeps the table's code. Mid-season changes use the
+    end-of-season person; `changed_midseason` is per unit, so a new defensive caller doesn't touch
+    the offense. Units with nobody established are dropped."""
+    spells = load_spells()
+    df = coordinators_view(spells)
     parts = []
-    for side, caller, coord in (
-        ("off", "off_play_caller", "offensive_coordinator"),
-        ("def", "def_play_caller", "defensive_coordinator"),
+    for side, caller, coord, roles in (
+        ("off", "off_play_caller", "offensive_coordinator", ("OC", "OFF_PC")),
+        ("def", "def_play_caller", "defensive_coordinator", ("DC", "DEF_PC")),
     ):
+        changed = (
+            spells.filter(pl.col("role").is_in(roles) & (pl.col("start_week") > 1))
+            .select("season", "team", pl.lit(True).alias("unit_changed"))
+            .unique()
+        )
         parts.append(
-            df.select(
+            df.join(changed, on=["season", "team"], how="left").select(
                 "season",
                 _canon(pl.col("team")).alias("team"),
                 pl.col("team").alias("team_printed"),
@@ -283,7 +340,7 @@ def assignments() -> pl.DataFrame:
                 .otherwise(pl.lit("coordinator"))
                 .alias("source"),
                 pl.col("head_coach"),
-                pl.col("changed_midseason"),
+                pl.col("unit_changed").fill_null(False).alias("changed_midseason"),
             )
         )
     return pl.concat(parts).filter(pl.col("person").is_not_null()).sort("season", "team", "side")
