@@ -3,7 +3,7 @@
 Status: accepted 2026-11-06 (Austin): team page, verification 2016–2026 (hub decisions D15, D16). Plan: `.notes/plans/coaches-refinement.md`. Tasks: M17.
 
 ## Context
-The coordinator table (`src/nfl/data/coordinators.csv`, 352 rows, 2016–2026) was built from Wikipedia season pages through a summarizer, with play-callers from general knowledge. The play-caller column is the one the profiles and the game page hang on, and it is wrong in the current season (CAR 2026 names Canales; Idzik has called plays since February 2026) and unverified elsewhere. The table flattens mid-season changes to the end-of-season person. Profiles use participation data, which nflverse publishes once per offseason, so every 2026 unit shows "no tendencies yet" while weekly FTN and pbp tendencies already exist through Week 9. The nflverse schedule's coach field is stale for 2024+ (NYJ 2024 shows Saleh all season; 2026 shows three replaced head coaches), so it cannot be the ground truth. Austin's direction: accurate data first, play-callers labelled as play-callers only when they are, recent tendencies weighted over old ones, context for callers who moved teams, changed quarterbacks or have never called plays, and a place on the League side for a per-team evaluation. No paid API; open data only (ADR 0001); additive contracts (ADR 0015).
+The coordinator table (`src/nfl/data/coordinators.csv`, 352 rows, 2016–2026) was built from Wikipedia season pages through a summarizer, with play-callers from general knowledge. The play-caller column is the one the profiles and the game page hang on, and it is wrong in the current season (CAR 2026 names Canales; Idzik has called plays since February 2026) and unverified elsewhere. The table flattens mid-season changes to the end-of-season person. Profiles use participation data, which nflverse publishes once per offseason, so every 2026 unit shows "no tendencies yet" while weekly FTN and pbp tendencies already exist through the latest played week. The nflverse schedule's coach field is stale for 2024+ (NYJ 2024 shows Saleh all season; 2026 shows three replaced head coaches), so it cannot be the ground truth. Austin's direction: accurate data first, play-callers labelled as play-callers only when they are, recent tendencies weighted over old ones, context for callers who moved teams, changed quarterbacks or have never called plays, and a place on the League side for a per-team evaluation. No paid API; open data only (ADR 0001); additive contracts (ADR 0015).
 
 ## Options
 1. **Ground truth.** (a) Keep one row per team-season and fix names by hand. (b) A spells table (person, role, start and end week) with an evidence grade per row, verified by web-research agents against primary sources, with a public rule that a play-caller shows as one only with official, news or roundup evidence. (c) Extract staffs with the local LLM from the web each week and trust it. (c) is what produced today's errors at one remove; (a) cannot show interims or handoffs.
@@ -18,8 +18,23 @@ The coordinator table (`src/nfl/data/coordinators.csv`, 352 rows, 2016–2026) w
 - In-season changes: a weekly staff check on the desktop pass writes candidates with quotes and URLs; a person confirms; the change ships in a PR. Nothing edits the table automatically.
 
 ## Consequences
-- The honest labels get stricter: units without a confirmed play-caller show the coordinator with "not confirmed", and that may be a quarter of the league until the agents finish.
+- The honest labels get stricter: a unit without a confirmed play-caller shows the coordinator with "not confirmed".
 - Profiles become week-aware (phase 2), which fixes the known limit in `features/scheme.py`; the scheme features' values will move for team-seasons with a mid-season change, which is fine because every approach zeroes them (M11.3) and only the Hypotheses page reads them.
 - Four seasons at most of FTN history: the live profile says so. Participation-only measures (personnel, coverage, time to throw, pressure) stay a year behind in season, and the page says that too.
 - Ongoing cost: a weekly confirm step for staff changes, minutes a week; agent runs once now and a smaller pass each offseason.
 - Risks: agent over-confidence (mitigated by the quoted-sentence rule and the reconcile step), thin cells in the prior study (equal blend fallback), and the team page growing into a rebuild (it ships after data, with the design language's caps).
+
+## Measured (2026-11-06)
+`scripts/coach_prior_study.py` on 2017–2025, unit-seasons with no mid-season change, typical miss in percentile points of the within-season rank (always guessing the league middle: 24 to 27). Weights and misses live in `data/coach_blend.json`, written by the study and read by the team files; nothing is copied by hand. On verified 2022–2026 rows and unverified 2016–2021 rows.
+
+| Situation | Caller's past | Team's last season | Blend, held out |
+|---|---|---|---|
+| Offense, same caller (charted) | 18.2 | 18.1 | 17.7 |
+| Offense, same caller, new QB (charted) | 20.5 | 23.0 | 20.5 |
+| Offense, caller moved (charted) | 22.2 | 26.2 | 19.2 |
+| Defense, same caller (charted) | 20.2 | 20.4 | 20.0 |
+| Defense, caller moved (charted) | 28.2 | 29.7 | 24.9 |
+| Defense, caller moved (live) | 31.0 | 29.5 | 26.9 |
+| Offense, first-time caller from outside (charted) | – | 24.4 | – |
+
+Consequences for the page: pass rate and time to throw lean on the team when a caller moves (the roster and quarterback carry them), personnel and motion lean on the caller, a moved defensive caller is a weak read, and a first-time caller's "expected" is labelled weak because the team's last season barely beats the league middle.

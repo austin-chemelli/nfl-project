@@ -137,7 +137,7 @@ def test_sentence_reads_plainly():
 def test_assignments_prefer_play_caller_and_map_franchise():
     a = coaches.assignments()
     assert set(a["side"]) == {"off", "def"}
-    assert set(a["source"]) == {"play_caller", "coordinator"}
+    assert set(a["source"]) <= {"play_caller", "coordinator"}
     assert not set(a["team"]) & {"OAK", "SD", "STL"}  # franchise codes
     assert a.select("season", "team", "side").unique().height == a.height
 

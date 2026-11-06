@@ -537,3 +537,14 @@ The last review recounted all 62 cards exactly and still found the page claiming
 **Findings.** Neither page had ever been in a site walk, and both date from before team colors, UI round 2 and wave 2. Build overflows by 14 px on a phone and runs 7,418 px tall; Coaches has no charts at all. `/season/:year` is only linked from Build, so it's orphaned while Build is hidden.
 
 **Lesson.** A page nobody re-tests falls behind quietly while the rest of the site moves. Site walks need a goal that sends someone to every page.
+
+## 2026-11-06: Staff spells and verification (M17.1, M17.2, M17.3 in progress, M17.5, M17.6 backend)
+
+**Why.** Play-callers were the weakest column, and the one Austin cares most about: `coordinators.csv` was Wikipedia titles plus general knowledge, flattened to one row per team-season.
+
+**What changed.** `data/staff_spells.csv` replaces it: one row per spell, with weeks, an evidence grade and a source. `load_coordinators()` is now a derived view (it reproduced all 352 old rows before any data changed). Research agents checked 2022–2026; `.notes/staff-verification/changes.md` lists each change. `staff_context.py` labels each unit (same caller, new QB, moved, first-time) and writes `site/team/<code>.json` through the site build, with expected values from `coach_blend.json`, which `scripts/coach_prior_study.py` generates.
+
+**Findings.** The table had 55 of 64 current units with no play-caller, and three 2026 changes nobody had recorded: Wash replaced Evero at CAR (Week 9), Payton took Denver's calls back from Webb (Week 5), Ryans took Houston's defense from Burke (Week 5). "General knowledge" was wrong often: 2025 PHI (Patullo, not Sirianni), 2025 NYG (Kafka, not Daboll), 2025 SEA (Macdonald, not Durde). The study: a moved caller's past beats the team's last season on personnel and motion, the team's wins on pass rate and time to throw, moved defensive callers barely beat guessing, and first-time callers can't be predicted from the team's past. nflverse's schedule coach field is stale from 2024.
+
+**Lesson.** My first spot check called HC, OC and DC "probably mostly fine", and I gave Austin a wrong count (23 of 64) and made-up ranks in a worked example (McDaniel's motion): an example in a plan reads as a measurement, so measure it or don't print a number. Research agents hit a shared search limit well short of their budgets, so a verification plan needs to ask how many lookups it can really make.
+

@@ -30,7 +30,7 @@ from nfl.features import store
 from nfl.models.elo import TEAM_ALIASES
 
 SOURCE = "participation"
-VERSION = "2"
+VERSION = "3"
 FIRST_TARGET = 2017  # needs a prior season (participation starts 2016)
 
 # feature -> (side, metric in nfl.scheme)

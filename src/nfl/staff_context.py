@@ -111,10 +111,13 @@ def unit_situations(assign: pl.DataFrame, qbs: dict) -> pl.DataFrame:
         for r in spells.filter(pl.col("role").is_in(["OC", "DC"])).to_dicts()
     }
     first_called: dict[tuple[str, str], int] = {}
-    for x in rows:
-        if x["source"] == "play_caller":
-            k = (x["person"], x["side"])
-            first_called[k] = min(first_called.get(k, 9999), x["season"])
+    callers = spells.filter(pl.col("role").is_in(["OFF_PC", "DEF_PC"])).select(
+        "season", "person", pl.col("role").replace({"OFF_PC": "off", "DEF_PC": "def"}).alias("side")
+    )  # all spells, so a caller replaced mid-season still counts as having called
+    known = [*callers.to_dicts(), *(x for x in rows if x["source"] == "play_caller")]
+    for x in known:
+        k = (x["person"], x["side"])
+        first_called[k] = min(first_called.get(k, 9999), x["season"])
     out = []
     for x in rows:
         s, t, side, who = x["season"], x["team"], x["side"], x["person"]

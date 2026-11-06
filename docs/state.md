@@ -111,7 +111,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M13 site walk fixes (review §10) | done 2026-11-05 (PR #18), live; retros on schema 5 |
 | M14 league page (ADR 0019) | done 2026-11-06 (#20, #23, #24), live; odds history starts with Tuesday's refresh |
 | M15 retro win probability, motion, drives, story (ADR 0020) | done 2026-11-05 (#19, #21, #22), live; retros on schema 6; M15.10 route crossfades optional, not built |
-| M16 Coaches and Build back on the site | Coaches picked up 2026-11-06: plan on Fable as M17 (ADR 0021 proposed, `.notes/plans/coaches-refinement.md`), waiting on D15 and D16; both pages still hidden. Build: with the custom-approach work (review §4.3) |
+| M16 Coaches and Build back on the site | Coaches picked up 2026-11-06 as M17 (ADR 0021): staff spells, study and team files built on `staff-spells`; 2022–2026 partly verified (search limit), 2016–2021 running; team page next; both pages still hidden. Build: with the custom-approach work |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
