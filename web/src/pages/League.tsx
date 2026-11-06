@@ -18,8 +18,8 @@ function Strip({ file }: { file: LeagueFile }) {
   const race = closestRace(file)
   const game = gameOfWeek(file)
   const tiles: ReactNode[] = []
-  if (afc) tiles.push(<Tile key="afc" label="AFC favourite for the 1 seed" value={afc.team} sub={`${fmtProb(afc.p)} to get it`} tab="odds" />)
-  if (nfc) tiles.push(<Tile key="nfc" label="NFC favourite for the 1 seed" value={nfc.team} sub={`${fmtProb(nfc.p)} to get it`} tab="odds" />)
+  if (afc) tiles.push(<Tile key="afc" label="AFC favorite for the 1 seed" value={afc.team} sub={`${fmtProb(afc.p)} to get it`} tab="odds" />)
+  if (nfc) tiles.push(<Tile key="nfc" label="NFC favorite for the 1 seed" value={nfc.team} sub={`${fmtProb(nfc.p)} to get it`} tab="odds" />)
   if (race) tiles.push(<Tile key="race" label="Closest division race" value={race.division} sub={`${race.leader.team} ${fmtProb(race.leader.p)}, ${race.runnerUp.team} ${fmtProb(race.runnerUp.p)}`} tab="standings" />)
   if (game) tiles.push(<Tile key="game" label="Biggest game this week" value={`${game.away} @ ${game.home}`} sub={`Week ${game.week}, by how far it moves playoff odds`} tab="games" />)
   return tiles.length ? <SummaryStrip label="League summary">{tiles}</SummaryStrip> : null
@@ -53,10 +53,10 @@ export default function LeaguePage() {
       {league.data && <Strip file={league.data} />}
       <Tabs
         label="League views"
-        default="teams"
+        default="odds"
         tabs={[
-          { id: 'teams', label: 'Teams', content: teamsTab },
           { id: 'odds', label: 'Playoff odds', content: playoffTab('odds', (f) => <Odds file={f} />) },
+          { id: 'teams', label: 'Teams', content: teamsTab },
           { id: 'standings', label: 'Standings', content: playoffTab('standings', (f) => <Standings file={f} />) },
           { id: 'games', label: 'Games that matter', content: playoffTab('games', (f) => <Games file={f} />) },
         ]}

@@ -28,10 +28,10 @@ function withoutLeague(): string {
 }
 
 describe('League page, playoff tabs', () => {
-  it('shows the four tabs in order, Teams first and selected, and a summary strip', async () => {
+  it('shows the four tabs in order, Playoff odds first and selected, and a summary strip', async () => {
     renderRoute('/league')
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((t) => t.textContent)).toEqual(['Teams', 'Playoff odds', 'Standings', 'Games that matter'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['Playoff odds', 'Teams', 'Standings', 'Games that matter'])
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
     const strip = await screen.findByRole('group', { name: 'League summary' })
     expect(within(strip).getAllByRole('button')).toHaveLength(4)
@@ -157,7 +157,7 @@ describe('League page, playoff tabs', () => {
       expect(screen.queryByRole('alert')).toBeNull()
       unmount()
     }
-    renderRoute('/league', root)
+    renderRoute('/league?tab=teams', root)
     expect(await screen.findByRole('group', { name: 'Starting views' })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'League summary' })).toBeNull()
     fs.rmSync(root, { recursive: true, force: true })
@@ -166,7 +166,7 @@ describe('League page, playoff tabs', () => {
 
 describe('League page', () => {
   it('renders the Teams tab from teams.json and names the page', async () => {
-    renderRoute('/league')
+    renderRoute('/league?tab=teams')
     expect(await screen.findByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true')
     expect(document.title).toMatch(/^League/)
   })

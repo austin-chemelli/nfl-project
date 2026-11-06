@@ -15,8 +15,8 @@ export function topSeed(file: LeagueFile, conf: Conf): { team: string; p: number
 }
 
 /**
- * The closest race: the division whose favourite has the lowest P(division) under the Student, so the
- * one nobody is likely to win. Reports the favourite and the runner-up. Divisions with one team in the odds are skipped.
+ * The closest race: the division whose favorite has the lowest P(division) under the Student, so the
+ * one nobody is likely to win. Reports the favorite and the runner-up. Divisions with one team in the odds are skipped.
  */
 export function closestRace(file: LeagueFile): { division: string; leader: { team: string; p: number }; runnerUp: { team: string; p: number } } | null {
   let best: ReturnType<typeof closestRace> = null

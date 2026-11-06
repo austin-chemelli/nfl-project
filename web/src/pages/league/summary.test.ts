@@ -30,7 +30,7 @@ describe('summary tiles on a small league', () => {
     expect(topSeed(tiny(), 'AFC')).toEqual({ team: 'AAA', p: 0.4 })
     expect(topSeed(tiny(), 'NFC')).toEqual({ team: 'DDD', p: 0.3 })
   })
-  it('closestRace: the division whose favourite is least likely to win it', () => {
+  it('closestRace: the division whose favorite is least likely to win it', () => {
     expect(closestRace(tiny())).toEqual({ division: 'NFC North', leader: { team: 'CCC', p: 0.45 }, runnerUp: { team: 'DDD', p: 0.4 } })
   })
   it('gameOfWeek: highest leverage among the earliest week, not the whole schedule', () => {
