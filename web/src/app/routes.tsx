@@ -2,6 +2,7 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import type { RouteObject } from 'react-router'
 import { Loading } from '../components/ui'
+import { isHidden } from '../lib/hiddenPages'
 import { Layout } from './Layout'
 import { RouteError } from './RouteError'
 
@@ -15,6 +16,10 @@ const page = (load: () => Promise<{ default: ComponentType }>) => {
   )
 }
 
+// a hidden page answers like one that doesn't exist; `isHidden` says why
+const hidable = (path: string, load: () => Promise<{ default: ComponentType }>) =>
+  page(() => (isHidden(path) ? import('../pages/NotFound') : load()))
+
 export const routes: RouteObject[] = [
   {
     element: <Layout />,
@@ -26,8 +31,8 @@ export const routes: RouteObject[] = [
       { path: 'league', element: page(() => import('../pages/League')) },
       { path: 'tracker', element: page(() => import('../pages/Tracker')) },
       { path: 'hypotheses', element: page(() => import('../pages/Hypotheses')) },
-      { path: 'coaches', element: page(() => import('../pages/Coaches')) },
-      { path: 'build', element: page(() => import('../pages/Build')) },
+      { path: 'coaches', element: hidable('/coaches', () => import('../pages/Coaches')) },
+      { path: 'build', element: hidable('/build', () => import('../pages/Build')) },
       { path: 'season/:year', element: page(() => import('../pages/Season')) },
       { path: 'method', element: page(() => import('../pages/Method')) },
       { path: '*', element: page(() => import('../pages/NotFound')) },

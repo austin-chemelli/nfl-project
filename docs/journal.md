@@ -527,3 +527,13 @@ Austin's first look: it showed who was similar and not why. So the tab gained a 
 The last review recounted all 62 cards exactly and still found the page claiming more than the numbers did. Peers "within a win" made gaps that were mostly the record: CLE's −35 points was really −13. "Looks bad, wasn't" sat on counts that said it did, 4 of 46 against 14 of 99, because the tolerance was absolute. The Defense card used the friendliest of several defense measures; on the adjusted one the chart uses there's a mild penalty, so the card went, and with it a line saying the offense "earned" the record, which nothing measured. Effects fade or flip after 12 games, so cards stop there. 62 cards became 32, and every one now says what its counts say.
 
 **Lesson.** Reusing the one function that already answers "which row is current" is worth more than a test that a second answer agrees with it. And an insight on a page is a claim: test it the way the sentence will read, on data it wasn't chosen on.
+
+## 2026-11-06: Coaches and Build come off the live site for now (M16 parked)
+
+**Why.** Austin wants both pages better before the public sees them again, and wanted them hidden, not removed.
+
+**What changed.** `web/src/lib/hiddenPages.ts` lists them. On the live site they leave the nav, their URLs answer like pages that don't exist, and the League panel's "Scheme profile" and the Season page's "Back to Build your own" links go. `npm run dev` still shows everything, and the code, routes and data files all stay. M16 is parked until Austin picks it up: Coaches needs an accuracy and visuals pass, and Build comes back with the work that puts a custom approach on other pages.
+
+**Findings.** Neither page had ever been in a site walk, and both date from before team colors, UI round 2 and wave 2. Build overflows by 14 px on a phone and runs 7,418 px tall; Coaches has no charts at all. `/season/:year` is only linked from Build, so it's orphaned while Build is hidden.
+
+**Lesson.** A page nobody re-tests falls behind quietly while the rest of the site moves. Site walks need a goal that sends someone to every page.

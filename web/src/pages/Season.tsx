@@ -7,6 +7,7 @@ import { capMarket, decodeWeights, encodeWeights, isSetId, lastSeason, MARKET_GR
 import { llVsMarket, pct } from '../lib/format'
 import { WeekChart } from './season/WeekChart'
 import { GamesTable } from './season/GamesTable'
+import { isHidden } from '../lib/hiddenPages'
 
 const SET_NAMES: Record<SetId, string> = {
   yours: 'Your weights (from Build your own)',
@@ -77,7 +78,7 @@ function SeasonBody({ meta, matrix, season, first, last }: { meta: Meta; matrix:
             {setIds.map((s) => <option key={s} value={s}>{names(s)}</option>)}
           </select>
         </label>
-        {hasYours && (
+        {hasYours && !isHidden('/build') && (
           <Link className="pb-2 text-accent underline" to={`/build?w=${encodeWeights(yours)}`}>Back to Build your own</Link>
         )}
       </div>

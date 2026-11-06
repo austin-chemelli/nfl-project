@@ -35,10 +35,12 @@ flowchart LR
 | `/tracker` | Season tracker: gap to the market by week, backtest Δ with CIs, log loss by season, disagreements, calibration, paper bets (bankroll, return per bet, season grid), persona vs history | tracker, meta |
 | `/hypotheses` | What history says per feature; one feature or group over time | hypotheses |
 | `/league` | League (ADR 0019, M14): a summary strip when `league.json` loads, then Playoff odds (the default; AFC or NFC, Student or market, `?conf=`, `?view=`) · Teams (`?tab=teams`: scatter of any two features, 32 teams, presets, find a team, team panel) · Standings · Games that matter (the next week by leverage, then the ten biggest later games) · Similar seasons (`?team=`; descriptive: a finish grid of the 25 nearest seasons, flag cards, an overlap chart across seven measures, the ten nearest with what matched). Teams also holds Compare (`?team=&vs=`, every published measure as a dumbbell on the league band) and Show the ranks (sortable). Playoff odds draws a sparkline per team once `history` has two Tuesdays. Teams works without `league.json`. League prints rates to a decimal and a gap in a rate as a percent, because "pts" elsewhere means win chance | teams, league |
-| `/coaches` | Team view and coach view of coordinator scheme profiles | coaches |
-| `/build` | Build your own: group budget, donut by heading, results; shareable `?w=` | diy_matrix, meta |
+| `/coaches` | Team view and coach view of coordinator scheme profiles. **Hidden on the live site** (M16) | coaches |
+| `/build` | Build your own: group budget, donut by heading, results; shareable `?w=`. **Hidden on the live site** (M16) | diy_matrix, meta |
 | `/season/:year` | Every game of a season under a weight set | season_<yyyy>, diy_matrix |
 | `/method` | How it works, honest limits, leaks found, freshness, audit | meta, audit |
+
+Hidden pages: `lib/hiddenPages.ts` lists pages kept off the live site. `isHidden` is false in `npm run dev`, so they can be worked on; in a build they leave the nav, their routes render `NotFound`, and any link to them checks it too. Nothing else changes: the code and the data files stay. A new link to a listed page has to check `isHidden`.
 
 Global: page titles per route (`Page`'s `docTitle`; tabs and bookmarks only, link previews read `index.html`), `/hypotheses` is labeled Evidence in the nav, Help tips open by tap, hover or keyboard and stay on screen (fixed position), header nav, "last updated" from `meta.generated_at` and the last lock, footer with credits and the "fan-made, not affiliated with the NFL" line, light/dark theme from the dataviz palette tokens, hover help on every feature/group/metric (descriptions from `meta.groups`), mobile-friendly layouts (tables scroll horizontally, charts reflow).
 

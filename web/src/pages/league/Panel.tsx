@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import type { TeamRow } from '../../data/contract'
 import { teamInfo } from '../../lib/teams'
 import { recordText, resultText } from './helpers'
+import { isHidden } from '../../lib/hiddenPages'
 
 /** The selected team: record, every game linking to its page, the next one marked, the scheme profile. */
 export function Panel({ code, team, onClose, ref, compare, compareRef }: {
@@ -68,9 +69,11 @@ export function Panel({ code, team, onClose, ref, compare, compareRef }: {
           )
         })}
       </ul>
-      <p className="mt-2">
-        <Link to={`/coaches?team=${code}`}>Scheme profile</Link>
-      </p>
+      {!isHidden('/coaches') && (
+        <p className="mt-2">
+          <Link to={`/coaches?team=${code}`}>Scheme profile</Link>
+        </p>
+      )}
     </section>
   )
 }
