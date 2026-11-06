@@ -431,6 +431,24 @@ def write_league(paths: Paths, season: int, snapshot: str | None) -> None:
         print(f"site: league.json failed, continuing: {e!r}")
 
 
+def write_team_files(paths: Paths, season: int, week: int, games: pl.DataFrame) -> None:
+    """ADR 0021: staff and tendency files for the team pages, one per team, and the coach view's
+    file. Like the league's, a failure here never stops a site build."""
+    try:
+        from nfl.coaches import build_profiles
+        from nfl.staff_context import team_files
+
+        def label(metric: str) -> dict:
+            d = TENDENCY_METRICS[metric]
+            return {"label": d["label"], "help": d["help"]}
+
+        for team, body in team_files(paths, season, week, games, label).items():
+            _write(paths.site / "team" / f"{team}.json", body, compact=True)
+        build_profiles(paths, season)
+    except (Exception, pl.exceptions.PanicException) as e:  # noqa: BLE001
+        print(f"site: team files failed, continuing: {e!r}")
+
+
 def build(paths: Paths, season: int | None = None, league_snapshot: str | None = None) -> dict:
     t0 = time.perf_counter()
     season = season or current_season()
@@ -512,6 +530,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             _write(site / "teams.json", teams, compact=True)  # 236 KB at indent=1, 178 KB compact
     except Exception as e:  # noqa: BLE001
         print(f"site: teams.json failed, continuing: {e!r}")
+    write_team_files(paths, season, current_week, games)
     try:
         write_retro(paths, season)
     except Exception as e:  # noqa: BLE001  retros must never break the site build
