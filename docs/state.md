@@ -2,9 +2,9 @@
 
 Where the project is right now. Chats keep it current as they work ([state-maintenance.md](state-maintenance.md)); `scripts/state_check.py` checks the mechanical parts at every session start, before every PR and in CI. How we got here: [journal.md](journal.md). What's next: [tasks.md](tasks.md). Why: [adr/](adr/). How we work: [../CLAUDE.md](../CLAUDE.md).
 
-## Bottom line (as of 2026-11-05)
+## Bottom line (as of 2026-11-06)
 
-The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). The League page's Teams tab went live 2026-11-05 (#20). Next: two flights planned 2026-11-05 on Fable, the league page (M14, ADR 0019, this chat's track `league`) and the retro's win-probability chart with a motion pass (M15, ADR 0020, all three phases live 2026-11-05: #19, #21, #22); then the narrative's previews and evals (M6.3, M6.4).
+The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). The League page went live 2026-11-05 and 11-06 (#20, #23): playoff odds on two variants, standings, leverage, team charts and slate stakes lines. Next: two flights planned 2026-11-05 on Fable, the league page (M14, ADR 0019, this chat's track `league`) and the retro's win-probability chart with a motion pass (M15, ADR 0020, all three phases live 2026-11-05: #19, #21, #22); then the narrative's previews and evals (M6.3, M6.4).
 
 ## What runs where
 
@@ -86,7 +86,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| league | `league-playoffs`, then `league-context` | `~/dev/nfl-project-league` | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | phase 1 live 2026-11-05 (#20). Phase 2 (M14.6 to M14.12) built on `league-playoffs`, PR #23 open; after the merge: image, `nfl-site`, check `league.json` and a slate stakes line | #20 merged, #23 |
+| league | `league-context` | `~/dev/nfl-project-league` | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | phases 1 and 2 merged and live (#20, #23), checked in production 2026-11-06. Phase 3 (similar seasons, compare, ranks) not started. The first real snapshot lands with Saturday's lock: check the job log for `SNAPSHOT NOT SAVED` | #20, #23 merged |
 | pop | `retro-wp`, `retro-drives`, `retro-story` | removed | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; pinned result | merged 2026-11-05, all three phases live; `nfl-retro` run by hand on d969ab3, retros on schema 6; worktree and branches removed. M15.10 route crossfades optional, not built | #19, #21, #22 |
 | ui | `ui-next` | `~/dev/nfl-project-ui` | M13 site walk fixes merged 2026-11-05 (#18); round 2 done; later items in `.notes/ui-round2.md` §9 (tendencies across situations, H4 injuries and news tab, open-bets list once live bets exist) | U1 to U5 merged and live (#11, #13, #14, #16, #17); `nfl-retro` and `nfl-site` run by hand on 041a83a, 2026-11-05 | #11, #13, #14, #16, #17 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
@@ -109,7 +109,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M10 site v2, one answer first (ADR 0017) | done 2026-11-04 (PR #4) |
 | M11 model wave 2 (ADR 0018) | done 2026-11-04 (PR #12), live before the first public lock |
 | M13 site walk fixes (review §10) | done 2026-11-05 (PR #18), live; retros on schema 5 |
-| M14 league page (ADR 0019) | phase 1 (Teams tab) live 2026-11-05 (#20); phase 2 built (PR #23 open); phase 3 planned; track `league` |
+| M14 league page (ADR 0019) | phases 1 and 2 live (#20, #23); phase 3 planned; track `league` |
 | M15 retro win probability, motion, drives, story (ADR 0020) | done 2026-11-05 (#19, #21, #22), live; retros on schema 6; M15.10 route crossfades optional, not built |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
