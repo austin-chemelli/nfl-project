@@ -411,6 +411,8 @@ Decided (ADR 0020): `vegas_home_wp`; "Turning points"; CSS tokens, no animation 
 
 ### Phase 3: the story layout (branch `retro-story`; about two days)
 
+*M15.9 built 2026-11-05. The retro's order needed no change after phases 1 and 2, so it's the ADR 0017 amendment and the pinned strip. M15.10 not built: optional, Austin's call.*
+
 - **M15.9 ADR 0017 amendment and the reordered retro (main session first).** Amendment: retro tab order headline, WP chart, played like, phases, efficiency, swings, forecasts; a one-line condensed strip (result chip and score) becomes `position: sticky` under the header once the full strip scrolls out (IntersectionObserver). Files: `docs/adr/0017-*.md`, `pages/game/Retro.tsx`, `SummaryStrip.tsx` (`Condensed`), tests. Acceptance: the condensed strip appears only after the full strip leaves the viewport (observer mocked); reduced motion disables the slide-in.
 - **M15.10 Route crossfades (optional).** `app/Layout.tsx` links with `viewTransition`; a test that the attribute is set; verified in a browser since jsdom has no view transitions. Only if Austin wants orientation motion after living with phase 1.
 

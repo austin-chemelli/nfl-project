@@ -1,5 +1,5 @@
 /** The one-answer-first row of tiles at the top of a page or tab (ADR 0017). */
-import { Children, type ReactNode } from 'react'
+import { Children, useEffect, useState, type ReactNode, type Ref } from 'react'
 import { colorVar } from '../lib/models'
 import { Swatch } from './ui'
 import { useSetTab } from './Tabs'
@@ -69,10 +69,45 @@ export function Tile({ label, value, sub, tab, modelId, accent }: {
   return <div className={base} style={style}>{body}</div>
 }
 
-export function SummaryStrip({ children, label = 'Summary' }: { children: ReactNode; label?: string }) {
+export function SummaryStrip({ children, label = 'Summary', ref }: { children: ReactNode; label?: string; ref?: Ref<HTMLDivElement> }) {
   return (
-    <div role="group" aria-label={label} className={`grid grid-cols-2 gap-2 sm:grid-cols-3 ${Children.count(children) === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-5'}`}>
+    <div ref={ref} role="group" aria-label={label} className={`grid grid-cols-2 gap-2 sm:grid-cols-3 ${Children.count(children) === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-5'}`}>
       {children}
+    </div>
+  )
+}
+
+/** Whether `el` has scrolled up behind the site header, and how tall that header is. */
+function useScrolledPast(el: Element | null) {
+  const [state, setState] = useState({ past: false, top: HEADER })
+  useEffect(() => {
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const top = document.querySelector('header')?.getBoundingClientRect().height || HEADER
+    const io = new IntersectionObserver(
+      // a strip below the fold isn't intersecting either: only "past" when it left through the top
+      ([e]) => setState({ past: !e.isIntersecting && e.boundingClientRect.bottom <= top + 1, top }),
+      { rootMargin: `-${top}px 0px 0px 0px` },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [el])
+  return state
+}
+
+/**
+ * One line that sticks under the header once `watch` (the full strip) has scrolled out (ADR 0017
+ * amendment). The shell has no height, and -mb-8 cancels the page's gap, so nothing moves when it shows.
+ * It repeats the page's header, so it's hidden from screen readers.
+ */
+export function Condensed({ watch, children }: { watch: Element | null; children: ReactNode }) {
+  const { past, top } = useScrolledPast(watch)
+  return (
+    <div className="sticky z-10 -mb-8 h-0" style={{ top }}>
+      {past && (
+        <div data-testid="condensed" aria-hidden="true" className="pin-in -mx-4 flex h-9 items-center gap-2 border-b border-line bg-surface-1/95 px-4 text-[14px] backdrop-blur sm:-mx-6 sm:px-6">
+          {children}
+        </div>
+      )}
     </div>
   )
 }

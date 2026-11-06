@@ -171,6 +171,8 @@ a { color: var(--accent); }
 @keyframes bar-grow { from { transform: scaleX(0); } }
 .chart-tip-in { animation: motion-fade var(--dur-fast) var(--ease-out); }
 .tab-panel-in { animation: motion-fade var(--dur-base) var(--ease-out); }
+.pin-in { animation: pin-in var(--dur-base) var(--ease-out); }
+@keyframes pin-in { from { transform: translateY(-100%); } }
 .tile-flash { animation: tile-flash calc(var(--dur-base) * 3) var(--ease-out); }
 @keyframes tile-flash { from { background-color: color-mix(in srgb, var(--accent) 16%, transparent); } }
 .tab-panel-in.tile-flash { animation: motion-fade var(--dur-base) var(--ease-out), tile-flash calc(var(--dur-base) * 3) var(--ease-out); }

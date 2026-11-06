@@ -1,4 +1,5 @@
 /** The game page's title and one quiet line of facts (ADR 0017); the final score is the only loud element. */
+import type { ReactNode } from 'react'
 import { StatusBadge } from '../../components/ui'
 import { TeamAccent } from '../../components/TeamAccent'
 import type { Game } from '../../data/contract'
@@ -51,6 +52,23 @@ export function GameHeader({ g }: { g: Game }) {
         </div>
       )}
     </div>
+  )
+}
+
+/** The one line that stays on screen down a finished game's page: the score and the result tile's verdict. */
+export function PinnedResult({ g, verdict, ot }: { g: Game; verdict: ReactNode; ot: boolean }) {
+  const r = g.result
+  if (!r || r.home_score == null || r.away_score == null) return null
+  return (
+    <>
+      <span className="tabular font-semibold">
+        <Score team={g.away} pts={r.away_score} won={r.margin < 0} />
+        <span className="text-ink-3"> – </span>
+        <Score team={g.home} pts={r.home_score} won={r.margin > 0} />
+      </span>
+      {ot && <span className="text-[12px] text-ink-3">OT</span>}
+      <span className="ml-auto truncate rounded-full border border-line px-2 py-px text-[12px] text-ink-2">{verdict}</span>
+    </>
   )
 }
 

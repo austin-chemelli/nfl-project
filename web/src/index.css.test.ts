@@ -28,6 +28,10 @@ describe('motion tokens', () => {
     expect(rm).toMatch(/::view-transition-group\(\*\)[^{]*\{\s*animation:\s*none/)
   })
 
+  it('the pinned strip slides in on a token, so reduced motion shows it at once', () => {
+    expect(css).toMatch(/\.pin-in\s*\{\s*animation:\s*pin-in var\(--dur-base\)/)
+  })
+
   it('no animation or transition declaration uses a literal time', () => {
     const decl = /(?:^|[;{\s])((?:animation|transition)[\w-]*)\s*:([^;}]*)/g
     let found = 0

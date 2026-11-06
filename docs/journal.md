@@ -491,3 +491,13 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 **Findings.** A drive's `end_yl` is the last snap, so a touchdown stops a yard or more short of the goal line; the chart takes touchdowns to the line. Drive results reconcile with the final score in all 242 team-games of 2026 (touchdowns, field goals, defensive scores and safeties, with conversions the only gap), which is the check that says the data is tagged right. Field orientation is a choice: the away team always drives right, which isn't how teams switch ends in a real game, and the help text says so.
 
 **Lesson.** When a new chart only redraws published data, a reconciliation against a number the reader already trusts, here the score, is worth more than more unit tests.
+
+## 2026-11-05: the result stays on screen (M15 phase 3)
+
+**Why.** With the curve and the drives in, a finished game's page runs several screens on a phone, and the result scrolls away with the summary strip.
+
+**What changed.** ADR 0017 is amended first, as ADR 0020 required: the retro's order is written down, Drive by drive placed after the curve, and a finished game gets a pinned result. `Condensed` shows one line under the site header (the score, OT, the verdict) once the full strip has left through the top. The scroll-driven story stays rejected.
+
+**Findings.** The reorder the plan expected was already done by building phases 1 and 2 in that order. The observer has to tell "left through the top" from "still below the fold", since neither is intersecting. Measuring the header at runtime keeps this free of the league track's `Layout.tsx`.
+
+**Lesson.** A sticky element with no height is a cheap way to add a pinned line without moving anything: page height was identical with it on and off, which is the check that matters.
