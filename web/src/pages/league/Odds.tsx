@@ -7,6 +7,8 @@ import type { LeagueFile } from '../../data/contract'
 import { dash, kickoffEt } from '../../lib/format'
 import { teamDotVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
+import { hasSpark, sparkSeries } from './context'
+import { Spark } from './Spark'
 import { barWidth, fmtProb, oddsRows, parseConf, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
 
 const MAX_WINS = 17
@@ -63,6 +65,7 @@ export function Odds({ file }: { file: LeagueFile }) {
     setParams((prev) => { const n = new URLSearchParams(prev); if (v === fallback) n.delete(k); else n.set(k, v); return n }, { replace: true, preventScrollReset: true })
   const rows = oddsRows(file, conf, view)
   const { box, at, bind, card } = useChartTip()
+  const anySpark = rows.some((r) => hasSpark(sparkSeries(file, r.team.team, view)))
   const tipRow = rows.find((r) => r.team.team === at?.key)
   if (Object.keys(file.odds.student.teams).length === 0) return <p className="text-ink-2">The regular season is over. The final records are on the Standings tab.</p>
 
@@ -101,6 +104,8 @@ export function Odds({ file }: { file: LeagueFile }) {
                   <span className="bar-grow absolute inset-y-0 left-0 origin-left rounded-sm" style={{ width: barWidth(odds.playoffs), background: 'var(--team-home)', ['--i' as string]: Math.min(i, 7) }} />
                 </span>
                 <span className="tabular w-14 shrink-0 text-right text-[15px] font-semibold text-ink">{fmtProb(odds.playoffs)}</span>
+                {/* when any team has a line, the rest keep its width so every bar stays on one scale */}
+                {anySpark && (hasSpark(sparkSeries(file, team.team, view)) ? <Spark points={sparkSeries(file, team.team, view)} /> : <span aria-hidden className="w-16 shrink-0" />)}
               </span>
               <span className="order-2 flex items-baseline gap-2 md:order-1" title={teamInfo(team.team).name}>
                 <span className="font-medium text-ink">{team.team}</span>
@@ -136,7 +141,7 @@ export function Odds({ file }: { file: LeagueFile }) {
           ),
         )}
       </div>
-      <p className="text-[13px] text-ink-3">The line sits below the seven highest chances, which isn't the same as the current seeds. Hover or tap a team for its chance in each round.</p>
+      <p className="text-[13px] text-ink-3">The line sits below the seven highest chances, which isn't the same as the current seeds. Hover or tap a team for its chance in each round.{anySpark && ' The small line is the team\'s chance at each Tuesday refresh since the odds began.'}</p>
 
       <DataTable>
         <table className="w-full border-collapse text-[13px]">

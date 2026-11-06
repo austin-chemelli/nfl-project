@@ -729,6 +729,26 @@ export const LeagueGame = z.looseObject({
 
 export const LeagueHistoryPoint = z.looseObject({ week: num, student: nnum.default(null), market: nnum.default(null) })
 
+/** One of the ten nearest past team-seasons. `round` is the furthest round reached: wc, div, conf, sb, champ, or null. */
+export const SimilarNeighbour = z.looseObject({
+  season: num,
+  team: z.string(), // as printed then (SD, OAK, STL)
+  dist: num,
+  rec_then: z.string(), // "6-2"
+  final: z.string(), // "7-9-0"
+  playoffs: z.boolean(),
+  round: nstr.default(null),
+})
+
+/** What the nearest team-seasons did (descriptive, ADR 0019). `rounds` count reaching that round or beyond, of the `k_summary` nearest. A team with no entry has nothing to show. */
+export const SimilarTeam = z.looseObject({
+  games_played: num,
+  k_summary: num,
+  made_playoffs: num,
+  rounds: z.looseObject({ div: num, conf: num, sb: num, champ: num }),
+  neighbours: z.array(SimilarNeighbour).default([]),
+})
+
 export const LeagueFile = z.looseObject({
   schema_version: z.string(),
   season: num,
@@ -743,7 +763,7 @@ export const LeagueFile = z.looseObject({
   odds: z.looseObject({ student: LeagueVariant, market: LeagueVariant }),
   games: z.array(LeagueGame).default([]),
   history: z.record(z.string(), z.array(LeagueHistoryPoint)).default({}),
-  similar: z.record(z.string(), z.unknown()).default({}), // empty until phase 3
+  similar: z.record(z.string(), SimilarTeam).default({}), // team -> look-alike seasons; a team under four games has no entry
 })
 
 export type LeagueTeam = z.infer<typeof LeagueTeam>
@@ -751,4 +771,7 @@ export type LeagueOddsTeam = z.infer<typeof LeagueOddsTeam>
 export type LeagueVariant = z.infer<typeof LeagueVariant>
 export type LeagueSwing = z.infer<typeof LeagueSwing>
 export type LeagueGame = z.infer<typeof LeagueGame>
+export type SimilarNeighbour = z.infer<typeof SimilarNeighbour>
+export type SimilarTeam = z.infer<typeof SimilarTeam>
+export type LeagueHistoryPoint = z.infer<typeof LeagueHistoryPoint>
 export type LeagueFile = z.infer<typeof LeagueFile>

@@ -35,6 +35,9 @@ Austin, after the first look at the Teams tab: why blue and orange instead of te
 - **Tabs:** Austin, on seeing it: Playoff odds is the default and first tab, Teams second, because the strip above it is about the playoffs. Links from before this need `?tab=teams`.
 - **Contract:** `odds.<variant>` is `{sources, teams}` rather than team keys beside a `_sources` key, and `games[]` adds `home`, `away`, `kickoff` and the branch run counts.
 
+## Amendment 2026-11-06: what phase 3 measured
+Similar seasons score a leave-one-season-out Brier of 0.134 at k = 25 and 8 games played for "made the playoffs" (n = 768; base 0.238), matching the plan's 0.134. A team under four games played has no entry. The current vector comes from `team_latest`, the same next-game rows as `teams.json`, so it moves with a feature build and not with a kickoff. It adds about 0.3 s and 37 KB to `league.json`. A failure in it costs the tab, not the odds.
+
 ## Consequences
 - New modules `nfl/league/` (divisions, teams file, standings, tiebreak, simulate, inputs, similar, build) and `nfl league`; two new site files; one new mart. Architecture §3.6d and §3.7.
 - The game page's Details bands change slightly for FTN rates and per-game features once `feature_bands` reads next-game rows. Intended.

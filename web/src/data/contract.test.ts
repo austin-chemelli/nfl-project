@@ -85,6 +85,25 @@ describe('contract: league.json', () => {
     expect(p.teams[0].seed_today).toBeNull()
   })
 
+  it('types similar and history, and defaults a neighbour without a round', () => {
+    const f = raw()
+    const p = C.LeagueFile.parse(f)
+    expect(Object.keys(p.similar).length).toBeGreaterThan(3)
+    expect(Object.keys(p.similar).length).toBeLessThan(32) // a team under four games has no entry
+    expect(p.similar.CHI.neighbours).toHaveLength(10)
+    expect(p.similar.CHI.rounds).toMatchObject({ div: 4, conf: 2, sb: 1, champ: 0 })
+    expect(p.history.CHI).toHaveLength(3)
+    delete f.similar.CHI.neighbours[0].round
+    delete f.similar.CHI.neighbours
+    expect(C.LeagueFile.parse(f).similar.CHI.neighbours).toEqual([])
+  })
+
+  it('rejects a similar entry without its summary', () => {
+    const f = raw()
+    delete f.similar.CHI.made_playoffs
+    expect(C.LeagueFile.safeParse(f).success).toBe(false)
+  })
+
   it('rejects a file without odds', () => {
     const f = raw()
     delete f.odds

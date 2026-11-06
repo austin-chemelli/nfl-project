@@ -376,6 +376,8 @@ Built 2026-11-05: M14.6 to M14.12 on `league-playoffs`. What the build measured 
 
 ### Phase 3: context (branch `league-context`; about two days)
 
+Built 2026-11-06: M14.14 to M14.16 on `league-context`. The sparkline in M14.15 stays hidden until two Tuesdays are in the mart.
+
 **Parallel:** M14.14 ∥ M14.16, then M14.15, then M14.17.
 
 - **M14.14 Similar seasons.** *P.* Files: new `src/nfl/league/similar.py` (alignment by games played; a team's current vector is its next-game row and a past team's the row of its (n+1)th regular-season game; features: win percentage to date plus `strength.epa_off_adj`, `epa_def_adj`, `point_diff_pg`, `pythag_win_pct`, `qb_epa`, `sos`, standardized across candidates at the same games played, record weighted ×2, Euclidean; candidates 2002–2025; outcome table from `curated/games`: final W-L-T, playoffs, round reached, champion), `src/nfl/league/build.py` (fill `similar{}`: the 10 nearest by name, a 25-nearest summary), `tests/test_league_similar.py`. Acceptance: the same team-season and the current season are excluded; alignment by games played; a leave-one-season-out Brier helper prints ≤ 0.140 at k = 25 on local data (skipped without it); historical codes print as they were (2005 SD).

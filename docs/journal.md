@@ -513,3 +513,13 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 A reviewer pass then checked the numbers independently (records, seeds and the simulation reproduced exactly; nothing can touch a lock) and found what the tests couldn't. Scores arrive up to a day after a game ends, so a finished game could headline the page; the page now keeps only games with a kickoff still ahead. Ratings for playoff games shrank to nothing by Week 18, because they fit remaining games only, and with one game left the home term became that game's logit; played games now anchor the fit. `through_week` moved on a Thursday score, which would have mislabelled Saturday snapshots for good. The σ comparison wasn't paired at 0; paired, the gain stops being significant even at the 12-game cut.
 
 **Lesson.** A number with a source label is a claim about the source. Most of "market" was a model, and only holding out real lines showed it was no closer to the market than the thing it was compared with. And fixtures hide scale: 34 fixture games looked fine, 151 real ones ran past 20,000 pixels on a phone.
+
+## 2026-11-06: context for the League page: similar seasons, compare, ranks (M14 phase 3)
+
+**Why.** Odds say what a simulation expects. A fan also asks what happened to teams like this one, and how two teams compare on everything we publish (ADR 0019).
+
+**What changed.** `src/nfl/league/similar.py` finds each team's nearest past team-seasons since 2002, aligned by games played, and `league.json` carries the ten nearest and a summary of 25. `/league` gains a Similar seasons tab. The Teams tab gains Compare (`?team=&vs=`, every published measure on the league band, grouped) and a sortable rank table. Playoff odds has a sparkline, hidden until two Tuesdays are in the mart.
+
+**Findings.** Leave-one-season-out Brier 0.134 at k = 25 against 0.238 for the base rate. The current team's row had to come from `team_latest`: counting games from the clock would have brought back the Sunday drift phase 1 fixed, and all 192 rows match `teams.json` on game and value. All 30 neighbours checked for BUF, CHI and LAC match `curated/games`.
+
+**Lesson.** Reusing the one function that already answers "which row is current" is worth more than a test that a second answer agrees with it.

@@ -22,7 +22,10 @@ import {
   usableFeatures,
   type ColorMode,
 } from './helpers'
+import { Compare } from './Compare'
+import { resolveVs } from './context'
 import { Panel } from './Panel'
+import { Ranks } from './Ranks'
 
 const field = 'rounded-md border border-line bg-surface-1 px-2 py-1 text-[13px] text-ink'
 
@@ -69,6 +72,9 @@ export function Teams({ file }: { file: TeamsFile }) {
     }
     shown.current = team
   }, [team])
+
+  // An unknown or repeated ?vs= is ignored, as ?team= is; a comparison needs a team picked first.
+  const vs = resolveVs(file, team, params.get('vs'))
 
   const axes = resolveAxes(file, params.get('x'), params.get('y'))
   if (!axes) return <p className="text-ink-2">Team charts appear after the next data update.</p>
@@ -127,7 +133,7 @@ export function Teams({ file }: { file: TeamsFile }) {
           <select
             ref={picker}
             value={team ?? ''}
-            onChange={(e) => update((n) => { if (e.target.value) n.set('team', e.target.value); else n.delete('team') })}
+            onChange={(e) => update((n) => { if (e.target.value) n.set('team', e.target.value); else { n.delete('team'); n.delete('vs') } })}
             className={`${field} max-w-full`}
           >
             <option value="">All teams</option>
@@ -188,7 +194,20 @@ export function Teams({ file }: { file: TeamsFile }) {
       />
       {missing.length > 0 && <p className="text-[13px] text-ink-3">Not shown: {missing.join(', ')} (no value yet on one of these measures).</p>}
 
-      {team && <Panel ref={panel} code={team} team={file.teams[team]} onClose={() => { update((n) => n.delete('team')); picker.current?.focus() }} />}
+      {team && (
+        <Panel
+          ref={panel}
+          code={team}
+          team={file.teams[team]}
+          onClose={() => { update((n) => { n.delete('team'); n.delete('vs') }); picker.current?.focus() }}
+          compare={{
+            options: rows.filter((c) => c !== team).map((c) => ({ code: c, name: teamInfo(c).name })),
+            value: vs,
+            onChange: (c) => update((n) => { if (c) n.set('vs', c); else n.delete('vs') }),
+          }}
+        />
+      )}
+      {team && vs && <Compare file={file} a={team} b={vs} onClose={() => update((n) => n.delete('vs'))} />}
 
       <DataTable>
         <table className="w-full border-collapse text-[13px]">
@@ -214,6 +233,7 @@ export function Teams({ file }: { file: TeamsFile }) {
           </tbody>
         </table>
       </DataTable>
+      <Ranks file={file} />
 
       <FinePrint>
         <p>Each team's numbers as they stand entering its next game, so early weeks lean on last season. Form measures cover recent games, and a streak can run across seasons. Measures marked "vs avg" are the play-caller's past seasons against the league average, not this year's tape.</p>

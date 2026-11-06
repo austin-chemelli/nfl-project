@@ -28,10 +28,10 @@ function withoutLeague(): string {
 }
 
 describe('League page, playoff tabs', () => {
-  it('shows the four tabs in order, Playoff odds first and selected, and a summary strip', async () => {
+  it('shows the five tabs in order, Playoff odds first and selected, and a summary strip', async () => {
     renderRoute('/league')
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((t) => t.textContent)).toEqual(['Playoff odds', 'Teams', 'Standings', 'Games that matter'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['Playoff odds', 'Teams', 'Standings', 'Games that matter', 'Similar seasons'])
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
     const strip = await screen.findByRole('group', { name: 'League summary' })
     expect(within(strip).getAllByRole('button')).toHaveLength(4)
@@ -124,6 +124,43 @@ describe('League page, playoff tabs', () => {
     expect(li.textContent).not.toMatch(/→|\b0\b/)
     const later = screen.getByRole('region', { name: 'Later games' })
     expect(within(later).getAllByRole('link').length).toBeLessThanOrEqual(LATER_GAMES)
+  })
+
+  it('Odds: a sparkline for each team with two or more points, labelled with the first and last value, in the view shown', async () => {
+    const withHistory = (view: string) => `/league?tab=odds&view=${view}`
+    renderRoute(withHistory('student'))
+    const list = await screen.findByRole('list', { name: 'AFC playoff odds' })
+    const sparks = within(list).getAllByRole('img')
+    const names = Object.keys(league.history).filter((t) => league.teams.find((x) => x.team === t)!.conf === 'AFC')
+    expect(sparks).toHaveLength(names.length)
+    const kc = list.querySelector('[data-team="KC"] svg')!
+    const h = league.history.KC
+    expect(kc.getAttribute('aria-label')).toMatch(new RegExp(`^Chance of the playoffs by week: Week ${h[0].week} \\d+%, Week ${h[2].week} (>99\\.9%|\\d+%)$`))
+    expect(kc.getAttribute('aria-label')).not.toMatch(/(^|[^.\d])(0|100)%/)
+    expect(kc.querySelectorAll('polyline')).toHaveLength(1)
+    cleanup()
+    renderRoute(withHistory('market'))
+    const market = await screen.findByRole('list', { name: 'AFC playoff odds' })
+    expect(market.querySelector('[data-team="KC"] svg')!.getAttribute('aria-label')).not.toBe(kc.getAttribute('aria-label'))
+    expect(screen.getByText(/The small line is the team's chance/)).toBeInTheDocument()
+  })
+
+  it('Odds: with no history, or one point, nothing is drawn and the row has no extra element', async () => {
+    const lone = { ...league.history, KC: [league.history.KC[0]] }
+    for (const history of [{}, lone]) {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'league-hist-'))
+      fs.cpSync(FIX, root, { recursive: true })
+      const f = JSON.parse(fs.readFileSync(path.join(root, 'site/league.json'), 'utf8'))
+      f.history = history === lone ? Object.fromEntries(Object.entries(history).filter(([k]) => k === 'KC')) : history
+      fs.writeFileSync(path.join(root, 'site/league.json'), JSON.stringify(f))
+      const { unmount } = renderRoute('/league?tab=odds', root)
+      const list = await screen.findByRole('list', { name: 'AFC playoff odds' })
+      expect(within(list).queryAllByRole('img')).toHaveLength(0)
+      expect(list.querySelectorAll('svg')).toHaveLength(0)
+      expect(screen.queryByText(/The small line is/)).toBeNull()
+      unmount()
+      fs.rmSync(root, { recursive: true, force: true })
+    }
   })
 
   it('Odds: says when it was simulated', async () => {
