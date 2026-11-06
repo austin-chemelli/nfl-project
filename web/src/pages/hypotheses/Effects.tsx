@@ -86,6 +86,7 @@ export function Effects({ h, groupName }: { h: Hypotheses; groupName: (id: strin
                 title: `${f.label}: ${pp(f.effect_pp)} pts (90% range ${pp(f.effect_lo_pp)} to ${pp(f.effect_hi_pp)}), ${f.verdict}. ${f.description ?? ''}`,
               }))}
               format={(v) => pp(v, 1)}
+              focusable={false}
               refLabel="No effect"
               leftLabel="favors the away side"
               rightLabel="favors the home side"

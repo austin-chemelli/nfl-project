@@ -347,12 +347,13 @@ export function wpLede(r: RetroGame): string | null {
   const home = m > 0
   const winner = home ? r.home : r.away
   const low = ws.winner_low ?? [0, Math.min(...ws.points.map(([, p]) => (home ? p : 1 - p)))]
-  if (ws.winner_low && low[1] < 0.25) {
+  // a low at t = 0 is where the winner started, so it never "fell" there
+  if (ws.winner_low && low[0] > 0 && low[1] < 0.25) {
     const pctText = low[1] < 0.005 ? 'under 1%' : pc(low[1])
     const when = periodAt(low[0])
-    return `${winner} won ${score(r)} after falling to ${pctText} ${when === 'overtime' ? 'in overtime' : `in ${when}`}.`
+    return `${winner} won ${score(r)} after its win chance fell to ${pctText} ${when === 'overtime' ? 'in overtime' : `in ${when}`}.`
   }
-  return `${winner} never fell below ${Math.floor(low[1] * 100)}% on the way to a ${score(r)} win.`
+  return `${winner}'s win chance never fell below ${Math.floor(low[1] * 100 + 1e-9)}% on the way to a ${score(r)} win.`
 }
 
 const FACTOR_LABELS: Record<string, string> = {

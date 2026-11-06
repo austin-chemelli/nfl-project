@@ -58,7 +58,7 @@ export function WpChart({ series, home, away, homeScore, awayScore, describe }: 
   const p0 = first?.[1] ?? 0.5
   const kickoff = `${p0 >= 0.5 ? home : away} ${pc(Math.max(p0, 1 - p0))} at kickoff`
   const wl = series.winner_low
-  const winnerLow = wl && wl[1] < 0.25 ? wl : null
+  const winnerLow = wl && wl[0] > 0 && wl[1] < 0.25 ? wl : null
   const lowSpot = winnerLow ? { cx: x(winnerLow[0]), cy: y(margin > 0 ? winnerLow[1] : 1 - winnerLow[1]) } : null
 
   const lowText = wl ? `${winner} low of ${pc(wl[1])} in ${period(wl[0])}` : `home low of ${pc(Math.min(...points.map(([, p]) => p)))}`
@@ -96,6 +96,9 @@ export function WpChart({ series, home, away, homeScore, awayScore, describe }: 
             {first && <circle data-testid="wp-start" cx={x(first[0])} cy={y(p0)} r={4} fill="var(--text-secondary)" stroke="var(--surface-1)" strokeWidth={1.5} />}
             {last && <circle data-testid="wp-end" cx={x(last[0])} cy={y(last[1])} r={4} fill="var(--text-secondary)" stroke="var(--surface-1)" strokeWidth={1.5} />}
             {lowSpot && <circle data-testid="wp-low" cx={lowSpot.cx} cy={lowSpot.cy} r={6} fill="none" stroke="var(--text-secondary)" strokeWidth={2} />}
+            {lowSpot && wl && (
+              <text data-testid="wp-low-note" x={Math.max(M.l + 24, Math.min(width - M.r - 24, lowSpot.cx))} y={clampY(margin > 0 ? lowSpot.cy - 11 : lowSpot.cy + 19)} textAnchor="middle" {...HALO} className="fill-[var(--text-secondary)]">{winner} {pc(wl[1])}</text>
+            )}
             {startPos && <text data-testid="wp-start-note" x={startPos.x} y={startPos.y} {...HALO} className="fill-[var(--text-secondary)]">{kickoff}</text>}
             {endPos && <text data-testid="wp-end-note" x={endPos.x} y={endPos.y} textAnchor="end" {...HALO} className="fill-[var(--text-muted)]">{finalText}</text>}
           </g>

@@ -66,6 +66,7 @@ describe('WpChart', () => {
     expect(screen.getByTestId('wp-start-note')).toHaveTextContent('GB 65% at kickoff')
     expect(screen.getByTestId('wp-end-note')).toHaveTextContent('CAR won 23–20')
     expect(screen.getByTestId('wp-low')).toBeInTheDocument()
+    expect(screen.getByTestId('wp-low-note')).toHaveTextContent('CAR 16%')
     expect(container.querySelectorAll('[data-testid="wp-low"]')).toHaveLength(1)
   })
 

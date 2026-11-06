@@ -89,7 +89,9 @@ describe('skeletons', () => {
   it('Loading what="page" renders the page shape with a title bar', () => {
     const { container } = render(<Loading what="page" />)
     expect(screen.getByRole('status', { name: 'Loading page…' })).toBeInTheDocument()
-    expect(container.querySelector('[data-skeleton="tabs"]')).not.toBeNull()
+    // the route fallback serves pages with no tiles or tabs, so it doesn't promise them
+    expect(container.querySelector('[data-skeleton="tabs"]')).toBeNull()
+    expect(container.querySelector('[data-skeleton="tile"]')).toBeNull()
   })
 
   it('a small Loaded caller gets the compact form, and a shaped one the page shape', () => {
@@ -97,6 +99,7 @@ describe('skeletons', () => {
     const small = render(<Loaded q={pending} what="method">{() => null}</Loaded>)
     expect(screen.getByRole('status', { name: 'Loading method…' })).toBeInTheDocument()
     expect(small.container.querySelector('[data-skeleton="tile"]')).toBeNull()
+    expect(screen.getByText('Loading method…')).toBeVisible() // these pages have no shape to show, so they keep the words
     small.unmount()
     const shaped = render(<Loaded q={pending} what="game" shape="game">{() => null}</Loaded>)
     expect(shaped.container.querySelectorAll('[data-skeleton="tile"]')).toHaveLength(5)

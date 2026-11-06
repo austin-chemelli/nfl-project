@@ -389,6 +389,8 @@ Decided (ADR 0020): `vegas_home_wp`; "Turning points"; CSS tokens, no animation 
 
 ### Phase 1: the win-probability chart and the motion pass (branch `retro-wp`; about three days)
 
+*Built 2026-11-05 in one evening. `app/routes.tsx` was left to the league track: `Loading` itself renders the route fallback's shape.*
+
 **Parallel:** M15.1 first, then M15.2 ∥ M15.3 ∥ M15.4 ∥ M15.5, then M15.6.
 
 - **M15.1 Contract (main session).** Files: `src/nfl/retro/schema.py` (`WpPlay`, `WpSeries`, `Drive` as in `.notes/plans/pop-wp-chart-motion.md` "Contract"; `RetroGame.wp_series` and `drives` default `None`; `SCHEMA_VERSION` to the next free value with a dated comment), `web/src/data/contract.ts` (`.nullish()`), `tests/fixtures/retro/game_2026_08_CAR_GB.json` and its web copy (a hand-written `wp_series` with about 30 points, 3 plays, one `factor`; `drives` null), `tests/test_retro_schema.py`, `web/src/data/contract.test.ts`. Acceptance: the fixture validates in pydantic and zod; a record without the fields parses on both sides; `test_web_fixtures_match` green.

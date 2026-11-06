@@ -83,11 +83,11 @@ describe('Retro', () => {
     const heads = [...container.querySelectorAll('h2')].map((h) => h.textContent)
     const order = ['What happened', 'How it unfolded', 'Played like']
     expect(heads.slice(0, 3).map((t, i) => t?.startsWith(order[i]))).toEqual([true, true, true])
-    expect(screen.getByText(/CAR won 23–20 after falling to 16% in Q2\./)).toBeInTheDocument()
+    expect(screen.getByText(/CAR won 23–20 after its win chance fell to 16% in Q2\./)).toBeInTheDocument()
     const items = screen.getAllByRole('listitem').filter((li) => li.closest('ol'))
     const marks = screen.getAllByTestId('wp-mark')
     expect(items).toHaveLength(marks.length)
-    expect(items[1]).toHaveTextContent('Q4 3:02 · GB: CAR 36% → 79% (+43 pts). (Shotgun) J.Love')
+    expect(items[1]).toHaveTextContent('Q4 3:02 · GB: CAR win chance 36% → 79% (+43 pts). (Shotgun) J.Love')
     expect(items[1]).toHaveTextContent('Counted in: Fumble recoveries.')
     expect(screen.getByText('Turning points')).toBeInTheDocument()
     expect(screen.getByText(/not one of this site's approaches/)).toBeInTheDocument()

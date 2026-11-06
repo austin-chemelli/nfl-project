@@ -69,7 +69,7 @@ function Unfolded({ r }: { r: RetroGame }) {
                 const m = describe(p)
                 return (
                   <li key={p.play_id}>
-                    <span className="font-medium text-ink">{m.title}</span>: {m.team} {m.prob} ({m.swing}). {m.text}
+                    <span className="font-medium text-ink">{m.title}</span>: {m.team} win chance {m.prob} ({m.swing}). {m.text}
                     {m.counted && <> {m.counted}.</>}
                   </li>
                 )

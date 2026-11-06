@@ -5,12 +5,12 @@
  */
 import { scaleLinear } from 'd3-scale'
 import type { ReactNode } from 'react'
-import { TipRow, TipTitle, useChartTip } from './ChartTip'
+import { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
 
 export type DotRow = { key: string; label: ReactNode; value: number; lo: number; hi: number; color?: string; title?: string }
 
-export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, rightLabel, marker, rowHeight = 26, labelWidth = 170 }: {
+export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, rightLabel, marker, rowHeight = 26, labelWidth = 170, focusable = true }: {
   rows: DotRow[]
   format: (v: number) => string
   refValue?: number
@@ -21,6 +21,8 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
   marker?: { value: number; label: string }
   rowHeight?: number
   labelWidth?: number
+  /** False takes the rows out of the tab order (a long list whose text is repeated below); hover and tap still work. */
+  focusable?: boolean
 }) {
   const [ref, width] = useWidth()
   const { box, at, bind, card } = useChartTip()
@@ -38,7 +40,8 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
   return (
     <div ref={ref} className="w-full">
       <div ref={box} className="relative">
-      <svg width={width} height={h} role="img" className="block text-[12px]">
+      <svg width={width} height={h} className="block text-[12px]">
+        {rows.map((r, i) => at?.key === r.key && <rect key={r.key} x={0} y={head + i * rowHeight} width={width} height={rowHeight} rx={4} fill="var(--surface-2)" />)}
         <g className="fill-[var(--text-muted)]">
           {leftLabel && <text x={x(refValue) - 6} y={12} textAnchor="end">← {leftLabel}</text>}
           {rightLabel && <text x={x(refValue) + 6} y={12}>{rightLabel} →</text>}
@@ -65,8 +68,8 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
           const y = head + i * rowHeight + rowHeight / 2
           const c = r.color ?? 'var(--accent)'
           return (
-            <g key={r.key} {...bind(r.key)}>
-              <rect x={0} y={y - rowHeight / 2} width={width} height={rowHeight} rx={4} fill={at?.key === r.key ? 'var(--surface-2)' : 'transparent'} />
+            <g key={r.key} {...bind(r.key)} {...(focusable ? {} : { tabIndex: -1 })} role="group" aria-label={r.title ?? `${r.label}: ${format(r.value)}, ${format(r.lo)} to ${format(r.hi)}`}>
+              <rect x={0} y={y - rowHeight / 2} width={width} height={rowHeight} fill="transparent" />
               <foreignObject x={0} y={y - rowHeight / 2} width={lw - 8} height={rowHeight}>
                 <div className="flex h-full items-center truncate text-[13px] text-ink-2">{r.label}</div>
               </foreignObject>
@@ -80,15 +83,19 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
         at?.key === 'ref' ? (
           <TipTitle>{refLabel}</TipTitle>
         ) : (
-          tipped &&
-          (tipped.title ? (
-            <div>{tipped.title}</div>
-          ) : (
+          tipped && (
             <>
-              <TipTitle>{tipped.label}</TipTitle>
-              <TipRow color={tipped.color ?? 'var(--accent)'} value={format(tipped.value)} label={`${format(tipped.lo)} to ${format(tipped.hi)}`} />
+              {tipped.title ? (
+                <div>{tipped.title}</div>
+              ) : (
+                <>
+                  <TipTitle>{tipped.label}</TipTitle>
+                  <TipRow color={tipped.color ?? 'var(--accent)'} value={format(tipped.value)} label={`${format(tipped.lo)} to ${format(tipped.hi)}`} />
+                </>
+              )}
+              {refLabel && <TipNote>Solid line: {refLabel}</TipNote>}
             </>
-          ))
+          )
         ),
       )}
       </div>

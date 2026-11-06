@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { SummaryStrip, Tile } from './SummaryStrip'
+import { showPanel, SummaryStrip, Tile } from './SummaryStrip'
 import { Tabs } from './Tabs'
 
 describe('SummaryStrip', () => {
@@ -43,5 +43,21 @@ describe('SummaryStrip', () => {
     await userEvent.click(screen.getByRole('button', { name: /Injuries/ }))
     await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveClass('tile-flash'))
     expect(screen.getByRole('tabpanel')).toHaveClass('tab-panel-in')
+  })
+
+  it('waits for a panel the router mounts late, many frames after the tile click', async () => {
+    const tab = document.createElement('button')
+    tab.id = 'late-tab'
+    tab.setAttribute('aria-controls', 'late-panel')
+    document.body.append(tab)
+    showPanel(tab)
+    await new Promise((r) => setTimeout(r, 150)) // past the old 3-frame retry
+    const panel = document.createElement('div')
+    panel.id = 'late-panel'
+    panel.setAttribute('aria-labelledby', 'late-tab')
+    document.body.append(panel)
+    await waitFor(() => expect(panel).toHaveClass('tile-flash'))
+    tab.remove()
+    panel.remove()
   })
 })

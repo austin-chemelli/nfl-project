@@ -4,7 +4,7 @@ Where the project is right now. Chats keep it current as they work ([state-maint
 
 ## Bottom line (as of 2026-11-05)
 
-The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). Next: two flights planned 2026-11-05 on Fable, the league page (M14, ADR 0019, this chat's track `league`) and the retro's win-probability chart with a motion pass (M15, ADR 0020, track `pop` in a second chat); then the narrative's previews and evals (M6.3, M6.4).
+The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). Next: two flights planned 2026-11-05 on Fable, the league page (M14, ADR 0019, this chat's track `league`) and the retro's win-probability chart with a motion pass (M15, ADR 0020, track `pop` in a second chat; phase 1 built, in review); then the narrative's previews and evals (M6.3, M6.4).
 
 ## What runs where
 
@@ -87,7 +87,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
 | league | `league-teams`, then `league-playoffs`, `league-context` | `~/dev/nfl-project-league` | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | planned 2026-11-05 (Fable); phase 1 not started | |
-| pop | `retro-wp`, then `retro-drives`, `retro-story` | `~/dev/nfl-project-pop` | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; story layout | planned 2026-11-05 (Fable); starts in a new chat from `.notes/plans/pop-chat-prompt.md` | |
+| pop | `retro-wp`, then `retro-drives`, `retro-story` | `~/dev/nfl-project-pop` | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; story layout | phase 1 built 2026-11-05 on `retro-wp`, PR open; after the merge, `nfl-retro` by hand rebuilds every retro on schema 6 | |
 | ui | `ui-next` | `~/dev/nfl-project-ui` | M13 site walk fixes merged 2026-11-05 (#18); round 2 done; later items in `.notes/ui-round2.md` §9 (tendencies across situations, H4 injuries and news tab, open-bets list once live bets exist) | U1 to U5 merged and live (#11, #13, #14, #16, #17); `nfl-retro` and `nfl-site` run by hand on 041a83a, 2026-11-05 | #11, #13, #14, #16, #17 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
@@ -110,7 +110,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M11 model wave 2 (ADR 0018) | done 2026-11-04 (PR #12), live before the first public lock |
 | M13 site walk fixes (review §10) | done 2026-11-05 (PR #18), live; retros on schema 5 |
 | M14 league page (ADR 0019) | planned 2026-11-05; three phases, track `league` |
-| M15 retro win probability, motion, drives, story (ADR 0020) | planned 2026-11-05; three phases, track `pop` |
+| M15 retro win probability, motion, drives, story (ADR 0020) | phase 1 built 2026-11-05 (PR open); phases 2 and 3 to come, track `pop` |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions

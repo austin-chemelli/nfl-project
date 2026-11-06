@@ -1087,7 +1087,7 @@ def _drives(game_plays: pl.DataFrame, g: dict) -> list[Drive] | None:
         real = d.filter(pl.col("play_type").is_in(DRIVE_TYPES))
         if real.is_empty():
             continue
-        # a kickoff's posteam is the kicking team, so prefer the other plays
+        # the offense comes from a scrimmage play; a kickoff row only stands in when there's none
         pos = d.filter(pl.col("play_type") != "kickoff")["posteam"].drop_nulls()
         pos = pos if len(pos) else d["posteam"].drop_nulls()
         offense = pos[0] if len(pos) else None

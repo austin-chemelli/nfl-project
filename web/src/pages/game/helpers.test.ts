@@ -269,11 +269,14 @@ describe('wpLede and markText', () => {
     return r
   }
   it('comeback, with the quarter', () => {
-    expect(wpLede(with_({ home: 30, away: 33, low: [1000, 0.04] }))).toBe('ARI won 33–30 after falling to 4% in Q2.')
-    expect(wpLede(with_({ home: 30, away: 33, low: [3700, 0.004], ot: true }))).toBe('ARI won 33–30 after falling to under 1% in overtime.')
+    expect(wpLede(with_({ home: 30, away: 33, low: [1000, 0.04] }))).toBe('ARI won 33–30 after its win chance fell to 4% in Q2.')
+    expect(wpLede(with_({ home: 30, away: 33, low: [3700, 0.004], ot: true }))).toBe('ARI won 33–30 after its win chance fell to under 1% in overtime.')
   })
   it('wire to wire', () => {
-    expect(wpLede(with_({ home: 31, away: 20, low: [100, 0.589] }))).toBe('DAL never fell below 58% on the way to a 31–20 win.')
+    // an underdog that only rose never "fell" to where it started
+    expect(wpLede(with_({ home: 30, away: 33, low: [0, 0.134] }))).toBe("ARI's win chance never fell below 13% on the way to a 33–30 win.")
+    expect(wpLede(with_({ home: 31, away: 20, low: [100, 0.58] }))).toContain('below 58%') // 0.58 * 100 is 57.99...
+    expect(wpLede(with_({ home: 31, away: 20, low: [100, 0.589] }))).toBe("DAL's win chance never fell below 58% on the way to a 31–20 win.")
   })
   it('tie, and no series', () => {
     expect(wpLede(with_({ home: 20, away: 20, low: null }))).toBe('Tied 20–20.')

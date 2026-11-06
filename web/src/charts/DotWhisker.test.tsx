@@ -11,6 +11,19 @@ describe('DotWhisker', () => {
     expect(x).toBeGreaterThanOrEqual(170)
   })
 
+  it('names the reference in a row tip, since the rows cover its own hit area', () => {
+    const { container } = render(<DotWhisker rows={[{ key: 'a', label: 'Rest', value: 0.05, lo: 0.04, hi: 0.08 }]} format={String} refLabel="No effect" />)
+    fireEvent.focus(container.querySelector('[role="group"]')!)
+    expect(screen.getByTestId('chart-tip')).toHaveTextContent('No effect')
+  })
+
+  it('can leave a long list out of the tab order, with each row still named', () => {
+    const { container } = render(<DotWhisker focusable={false} rows={[{ key: 'a', label: 'Rest', value: 0.05, lo: 0.04, hi: 0.08, title: 'Rest: a sentence' }]} format={String} />)
+    const row = container.querySelector('[role="group"]')!
+    expect(row).toHaveAttribute('tabindex', '-1')
+    expect(row).toHaveAttribute('aria-label', 'Rest: a sentence')
+  })
+
   it('shows a tip on focus instead of a <title>', () => {
     const { container } = render(<DotWhisker rows={[{ key: 'a', label: 'Rest', value: 0.05, lo: 0.04, hi: 0.08 }]} format={String} refLabel="No effect" />)
     expect(container.querySelectorAll('title')).toHaveLength(0)

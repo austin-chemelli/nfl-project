@@ -119,7 +119,7 @@ export function PageSkeleton({ what = 'page', shape = 'page', title = true }: { 
     <div role="status" aria-label={`Loading ${what}…`} data-shape={shape} className="flex flex-col gap-5">
       <span className="sr-only">Loading {what}…</span>
       {title && <Skeleton className="h-8 w-2/3 max-w-sm" />}
-      {shape !== 'cards' && (
+      {shape !== 'cards' && shape !== 'page' && (
         <div aria-hidden="true" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {[0, 1, 2, 3, 4].map((i) => (
             <div key={i} data-skeleton="tile" className="min-w-0 rounded-lg border border-t-2 border-line bg-surface-1 p-3">
@@ -130,7 +130,7 @@ export function PageSkeleton({ what = 'page', shape = 'page', title = true }: { 
           ))}
         </div>
       )}
-      {shape !== 'slate' && shape !== 'cards' && (
+      {(shape === 'game' || shape === 'tracker') && (
         <div aria-hidden="true" data-skeleton="tabs" className="flex gap-2 overflow-hidden">
           {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-9 w-24 shrink-0" />)}
         </div>
@@ -154,11 +154,7 @@ export function PageSkeleton({ what = 'page', shape = 'page', title = true }: { 
 /** A small section loading: one or two lines, not a page. */
 function CompactLoading({ what }: { what: string }) {
   return (
-    <div role="status" aria-label={`Loading ${what}…`} className="flex flex-col gap-2 py-4">
-      <span className="sr-only">Loading {what}…</span>
-      <Skeleton className="h-4 w-1/2" />
-      <Skeleton className="h-4 w-1/3" />
-    </div>
+    <div role="status" aria-label={`Loading ${what}…`} className="py-12 text-center text-ink-3">Loading {what}…</div>
   )
 }
 

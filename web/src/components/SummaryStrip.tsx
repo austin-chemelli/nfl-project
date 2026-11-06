@@ -7,9 +7,14 @@ import { useSetTab } from './Tabs'
 /**
  * Bring a tab's panel into view if it sits below the fold or above the top, then flash it once. Called
  * from a tile click only. The flash lasts 3 x --dur-base, so reduced motion zeroes it, and the scroll is
- * instant under reduced motion. The panel can take a frame to mount after the tab switch, so it retries.
+ * instant under reduced motion. The router applies a tab change as a transition, so the new panel can take
+ * many frames to mount, longer on a phone: it retries for about 750 ms.
  */
-function showPanel(tab: HTMLElement, tries = 3) {
+const HEADER = 56 // the sticky site header; the panel's scroll-mt also clears the tab bar
+
+// oxlint-disable-next-line react/only-export-components
+export function showPanel(tab: HTMLElement, tries = 45) {
+  if (!tab.isConnected) return
   const panel = document.getElementById(tab.getAttribute('aria-controls') ?? '')
   if (!panel || panel.getAttribute('aria-labelledby') !== tab.id) {
     if (tries > 0) requestAnimationFrame(() => showPanel(tab, tries - 1))
@@ -17,7 +22,7 @@ function showPanel(tab: HTMLElement, tries = 3) {
   }
   const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const top = panel.getBoundingClientRect().top
-  if (top > window.innerHeight * 0.75 || top < 0) panel.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  if (top > window.innerHeight * 0.75 || top < HEADER) panel.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
   panel.classList.remove('tile-flash')
   void panel.offsetWidth // restart the animation on a second click
   panel.classList.add('tile-flash')
@@ -38,7 +43,7 @@ export function Tile({ label, value, sub, tab, modelId, accent }: {
     setTab(id)
     requestAnimationFrame(() => {
       const tab = document.querySelector<HTMLElement>(`[role="tab"][data-tab-id="${CSS.escape(id)}"]`)
-      tab?.focus()
+      tab?.focus({ preventScroll: true })
       if (tab) showPanel(tab)
     })
   }
