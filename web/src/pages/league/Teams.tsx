@@ -148,8 +148,8 @@ export function Teams({ file }: { file: TeamsFile }) {
           <Segmented<ColorMode>
             label="Color"
             value={mode}
-            onChange={(m) => update((n) => { if (m === 'conference') n.delete('color'); else n.set('color', m); if (m !== 'division') n.delete('div') })}
-            options={[{ value: 'conference', label: 'Conference' }, { value: 'division', label: 'Division' }, { value: 'none', label: 'None' }]}
+            onChange={(m) => update((n) => { if (m === 'team') n.delete('color'); else n.set('color', m); if (m !== 'division') n.delete('div') })}
+            options={[{ value: 'team', label: 'Team' }, { value: 'conference', label: 'Conference' }, { value: 'division', label: 'Division' }, { value: 'none', label: 'None' }]}
           />
         </div>
       </div>
@@ -169,7 +169,7 @@ export function Teams({ file }: { file: TeamsFile }) {
           ))}
         </div>
       )}
-      {(mode === 'conference' || (mode === 'division' && !div)) && (
+      {mode === 'conference' && (
         <p className="flex gap-4 text-[12px] text-ink-2">
           <span><span aria-hidden className="mr-1 inline-block size-2 rounded-full" style={{ background: 'var(--conf-afc)' }} />AFC</span>
           <span><span aria-hidden className="mr-1 inline-block size-2 rounded-full" style={{ background: 'var(--conf-nfc)' }} />NFC</span>

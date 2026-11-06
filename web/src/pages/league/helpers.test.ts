@@ -72,11 +72,19 @@ describe('points and tones', () => {
     const { points } = buildPoints(file, f('strength.epa_off'), f('strength.epa_def'), 'division', 'AFC West')
     expect(points.filter((p) => p.tone === 'strong').map((p) => p.key).sort()).toEqual(['DEN', 'KC', 'LAC', 'LV'])
     expect(points.filter((p) => p.tone === 'muted')).toHaveLength(28)
-    expect(toneFor(file.teams.KC, 'division', null)).toBe('conf-afc')
+    expect(toneFor(file.teams.KC, 'division', null)).toBeUndefined()
+    expect(points.find((p) => p.key === 'KC')!.dot).toBeDefined() // the division keeps its team colors
+    expect(points.find((p) => p.key === 'GB')!.dot).toBeUndefined() // the rest go gray
+  })
+  it('gives every team its own dot by default, and only there', () => {
+    const on = (mode: 'team' | 'conference' | 'none') => buildPoints(file, f('strength.epa_off'), f('strength.epa_def'), mode, null).points
+    expect(on('team').every((p) => p.dot && p.tone === undefined)).toBe(true)
+    expect(on('conference').some((p) => p.dot)).toBe(false)
+    expect(on('none').some((p) => p.dot)).toBe(false)
   })
   it('lists eight divisions', () => expect(divisionsOf(file)).toHaveLength(8))
   it('parses the color mode', () => {
-    expect([colorMode(null), colorMode('division'), colorMode('none'), colorMode('x')]).toEqual(['conference', 'division', 'none', 'conference'])
+    expect([colorMode(null), colorMode('conference'), colorMode('division'), colorMode('none'), colorMode('x')]).toEqual(['team', 'conference', 'division', 'none', 'team'])
   })
 })
 

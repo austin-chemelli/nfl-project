@@ -1,9 +1,10 @@
 import type { ScatterPoint, ScatterTone } from '../../charts/Scatter'
 import type { TeamFeature, TeamRow, TeamsFile } from '../../data/contract'
 import { dash, fmtUnit } from '../../lib/format'
+import { teamDotVars } from '../../lib/teamColors'
 import { DEFAULT_PRESET, PRESETS, presetFor, type Quadrants } from './presets'
 
-export type ColorMode = 'conference' | 'division' | 'none'
+export type ColorMode = 'team' | 'conference' | 'division' | 'none'
 
 export function hasData(file: TeamsFile, id: string): boolean {
   return Object.values(file.teams).some((t) => t.values[id] != null)
@@ -111,14 +112,17 @@ export function divisionsOf(file: TeamsFile): string[] {
 }
 
 export function colorMode(raw: string | null): ColorMode {
-  return raw === 'division' || raw === 'none' ? raw : 'conference'
+  return raw === 'conference' || raw === 'division' || raw === 'none' ? raw : 'team'
 }
 
 export function toneFor(t: TeamRow, mode: ColorMode, div: string | null): ScatterTone | undefined {
-  if (mode === 'none') return undefined
   if (mode === 'division' && div) return t.division === div ? 'strong' : 'muted'
+  if (mode !== 'conference') return undefined
   return t.conference === 'NFC' ? 'conf-nfc' : 'conf-afc'
 }
+
+/** Team colors in Team mode and in Division mode, where the teams left out of a highlighted division go gray. */
+const hasDot = (tone: ScatterTone | undefined, mode: ColorMode) => (mode === 'team' || mode === 'division') && tone !== 'muted'
 
 /** Points for teams with a value on both axes, in alphabetical order, and the teams left out. */
 export function buildPoints(file: TeamsFile, x: TeamFeature, y: TeamFeature, mode: ColorMode, div: string | null) {
@@ -129,7 +133,10 @@ export function buildPoints(file: TeamsFile, x: TeamFeature, y: TeamFeature, mod
     const vx = t.values[x.id]
     const vy = t.values[y.id]
     if (vx == null || vy == null) missing.push(code)
-    else points.push({ key: code, label: code, x: vx, y: vy, tone: toneFor(t, mode, div) })
+    else {
+      const tone = toneFor(t, mode, div)
+      points.push({ key: code, label: code, x: vx, y: vy, tone, dot: hasDot(tone, mode) ? teamDotVars(code) : undefined })
+    }
   }
   return { points, missing }
 }

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import type { CSSProperties } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Scatter, type ScatterProps } from './Scatter'
 
@@ -124,6 +125,15 @@ describe('Scatter', () => {
     expect(fill('c')).toBe('var(--text-primary)')
     expect(fill('d')).toBe('var(--text-muted)')
     expect(pt('d').querySelector('circle:last-child')!.getAttribute('fill-opacity')).toBe('0.4')
+  })
+
+  it('draws a team dot through the matchup slots, over its tone', () => {
+    const dot = { '--team-home-light': '#111111' } as CSSProperties
+    setup({ points: [{ key: 'a', label: 'A', x: 1, y: 1, tone: 'strong', dot }, { key: 'b', label: 'B', x: 2, y: 2 }] })
+    const mark = pt('a').querySelector('[data-matchup] circle')!
+    expect(mark.getAttribute('fill')).toBe('var(--team-home)')
+    expect(mark.getAttribute('stroke')).toBe('var(--team-away)')
+    expect(pt('b').querySelector('[data-matchup]')).toBeNull()
   })
 
   it('never draws two labels on top of each other', () => {

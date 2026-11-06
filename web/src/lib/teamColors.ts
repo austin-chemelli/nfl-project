@@ -127,6 +127,16 @@ const score = (x: TeamColor, y: TeamColor) =>
 export const teamColor = (team: string): TeamColor => options(team)[0]
 
 /**
+ * A team among all 32 (the League scatter): its main color and its second brand color. One color can't
+ * do this: three pairs of teams fit to the same color and most of the blues land together, so the ring
+ * is what tells them apart.
+ */
+export function teamDot(team: string): { fill: TeamColor; ring: TeamColor } {
+  const o = options(team)
+  return { fill: o[0], ring: o[2] ?? o[1] }
+}
+
+/**
  * The pair for a matchup: the one that changes the teams least, the away team giving way first on a
  * tie. With no pair past the thresholds, the widest one wins.
  */
@@ -142,4 +152,10 @@ export function matchupColors(away: string, home: string): { away: TeamColor; ho
 export function matchupVars(away: string, home: string): CSSProperties {
   const c = matchupColors(away, home)
   return { '--team-away-light': c.away.light, '--team-away-dark': c.away.dark, '--team-home-light': c.home.light, '--team-home-dark': c.home.dark } as CSSProperties
+}
+
+/** The same `[data-matchup]` slots for one team's dot, so the theme switch stays in one place: `--team-home` is the fill, `--team-away` the ring. */
+export function teamDotVars(team: string): CSSProperties {
+  const d = teamDot(team)
+  return { '--team-away-light': d.ring.light, '--team-away-dark': d.ring.dark, '--team-home-light': d.fill.light, '--team-home-dark': d.fill.dark } as CSSProperties
 }

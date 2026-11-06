@@ -150,12 +150,14 @@ describe('Teams tab', () => {
     expect(options).toContain('strength.epa_off')
   })
 
-  it('keeps the conference legend while no division is picked', async () => {
-    await open('/league?color=division')
+  it('shows the legend only for conference colors; a team dot carries its own label', async () => {
+    await open('/league?color=conference')
     expect(screen.getByText('AFC')).toBeInTheDocument()
     cleanup()
-    await open('/league?color=division&div=AFC%20North')
+    await open('/league')
     expect(screen.queryByText('AFC')).toBeNull()
+    expect(screen.getByRole('radio', { name: 'Team' })).toHaveAttribute('aria-checked', 'true')
+    expect(last.props!.points.every((p) => p.dot)).toBe(true)
   })
 
   it('explains the measure on each axis', async () => {

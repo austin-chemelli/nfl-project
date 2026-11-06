@@ -6,14 +6,22 @@
  * a top layer so the focus order of the 32 stops never changes.
  */
 import { scaleLinear } from 'd3-scale'
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent, ReactNode } from 'react'
 import { useChartTip } from './ChartTip'
 import { placeLabels, type Rect } from './labels'
 import { useWidth } from './useWidth'
 
 export type ScatterTone = 'conf-afc' | 'conf-nfc' | 'muted' | 'strong'
 
-export type ScatterPoint = { key: string; label: string; x: number; y: number; tone?: ScatterTone }
+export type ScatterPoint = {
+  key: string
+  label: string
+  x: number
+  y: number
+  tone?: ScatterTone
+  /** A two-color dot: `teamDotVars`, read through `[data-matchup]`. Wins over the tone's color; the tone still decides the label. */
+  dot?: CSSProperties
+}
 
 export type ScatterAxis = {
   title: string
@@ -40,6 +48,8 @@ export type ScatterProps = {
 }
 
 const R = 5
+/** A two-color dot needs more room for its ring, except on a phone, where the plot is crowded and labels would go first. */
+const dotRadius = (width: number) => (width < 480 ? R : 6)
 const HIT = 14
 const M = { l: 60, r: 24, t: 26, b: 46 }
 const CAP_FS = 10
@@ -48,6 +58,17 @@ const CAP_CH = 5.4
 const fillOf = (t?: ScatterTone) =>
   t === 'conf-afc' ? 'var(--conf-afc)' : t === 'conf-nfc' ? 'var(--conf-nfc)' : t === 'strong' ? 'var(--text-primary)' : t === 'muted' ? 'var(--text-muted)' : 'var(--text-secondary)'
 const opacityOf = (t?: ScatterTone) => (t === 'muted' ? 0.4 : 0.9)
+
+/** One point's mark. A team dot has its fill inside a ring in the team's second color. */
+function Dot({ p, r }: { p: ScatterPoint & { cx: number; cy: number }; r: number }) {
+  if (p.dot)
+    return (
+      <g data-matchup="" style={p.dot}>
+        <circle cx={p.cx} cy={p.cy} r={r} fill="var(--team-home)" stroke="var(--team-away)" strokeWidth={r / 2.4} />
+      </g>
+    )
+  return <circle cx={p.cx} cy={p.cy} r={R} fill={fillOf(p.tone)} fillOpacity={opacityOf(p.tone)} stroke="var(--surface-1)" strokeWidth={1} />
+}
 
 function wrap(text: string, maxChars: number): string[] {
   const lines: string[] = []
@@ -99,16 +120,18 @@ export function Scatter({ points, x, y, quadrants, selected, onSelect, tip, labe
   // A highlighted point (tone `strong`) keeps its label, however crowded the plot.
   const forced = [selected, ...points.filter((p) => p.tone === 'strong').map((p) => p.key)].filter((k): k is string => !!k)
   const area = { width: M.l + innerW + M.r, height: M.t + innerH + M.b }
+  const dotR = dotRadius(width)
+  const radius = points.some((p) => p.dot) ? dotR + 1 : R
   const toLabel = (p: (typeof px)[number]) => ({ key: p.key, text: p.label, x: p.cx, y: p.cy })
   const base = placeLabels(
     px.map(toLabel),
     area,
-    { obstacles: caps.map((c) => c.rect), forced, radius: R, center: centre.x != null && centre.y != null ? { x: centre.x, y: centre.y } : undefined },
+    { obstacles: caps.map((c) => c.rect), forced, radius, center: centre.x != null && centre.y != null ? { x: centre.x, y: centre.y } : undefined },
   )
   // A hovered point fits around the labels already placed, so its neighbours don't jump as the pointer moves.
   const hoverPoint = hovered && !base.some((l) => l.key === hovered) ? px.find((p) => p.key === hovered) : undefined
   const placed = hoverPoint
-    ? [...base, ...placeLabels([toLabel(hoverPoint)], area, { obstacles: [...caps.map((c) => c.rect), ...base], forced: [hoverPoint.key], radius: R })]
+    ? [...base, ...placeLabels([toLabel(hoverPoint)], area, { obstacles: [...caps.map((c) => c.rect), ...base], forced: [hoverPoint.key], radius })]
     : base
   const byKey = new Map(px.map((p) => [p.key, p]))
   const labelFor = (k: string) => placed.find((l) => l.key === k)
@@ -162,7 +185,7 @@ export function Scatter({ points, x, y, quadrants, selected, onSelect, tip, labe
           {px.map((p) => (
             <g key={p.key} data-testid="point" data-key={p.key} aria-label={`${p.label}: ${x.title} ${x.format(p.x)}, ${y.title} ${y.format(p.y)}`} {...bind(p.key)} {...act(p.key)} className="cursor-pointer">
               <circle cx={p.cx} cy={p.cy} r={HIT} fill="transparent" />
-              <circle cx={p.cx} cy={p.cy} r={R} fill={fillOf(p.tone)} fillOpacity={opacityOf(p.tone)} stroke="var(--surface-1)" strokeWidth={1} />
+              <Dot p={p} r={dotR} />
             </g>
           ))}
           <g aria-hidden pointerEvents="none">
@@ -174,8 +197,8 @@ export function Scatter({ points, x, y, quadrants, selected, onSelect, tip, labe
               const isSel = p === sel
               return (
                 <g key={p.key} data-testid={isSel ? 'selected' : 'hovered'}>
-                  <circle cx={p.cx} cy={p.cy} r={R + (isSel ? 4 : 3)} fill="none" stroke="var(--text-primary)" strokeWidth={isSel ? 2.5 : 1.5} />
-                  <circle cx={p.cx} cy={p.cy} r={R} fill={fillOf(p.tone)} stroke="var(--surface-1)" strokeWidth={1} />
+                  <circle cx={p.cx} cy={p.cy} r={(p.dot ? dotR + 1 : R) + (isSel ? 4 : 3)} fill="none" stroke="var(--text-primary)" strokeWidth={isSel ? 2.5 : 1.5} />
+                  <Dot p={p} r={dotR} />
                   {l && <text data-testid="label" x={l.x + 2} y={l.y + 9.5} fontWeight={600} fill="var(--text-primary)">{l.text}</text>}
                 </g>
               )
