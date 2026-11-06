@@ -4,7 +4,9 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { LeagueFile } from '../../data/contract'
 import { renderRoute } from '../../test/render'
+import { stakesLine } from './helpers'
 
 /** A copy of the fixtures where the listed weeks' slates have a finished game, so their recap is requested. */
 export function fixturesWithResults(weeks: number[]): string {
@@ -175,6 +177,32 @@ describe('Slate page', () => {
     expect(within(card).getByText(/picked|called it|missed it|Upset|Approaches/)).toBeInTheDocument()
     expect(within(card).queryByText(/edge, bigger than/)).toBeNull()
     expect(within(card).queryByText(/most blitz-heavy/)).toBeNull()
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+})
+
+describe('Slate stakes line', () => {
+  const fix = path.resolve(import.meta.dirname, '../../test/fixtures/site')
+  it('shows the Student-only line on a card, computed from the league fixture', async () => {
+    const league = LeagueFile.parse(JSON.parse(fs.readFileSync(path.join(fix, 'league.json'), 'utf8')))
+    const slate = JSON.parse(fs.readFileSync(path.join(fix, 'slate_2026_08.json'), 'utf8'))
+    const expected = slate.games.flatMap((g: { game_id: string }) => stakesLine(g, league) ?? [])
+    expect(expected.length).toBeGreaterThan(0)
+    renderRoute('/')
+    await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
+    await screen.findAllByText(/^Playoff stakes: /)
+    expect(screen.getAllByText(/^Playoff stakes: /)).toHaveLength(expected.length)
+    for (const line of expected) expect(screen.getByText(line)).toBeInTheDocument()
+  })
+
+  it('shows no line and no error when league.json is missing', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'slate-nolg-'))
+    fs.cpSync(path.resolve(import.meta.dirname, '../../test/fixtures'), root, { recursive: true })
+    fs.rmSync(path.join(root, 'site/league.json'))
+    renderRoute('/', root)
+    await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
+    expect(screen.queryByText(/Playoff stakes/)).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
     fs.rmSync(root, { recursive: true, force: true })
   })
 })

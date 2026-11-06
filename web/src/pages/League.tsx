@@ -1,20 +1,66 @@
+import type { ReactNode } from 'react'
+import { SummaryStrip, Tile } from '../components/SummaryStrip'
 import { Tabs } from '../components/Tabs'
 import { Card, Loaded, Page } from '../components/ui'
-import { isNotFound, useTeams } from '../data/api'
+import { isNotFound, useLeague, useTeams } from '../data/api'
+import type { LeagueFile } from '../data/contract'
+import { fmtProb } from './league/playoffs'
+import { Games } from './league/Games'
+import { Odds } from './league/Odds'
+import { Standings } from './league/Standings'
+import { closestRace, gameOfWeek, topSeed } from './league/summary'
 import { Teams } from './league/Teams'
 
-/** Where the league stands (ADR 0019). Each tab arrives with its data; none renders before that. */
+/** The tiles that the file can answer; each opens the tab that explains it. */
+function Strip({ file }: { file: LeagueFile }) {
+  const afc = topSeed(file, 'AFC')
+  const nfc = topSeed(file, 'NFC')
+  const race = closestRace(file)
+  const game = gameOfWeek(file)
+  const tiles: ReactNode[] = []
+  if (afc) tiles.push(<Tile key="afc" label="AFC favourite for the 1 seed" value={afc.team} sub={`${fmtProb(afc.p)} to get it`} tab="odds" />)
+  if (nfc) tiles.push(<Tile key="nfc" label="NFC favourite for the 1 seed" value={nfc.team} sub={`${fmtProb(nfc.p)} to get it`} tab="odds" />)
+  if (race) tiles.push(<Tile key="race" label="Closest division race" value={race.division} sub={`${race.leader.team} ${fmtProb(race.leader.p)}, ${race.runnerUp.team} ${fmtProb(race.runnerUp.p)}`} tab="standings" />)
+  if (game) tiles.push(<Tile key="game" label="Game that matters most" value={`${game.away} @ ${game.home}`} sub={`Week ${game.week}, moves playoff odds the most`} tab="games" />)
+  return tiles.length ? <SummaryStrip label="League summary">{tiles}</SummaryStrip> : null
+}
+
+/** Where the league stands (ADR 0019). Teams comes from teams.json; the playoff tabs need league.json and say so when it's missing. */
 export default function LeaguePage() {
-  const q = useTeams()
+  const teams = useTeams()
+  const league = useLeague()
+
+  const playoffTab = (what: string, render: (f: LeagueFile) => ReactNode) =>
+    league.isError && isNotFound(league.error) ? (
+      <Card className="text-ink-2">Playoff {what} appear after the next data update.</Card>
+    ) : (
+      <Loaded q={league} what={what}>
+        {render}
+      </Loaded>
+    )
+
+  const teamsTab =
+    teams.isError && isNotFound(teams.error) ? (
+      <Card className="text-ink-2">Team charts appear after the next data update.</Card>
+    ) : (
+      <Loaded q={teams} what="teams">
+        {(t) => <Teams file={t} />}
+      </Loaded>
+    )
+
   return (
     <Page title="League" lede="Where all 32 teams stand.">
-      {q.isError && isNotFound(q.error) ? (
-        <Card className="text-ink-2">Team charts appear after the next data update.</Card>
-      ) : (
-        <Loaded q={q} what="teams">
-          {(t) => <Tabs label="League views" default="teams" tabs={[{ id: 'teams', label: 'Teams', content: <Teams file={t} /> }]} />}
-        </Loaded>
-      )}
+      {league.data && <Strip file={league.data} />}
+      <Tabs
+        label="League views"
+        default="teams"
+        tabs={[
+          { id: 'teams', label: 'Teams', content: teamsTab },
+          { id: 'odds', label: 'Playoff odds', content: playoffTab('odds', (f) => <Odds file={f} />) },
+          { id: 'standings', label: 'Standings', content: playoffTab('standings', (f) => <Standings file={f} />) },
+          { id: 'games', label: 'Games that matter', content: playoffTab('games', (f) => <Games file={f} />) },
+        ]}
+      />
     </Page>
   )
 }

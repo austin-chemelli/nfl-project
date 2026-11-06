@@ -1,10 +1,11 @@
 /** Pure helpers for the Slate page (port of nfl.ui.slate_helpers). */
-import type { CardData, GameRow, Meta } from '../../data/contract'
+import type { CardData, GameRow, LeagueFile, Meta } from '../../data/contract'
 import { APPROACHES, HEADLINE, REFERENCES, SHORT } from '../../lib/models'
 import { pct } from '../../lib/format'
 import { edgePct, groupOf } from '../../lib/meta'
 import { injuryRank, ordinal } from '../game/helpers'
 import { topAbsence, topEdge } from '../game/summary'
+import { MIN_BRANCH_RUNS, swingSize, swingText } from '../league/playoffs'
 
 /** |model − market| in probability at which a cell is highlighted. */
 export const DIVERGE = 0.05
@@ -246,4 +247,24 @@ export function contrastLine(g: GameRow): string | null {
   if (g.result != null || !x) return null
   const rank = (n: number) => (n === 1 ? 'most' : `${ordinal(n)}-most`)
   return `The league's ${rank(x.off_rank)} ${x.off_label} offense (${x.offense}) faces its ${rank(x.def_rank)} ${x.def_label} defense (${x.defense})`
+}
+
+/** A swing at least this big (probability, 0.08 = 8 points) earns a line on the card. */
+export const STAKES_MIN = 0.08
+
+/**
+ * "Playoff stakes: CHI 55% → 80% with a win." The Student's simulations only, for the team whose playoff
+ * chances swing most on this game, when that swing is at least 8 points and both branches have at least
+ * 1,000 runs. Null with no league file, no entry for the game, or no swing that big.
+ */
+export function stakesLine(g: { game_id: string }, league: LeagueFile | null | undefined): string | null {
+  const lg = league?.games.find((x) => x.game_id === g.game_id)
+  if (!league || !lg || lg.n_home_wins < MIN_BRANCH_RUNS || lg.n_away_wins < MIN_BRANCH_RUNS) return null
+  // Rounded to a tenth of a point first, so 7.95 is 8 and floating-point dust can't push 8.0 under.
+  const big = lg.swings.filter((s) => Math.round(swingSize(s) * 1000) / 10 >= STAKES_MIN * 100).sort((a, b) => swingSize(b) - swingSize(a))
+  for (const s of big) {
+    const text = swingText(lg, s, league)
+    if (text) return `Playoff stakes: ${text}.`
+  }
+  return null
 }

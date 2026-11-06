@@ -673,3 +673,82 @@ export type TeamFeature = z.infer<typeof TeamFeature>
 export type TeamGame = z.infer<typeof TeamGame>
 export type TeamRow = z.infer<typeof TeamRow>
 export type TeamsFile = z.infer<typeof TeamsFile>
+
+// ------------------------------------------------------------------------------------- league
+
+/** One team's standing today (ADR 0019). `seed_today` is null outside the top seven of its conference. */
+export const LeagueTeam = z.looseObject({
+  team: z.string(),
+  conf: z.string(),
+  div: z.string(),
+  w: num,
+  l: num,
+  t: num.default(0),
+  pct: num,
+  div_rec: z.string(),
+  conf_rec: z.string(),
+  pf: num,
+  pa: num,
+  left: num,
+  div_rank: num,
+  seed_today: nnum.default(null),
+})
+
+export const LeagueOddsTeam = z.looseObject({
+  playoffs: num,
+  division: num,
+  bye: num,
+  seed: z.array(num), // P(seed k), seven numbers
+  rounds: z.looseObject({ div: num, conf: num, sb: num, champ: num }),
+  wins: z.looseObject({ mean: num, lo: num, hi: num }), // lo and hi are the p10 and p90
+})
+
+/** One variant (the Student or the market). `sources` keys vary by variant, so it is a record of counts. */
+export const LeagueVariant = z.looseObject({
+  sources: z.record(z.string(), num).default({}),
+  teams: z.record(z.string(), LeagueOddsTeam),
+})
+
+export const LeagueSwing = z.looseObject({ team: z.string(), if_home_win: num, if_away_win: num })
+
+/** A remaining game. Swings come from the Student runs and only list teams past the reporting thresholds. */
+export const LeagueGame = z.looseObject({
+  game_id: z.string(),
+  week: num,
+  kickoff: nstr.default(null),
+  home: z.string(),
+  away: z.string(),
+  p_student: nnum.default(null),
+  p_market: nnum.default(null),
+  market_source: nstr.default(null),
+  leverage_total: num.default(0),
+  swings: z.array(LeagueSwing).default([]),
+  n_home_wins: num.default(0), // Student runs on each branch
+  n_away_wins: num.default(0),
+})
+
+export const LeagueHistoryPoint = z.looseObject({ week: num, student: nnum.default(null), market: nnum.default(null) })
+
+export const LeagueFile = z.looseObject({
+  schema_version: z.string(),
+  season: num,
+  generated_at: z.string(),
+  as_of: z.string(),
+  through_week: nnum.default(null),
+  n_sims: num,
+  seed: num.optional(),
+  shock_sigma: num,
+  tiebreak: z.string().optional(),
+  teams: z.array(LeagueTeam),
+  odds: z.looseObject({ student: LeagueVariant, market: LeagueVariant }),
+  games: z.array(LeagueGame).default([]),
+  history: z.record(z.string(), z.array(LeagueHistoryPoint)).default({}),
+  similar: z.record(z.string(), z.unknown()).default({}), // empty until phase 3
+})
+
+export type LeagueTeam = z.infer<typeof LeagueTeam>
+export type LeagueOddsTeam = z.infer<typeof LeagueOddsTeam>
+export type LeagueVariant = z.infer<typeof LeagueVariant>
+export type LeagueSwing = z.infer<typeof LeagueSwing>
+export type LeagueGame = z.infer<typeof LeagueGame>
+export type LeagueFile = z.infer<typeof LeagueFile>

@@ -20,6 +20,7 @@ function schemaFor(rel: string) {
   if (base.startsWith('season_')) return C.SeasonFile
   if (base === 'audit.json') return C.Audit
   if (base === 'teams.json') return C.TeamsFile
+  if (base === 'league.json') return C.LeagueFile
   return null
 }
 
@@ -51,6 +52,45 @@ function check(root: string, rel: string) {
     expect.fail(`${rel}\n  ${issues.join('\n  ')}`)
   }
 }
+
+describe('contract: league.json', () => {
+  const raw = () => JSON.parse(fs.readFileSync(path.join(FIX, 'league.json'), 'utf8'))
+
+  it('parses the fixture: 32 teams, both variants, at least 20 games', () => {
+    const f = C.LeagueFile.parse(raw())
+    expect(f.teams).toHaveLength(32)
+    for (const v of [f.odds.student, f.odds.market]) {
+      expect(Object.keys(v.teams)).toHaveLength(32)
+      for (const o of Object.values(v.teams)) expect(o.seed).toHaveLength(7)
+    }
+    expect(f.games.length).toBeGreaterThanOrEqual(20)
+  })
+
+  it('keeps source counts as a record, whatever the keys', () => {
+    const f = raw()
+    f.odds.student.sources = { locked: 1, something_new: 2 }
+    expect(C.LeagueFile.parse(f).odds.student.sources).toEqual({ locked: 1, something_new: 2 })
+  })
+
+  it('defaults empty swings, history, similar and a missing seed_today', () => {
+    const f = raw()
+    delete f.games[0].swings
+    delete f.history
+    delete f.similar
+    delete f.teams[0].seed_today
+    const p = C.LeagueFile.parse(f)
+    expect(p.games[0].swings).toEqual([])
+    expect(p.history).toEqual({})
+    expect(p.similar).toEqual({})
+    expect(p.teams[0].seed_today).toBeNull()
+  })
+
+  it('rejects a file without odds', () => {
+    const f = raw()
+    delete f.odds
+    expect(C.LeagueFile.safeParse(f).success).toBe(false)
+  })
+})
 
 describe('contract: teams.json', () => {
   const team = (code: string) => ({

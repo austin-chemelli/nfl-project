@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { CardData, GameRow, Meta } from '../../data/contract'
-import { gapToMarket, cardSentence, contrastLine, correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, parseSort, pickOf, sideText, sortGames, whyLine, winnerMarketP } from './helpers'
+import type { CardData, GameRow, LeagueFile, Meta } from '../../data/contract'
+import { gapToMarket, cardSentence, contrastLine, correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, parseSort, pickOf, sideText, sortGames, stakesLine, whyLine, winnerMarketP } from './helpers'
 
 const pick = (p: number, div: number | null = null) => ({ p_home: p, spread_home: null, status: 'preview' as const, lock_ts: null, divergence: div })
 const game = (over: Partial<GameRow> = {}): GameRow => ({
@@ -270,5 +270,37 @@ describe('contrastLine', () => {
     expect(contrastLine(game({ card: c(contrast), result: { home_score: 1, away_score: 0, margin: 1 } }))).toBeNull()
     expect(contrastLine(game({ card: c(null) }))).toBeNull()
     expect(contrastLine(game())).toBeNull()
+  })
+})
+
+describe('stakesLine', () => {
+  const league = (swings: { team: string; if_home_win: number; if_away_win: number }[], runs: [number, number] = [5000, 5000]) =>
+    ({
+      odds: { student: { sources: {}, teams: { CHI: { playoffs: 0.55 }, BUF: { playoffs: 0.4 } } }, market: { sources: {}, teams: {} } },
+      games: [{ game_id: 'g', week: 9, home: 'MIN', away: 'CHI', swings, n_home_wins: runs[0], n_away_wins: runs[1] }],
+    }) as unknown as LeagueFile
+  const chi = (up: number, down: number) => [{ team: 'CHI', if_home_win: down, if_away_win: up }]
+
+  it('shows the biggest swing on the side of the team', () => {
+    expect(stakesLine({ game_id: 'g' }, league(chi(0.8, 0.5)))).toBe('Playoff stakes: CHI 55% → 80% with a win.')
+  })
+  it('shows nothing at 7.9 points and the line at 8', () => {
+    expect(stakesLine({ game_id: 'g' }, league(chi(0.629, 0.55)))).toBeNull()
+    expect(stakesLine({ game_id: 'g' }, league(chi(0.63, 0.55)))).toBe('Playoff stakes: CHI 55% → 63% with a win.')
+    expect(stakesLine({ game_id: 'g' }, league(chi(0.8, 0.72)))).toBe('Playoff stakes: CHI 55% → 80% with a win.')
+  })
+  it('picks the team with the largest swing', () => {
+    const sw = [...chi(0.65, 0.5), { team: 'BUF', if_home_win: 0.7, if_away_win: 0.2 }]
+    expect(stakesLine({ game_id: 'g' }, league(sw))).toBe('Playoff stakes: BUF 40% → 70% if MIN wins.')
+  })
+  it('needs 1,000 runs on both branches', () => {
+    expect(stakesLine({ game_id: 'g' }, league(chi(0.8, 0.5), [1000, 1000]))).not.toBeNull()
+    expect(stakesLine({ game_id: 'g' }, league(chi(0.8, 0.5), [999, 5000]))).toBeNull()
+    expect(stakesLine({ game_id: 'g' }, league(chi(0.8, 0.5), [5000, 999]))).toBeNull()
+  })
+  it('is null without a file or without the game', () => {
+    expect(stakesLine({ game_id: 'g' }, undefined)).toBeNull()
+    expect(stakesLine({ game_id: 'g' }, null)).toBeNull()
+    expect(stakesLine({ game_id: 'other' }, league(chi(0.8, 0.5)))).toBeNull()
   })
 })

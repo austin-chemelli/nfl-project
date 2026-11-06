@@ -1,0 +1,169 @@
+import type { HTMLAttributes } from 'react'
+import { useSearchParams } from 'react-router'
+import { TipNote, TipRow, TipTitle, useChartTip } from '../../charts'
+import { FinePrint } from '../../components/FinePrint'
+import { DataTable, Segmented, td, th } from '../../components/ui'
+import type { LeagueFile } from '../../data/contract'
+import { dash } from '../../lib/format'
+import { teamDotVars } from '../../lib/teamColors'
+import { teamInfo } from '../../lib/teams'
+import { barWidth, fmtProb, oddsRows, parseConf, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
+
+const MAX_WINS = 17
+const ROUNDS = [
+  ['div', 'Reach the divisional round'],
+  ['conf', 'Reach the conference game'],
+  ['sb', 'Reach the Super Bowl'],
+  ['champ', 'Win the Super Bowl'],
+] as const
+
+/** The fine print for the playoff tabs: what each variant used and what the simulation leaves out. */
+export function SimFinePrint({ file }: { file: LeagueFile }) {
+  return (
+    <FinePrint label="How these odds are made">
+      <p>
+        Each team's odds come from {file.n_sims.toLocaleString('en-US')} simulations of the rest of the season, run twice. The Student's run used {sourcesText(file.odds.student)}. The market's run used{' '}
+        {sourcesText(file.odds.market)}. Tested on the Week 9 lines it hadn't seen, that estimate missed by about 7 points of win chance a game, and the Student missed by about 6, so a gap between the two views far from
+        this week is weak evidence of anything.
+      </p>
+      <p>
+        Each run moves every team's strength up or down a little for all of that team's games, so a team that is better than rated is better all season. The size was tuned on past seasons, and for the Student the gain
+        was too small to tell from noise.
+      </p>
+      <p>
+        Ties in the standings use the real tiebreakers through strength of schedule, then a coin; no real tie from 2002 to 2025 went past strength of victory. Simulated games never end in a tie, and injuries beyond this
+        week are assumed average.
+      </p>
+      <p>These are simulations, not a count of exact playoff scenarios, so no team is ever shown as certain or out.</p>
+    </FinePrint>
+  )
+}
+
+/** Wins from p10 to p90 on a shared 0 to 17 scale, with the mean as a tick. The page-wide scale is why this isn't a RangeRow, which scales each row to itself. */
+function WinsRange({ w }: { w: { mean: number; lo: number; hi: number } }) {
+  const at = (v: number) => `${(100 * Math.min(MAX_WINS, Math.max(0, v))) / MAX_WINS}%`
+  return (
+    <span className="flex items-center gap-2">
+      <span aria-hidden className="relative h-2.5 w-24 shrink-0 rounded-sm bg-surface-2 md:w-28">
+        <span className="absolute inset-y-0 rounded-sm bg-[var(--band-strong)]" style={{ left: at(w.lo), width: `calc(${at(w.hi)} - ${at(w.lo)} + 2px)` }} />
+        <span className="absolute -inset-y-0.5 w-0.5 bg-[var(--text-muted)]" style={{ left: at(w.mean) }} />
+      </span>
+      <span className="tabular whitespace-nowrap text-ink-2">{winsRange(w)} wins</span>
+    </span>
+  )
+}
+
+/** The Playoff odds tab: P(playoffs) for one conference, Student or market (ADR 0019). */
+export function Odds({ file }: { file: LeagueFile }) {
+  const [params, setParams] = useSearchParams()
+  const conf = parseConf(params.get('conf'))
+  const view = parseView(params.get('view'))
+  const set = (k: string, v: string, fallback: string) =>
+    setParams((prev) => { const n = new URLSearchParams(prev); if (v === fallback) n.delete(k); else n.set(k, v); return n }, { replace: true, preventScrollReset: true })
+  const rows = oddsRows(file, conf, view)
+  const { box, at, bind, card } = useChartTip()
+  const tipRow = rows.find((r) => r.team.team === at?.key)
+
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <p className="text-ink-2">Each team's chance of reaching the playoffs, the top seven in its conference.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Segmented<Conf> label="Conference" value={conf} onChange={(v) => set('conf', v, 'AFC')} options={[{ value: 'AFC', label: 'AFC' }, { value: 'NFC', label: 'NFC' }]} />
+        <Segmented<View> label="Odds from" value={view} onChange={(v) => set('view', v, 'student')} options={[{ value: 'student', label: 'Student' }, { value: 'market', label: 'Market' }]} />
+      </div>
+
+      {view === 'market' && marketNote(file.odds.market) && <p className="text-[13px] text-ink-3">{marketNote(file.odds.market)}</p>}
+
+      <div ref={box} className="relative">
+        <div aria-hidden className="hidden grid-cols-[6.5rem_2.5rem_minmax(0,1fr)_4rem_4rem_13rem] gap-x-3 border-b border-line px-2 pb-1 text-[12px] uppercase tracking-wide text-ink-3 md:grid">
+          <span>Team</span>
+          <span>Seed</span>
+          <span>Playoffs</span>
+          <span className="text-right">Division</span>
+          <span className="text-right">Bye</span>
+          <span>Wins, p10 to p90</span>
+        </div>
+        <ol aria-label={`${conf} playoff odds`} className="m-0 list-none p-0">
+          {rows.map(({ team, odds }, i) => (
+            <li
+              key={team.team}
+              data-team={team.team}
+              {...(bind(team.team) as unknown as HTMLAttributes<HTMLLIElement>)}
+              data-matchup
+              style={{ ...teamDotVars(team.team), cursor: 'pointer' }}
+              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line px-2 py-2 text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)] md:grid-cols-[6.5rem_2.5rem_minmax(0,1fr)_4rem_4rem_13rem] md:py-1.5 ${i === 7 ? 'border-t-2 border-t-[var(--text-muted)]' : ''}`}
+            >
+              <span className="order-1 col-span-2 flex items-center gap-2 md:order-3 md:col-span-1">
+                <span className="relative h-3 min-w-0 flex-1 rounded-sm bg-surface-2">
+                  <span className="bar-grow absolute inset-y-0 left-0 origin-left rounded-sm" style={{ width: barWidth(odds.playoffs), background: 'var(--team-home)', ['--i' as string]: Math.min(i, 7) }} />
+                </span>
+                <span className="tabular w-14 shrink-0 text-right text-[15px] font-semibold text-ink">{fmtProb(odds.playoffs)}</span>
+              </span>
+              <span className="order-2 flex items-baseline gap-2 md:order-1" title={teamInfo(team.team).name}>
+                <span className="font-medium text-ink">{team.team}</span>
+                <span className="tabular whitespace-nowrap text-ink-3">{recordOf(team)}</span>
+              </span>
+              <span className="tabular order-3 text-right text-ink-2 md:order-2 md:text-left">
+                <span className="md:hidden">Seed today </span>
+                {team.seed_today ?? dash}
+              </span>
+              <span className="tabular order-4 text-ink-2 md:order-4 md:text-right">
+                <span className="text-ink-3 md:hidden">Division </span>
+                {fmtProb(odds.division)}
+              </span>
+              <span className="tabular order-5 text-right text-ink-2 md:text-right">
+                <span className="text-ink-3 md:hidden">Bye </span>
+                {fmtProb(odds.bye)}
+              </span>
+              <span className="order-6 col-span-2 md:col-span-1">
+                <WinsRange w={odds.wins} />
+              </span>
+            </li>
+          ))}
+        </ol>
+        {card(
+          tipRow && (
+            <>
+              <TipTitle note={`${tipRow.team.div} · ${recordOf(tipRow.team)}`}>{teamInfo(tipRow.team.team).name}</TipTitle>
+              {ROUNDS.map(([k, label]) => (
+                <TipRow key={k} value={fmtProb(tipRow.odds.rounds[k])} label={label} />
+              ))}
+              <TipNote>{view === 'student' ? 'The Student' : 'The market'}'s simulations</TipNote>
+            </>
+          ),
+        )}
+      </div>
+      <p className="text-[13px] text-ink-3">The line between the 7th and 8th rows marks the last playoff spot. Hover or tap a team for its chance in each round.</p>
+
+      <DataTable>
+        <table className="w-full border-collapse text-[13px]">
+          <thead>
+            <tr>
+              <th className={th}>Team</th>
+              <th className={`${th} text-right`}>Playoffs</th>
+              <th className={`${th} text-right`}>Division</th>
+              <th className={`${th} text-right`}>Bye</th>
+              {ROUNDS.map(([k, label]) => (
+                <th key={k} className={`${th} text-right`}>{label.replace('Reach the ', '').replace('Win the ', 'Win ')}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ team, odds }) => (
+              <tr key={team.team}>
+                <td className={td}>{teamInfo(team.team).name}</td>
+                <td className={`${td} tabular text-right`}>{fmtProb(odds.playoffs)}</td>
+                <td className={`${td} tabular text-right`}>{fmtProb(odds.division)}</td>
+                <td className={`${td} tabular text-right`}>{fmtProb(odds.bye)}</td>
+                {ROUNDS.map(([k]) => (
+                  <td key={k} className={`${td} tabular text-right`}>{fmtProb(odds.rounds[k])}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </DataTable>
+      <SimFinePrint file={file} />
+    </div>
+  )
+}
