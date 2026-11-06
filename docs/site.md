@@ -31,6 +31,7 @@ flowchart LR
 | `/game/:id` | Game: approaches vs market, why (group contributions in win-probability points), edges by group, tale of the tape, tendency dumbbells vs league, injuries, narrative v2 | game |
 | `/tracker` | Season tracker: gap to the market by week, backtest Δ with CIs, log loss by season, disagreements, calibration, paper bets (bankroll, return per bet, season grid), persona vs history | tracker, meta |
 | `/hypotheses` | What history says per feature; one feature or group over time | hypotheses |
+| `/league` | League (ADR 0019, M14): Teams (scatter of any two features, 32 teams, presets, team panel) · Playoff odds (Student and market variants) · Standings · Games that matter (leverage) · Similar seasons | teams, league |
 | `/coaches` | Team view and coach view of coordinator scheme profiles | coaches |
 | `/build` | Build your own: group budget, donut by heading, results; shareable `?w=` | diy_matrix, meta |
 | `/season/:year` | Every game of a season under a weight set | season_<yyyy>, diy_matrix |
@@ -88,8 +89,9 @@ Why: with the retrospective added, a finished game's page was 21 stacked section
 8. **Calls are honest about noise.** Within 5 points of even a result or a played-like is a toss-up; on the tracker, log-loss gaps under 0.025 are "about the same" (`GAP_BAND`; a week's recap tile uses 0.005 and only describes that week); a line older than 3 days says so ("line from Oct 27").
 9. **Slate as matchup cards** on every screen size, one computed sentence each, sorted by `?sort=`; `?view=table` keeps the grid for power users.
 10. **Phone first for the slate and the game page**; the tracker and build-your-own may lean desktop.
+11. **Motion is information, and it is CSS** (ADR 0020). Animate only to show a direction or an order (a curve drawing in time, a dot sliding from the market to its value, bars growing from the axis, the panel a tile sent you to). Every animation reads the `--dur-*` and `--ease-*` tokens in `index.css`; `prefers-reduced-motion` zeroes them; elements render in their final state and animate from an offset back to it. No count-ups, no animation library, Recharts stays static. Loading shows the page's shape (`Skeleton`), not a word.
 
-Kit: `Tabs`, `SummaryStrip`/`Tile`, `FinePrint`, `TeamAccent`, `RangeRow`, `MatchupBand`, `useChartTip`, `ProbStrip` (in `web/src/components/` and `web/src/charts/`), colors from CSS tokens. Still open: the tendencies dumbbells on the same league band (hub decision D2).
+Kit: `Tabs`, `SummaryStrip`/`Tile`, `FinePrint`, `TeamAccent`, `RangeRow`, `MatchupBand`, `useChartTip`, `ProbStrip`, and from M14/M15 `Scatter`, `WpChart`, `PossessionStrip`, `Skeleton` (in `web/src/components/` and `web/src/charts/`), colors from CSS tokens. Still open: the tendencies dumbbells on the same league band (hub decision D2).
 
 ## Out of scope for now
 

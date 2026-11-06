@@ -4,7 +4,7 @@ Where the project is right now. Chats keep it current as they work ([state-maint
 
 ## Bottom line (as of 2026-11-05)
 
-The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17). Next: watch the first live locks, then the narrative's previews and evals (M6.3, M6.4). Two future research plans are parked (M6.6 follow-up searches, M6.7 hosted agent; decision D3).
+The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17). M13 site walk fixes merged 2026-11-05 (#18). Next: two flights planned 2026-11-05 on Fable, the league page (M14, ADR 0019, this chat's track `league`) and the retro's win-probability chart with a motion pass (M15, ADR 0020, track `pop` in a second chat); then the narrative's previews and evals (M6.3, M6.4). Two future research plans are parked (M6.6 follow-up searches, M6.7 hosted agent; decision D3).
 
 ## What runs where
 
@@ -86,6 +86,8 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
+| league | `league-teams`, then `league-playoffs`, `league-context` | `~/dev/nfl-project-league` | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | planned 2026-11-05 (Fable); phase 1 not started | |
+| pop | `retro-wp`, then `retro-drives`, `retro-story` | `~/dev/nfl-project-pop` | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; story layout | planned 2026-11-05 (Fable); starts in a new chat from `.notes/plans/pop-chat-prompt.md` | |
 | ui | `ui-site-walk-fixes` | `~/dev/nfl-project-ui` | M13 site walk fixes in review; round 2 done; later items in `.notes/ui-round2.md` §9 (tendencies across situations, H4 injuries and news tab, open-bets list once live bets exist) | U1 to U5 merged and live (#11, #13, #14, #16, #17); `nfl-retro` and `nfl-site` run by hand on 041a83a, 2026-11-05 | #11, #13, #14, #16, #17 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
@@ -106,7 +108,9 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M9 game retrospective (ADR 0016) | done 2026-11-02 |
 | M10 site v2, one answer first (ADR 0017) | done 2026-11-04 (PR #4) |
 | M11 model wave 2 (ADR 0018) | done 2026-11-04 (PR #12), live before the first public lock |
-| M13 site walk fixes (review §10) | built 2026-11-05, in review on `ui-site-walk-fixes` |
+| M13 site walk fixes (review §10) | merged 2026-11-05 (#18) |
+| M14 league page (ADR 0019) | planned 2026-11-05; three phases, track `league` |
+| M15 retro win probability, motion, drives, story (ADR 0020) | planned 2026-11-05; three phases, track `pop` |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -117,7 +121,6 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D2 | Tendencies on the league band too (`RangeRow` over `tendencies.parquet`), the follow-up ADR 0017 left out? | (a) next UI round; (b) not worth it | the next UI look | 2026-11-03 |
 | D3 | How should narrative research get smarter? Plans in `docs/tasks.md` (M6.6, M6.7) | (a) M6.6: one model-proposed follow-up search per game in the local pipeline, a few hours, free; (b) M6.7: hosted free-roaming agent on API credits, better writing and no desktop dependence, but reverses the no-paid-API rule; (c) leave it as it is | Austin; both parked, neither scheduled | 2026-11-05 |
 | D3 | A better knowledge-base tool for cross-chat tracking than `.notes/board.md`? | later; revisit when the board stops being enough | nothing yet | 2026-11-04 |
-| D9 | League page (`.notes/project-review-2026-11.md` §4.1): the real NFL tiebreak procedure or a documented approximation? | real (L) / approximate (M) | Austin | 2026-11-05 |
 | D10 | Betting integration (§5): which venue is lawful where Austin lives; then read-only prices only, or execution with a fixed small stake? | legal check first; read-only / execute | Austin | 2026-11-05 |
 | D11 | GPU for the desktop (§6): a 24 GB card to run 27–32B models, or stay on the 1070 with prompts and evals only? | buy / stay | Austin's money | 2026-11-05 |
 | D12 | Learned Student (§3.1): a fifth line in shadow (recommended) or a replacement for the Student? | shadow / replace | Austin | 2026-11-05 |
@@ -126,6 +129,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
+- D9 League page tiebreaks: the real procedure through strength of schedule, then a seeded coin flip (Austin, 2026-11-05, ADR 0019). A scratch engine reproduced 48 of 48 conference-seasons' seeds, so it is M, not L.
 - D4 Preview bars are scaled by the Global fit (Austin, 2026-11-04).
 - D5 The Student stays as the data-only public line; the ensemble is demoted to a diagnostic like Global and leaves the site, README and tiles (Austin, 2026-11-04). Its lock rows keep being written until wave 2 drops it.
 - D6 Model wave 2 scoped (Austin, 2026-11-04; `.notes/ui-round2.md` §6): quarterback-group fix, line move winsorized and given to the Student and Analyst, coaching and both scheme groups zeroed in every line, special teams promoted to its own group, ensemble stops locking. One `model_version` at the Week 10 Thursday lock.
@@ -161,8 +165,8 @@ Current docs, what each is for, and when it was last verified against the code o
 
 | Doc | Read it when | Verified |
 |---|---|---|
-| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-02 |
-| [adr/](adr/) | before re-opening a decision; ADR 0018 is the newest | 2026-11-03 |
+| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-05 |
+| [adr/](adr/) | before re-opening a decision; ADR 0020 is the newest (0019 league page, 0020 retro win probability and motion) | 2026-11-05 |
 | [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-05 |
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-05 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-04 |
@@ -173,7 +177,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |
 | [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona | 2026-11-04 |
 | [PROJECT_BRIEF.md](PROJECT_BRIEF.md) | the original scope; historical, ADRs win on conflict | 2026-10-27 |
-| `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `project-review-2026-11.md` the 2026-11-05 review and next directions (D9–D13); `plans/` one research plan per enhancement (2026-11-05: interaction features, learned Student, boldness view, league page, team scatter, WP chart and motion), each ending in decisions for Austin; `archive/` notes that were true once | 2026-11-04 |
+| `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `project-review-2026-11.md` the 2026-11-05 review and next directions (D9–D13); `plans/` one research plan per enhancement (2026-11-05: interaction features, learned Student, boldness view, league page, team scatter, WP chart and motion), each ending in decisions for Austin; `plans/pop-chat-prompt.md` starts the M15 chat; `archive/` notes that were true once | 2026-11-04 |
 
 ## Maintenance
 

@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-02 (sections 3.6c and 8 updated with the retrospective); the live state is [state.md](state.md).
+Status: current, verified 2026-11-05 (sections 3.6c and 8 updated with the retrospective); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
@@ -65,6 +65,7 @@ flowchart LR
 | Lock | `nfl/lock.py` | Live prediction run at a lock point; writes prediction rows and the public JSON + hash. |
 | Grade and ledger | `nfl/grade.py`, `nfl/ledger.py` | Scores predictions, settles paper bets, computes CLV and divergence buckets. |
 | Retrospective | `nfl/retro/` | Post-game: efficiency vs season to date, luck factors priced in points against league expectations, predictions graded per game, group attribution (ADR 0016). Daily job. |
+| League | `nfl/league/` | Division map, standings and the real tiebreak procedure, Monte Carlo playoff odds with a team-strength shock, game leverage, similar seasons, the per-team feature table (`teams.json`, also the source of the game page's bands). Built inside every site build; snapshots on refresh and lock (ADR 0019). |
 | Hypotheses | `nfl/hypotheses.py` | Per-feature coefficients, CIs, verdicts from the global fit. |
 | LLM | `nfl/llm/` | Narrative extraction, preview text, faithfulness check, call log. Separate entrypoints, versioned prompts. |
 | Site | `nfl/site.py` | Writes the JSON contract the UI reads. |
@@ -90,7 +91,7 @@ Git holds code, prompts, approach configs, `public/predictions/` lock artifacts,
 | Table | Grain | Key columns |
 |---|---|---|
 | `games` | game | `game_id, season, week, game_type, kickoff_utc, home_team, away_team, location, roof, surface, spread_line, total_line, home_moneyline, away_moneyline, home_rest, away_rest, div_game, result, home_score, away_score, home_coach, away_coach, home_qb_name, away_qb_name` |
-| `plays` | play | POC 37-column pbp subset + FTN flags, `has_ftn` |
+| `plays` | play | POC 37-column pbp subset + FTN flags, `has_ftn`; from M15.2 also `vegas_home_wp`, `vegas_home_wpa` and the `fixed_drive*` / `drive_*` columns (ADR 0020) |
 | `injuries`, `depth_charts` | report row | as POC |
 | `lines` (new) | game × book × market × snapshot | `game_id, snapshot_ts, book, market ('h2h','spreads','totals'), side, price_american, point` |
 | `weather` (new) | game | `game_id, fetched_at, temp_c, wind_kph, precip_mm, is_forecast` |
@@ -202,6 +203,12 @@ flowchart LR
 
 Game retro sections: `result`; `predictions[]` (per approach: status, pick, right, log loss, spread error, best); `played_like` (home win % from the logistic); per team `efficiency[]` (metric, game, season to date, league) and `luck[]` (factor, actual, expected, swing points, sentence) with `luck_net`; `attribution` (per approach, per group: pp, drop-one log-loss value); `headlines[]` (template sentences).
 
+### 3.6d League artifacts (ADR 0019, M14)
+
+- `site/teams.json`: every team's latest season-to-date value, league percentile and rank for every team-level feature, from each team's next-game row (`nfl.league.teams.team_latest`), plus conference, division, record and games. `feature_bands` reads the same table.
+- `site/league.json`: standings with "seed today", playoff odds per team for two variants (Student, market), game leverage, odds history and similar seasons. Built by `nfl.league.build` at the end of `site.build`.
+- `marts/league/season=YYYY/snapshots.parquet`: append-only odds snapshots (as_of, kind refresh|lock, variant, team, outputs, model_version, n_sims, seed), written on the Tuesday refresh and after each real lock, never backfilled.
+
 ### 3.7 Site JSON (the UI contract)
 
 | File | Content |
@@ -212,7 +219,8 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | `site/scorecard.json`, `site/tracker.json` | scorecard rows; per model cumulative units, CLV, calibration bins, divergence buckets, weekly series |
 | `site/hypotheses.json` | per feature: coefficient, CI, n, verdict, sentence, approaches that lean on it |
 | `site/audit.json` | null rates, freshness |
-| `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet |
+| `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet; `wp_series` and `drives` from M15 (ADR 0020), nullable |
+| `site/teams.json`, `site/league.json` | per-team feature table; standings, playoff odds, leverage, similar seasons (ADR 0019, §3.6d) |
 | `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, best call and costliest miss, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.
