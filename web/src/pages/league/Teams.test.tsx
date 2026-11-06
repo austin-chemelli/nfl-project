@@ -16,7 +16,7 @@ vi.mock('../../charts/Scatter', () => ({
 afterEach(cleanup)
 
 const open = async (url: string) => {
-  renderRoute(url)
+  renderRoute(url.includes('tab=') ? url : `${url}${url.includes('?') ? '&' : '?'}tab=teams`)
   await screen.findByRole('group', { name: 'Starting views' })
 }
 const pressed = () => screen.queryAllByRole('button', { pressed: true }).map((b) => b.textContent)

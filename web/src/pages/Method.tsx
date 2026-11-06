@@ -183,6 +183,7 @@ function Limits() {
         <li>Persona weights are opinions. History-fitted weights describe the past, not the future.</li>
         <li>The Sharp&apos;s market-behavior inputs (line moves, public betting share) exist only for live games. Its backtest covers the same games as the others but mostly tests its football weights.</li>
         <li>Narrative (news) features exist only for live games; there is no history to fit.</li>
+        <li>Playoff odds are simulations of the Student&apos;s and the market&apos;s game probabilities, so they carry each one&apos;s errors. Betting lines reach only about a week ahead, so for most of the season the market view is largely estimated from this season&apos;s lines. Tested on lines it hadn&apos;t seen, that estimate was no closer to the market than the Student was.</li>
       </ul>
     </Section>
   )

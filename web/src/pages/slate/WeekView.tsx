@@ -2,8 +2,8 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Help } from '../../components/Help'
 import { FinePrint } from '../../components/FinePrint'
 import { Card, Loaded, ModelBadge, ProbCell, Section, Segmented, StatusBadge, TableScroll, td, th } from '../../components/ui'
-import { isNotFound, useSlate } from '../../data/api'
-import type { GameRow, Meta } from '../../data/contract'
+import { isNotFound, useLeague, useSlate } from '../../data/api'
+import type { GameRow, LeagueFile, Meta } from '../../data/contract'
 import { ago, kickoffEt, spreadLabel } from '../../lib/format'
 import { approachOf } from '../../lib/meta'
 import { APPROACHES, colorVar } from '../../lib/models'
@@ -14,6 +14,7 @@ import { correct, divergenceText, DIVERGE, gameStatus, neighbours, parseSort, pi
 
 export function WeekView({ meta, season, week }: { meta: Meta; season: number; week: number }) {
   const q = useSlate(season, week)
+  const league = useLeague() // optional: a missing file just means no stakes line
   const lock = meta.last_lock
   return (
     <>
@@ -31,7 +32,7 @@ export function WeekView({ meta, season, week }: { meta: Meta; season: number; w
         </Card>
       ) : (
         <Loaded q={q} what="slate" shape="cards">
-          {(s) => <Games meta={meta} games={s.games} week={week} />}
+          {(s) => <Games meta={meta} games={s.games} week={week} league={league.data} />}
         </Loaded>
       )}
     </>
@@ -71,7 +72,7 @@ function WeekPicker({ meta, season, week }: { meta: Meta; season: number; week: 
   )
 }
 
-function Games({ meta, games, week }: { meta: Meta; games: GameRow[]; week: number }) {
+function Games({ meta, games, week, league }: { meta: Meta; games: GameRow[]; week: number; league?: LeagueFile }) {
   const [params, setParams] = useSearchParams()
   const location = useLocation()
   const sort = parseSort(params.get('sort'))
@@ -119,7 +120,7 @@ function Games({ meta, games, week }: { meta: Meta; games: GameRow[]; week: numb
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {sorted.map((g) => (
-              <GameCard key={g.game_id} g={g} meta={meta} showStatus={gameStatus(g).status !== common} />
+              <GameCard key={g.game_id} g={g} league={league} meta={meta} showStatus={gameStatus(g).status !== common} />
             ))}
           </div>
         )}

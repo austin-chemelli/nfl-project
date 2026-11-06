@@ -472,9 +472,8 @@ def run(
     try:
         from nfl.site import build as build_site
 
-        build_site(
-            paths, season
-        )  # the UI shows the lock right away (statuses flip preview -> locked)
+        # the UI shows the lock right away (statuses flip preview -> locked)
+        build_site(paths, season, league_snapshot="lock")
     except Exception as e:  # noqa: BLE001 - the lock is already recorded; the UI can be rebuilt
         warnings.warn(f"site rebuild after lock failed: {e!r}; run `nfl site`", stacklevel=2)
     return res

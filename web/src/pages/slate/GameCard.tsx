@@ -4,12 +4,12 @@ import { Link } from 'react-router'
 import { ProbStrip } from '../../charts'
 import { StatusBadge } from '../../components/ui'
 import { TeamAccent } from '../../components/TeamAccent'
-import type { GameRow, Meta } from '../../data/contract'
+import type { GameRow, LeagueFile, Meta } from '../../data/contract'
 import { kickoffEt, pct, spreadLabel } from '../../lib/format'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { matchupVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
-import { cardSentence, contrastLine, gameStatus, pickOf, whyLine } from './helpers'
+import { cardSentence, contrastLine, gameStatus, pickOf, stakesLine, whyLine } from './helpers'
 
 function TeamCode({ team, color }: { team: string; color: string }) {
   return (
@@ -36,7 +36,7 @@ function FinalScore({ g }: { g: GameRow }) {
 }
 
 /** `showStatus` is false when this card's status is the usual one for the week (said once above the grid). */
-export function GameCard({ g, meta, showStatus }: { g: GameRow; meta: Meta; showStatus: boolean }) {
+export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Meta; showStatus: boolean; league?: LeagueFile }) {
   const { status } = gameStatus(g)
   const mk = g.market?.p_home ?? null
   const models = APPROACHES.flatMap((id) => {
@@ -49,6 +49,7 @@ export function GameCard({ g, meta, showStatus }: { g: GameRow; meta: Meta; show
   const pk = pickOf(g, HEADLINE)
   const why = whyLine(g, meta)
   const contrast = contrastLine(g)
+  const stakes = g.result == null ? stakesLine(g, league) : null
   return (
     <Link
       to={`/game/${g.game_id}`}
@@ -78,6 +79,7 @@ export function GameCard({ g, meta, showStatus }: { g: GameRow; meta: Meta; show
       {pk && <div className="text-[14px] font-medium text-ink">{SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}</div>}
       {why && <div id={`${id}-why`} className="text-[14px] text-ink">{why}</div>}
       {contrast && <div className="text-[13px] text-ink-2">{contrast}</div>}
+      {stakes && <div className="tabular text-[13px] text-ink-2">{stakes}</div>}
       <div className={`flex items-center gap-2 text-[11px] text-ink-3 ${pregame ? 'border-t border-line pt-2' : ''}`}>
         <span>{g.away}</span>
         <div className="min-w-0 flex-1">

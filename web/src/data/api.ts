@@ -66,6 +66,8 @@ export const useSeasonFile = (season?: number) =>
   useJson('season', season ? `site/season_${season}.json` : null, C.SeasonFile)
 /** Every team's season-to-date feature values (ADR 0019): the League page's Teams tab; a 404 means not built yet. */
 export const useTeams = () => useJson('teams', 'site/teams.json', C.TeamsFile)
+/** Simulated playoff odds, standings and game leverage (ADR 0019): the League page's other tabs and the slate's stakes line; a 404 means not built yet. */
+export const useLeague = () => useJson('league', 'site/league.json', C.LeagueFile)
 export const useAudit = () => useJson('audit', 'site/audit.json', C.Audit)
 /** Post-game retrospective (ADR 0016): ask only once the game has a result; a 404 means not built yet. */
 export const useRetro = (id: string | undefined, enabled: boolean) =>
