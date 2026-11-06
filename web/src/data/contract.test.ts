@@ -19,6 +19,7 @@ function schemaFor(rel: string) {
   if (base === 'diy_matrix.json') return C.DiyMatrix
   if (base.startsWith('season_')) return C.SeasonFile
   if (base === 'audit.json') return C.Audit
+  if (base === 'teams.json') return C.TeamsFile
   return null
 }
 
@@ -50,6 +51,60 @@ function check(root: string, rel: string) {
     expect.fail(`${rel}\n  ${issues.join('\n  ')}`)
   }
 }
+
+describe('contract: teams.json', () => {
+  const team = (code: string) => ({
+    conference: code === 'KC' || code === 'BUF' ? 'AFC' : 'NFC',
+    division: 'x',
+    wins: 6,
+    losses: 2,
+    ties: 0,
+    games_played: 8,
+    points_for: 210,
+    points_against: 160,
+    last_game_id: '2026_08_A_B',
+    next_game_id: '2026_09_A_B',
+    games: [{ id: '2026_01_A_B', week: 1, opp: 'LAC', home: true, pf: 27, pa: 21 }, { id: '2026_09_A_B', week: 9, opp: 'NYJ', home: false, pf: null, pa: null }],
+    values: { 'strength.epa_off': 0.1 },
+    pct: { 'strength.epa_off': 87.1 },
+    rank: { 'strength.epa_off': 5 },
+  })
+  const file = () => ({
+    schema_version: '1',
+    generated_at: '2026-11-05T23:02:08Z',
+    season: 2026,
+    week: 9,
+    as_of: '2026-11-05T14:04:48Z',
+    features: [{ id: 'strength.epa_off', label: 'EPA per play', short: 'Offense EPA', description: 'd', unit: 'epa', group: 'offense', group_name: 'Offense', better: 'higher', n: 4, mean: 0, lo: -0.1, q1: -0.05, med: 0, q3: 0.05, hi: 0.1 }],
+    teams: Object.fromEntries(['KC', 'BUF', 'CHI', 'SF'].map((c) => [c, team(c)])),
+  })
+
+  it('parses a four-team file', () => expect(C.TeamsFile.safeParse(file()).success).toBe(true))
+
+  it('defaults what a later contract added: games, points, next game, pct and rank', () => {
+    const f = file()
+    for (const t of Object.values(f.teams) as Partial<ReturnType<typeof team>>[]) {
+      delete t.games
+      delete t.points_for
+      delete t.points_against
+      delete t.next_game_id
+      delete t.pct
+      delete t.rank
+    }
+    const parsed = C.TeamsFile.parse(f)
+    expect(parsed.teams.KC.games).toEqual([])
+    expect(parsed.teams.KC.next_game_id).toBeNull()
+    expect(parsed.teams.KC.rank).toBeUndefined()
+  })
+
+  it('accepts no direction and rejects an unknown one', () => {
+    const f = file()
+    f.features[0].better = null as unknown as string
+    expect(C.TeamsFile.safeParse(f).success).toBe(true)
+    f.features[0].better = 'sideways'
+    expect(C.TeamsFile.safeParse(f).success).toBe(false)
+  })
+})
 
 describe('contract: checked-in fixtures', () => {
   const fx = files(FIX)
