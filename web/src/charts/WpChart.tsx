@@ -9,10 +9,11 @@ import { useId, type ReactNode } from 'react'
 import type { WpPlay, WpSeries } from '../data/contract'
 import { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
+import { timeScale, WP_MARGIN } from './wpScale'
 
 export type WpMark = { title: string; helped: 'home' | 'away'; team: string; prob: string; swing: string; text: string; counted: string | null }
 
-const M = { l: 8, r: 10, t: 8, b: 22 }
+const M = { ...WP_MARGIN, t: 8, b: 22 }
 const QUARTER = 900
 const pc = (p: number) => `${Math.round(100 * p)}%`
 const period = (t: number) => (t >= 3600 ? 'overtime' : `Q${Math.floor(t / QUARTER) + 1}`)
@@ -35,7 +36,7 @@ export function WpChart({ series, home, away, homeScore, awayScore, describe }: 
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const { points, end_t: endT, ot } = series
   const height = width < 480 ? 180 : 220
-  const x = scaleLinear().domain([0, Math.max(1, endT)]).range([M.l, width - M.r])
+  const x = timeScale(width, endT)
   const y = scaleLinear().domain([1, 0]).range([M.t, height - M.b])
   const y50 = y(0.5)
   const plays = [...series.plays].sort((a, b) => a.t - b.t)

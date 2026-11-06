@@ -3,7 +3,7 @@ import metaJson from '../../test/fixtures/site/meta.json'
 import retroJson from '../../test/fixtures/site/retro/2026_08_CAR_GB.json'
 import gameJson from '../../test/fixtures/site/game/2026_08_CAR_GB.json'
 import { Game, Meta, RetroGame } from '../../data/contract'
-import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText } from './helpers'
+import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText, driveText, driveLede } from './helpers'
 
 const meta = Meta.parse(metaJson)
 const game = Game.parse(gameJson)
@@ -294,5 +294,24 @@ describe('wpLede and markText', () => {
     expect(markText(p, 'DAL', 'ARI')).toMatchObject({ prob: '53% → 73%', swing: '+20 pts', text: '(Shotgun) D.Prescott sacked' })
     expect(markText({ ...p, text: '(:10) pass' }, 'DAL', 'ARI').text).toBe('pass')
     expect(markText({ ...p, text: 'Kickoff (3:02) note' }, 'DAL', 'ARI').text).toBe('Kickoff (3:02) note')
+  })
+})
+
+describe('driveText and driveLede', () => {
+  const dr = { n: 1, team: 'ARI', qtr: 2, t0: 1000, t1: 1190, start_yl: 31, end_yl: 62, plays: 7, result: 'Punt' }
+  it('says when, how it ended, and where it went from the offense\'s view', () => {
+    expect(driveText(dr)).toEqual({ title: 'Q2 · ARI', result: 'Punt', span: '7 plays, 3:10', detail: "From own 31 to opponent's 38" })
+  })
+  it('takes a touchdown to the end zone, and handles overtime, midfield and missing fields', () => {
+    expect(driveText({ ...dr, qtr: 5, result: 'Touchdown', start_yl: 50 })).toMatchObject({ title: 'OT · ARI', detail: 'From midfield to the end zone' })
+    expect(driveText({ ...dr, plays: 1 }).span).toBe('1 play, 3:10')
+    expect(driveText({ ...dr, plays: null, start_yl: null, end_yl: null, result: null })).toMatchObject({ result: 'Result not recorded', span: '3:10', detail: null })
+    expect(driveText({ ...dr, end_yl: null }).detail).toBe('From own 31')
+    expect(driveText({ ...dr, result: 'Opp touchdown' }).result).toBe('Touchdown for the defense')
+  })
+  it('counts each team\'s scoring drives, away first', () => {
+    const r = { away: 'ARI', home: 'DAL', drives: [dr, { ...dr, result: 'Touchdown' }, { ...dr, team: 'DAL', result: 'Field goal' }] } as unknown as RetroGame
+    expect(driveLede(r)).toBe('ARI scored on 1 of 2 drives, DAL on 1 of 1.')
+    expect(driveLede({ ...r, drives: null })).toBeNull()
   })
 })

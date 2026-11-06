@@ -93,6 +93,18 @@ describe('Retro', () => {
     expect(screen.getByText(/not one of this site's approaches/)).toBeInTheDocument()
   })
 
+  it('renders the strip and Drive by drive with drives, and neither without', () => {
+    const drives = [{ n: 1, team: 'CAR', qtr: 1, t0: 0, t1: 171, start_yl: 25, end_yl: 40, plays: 6, result: 'Punt' }, { n: 2, team: 'GB', qtr: 1, t0: 180, t1: 400, start_yl: 20, end_yl: 99, plays: 9, result: 'Touchdown' }]
+    const { unmount } = render(<Retro r={{ ...r, drives }} />)
+    expect(screen.getAllByTestId('drive-segment')).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: /Drive by drive/ })).toBeInTheDocument()
+    expect(screen.getByText('CAR scored on 0 of 1 drives, GB on 1 of 1.')).toBeInTheDocument()
+    unmount()
+    render(<Retro r={{ ...r, drives: null }} />)
+    expect(screen.queryByTestId('drive-segment')).toBeNull()
+    expect(screen.queryByRole('heading', { name: /Drive by drive/ })).toBeNull()
+  })
+
   it('renders no win-probability section when wp_series is null or missing', () => {
     const { unmount } = render(<Retro r={{ ...r, wp_series: null }} />)
     expect(screen.queryByRole('heading', { name: /How it unfolded/ })).toBeNull()

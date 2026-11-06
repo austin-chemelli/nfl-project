@@ -1,5 +1,6 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
-import type { Contribution, Game, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
+import type { DriveTip } from '../../charts'
+import type { Contribution, Drive, Game, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
 import { fmtUnit, kickoffEt, pct } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
 import { APPROACHES } from '../../lib/models'
@@ -354,6 +355,36 @@ export function wpLede(r: RetroGame): string | null {
     return `${winner} won ${score(r)} after its win chance fell to ${pctText} ${when === 'overtime' ? 'in overtime' : `in ${when}`}.`
   }
   return `${winner}'s win chance never fell below ${Math.floor(low[1] * 100 + 1e-9)}% on the way to a ${score(r)} win.`
+}
+
+const whereOnField = (yl: number) => (yl === 50 ? 'midfield' : yl < 50 ? `own ${yl}` : `opponent's ${100 - yl}`)
+const DRIVE_RESULTS: Record<string, string> = { 'Opp touchdown': 'Touchdown for the defense', 'End of half': 'Ran out of time' }
+
+/** A drive's hover card and row label: when, how it ended, plays and time, where it went. */
+export function driveText(d: Drive): DriveTip {
+  const secs = Math.max(0, d.t1 - d.t0)
+  const time = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`
+  const plays = d.plays == null ? null : `${d.plays} ${d.plays === 1 ? 'play' : 'plays'}`
+  const end = d.result === 'Touchdown' ? 'the end zone' : d.end_yl == null ? null : whereOnField(d.end_yl)
+  return {
+    title: `${d.qtr >= 5 ? 'OT' : `Q${d.qtr}`} · ${d.team}`,
+    result: d.result == null ? 'Result not recorded' : (DRIVE_RESULTS[d.result] ?? d.result),
+    span: plays ? `${plays}, ${time}` : time,
+    detail: d.start_yl == null ? null : end ? `From ${whereOnField(d.start_yl)} to ${end}` : `From ${whereOnField(d.start_yl)}`,
+  }
+}
+
+/** One sentence over the drives: how often each team scored, the away team first. */
+export function driveLede(r: RetroGame): string | null {
+  const ds = r.drives
+  if (!ds?.length) return null
+  const line = (team: string) => {
+    const own = ds.filter((d) => d.team === team)
+    return { team, scored: own.filter((d) => d.result === 'Touchdown' || d.result === 'Field goal').length, n: own.length }
+  }
+  const a = line(r.away)
+  const h = line(r.home)
+  return `${a.team} scored on ${a.scored} of ${a.n} drives, ${h.team} on ${h.scored} of ${h.n}.`
 }
 
 const FACTOR_LABELS: Record<string, string> = {

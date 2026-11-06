@@ -402,6 +402,8 @@ Decided (ADR 0020): `vegas_home_wp`; "Turning points"; CSS tokens, no animation 
 
 ### Phase 2: drives (branch `retro-drives`; about two days)
 
+*Built 2026-11-05, in one sitting, in the main session: both charts are small and read data phase 1 already publishes, so it's web only.*
+
 - **M15.7 Possession strip.** Files: new `web/src/charts/PossessionStrip.tsx` and test, `pages/game/Retro.tsx` (under the WP chart, same x scale). A 10 px band colored by the team with the ball, a tick at each score, hover card with the drive's result. Acceptance: one segment per drive, in time order; `drives: null` renders nothing; aligned to the chart's x scale (shared scale test).
 - **M15.8 Field drive chart.** Files: new `web/src/charts/DriveField.tsx` and test, `pages/game/Retro.tsx`. A 100-yard SVG field, end zones tinted by team, no logos; one row per drive, a bar from start to end yard line in the offense's color, an end glyph per result (touchdown filled, field goal ring, punt dash, turnover ×); hover card with plays, time and result. Uses `drive_start_yard_line`, never the first play's `yardline_100`; drops the END GAME pseudo-drive. Acceptance: glyph per result tested; the "50" and null yard lines handled; phone width stacks the field under the strip.
 

@@ -7,15 +7,16 @@ import { FinePrint } from '../../components/FinePrint'
 import { Help } from '../../components/Help'
 import { Card, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Efficiency, GradedPick, RetroGame, TeamRetro, WpPlay } from '../../data/contract'
-import { DivergingBars, RangeRow, TipNote, TipRow, TipTitle, WpChart, type RangeRowData } from '../../charts'
+import { DivergingBars, DriveField, PossessionStrip, RangeRow, TipNote, TipRow, TipTitle, WpChart, type RangeRowData } from '../../charts'
 import { dash, fmtEff, pct, pts, ptsFor, ptsSide } from '../../lib/format'
-import { factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
+import { driveLede, driveText, factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
 
 export function Retro({ r }: { r: RetroGame }) {
   return (
     <div className="flex flex-col gap-8">
       <Headlines r={r} />
       <Unfolded r={r} />
+      <DriveByDrive r={r} />
       <PlayedLike r={r} />
       <Phases r={r} />
       <EfficiencySection r={r} />
@@ -57,10 +58,11 @@ function Unfolded({ r }: { r: RetroGame }) {
   const describe = (p: WpPlay) => markText(p, r.home, r.away, p.factor ? factorLabel(r, p.factor) : null)
   const plays = orderedPlays(ws)
   return (
-    <Section title="How it unfolded" help="Home win probability after every play, from nflfastR's model with the pregame spread. The numbered dots are the biggest single-play swings; hover, focus or tap one for the play.">
+    <Section title="How it unfolded" help="Home win probability after every play, from nflfastR's model with the pregame spread. The numbered dots are the biggest single-play swings; hover, focus or tap one for the play. The band underneath shows who had the ball, with a line at each score.">
       <p className="mb-3 text-[15px]">{wpLede(r)}</p>
       <Card>
         <WpChart series={ws} home={r.home} away={r.away} homeScore={r.result.home_score} awayScore={r.result.away_score} describe={describe} />
+        {r.drives && r.drives.length > 0 && <PossessionStrip drives={r.drives} endT={ws.end_t} home={r.home} describe={driveText} />}
         {plays.length > 0 && (
           <details className="mt-3 border-t border-line pt-2 text-[13px] text-ink-2">
             <summary className="cursor-pointer text-ink-3 hover:text-ink">Turning points</summary>
@@ -77,6 +79,18 @@ function Unfolded({ r }: { r: RetroGame }) {
             </ol>
           </details>
         )}
+      </Card>
+    </Section>
+  )
+}
+
+function DriveByDrive({ r }: { r: RetroGame }) {
+  if (!r.drives?.length) return null
+  return (
+    <Section title="Drive by drive" help="Each row is one drive, in order: where it started, where it ended and how. The away team drives left to right, the home team right to left, so the field isn't how the teams switched ends in the game.">
+      <p className="mb-3 text-[15px]">{driveLede(r)}</p>
+      <Card>
+        <DriveField drives={r.drives} home={r.home} away={r.away} describe={driveText} />
       </Card>
     </Section>
   )
