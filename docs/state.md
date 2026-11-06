@@ -87,7 +87,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
 | league | `league-teams`, then `league-playoffs`, `league-context` | `~/dev/nfl-project-league` | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | planned 2026-11-05 (Fable); phase 1 not started | |
-| pop | `retro-wp`, then `retro-drives`, `retro-story` | `~/dev/nfl-project-pop` | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; story layout | phase 1 merged 2026-11-05 (#19); `nfl-retro` run by hand on d969ab3, retros on schema 6. Phase 2 (`retro-drives`): possession strip and field chart, web only, PR open | #19 |
+| pop | `retro-wp`, then `retro-drives`, `retro-story` | `~/dev/nfl-project-pop` | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; story layout | phase 1 merged 2026-11-05 (#19); `nfl-retro` run by hand on d969ab3, retros on schema 6. Phase 2 (`retro-drives`): possession strip and field chart, web only, PR #21 open | #19, #21 |
 | ui | `ui-next` | `~/dev/nfl-project-ui` | M13 site walk fixes merged 2026-11-05 (#18); round 2 done; later items in `.notes/ui-round2.md` §9 (tendencies across situations, H4 injuries and news tab, open-bets list once live bets exist) | U1 to U5 merged and live (#11, #13, #14, #16, #17); `nfl-retro` and `nfl-site` run by hand on 041a83a, 2026-11-05 | #11, #13, #14, #16, #17 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
@@ -110,7 +110,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M11 model wave 2 (ADR 0018) | done 2026-11-04 (PR #12), live before the first public lock |
 | M13 site walk fixes (review §10) | done 2026-11-05 (PR #18), live; retros on schema 5 |
 | M14 league page (ADR 0019) | planned 2026-11-05; three phases, track `league` |
-| M15 retro win probability, motion, drives, story (ADR 0020) | phase 1 done 2026-11-05 (#19), live; phase 2 PR open; phase 3 to come, track `pop` |
+| M15 retro win probability, motion, drives, story (ADR 0020) | phase 1 done 2026-11-05 (#19), live; phase 2 PR #21 open; phase 3 to come, track `pop` |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
