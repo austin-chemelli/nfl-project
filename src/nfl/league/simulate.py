@@ -24,6 +24,13 @@ MIN_SWING = 0.05  # and the swing at least 5 points of probability
 WINS_LO, WINS_HI = 10, 90  # percentiles of the wins range
 CONFS = ("AFC", "NFC")
 N_SEEDS = 7
+# Team-strength shock std (logit), per run and team, added to every game of that team. Calibrated
+# 2026-11-05 by scripts/league_backtest.py (2010-2025, cuts at 6/9/12 games, 400 runs, Student
+# proxy); table in .notes/league-calibration.md. Pooled log loss on P(playoffs): 0.3585 at 0,
+# 0.3579 at 0.2, 0.3556 at 0.3, 0.3541 at 0.4 and 0.5, 0.3548 at 0.7, 0.3619 at 1.0. The gain over
+# 0 at 0.4 is -0.0044 (season-bootstrap 95% interval -0.0115 to +0.0029): a point estimate, not
+# significant pooled (significant at the 12-game cut). Smaller of the tied 0.4 and 0.5.
+SHOCK_SIGMA = 0.4
 ROUNDS = ("div", "conf", "sb", "champ")
 
 Seeder = Callable[..., list[str]]
@@ -91,6 +98,7 @@ def simulate_season(
     n_runs: int = DEFAULT_RUNS,
     rng: np.random.Generator | int | None = None,
     seeder: Seeder | None = None,
+    n_seeds: int = N_SEEDS,
 ) -> SimResult:
     """Simulate the rest of the regular season and the playoffs `n_runs` times.
 
@@ -98,7 +106,11 @@ def simulate_season(
     `ratings` (missing teams count 0) and `home_adv` give the playoff game probabilities
     sigmoid(r_home - r_away + home_adv); the Super Bowl is neutral (no home term).
     `sigma` is the std of the per-run team logit shock, applied to every game of a team.
+    `n_seeds` is 7 (from 2020) or 6 (to 2019: two byes, wild card 3v6 and 4v5). With 6 seeds
+    `TeamOdds.bye` is still P(seed 1) only, not P(seed 1 or 2).
     """
+    if n_seeds not in (6, 7):
+        raise ValueError(f"n_seeds must be 6 or 7, got {n_seeds}")
     from nfl.league.standings import GameResult, Results
 
     seeder = seeder or _default_seeder()
@@ -156,9 +168,9 @@ def simulate_season(
         k = 0
         champs: dict[str, int] = {}
         for conf in CONFS:
-            seeds = [ix[t] for t in seeder(results, conf, gen)]
-            if len(seeds) != N_SEEDS:
-                raise ValueError(f"seeder returned {len(seeds)} {conf} seeds, expected 7")
+            seeds = [ix[t] for t in seeder(results, conf, gen, n_seeds=n_seeds)]
+            if len(seeds) != n_seeds:
+                raise ValueError(f"seeder returned {len(seeds)} {conf} seeds, expected {n_seeds}")
             for s, t in enumerate(seeds):
                 seed_n[t, s] += 1
                 playoff_y[run, t] = 1.0
@@ -170,8 +182,9 @@ def simulate_season(
                 k += 1
                 return a if u[k - 1] < p_a else b
 
-            wc = [play(1, 6), play(2, 5), play(3, 4)]
-            alive = sorted([0, *wc])
+            byes = list(range(8 - n_seeds))  # seed 1 (7 seeds) or seeds 1 and 2 (6 seeds)
+            wc = [play(b, n_seeds - 1 - (b - len(byes))) for b in range(len(byes), 4)]
+            alive = sorted([*byes, *wc])
             for s in alive:
                 round_n["div"][seeds[s]] += 1
             alive = sorted([play(alive[0], alive[3]), play(alive[1], alive[2])])
