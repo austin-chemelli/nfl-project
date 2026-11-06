@@ -1,6 +1,6 @@
 # ADR 0021: Coaching staff ground truth, tendency context and a team page
 
-Status: proposed 2026-11-06, waiting on Austin (hub decisions D15, D16). Plan: `.notes/plans/coaches-refinement.md`. Tasks: M17.
+Status: accepted 2026-11-06 (Austin): team page, verification 2016–2026 (hub decisions D15, D16). Plan: `.notes/plans/coaches-refinement.md`. Tasks: M17.
 
 ## Context
 The coordinator table (`src/nfl/data/coordinators.csv`, 352 rows, 2016–2026) was built from Wikipedia season pages through a summarizer, with play-callers from general knowledge. The play-caller column is the one the profiles and the game page hang on, and it is wrong in the current season (CAR 2026 names Canales; Idzik has called plays since February 2026) and unverified elsewhere. The table flattens mid-season changes to the end-of-season person. Profiles use participation data, which nflverse publishes once per offseason, so every 2026 unit shows "no tendencies yet" while weekly FTN and pbp tendencies already exist through Week 9. The nflverse schedule's coach field is stale for 2024+ (NYJ 2024 shows Saleh all season; 2026 shows three replaced head coaches), so it cannot be the ground truth. Austin's direction: accurate data first, play-callers labelled as play-callers only when they are, recent tendencies weighted over old ones, context for callers who moved teams, changed quarterbacks or have never called plays, and a place on the League side for a per-team evaluation. No paid API; open data only (ADR 0001); additive contracts (ADR 0015).

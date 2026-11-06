@@ -127,8 +127,8 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D12 | Learned Student (§3.1): a fifth line in shadow (recommended) or a replacement for the Student? | shadow / replace | Austin | 2026-11-05 |
 | D13 | Player-level data (§2.2): injury weighting plus four position groups, or wider? | narrow / wide | Austin | 2026-11-05 |
 | D14 | A backup lock run 30 minutes after each lock that acts only if the first didn't, so a badly timed merge fixes itself? | (a) build it, about an hour, plus an "already locked?" check; (b) leave reruns manual | Austin, after the first public lock | 2026-11-04 |
-| D15 | Coaches refinement (ADR 0021): a team page `/team/:code` for state, staff and tendencies (recommended), or the League panel / Coaches page as is? | team page / panel / coaches page | Austin | 2026-11-06 |
-| D16 | Staff verification depth: 2016–2026 with a full bar for 2022+ and a light bar before (recommended), or 2022–2026 only? Launch the 2025–2026 agents now? | full / recent only; launch now / wait | Austin | 2026-11-06 |
+| D15 | Coaches refinement (ADR 0021): where the per-team view lives | **decided 2026-11-06: a team page `/team/:code`, linked from game previews and wherever a team is named** | Austin | 2026-11-06 |
+| D16 | Staff verification depth | **decided 2026-11-06: 2016–2026 (where scheme data exists), full bar 2022+, light bar before; five research agents launched 2026-11-06** | Austin | 2026-11-06 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
