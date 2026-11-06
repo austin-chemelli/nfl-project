@@ -6,15 +6,16 @@ import { useState } from 'react'
 import { FinePrint } from '../../components/FinePrint'
 import { Help } from '../../components/Help'
 import { Card, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
-import type { Efficiency, GradedPick, RetroGame, TeamRetro } from '../../data/contract'
-import { DivergingBars, RangeRow, TipNote, TipRow, TipTitle, type RangeRowData } from '../../charts'
+import type { Efficiency, GradedPick, RetroGame, TeamRetro, WpPlay } from '../../data/contract'
+import { DivergingBars, RangeRow, TipNote, TipRow, TipTitle, WpChart, type RangeRowData } from '../../charts'
 import { dash, fmtEff, pct, pts, ptsFor, ptsSide } from '../../lib/format'
-import { phaseSummary, playedLikeSteps, swingRows, type SwingRow } from './helpers'
+import { factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
 
 export function Retro({ r }: { r: RetroGame }) {
   return (
     <div className="flex flex-col gap-8">
       <Headlines r={r} />
+      <Unfolded r={r} />
       <PlayedLike r={r} />
       <Phases r={r} />
       <EfficiencySection r={r} />
@@ -26,6 +27,7 @@ export function Retro({ r }: { r: RetroGame }) {
         <p>"Expected" comes from league rates in the same situations (2015–2025), and swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played, so they are variance rather than luck.</p>
         <p>In the forecast table, dimmed rows are references (the market and simple baselines), not entrants, and cannot be "best". One game is a very noisy score for any model.</p>
         <p>Phases are a count, not a score: they aren't worth the same as each other, and none of them feeds the played-like verdict. Some overlap with the swing plays below.</p>
+        <p>The win probability curve is nflfastR's model with the pregame spread, not one of this site's approaches. Its quirks, such as the step at the end of a tied regulation and blowouts flattening at 99.9%, are the model's. Play text is from nflverse.</p>
         <p>Group values overlap and do not add up to anything: read their order, not their size.</p>
       </FinePrint>
     </div>
@@ -43,6 +45,39 @@ function Headlines({ r }: { r: RetroGame }) {
           <li key={h}>{h}</li>
         ))}
       </ul>
+    </Section>
+  )
+}
+
+// ------------------------------------------------------------------------------------ unfolded
+
+function Unfolded({ r }: { r: RetroGame }) {
+  const ws = r.wp_series
+  if (!ws) return null
+  const describe = (p: WpPlay) => markText(p, r.home, r.away, p.factor ? factorLabel(r, p.factor) : null)
+  const plays = orderedPlays(ws)
+  return (
+    <Section title="How it unfolded" help="Home win probability after every play, from nflfastR's model with the pregame spread. The numbered dots are the biggest single-play swings; hover, focus or tap one for the play.">
+      <p className="mb-3 text-[15px]">{wpLede(r)}</p>
+      <Card>
+        <WpChart series={ws} home={r.home} away={r.away} homeScore={r.result.home_score} awayScore={r.result.away_score} describe={describe} />
+        {plays.length > 0 && (
+          <details className="mt-3 border-t border-line pt-2 text-[13px] text-ink-2">
+            <summary className="cursor-pointer text-ink-3 hover:text-ink">Turning points</summary>
+            <ol className="mt-2 list-decimal space-y-1.5 pl-5">
+              {plays.map((p) => {
+                const m = describe(p)
+                return (
+                  <li key={p.play_id}>
+                    <span className="font-medium text-ink">{m.title}</span>: {m.team} win chance {m.prob} ({m.swing}). {m.text}
+                    {m.counted && <> {m.counted}.</>}
+                  </li>
+                )
+              })}
+            </ol>
+          </details>
+        )}
+      </Card>
     </Section>
   )
 }

@@ -48,8 +48,8 @@ export default function GamePage() {
       ) : q.isError ? (
         <ErrorBox error={q.error} />
       ) : (
-        <Loaded q={meta} what="site info">
-          {(m) => <Loaded q={q} what="game">{(g) => <GameBody g={g} meta={m} />}</Loaded>}
+        <Loaded q={meta} what="game" shape="game">
+          {(m) => <Loaded q={q} what="game" shape="game">{(g) => <GameBody g={g} meta={m} />}</Loaded>}
         </Loaded>
       )}
     </Page>
@@ -61,7 +61,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
   const final = g.result != null
   const rq = useRetro(g.game_id, final)
   // wait for the retro (a final game's default tab depends on it); a 404 just means not built yet
-  if (final && rq.isPending) return <Loading what="game" />
+  if (final && rq.isPending) return <Loading what="game" shape="game" />
   const retro: RetroGame | null = rq.isSuccess ? rq.data : null
   const retroError = rq.isError && !isNotFound(rq.error) ? rq.error : null
   const { status } = gameStatus(g)

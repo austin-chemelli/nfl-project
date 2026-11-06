@@ -6,6 +6,7 @@ import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import duckdb
 import numpy as np
 import polars as pl
 import pytest
@@ -14,15 +15,19 @@ from nfl.config import Paths
 from nfl.features.groups import FEATURE_GROUP
 from nfl.predict import PRED_SCHEMA
 from nfl.retro.game import (
+    _drives,
     _league_bands,
+    _load_plays,
     _metric_exprs,
     _metrics,
     _phases,
+    _wp_series,
     build,
     build_games,
+    plays_hash,
     retro_path,
 )
-from nfl.retro.schema import SCHEMA_VERSION, Expectations, RetroGame, TeamRetro
+from nfl.retro.schema import SCHEMA_VERSION, Expectations, RetroGame, TeamRetro, WpSeries
 
 EXP = Path(__file__).parent / "fixtures" / "retro" / "expectations.json"
 PLAY_COLS = [
@@ -476,7 +481,7 @@ def test_league_bands_match_metrics_per_team():
 
 def test_schema_version_staleness(tree):
     build_games(tree, 2026)
-    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION == "5"
+    assert read(tree, "g2")["schema_version"] == SCHEMA_VERSION
     assert build_games(tree, 2026) == []  # same hash, expectations and schema: up to date
     f = retro_path(tree, 2026, "g2")
     d = json.loads(f.read_text())
@@ -602,3 +607,256 @@ def test_swing_sentence_hurt_both_helped_both_and_mixed():
         "Swing plays helped Arizona by 3.3 points and left Los Angeles even, a net 3.3 toward "
         "Arizona."
     )
+
+
+# ------------------------------------------------------------- win probability series and drives
+
+NEW_COLS = ["qtr", "game_seconds_remaining", "desc", "vegas_home_wp", "vegas_home_wpa", "fixed_drive",
+            "fixed_drive_result", "drive_start_yard_line", "drive_end_yard_line", "drive_play_count"]  # fmt: skip
+NEW_STR = {"desc", "fixed_drive_result", "drive_start_yard_line", "drive_end_yard_line"}
+ALL_COLS = PLAY_COLS + NEW_COLS
+WG = {"game_id": "w1", "home_team": "HOM", "away_team": "AWY", "home_score": 24, "away_score": 17}
+
+
+def wf(*rows):
+    """A planted game's plays with every column the series and drives read."""
+    schema = {c: pl.Utf8 if c in STR | NEW_STR else pl.Float64 for c in ALL_COLS}
+    out = []
+    for i, r in enumerate(rows, 1):
+        out.append(dict.fromkeys(ALL_COLS) | {"game_id": "w1", "play_id": float(i), "qtr": 1.0,
+                   "season_type": "REG", "posteam": "HOM", "defteam": "AWY", "play_type": "pass",
+                   "epa": 0.1, "game_seconds_remaining": 3600.0} | r)  # fmt: skip
+    return pl.DataFrame(out, schema=schema)
+
+
+def wp(p, wpa, gsr, qtr=1.0, **kw):
+    return {
+        "vegas_home_wp": p,
+        "vegas_home_wpa": wpa,
+        "game_seconds_remaining": gsr,
+        "qtr": qtr,
+    } | kw
+
+
+def ts(s):
+    return [t for t, _ in s.points]
+
+
+def test_wp_time_mapping_quarters_and_regular_overtime():
+    rows = [wp(0.5, 0.01, 3600.0), wp(0.51, 0.01, 2700.0, 2.0), wp(0.52, 0.01, 1800.0, 3.0),
+            wp(0.53, 0.01, 1.0, 4.0), wp(0.54, 0.01, 500.0, 5.0), wp(0.55, 0.01, 100.0, 5.0)]  # fmt: skip
+    s = _wp_series(wf(*rows), WG | {"home_score": 20, "away_score": 20})
+    assert ts(s) == [0, 0, 900, 1800, 3599, 3700, 4100, 4100]  # opening, five plays, the end
+    assert s.ot and s.end_t == 4100
+
+
+def test_wp_time_mapping_playoff_overtime():
+    rows = [wp(0.5, 0.01, 3600.0), wp(0.6, 0.01, 500.0, 5.0), wp(0.7, 0.02, 800.0, 6.0)]
+    s = _wp_series(wf(*[r | {"season_type": "POST"} for r in rows]), WG)
+    assert ts(s)[2] == 3600 + 900 - 500  # 15-minute overtime periods
+    assert ts(s)[3] == 3600 + 900 + (900 - 800)  # the second period starts at 4500
+    assert s.end_t == 4600
+
+
+def test_wp_time_never_runs_backwards_and_fills_null_clocks():
+    rows = [wp(0.5, 0.01, 3000.0), wp(0.6, 0.1, 3100.0), wp(0.7, 0.1, None)]
+    assert ts(_wp_series(wf(*rows), WG))[1:-1] == [600, 600, 600]
+
+
+@pytest.mark.parametrize(("gsr", "qtr", "clock"), [
+    (3600.0, 1.0, "15:00"), (2710.0, 2.0, "15:10"), (1810.0, 3.0, "15:10"), (900.0, 4.0, "15:00"),
+    (10.0, 4.0, "0:10"), (125.0, 5.0, "2:05"),
+])  # fmt: skip
+def test_wp_clock_is_time_left_in_the_quarter(gsr, qtr, clock):
+    assert _wp_series(wf(wp(0.2, 0.3, gsr, qtr)), WG).plays[0].clock == clock
+
+
+def test_wp_repeats_dropped_and_last_point_is_result():
+    rows = [wp(0.5, 0.0, 3600.0), wp(0.5, 0.02, 3500.0), wp(0.52, 0.0001, 3400.0),
+            wp(0.52, 0.0, 3300.0), wp(0.53, 0.01, 3200.0)]  # fmt: skip
+    s = _wp_series(wf(*rows), WG)
+    assert s.points == [(0, 0.5), (100, 0.52), (400, 0.54), (3600, 1.0)]
+    assert not s.ot and s.end_t == 3600
+    assert _wp_series(wf(*rows), WG | {"home_score": 3, "away_score": 9}).points[-1] == (3600, 0.0)
+    assert _wp_series(wf(*rows), WG | {"home_score": 9, "away_score": 9}).points[-1] == (3600, 0.5)
+    end = _wp_series(wf(wp(0.9, 0.1, 100.0, 4.0)), WG)  # the result point stays when p repeats
+    assert end.points[-2][1] == 1.0 and end.points[-1] == (3600, 1.0)
+
+
+def test_wp_stale_timeout_row_does_not_bounce_the_curve():
+    rows = [wp(0.5, 0.0, 3600.0),
+            wp(0.138, -0.138, 178.0, 4.0, play_type="field_goal", field_goal_attempt=1.0,
+               field_goal_result="made", kick_distance=40.0),
+            wp(0.138, 0.0, 175.0, 4.0, play_type="no_play"),  # icing timeout repeats the stale value
+            wp(0.0, 0.0, 173.0, 4.0, play_type=None, desc="END GAME")]  # fmt: skip
+    s = _wp_series(wf(*rows), WG | {"home_score": 3, "away_score": 9})
+    assert [p for _, p in s.points] == [0.5, 0.0, 0.0]
+    assert [m.play_id for m in s.plays] == [2]
+
+
+def test_wp_penalty_stays_on_curve_but_is_never_marked():
+    rows = [wp(0.5, 0.0, 3600.0),
+            wp(0.5, 0.2, 3000.0, play_type="no_play", penalty_team="AWY"),
+            wp(0.7, -0.2, 2000.0, 2.0, play_type="qb_kneel"),
+            wp(0.5, 0.2, 1500.0, 3.0, play_type=None),
+            wp(0.7, 0.01, 1000.0, 3.0)]  # fmt: skip
+    s = _wp_series(wf(*rows), WG)
+    assert [p for _, p in s.points] == [0.5, 0.7, 0.5, 0.7, 0.71, 1.0]
+    assert s.plays == []
+
+
+def test_wp_marks_top_five_largest_first_all_on_the_curve():
+    rows, p = [wp(0.5, 0.0, 3600.0)], 0.5
+    for i, w in enumerate([0.06, -0.3, 0.2, -0.07, 0.05, 0.049, 0.4, -0.1]):
+        rows.append(wp(p, w, 3500.0 - 100 * i))
+        p += w
+    s = _wp_series(wf(*rows), WG)
+    assert [abs(m.wpa) for m in s.plays] == [0.4, 0.3, 0.2, 0.1, 0.07]
+    assert {(m.t, m.p_after) for m in s.plays} <= set(s.points)
+    assert all(m.wpa == round(m.p_after - m.p_before, 3) for m in s.plays)
+
+
+def test_wp_mark_fields_clip_team_and_trimmed_text():
+    long = " ".join(["word"] * 50)
+    m = _wp_series(wf(wp(0.9, 0.3, 100.0, 4.0, posteam="AWY", desc=long)), WG).plays[0]
+    assert (m.p_before, m.p_after, m.wpa, m.team, m.qtr) == (0.9, 1.0, 0.1, "AWY", 4)
+    assert len(m.text) <= 160 and m.text.endswith("word") and long.startswith(m.text)
+    short = _wp_series(wf(wp(0.5, 0.2, 100.0, 4.0, posteam=None, desc="1-A.B pass")), WG).plays[0]
+    assert short.team is None and short.text == "1-A.B pass"
+
+
+def spec(**k):
+    return k
+
+
+def test_wp_factor_tags():
+    cases = {
+        "interceptions": spec(play_type="pass", qb_dropback=1.0, interception=1.0),
+        "fumbles": spec(play_type="pass", qb_dropback=1.0, fumble=1.0, fumble_lost=1.0),
+        "fumble beats third_down": spec(play_type="run", down=3.0, ydstogo=2.0, third_down_failed=1.0,
+                                        fumble=1.0, fumble_lost=1.0),
+        "third_down": spec(play_type="run", down=3.0, ydstogo=2.0, third_down_failed=1.0,
+                           fumble=1.0, fumble_lost=0.0),
+        "fourth_down": spec(play_type="run", down=4.0, ydstogo=1.0, fourth_down_converted=1.0),
+        "special_teams blocked": spec(play_type="field_goal", field_goal_attempt=1.0,
+                                      field_goal_result="blocked", kick_distance=40.0, defteam="HOM"),
+        "special_teams return": spec(play_type="punt", return_touchdown=1.0, special_teams_play=1.0,
+                                     td_team="HOM"),
+        "kicking fg": spec(play_type="field_goal", field_goal_attempt=1.0,
+                           field_goal_result="missed", kick_distance=40.0),
+        "kicking xp": spec(play_type="extra_point", extra_point_attempt=1.0,
+                           extra_point_result="failed"),
+        "aborted third": spec(play_type="run", down=3.0, ydstogo=2.0, third_down_failed=1.0,
+                              aborted_play=1.0),
+        "penalty": spec(play_type="run", penalty_team="HOM", penalty_yards=10.0),
+    }  # fmt: skip
+    want = {"fumble beats third_down": "fumbles", "special_teams blocked": "special_teams",
+            "special_teams return": "special_teams", "kicking fg": "kicking",
+            "kicking xp": "kicking", "aborted third": None, "penalty": None}  # fmt: skip
+    for name, kw in cases.items():
+        m = _wp_series(wf(wp(0.5, 0.0, 3600.0), wp(0.5, 0.3, 3000.0, **kw)), WG).plays
+        assert [x.factor for x in m] == [want.get(name, name)], name
+
+
+def test_wp_winner_low_comeback_and_tie():
+    rows = [wp(0.5, 0.0, 3600.0), wp(0.5, -0.4, 3000.0), wp(0.1, -0.05, 2400.0),
+            wp(0.05, 0.0, 2000.0), wp(0.05, 0.6, 1500.0, 3.0)]  # fmt: skip
+    assert _wp_series(wf(*rows), WG).winner_low == (1200, 0.05)  # home wins from 5%
+    away = WG | {"home_score": 3, "away_score": 10}
+    assert _wp_series(wf(*rows), away).winner_low == (2100, 0.35)  # away's view of 0.65
+    assert _wp_series(wf(*rows), WG | {"home_score": 7, "away_score": 7}).winner_low is None
+
+
+def test_wp_model_and_schema():
+    s = _wp_series(wf(wp(0.5, 0.2, 100.0, 4.0)), WG)
+    assert s.model == "nflfastr_vegas"
+    WpSeries.model_validate(s.model_dump())
+
+
+def test_wp_and_drives_none_without_the_columns_or_probabilities():
+    old = pl.DataFrame([play("w1", "HOM", "AWY")])
+    assert _wp_series(old, WG) is None and _drives(old, WG) is None
+    assert _wp_series(wf(wp(None, None, 100.0)), WG) is None
+    assert _drives(wf(wp(None, None, 100.0)), WG) is None
+    assert isinstance(plays_hash(old), str)  # the hash works on a frame lacking the new columns
+
+
+DRV = {"game_seconds_remaining": 3600.0, "fixed_drive_result": "Touchdown",
+       "drive_start_yard_line": "HOM 25", "drive_end_yard_line": "50", "drive_play_count": 6.0}  # fmt: skip
+
+
+def drive_rows():
+    return [
+        DRV | {"fixed_drive": 1.0, "play_type": "kickoff", "posteam": "AWY"},
+        DRV | {"fixed_drive": 1.0, "play_type": "run", "game_seconds_remaining": 3500.0},
+        DRV | {"fixed_drive": 1.0, "play_type": "pass", "game_seconds_remaining": 3300.0},
+        {"fixed_drive": 2.0, "play_type": "punt", "posteam": "AWY", "qtr": 2.0,
+         "game_seconds_remaining": 1700.0, "fixed_drive_result": "Punt",
+         "drive_start_yard_line": "AWY 31", "drive_end_yard_line": "HOM 40"},
+        {"fixed_drive": 3.0, "play_type": "pass", "qtr": 4.0, "game_seconds_remaining": 600.0,
+         "fixed_drive_result": "End of half", "drive_play_count": 2.0},
+        {"fixed_drive": 4.0, "play_type": None, "posteam": None, "qtr": 4.0,
+         "game_seconds_remaining": 0.0},  # END GAME pseudo-drive
+    ]  # fmt: skip
+
+
+def test_drives_fields_numbering_and_end_game_dropped():
+    d = _drives(wf(*drive_rows()), WG)
+    assert [x.n for x in d] == [1, 2, 3]
+    a, b, c = d
+    assert (a.team, a.qtr, a.t0, a.t1, a.plays, a.result) == ("HOM", 1, 0, 300, 6, "Touchdown")
+    assert (b.team, b.qtr, b.t0, b.plays, b.result) == ("AWY", 2, 1900, None, "Punt")
+    assert (c.team, c.start_yl, c.end_yl, c.plays) == ("HOM", None, None, 2)
+    assert _drives(wf(drive_rows()[5]), WG) is None
+
+
+def test_drives_yard_lines_parse_from_both_sides():
+    d = _drives(wf(*drive_rows()), WG)
+    assert (d[0].start_yl, d[0].end_yl) == (25, 50)  # "HOM 25" for HOM, "50"
+    assert (d[1].start_yl, d[1].end_yl) == (31, 60)  # "AWY 31" for AWY, "HOM 40" is its 60
+    flip = {"HOM": "AWY", "AWY": "HOM"}
+    rows = [r | {"posteam": flip.get(r.get("posteam", "HOM"))} for r in drive_rows()[:4]]
+    d = _drives(wf(*rows), WG)
+    assert (d[0].start_yl, d[0].end_yl) == (75, 50)  # AWY has the ball at "HOM 25"
+    assert (d[1].start_yl, d[1].end_yl) == (69, 40)
+
+
+def test_planted_partition_without_the_columns_builds_with_no_series(tree):
+    build_games(tree, 2026)
+    rec = RetroGame.model_validate(read(tree, "g2"))
+    assert rec.wp_series is None and rec.drives is None
+
+
+def _plays_dir(tmp_path, season):
+    d = Paths(tmp_path).curated_table("plays") / f"season={season}"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def test_load_plays_reads_only_its_season_when_an_older_one_lacks_columns(tmp_path):
+    pl.DataFrame({"game_id": ["o"], "play_id": [1.0], "posteam": ["HOM"]}).write_parquet(
+        _plays_dir(tmp_path, 2020) / "p.parquet"
+    )
+    pl.DataFrame({"game_id": ["n"], "play_id": [1.0], "posteam": ["OAK"], "vegas_home_wp": [0.4],
+                  "fixed_drive": [1.0]}).write_parquet(_plays_dir(tmp_path, 2026) / "p.parquet")  # fmt: skip
+    root = Paths(tmp_path).curated_table("plays").as_posix()
+    with pytest.raises(duckdb.Error):  # the all-season glob binds to the first file's schema
+        duckdb.sql(f"select vegas_home_wp from read_parquet('{root}/*/*.parquet', hive_partitioning=true)")  # fmt: skip
+    df = _load_plays(Paths(tmp_path), 2026)
+    assert df["game_id"].to_list() == ["n"] and df["vegas_home_wp"].to_list() == [0.4]
+    assert df["posteam"].to_list() == ["LV"] and "season" not in df.columns  # canonical code
+    assert df["fixed_drive_result"].dtype == pl.Utf8 and df["desc"].null_count() == 1
+
+
+def test_load_plays_season_partition_predating_the_columns(tmp_path):
+    paths = write_tree(tmp_path, [G1, G2], base_plays("g1") + base_plays("g2"))
+    df = _load_plays(paths, 2026)
+    assert set(PLAY_COLS) <= set(df.columns)
+    assert df["vegas_home_wpa"].null_count() == df.height
+    g2 = df.filter(pl.col("game_id") == "g2")
+    assert _wp_series(g2, WG) is None and _drives(g2, WG) is None
+
+
+def test_load_plays_missing_partition_is_empty_with_the_columns(tmp_path):
+    df = _load_plays(Paths(tmp_path), 2026)
+    assert df.is_empty() and {"vegas_home_wp", "posteam", "game_id"} <= set(df.columns)

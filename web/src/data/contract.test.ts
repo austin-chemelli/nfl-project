@@ -61,6 +61,17 @@ describe('contract: checked-in fixtures', () => {
     const parsed = C.RetroGame.parse(r)
     expect(parsed.teams.home.efficiency[0]).toMatchObject({ league_lo: null, league_hi: null })
   })
+  it('a retro parses with wp_series and drives missing, null or filled (schema 6, additive)', () => {
+    const r = JSON.parse(fs.readFileSync(path.join(FIX, 'retro/2026_08_CAR_GB.json'), 'utf8'))
+    expect(C.RetroGame.parse(r).wp_series?.plays).toHaveLength(3)
+    const { wp_series: _w, drives: _d, ...old } = r
+    const parsed = C.RetroGame.parse(old)
+    expect(parsed.wp_series ?? null).toBeNull()
+    expect(parsed.drives ?? null).toBeNull()
+    expect(C.RetroGame.parse({ ...old, wp_series: null, drives: null }).wp_series).toBeNull()
+    const drive = { n: 1, team: 'GB', qtr: 1, t0: 0, t1: 171, start_yl: 25, end_yl: null, plays: 6, result: 'Punt' }
+    expect(C.RetroGame.parse({ ...old, drives: [drive] }).drives?.[0]).toMatchObject(drive)
+  })
   it('a slate row parses with no card, an empty one, a partial one, and loses only the card when it is bad', () => {
     const row = JSON.parse(fs.readFileSync(path.join(FIX, 'slate_2026_08.json'), 'utf8')).games[0]
     const { card: _drop, ...bare } = row

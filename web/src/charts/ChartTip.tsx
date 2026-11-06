@@ -3,7 +3,7 @@
  * tap too. It adds detail and never carries the only copy of a value: each chart still prints its
  * numbers. Value first, label after, a short stroke keying the series.
  */
-import { useRef, useState, type FocusEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FocusEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 
 type At = { key: string; x: number; y: number; width: number; above: boolean }
 
@@ -18,8 +18,17 @@ export function useChartTip() {
     const r = box.current?.getBoundingClientRect()
     if (r) setAt({ key, x: clientX - r.left, y: clientY - r.top, width: r.width, above: clientY > window.innerHeight / 2 })
   }
+  // iOS Safari doesn't focus a tapped element, so a tap comes through onClick and blur may never close it
+  const open = at !== null
+  useEffect(() => {
+    if (!open) return
+    const close = (e: Event) => { if (!box.current?.contains(e.target as Node)) setAt(null) }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [open])
   const bind = (key: string) => ({
     tabIndex: 0,
+    onClick: (e: MouseEvent) => place(key, e.clientX, e.clientY),
     onPointerMove: (e: PointerEvent) => place(key, e.clientX, e.clientY),
     onPointerLeave: () => setAt(null),
     onFocus: (e: FocusEvent<SVGGElement>) => {
@@ -27,13 +36,13 @@ export function useChartTip() {
       place(key, b.left + b.width / 2, b.top)
     },
     onBlur: () => setAt(null),
-    style: { outline: 'none' },
+    style: { outline: 'none', cursor: 'pointer' },
   })
   const card = (content: ReactNode) => {
     if (!at || !content) return null
     const left = Math.max(0, Math.min(at.x + 14, at.width - WIDTH))
     return (
-      <div role="tooltip" data-testid="chart-tip" className="pointer-events-none absolute z-30 rounded-lg border border-line bg-surface-1 p-2.5 text-[13px] leading-snug shadow-xl" style={{ left, top: at.above ? at.y - 12 : at.y + 16, width: WIDTH, transform: at.above ? 'translateY(-100%)' : undefined }}>
+      <div role="tooltip" data-testid="chart-tip" className="chart-tip-in pointer-events-none absolute z-30 rounded-lg border border-line bg-surface-1 p-2.5 text-[13px] leading-snug shadow-xl" style={{ left, top: at.above ? at.y - 12 : at.y + 16, width: WIDTH, transform: at.above ? 'translateY(-100%)' : undefined }}>
         {content}
       </div>
     )

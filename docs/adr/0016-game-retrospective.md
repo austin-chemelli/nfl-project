@@ -57,3 +57,7 @@ Constraints: principle 1 (no generated statistic that wasn't computed), principl
   - historical seasons, since the CLI can build any season but only 2026 is published;
   - an LLM recap paragraph under the faithfulness check;
   - Streamlit parity (P1 UI is disposable).
+
+## Amendment 2026-11-05: win probability and drives
+
+The retro contract gains `wp_series` and `drives`, additive and nullable, at schema 6, and the builder reads its own season's partition rather than the all-season glob. Decision and shapes: ADR 0020.

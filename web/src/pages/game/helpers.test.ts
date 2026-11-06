@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import metaJson from '../../test/fixtures/site/meta.json'
+import retroJson from '../../test/fixtures/site/retro/2026_08_CAR_GB.json'
 import gameJson from '../../test/fixtures/site/game/2026_08_CAR_GB.json'
 import { Game, Meta, RetroGame } from '../../data/contract'
-import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus } from './helpers'
+import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText } from './helpers'
 
 const meta = Meta.parse(metaJson)
 const game = Game.parse(gameJson)
@@ -254,5 +255,44 @@ describe('marketSource and trendStatus', () => {
   })
   it('trend status wording', () => {
     expect([true, false, null].map(trendStatus)).toEqual(['producing results', 'not producing results', 'results unclear'])
+  })
+})
+
+describe('wpLede and markText', () => {
+  const base = RetroGame.parse(JSON.parse(JSON.stringify(retroJson)))
+  const with_ = (o: { home: number; away: number; low: [number, number] | null; ot?: boolean; min?: number }) => {
+    const r = structuredClone(base)
+    r.result = { home_score: o.home, away_score: o.away, margin: o.home - o.away }
+    r.home = 'DAL'
+    r.away = 'ARI'
+    Object.assign(r.wp_series!, { winner_low: o.low, ot: o.ot ?? false, points: [[0, 0.77], [100, o.min ?? 0.6], [3600, o.home > o.away ? 1 : 0]] })
+    return r
+  }
+  it('comeback, with the quarter', () => {
+    expect(wpLede(with_({ home: 30, away: 33, low: [1000, 0.04] }))).toBe('ARI won 33–30 after its win chance fell to 4% in Q2.')
+    expect(wpLede(with_({ home: 30, away: 33, low: [3700, 0.004], ot: true }))).toBe('ARI won 33–30 after its win chance fell to under 1% in overtime.')
+  })
+  it('wire to wire', () => {
+    // an underdog that only rose never "fell" to where it started
+    expect(wpLede(with_({ home: 30, away: 33, low: [0, 0.134] }))).toBe("ARI's win chance never fell below 13% on the way to a 33–30 win.")
+    expect(wpLede(with_({ home: 31, away: 20, low: [100, 0.58] }))).toContain('below 58%') // 0.58 * 100 is 57.99...
+    expect(wpLede(with_({ home: 31, away: 20, low: [100, 0.589] }))).toBe("DAL's win chance never fell below 58% on the way to a 31–20 win.")
+  })
+  it('tie, and no series', () => {
+    expect(wpLede(with_({ home: 20, away: 20, low: null }))).toBe('Tied 20–20.')
+    expect(wpLede(with_({ home: 20, away: 20, low: null, ot: true }))).toBe('Tied 20–20 after overtime.')
+    expect(wpLede({ ...base, wp_series: null })).toBeNull()
+  })
+  it('markText names the team helped, with and without a factor', () => {
+    const p = base.wp_series!.plays[0] // GB fumble, wpa -0.425: helps the away side
+    const m = markText(p, 'GB', 'CAR', 'Fumble recoveries')
+    expect(m).toMatchObject({ title: 'Q4 3:02 · GB', helped: 'away', team: 'CAR', prob: '36% → 79%', swing: '+43 pts', counted: 'Counted in: Fumble recoveries' })
+    expect(markText({ ...p, qtr: 5, wpa: 0.1, team: null }, 'GB', 'CAR')).toMatchObject({ title: 'OT 3:02', helped: 'home', team: 'GB', counted: null })
+  })
+  it('states a swing its own two numbers add up to, and leaves the repeated clock off the play text', () => {
+    const p = { play_id: 1, t: 3727, qtr: 5, clock: '7:53', team: 'DAL', p_before: 0.469, p_after: 0.275, wpa: -0.194, factor: null, text: '(7:53) (Shotgun) D.Prescott sacked' }
+    expect(markText(p, 'DAL', 'ARI')).toMatchObject({ prob: '53% → 73%', swing: '+20 pts', text: '(Shotgun) D.Prescott sacked' })
+    expect(markText({ ...p, text: '(:10) pass' }, 'DAL', 'ARI').text).toBe('pass')
+    expect(markText({ ...p, text: 'Kickoff (3:02) note' }, 'DAL', 'ARI').text).toBe('Kickoff (3:02) note')
   })
 })

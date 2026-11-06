@@ -1,5 +1,5 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
-import type { Contribution, Game, Meta, RetroGame, Tendency } from '../../data/contract'
+import type { Contribution, Game, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
 import { fmtUnit, kickoffEt, pct } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
 import { APPROACHES } from '../../lib/models'
@@ -326,4 +326,69 @@ export function marketSource(market: { p_home?: number | null; source?: string |
   if (market.source === 'schedules') return 'Market line: the nflverse schedule (no time recorded).'
   const name = market.source === 'odds_api' ? 'The Odds API' : market.source
   return market.as_of ? `Market line: ${name}, ${kickoffEt(market.as_of)}.` : `Market line: ${name}.`
+}
+
+// ------------------------------------------------------------------------- win probability (M15.3)
+
+/** Plays in the order they happened: the chart's marks and the list under it share this order. */
+export const orderedPlays = (ws: WpSeries): WpPlay[] => [...ws.plays].sort((a, b) => a.t - b.t)
+
+const pc = (p: number) => `${Math.round(100 * p)}%`
+const score = (r: RetroGame) => `${Math.max(r.result.home_score, r.result.away_score)}–${Math.min(r.result.home_score, r.result.away_score)}`
+/** Period from elapsed seconds: Q1 to Q4, then overtime. */
+const periodAt = (t: number) => (t >= 3600 ? 'overtime' : `Q${Math.floor(t / 900) + 1}`)
+
+/** The one sentence over the win-probability chart; null when the record has no series. */
+export function wpLede(r: RetroGame): string | null {
+  const ws = r.wp_series
+  if (!ws) return null
+  const m = r.result.margin
+  if (m === 0) return `Tied ${r.result.home_score}–${r.result.away_score}${ws.ot ? ' after overtime' : ''}.`
+  const home = m > 0
+  const winner = home ? r.home : r.away
+  const low = ws.winner_low ?? [0, Math.min(...ws.points.map(([, p]) => (home ? p : 1 - p)))]
+  // a low at t = 0 is where the winner started, so it never "fell" there
+  if (ws.winner_low && low[0] > 0 && low[1] < 0.25) {
+    const pctText = low[1] < 0.005 ? 'under 1%' : pc(low[1])
+    const when = periodAt(low[0])
+    return `${winner} won ${score(r)} after its win chance fell to ${pctText} ${when === 'overtime' ? 'in overtime' : `in ${when}`}.`
+  }
+  return `${winner}'s win chance never fell below ${Math.floor(low[1] * 100 + 1e-9)}% on the way to a ${score(r)} win.`
+}
+
+const FACTOR_LABELS: Record<string, string> = {
+  fumbles: 'Fumble recoveries',
+  interceptions: 'Interceptions thrown',
+  third_down: '3rd-down conversions',
+  fourth_down: '4th-down conversions',
+  kicking: 'Field goals and extra points',
+  penalties: 'Penalty yards',
+  special_teams: 'Return TDs and blocked kicks',
+}
+
+/** A luck factor's label from the retro record, with a static fallback. */
+export function factorLabel(r: RetroGame, factor: string): string {
+  return [...r.teams.home.luck, ...r.teams.away.luck].find((l) => l.factor === factor)?.label ?? FACTOR_LABELS[factor] ?? factor.replace(/_/g, ' ')
+}
+
+export type MarkText = { title: string; helped: 'home' | 'away'; team: string; prob: string; swing: string; text: string; counted: string | null }
+
+/**
+ * One turning point as strings. The numbers are the team it helped (wpa > 0 helps home): its win
+ * probability before and after, and the swing in points. `factor` is the label to print, if any.
+ */
+export function markText(p: WpPlay, home: string, away: string, factor?: string | null): MarkText {
+  const helped = p.wpa > 0 ? 'home' : 'away'
+  const view = (x: number) => (helped === 'home' ? x : 1 - x)
+  const when = p.qtr >= 5 ? `OT ${p.clock}` : `Q${p.qtr} ${p.clock}`
+  return {
+    title: p.team ? `${when} · ${p.team}` : when,
+    helped,
+    team: helped === 'home' ? home : away,
+    prob: `${pc(view(p.p_before))} → ${pc(view(p.p_after))}`,
+    // from the rounded ends, so the row's own arithmetic holds: 53% → 73% is +20, not +19
+    swing: `+${Math.abs(Math.round(100 * view(p.p_after)) - Math.round(100 * view(p.p_before)))} pts`,
+    text: p.text.replace(/^\(\d*:\d\d\)\s*/, ''), // the title already has the clock
+    counted: factor ? `Counted in: ${factor}` : null,
+  }
 }

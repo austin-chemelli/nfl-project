@@ -6,7 +6,7 @@
  * a row where lower is better, so right is always the better side.
  */
 import { scaleLinear } from 'd3-scale'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
 
@@ -61,14 +61,19 @@ export function MatchupBand({ rows, away, home, format, labelWidth = 220 }: {
             const span = (a: number, b: number) => ({ x: Math.min(x(a), x(b)), width: Math.max(2, Math.abs(x(b) - x(a))) })
             const op = r.stands ? 1 : 0.75
             const on = hovered?.key === r.key
+            // the league band grows out from its median
+            const grow = (a: number, b: number) => {
+              const s = span(a, b)
+              return { className: 'bar-grow', style: { '--i': Math.min(i, 7), transformOrigin: `${((x(r.med) - s.x) / s.width) * 100}% 50%` } as CSSProperties }
+            }
             return (
               <g key={r.key} data-stands={r.stands || undefined} {...bind(r.key)}>
                 <rect x={0} y={top} width={width} height={rowHeight} rx={4} fill={on ? 'var(--surface-2)' : 'transparent'} />
                 <foreignObject x={0} y={top} width={lw} height={narrow ? 20 : rowHeight}>
                   <div className={`flex h-full items-center truncate text-[13px] ${r.stands || on ? 'font-medium text-ink' : 'text-ink-3'}`}>{r.label}</div>
                 </foreignObject>
-                <rect data-testid="band" {...span(r.lo, r.hi)} y={cy - 7} height={14} rx={3} fill="var(--band)" />
-                <rect data-testid="band-core" {...span(r.q1, r.q3)} y={cy - 7} height={14} fill="var(--band-strong)" />
+                <rect data-testid="band" {...span(r.lo, r.hi)} y={cy - 7} height={14} rx={3} fill="var(--band)" {...grow(r.lo, r.hi)} />
+                <rect data-testid="band-core" {...span(r.q1, r.q3)} y={cy - 7} height={14} fill="var(--band-strong)" {...grow(r.q1, r.q3)} />
                 <line x1={x(r.med)} x2={x(r.med)} y1={cy - 9} y2={cy + 9} stroke="var(--text-muted)" strokeWidth={1.5} />
                 {r.stands && <line x1={x(r.away)} x2={x(r.home)} y1={cy} y2={cy} stroke="var(--text-primary)" strokeWidth={2} />}
                 <circle cx={x(r.away)} cy={cy} r={6} fill={AWAY} stroke="var(--surface-1)" strokeWidth={2} opacity={on ? 1 : op} />

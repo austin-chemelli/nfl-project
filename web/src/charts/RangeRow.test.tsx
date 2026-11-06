@@ -39,4 +39,14 @@ describe('RangeRow', () => {
     expect(container.textContent).not.toContain('vs season')
     expect(screen.getByRole('img')).toHaveAttribute('aria-label', expect.stringContaining('no data'))
   })
+
+  it('the game dot slides from the season dot but is drawn at its own value', () => {
+    const { container } = render(<RangeRow rows={[row({})]} format={f} legend={false} />)
+    const [season, game] = [...container.querySelectorAll('circle')]
+    expect(game).toHaveClass('dot-slide')
+    expect(season).not.toHaveClass('dot-slide')
+    const dx = Number(season.getAttribute('cx')) - Number(game.getAttribute('cx'))
+    expect(Number.parseFloat((game as unknown as SVGElement).style.getPropertyValue('--from-x'))).toBeCloseTo(dx)
+    expect(Number(game.getAttribute('cx'))).toBeGreaterThan(Number(season.getAttribute('cx')))
+  })
 })

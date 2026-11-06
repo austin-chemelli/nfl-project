@@ -30,3 +30,10 @@ Facts that shaped this: `curated/plays` keeps `wp` but drops `wpa`, `home_wp`, `
 - Play text is nflverse's (CC-BY, ADR 0011), five plays a game, trimmed and attributed. A template from fields exists as a fallback if that ever needs to change.
 - `docs/site.md` gains the motion rule as rule 11; every later animation reads the tokens or it is a bug.
 - Open: whether the comeback sentence becomes a sixth summary tile (ADR 0017 caps the strip at five), and whether orientation motion (route crossfades) is wanted at all.
+
+## Amendment 2026-11-05: what building it settled
+
+- **A curve point is the value after the play** (`vegas_home_wp + vegas_home_wpa`), taken only from rows with a non-zero wpa. `play_id` order puts a timeout after the kick it iced, repeating the stale value, so reading `vegas_home_wp` row by row would bounce the curve at the end of close games. Measured on 2026: one 2.6-point break in 19,449 rows.
+- **Elapsed time in regulation is `3600 − game_seconds_remaining`**; only overtime restarts the clock. The formula first written in the tasks was wrong.
+- **Skeletons stay on the game page, slate and tracker**, as decided. Other pages keep their "Loading …" words: two grey bars say less, and Build and Coaches wait on files over a megabyte. The route fallback shows a title and two blocks, since it serves pages with no tiles.
+- **Compact `ProbStrip`s keep `<title>`**: they sit inside links, up to 15 to a page. "Touch tips everywhere" means the expanded strip and `DotWhisker`.

@@ -13,6 +13,11 @@ RETRO_COLUMNS = [
     "punt_blocked", "posteam_score_post", "defteam_score_post",
 ]  # fmt: skip
 
+WP_DRIVE_COLUMNS = [
+    "vegas_home_wp", "vegas_home_wpa", "fixed_drive", "fixed_drive_result",
+    "drive_start_yard_line", "drive_end_yard_line", "drive_play_count",
+]  # fmt: skip
+
 SCHED_COLS = (  # noqa: SIM905
     "game_id season game_type week gameday weekday gametime location home_team away_team "
     "home_score away_score result total spread_line total_line home_moneyline away_moneyline "
@@ -42,7 +47,10 @@ def _pbp(season, gid, extra=True):
         base.update(field_goal_attempt=[1.0, 0.0], field_goal_result=["made", None],
                     kick_distance=[45.0, None], fumble=[0.0, 1.0], fumble_lost=[0.0, 1.0],
                     penalty_team=[None, "BBB"], penalty_yards=[None, 10.0],
-                    td_team=[None, "BBB"], posteam_score_post=[3.0, 0.0])  # fmt: skip
+                    td_team=[None, "BBB"], posteam_score_post=[3.0, 0.0],
+                    vegas_home_wp=[0.5, 0.4], vegas_home_wpa=[-0.1, 0.0], fixed_drive=[1.0, 1.0],
+                    fixed_drive_result=["Touchdown"] * 2, drive_start_yard_line=["AAA 25", "50"],
+                    drive_end_yard_line=["BBB 3"] * 2, drive_play_count=[6.0, 6.0])  # fmt: skip
     df = pl.DataFrame(base, strict=False)
     if not extra:
         df = df.drop(RETRO_COLUMNS)
@@ -71,6 +79,9 @@ def test_retro_columns_pass_through_and_missing_season_is_tolerated(tmp_path):
     assert new["penalty_yards"].to_list() == [None, 10.0]
     assert new["td_team"].to_list() == [None, "BBB"]
     assert new["posteam_score_post"].to_list() == [3.0, 0.0]
+    assert set(WP_DRIVE_COLUMNS) <= set(df.columns)
+    assert new["vegas_home_wp"].to_list() == [0.5, 0.4]
+    assert new["drive_start_yard_line"].to_list() == ["AAA 25", "50"]
     assert (new["fumble_lost"] <= new["fumble"]).all()
     assert df.filter(pl.col("season") == 1999)["field_goal_result"].null_count() == 2
 

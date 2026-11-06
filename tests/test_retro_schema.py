@@ -40,6 +40,30 @@ def test_example_is_consistent():
         assert vals == sorted(vals, reverse=True)
 
 
+def test_wp_series_and_drives_are_additive():
+    rec = _load("game_2026_08_CAR_GB.json")
+    assert RetroGame.model_validate(rec).wp_series is not None
+    for k in ("wp_series", "drives"):
+        del rec[k]
+    r = RetroGame.model_validate(rec)
+    assert r.wp_series is None and r.drives is None
+    drive = {"n": 1, "team": "GB", "qtr": 1, "t0": 0, "t1": 171, "start_yl": 25, "end_yl": None, "plays": 6, "result": "Punt"}  # fmt: skip
+    assert RetroGame.model_validate({**rec, "drives": [drive]}).drives[0].team == "GB"
+
+
+def test_example_wp_series_is_consistent():
+    s = RetroGame.model_validate(_load("game_2026_08_CAR_GB.json")).wp_series
+    assert s is not None and s.points[0][0] == 0 and s.points[-1] == (s.end_t, 0)
+    ts = [t for t, _ in s.points]
+    assert ts == sorted(ts)
+    on_curve = set(s.points)
+    for p in s.plays:
+        assert (p.t, p.p_after) in on_curve  # a mark sits on the line
+        assert p.wpa == pytest.approx(p.p_after - p.p_before, abs=1e-9)
+        assert abs(p.wpa) >= 0.05
+    assert [abs(p.wpa) for p in s.plays] == sorted((abs(p.wpa) for p in s.plays), reverse=True)
+
+
 def test_unknown_fields_rejected():
     rec = _load("game_2026_08_CAR_GB.json")
     rec["teams"]["home"]["luck"][0]["swing"] = 1.0

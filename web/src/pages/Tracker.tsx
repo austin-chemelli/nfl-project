@@ -22,9 +22,9 @@ export default function TrackerPage() {
   const meta = useMeta()
   return (
     <Page title="Season tracker" lede="How the forecasts are scoring against the market (log loss: lower is better; 0.693 is a coin flip).">
-      <Loaded q={tracker} what="tracker">
+      <Loaded q={tracker} what="tracker" shape="tracker">
         {(t) => (
-          <Loaded q={meta} what="tracker">
+          <Loaded q={meta} what="tracker" shape="tracker">
             {(m) => (
               <>
                 <SummaryStrip label="Tracker summary">

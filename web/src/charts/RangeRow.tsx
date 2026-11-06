@@ -5,7 +5,7 @@
  * Without a band (`lo`/`hi` null) the row scales to its own values and says so.
  */
 import { scaleLinear } from 'd3-scale'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
 
@@ -96,7 +96,18 @@ export function RangeRow({ rows, format, formatDelta, labelWidth = 150, rowHeigh
               {hasBand && <rect data-testid="band" x={x(bandLo)} y={cy - 7} width={Math.max(2, x(bandHi) - x(bandLo))} height={14} rx={3} fill="var(--band-strong)" />}
               {num(r.league) && <line x1={x(r.league)} x2={x(r.league)} y1={cy - 8} y2={cy + 8} stroke="var(--text-muted)" strokeWidth={2} />}
               {num(r.season) && <circle cx={x(r.season)} cy={cy} r={5} fill="var(--surface-1)" stroke="var(--text-secondary)" strokeWidth={2} />}
-              {num(r.game) && <circle cx={x(r.game)} cy={cy} r={5.5} fill={color} stroke="var(--surface-1)" strokeWidth={1.5} />}
+              {num(r.game) && (
+                <circle
+                  cx={x(r.game)}
+                  cy={cy}
+                  r={5.5}
+                  fill={color}
+                  stroke="var(--surface-1)"
+                  strokeWidth={1.5}
+                  className={num(r.season) ? 'dot-slide' : undefined}
+                  style={num(r.season) ? ({ '--from-x': `${x(r.season) - x(r.game)}px` } as CSSProperties) : undefined}
+                />
+              )}
               {!hasBand && <text x={x0 + 2} y={cy + 20} fontSize={10} className="fill-[var(--text-muted)]">no league range</text>}
               <text x={width - 2} y={cy - 2} textAnchor="end" fontWeight={600} className="tabular fill-[var(--text-primary)]">{num(r.game) ? format(r.game) : '–'}</text>
               {d != null && (
