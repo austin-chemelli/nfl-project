@@ -501,3 +501,13 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 **Findings.** The reorder the plan expected was already done by building phases 1 and 2 in that order. The observer has to tell "left through the top" from "still below the fold", since neither is intersecting. Measuring the header at runtime keeps this free of the league track's `Layout.tsx`.
 
 **Lesson.** A sticky element with no height is a cheap way to add a pinned line without moving anything: page height was identical with it on and off, which is the check that matters.
+
+## 2026-11-05: the playoff picture: standings, simulated odds, leverage (M14 phase 2)
+
+**Why.** The League page could compare teams but not say who is making the playoffs. Austin asked for playoff odds with game leverage, which needs real standings and tiebreakers, a simulation of the rest of the season, and honest inputs for it (ADR 0019).
+
+**What changed.** `src/nfl/league/` gains `standings.py`, `tiebreak.py`, `simulate.py`, `inputs.py` and `build.py`, and `nfl league`. `site/league.json` is written last in every site build, in its own try/except; snapshots append only from the Tuesday refresh and real locks. `/league` gains a summary strip and the Playoff odds, Standings and Games that matter tabs, and slate cards get a stakes line. Built by five implementer agents on new files, against one signature fixed in their prompts, then integrated by hand.
+
+**Findings.** The tiebreakers match the real qualifiers, byes and wild-card pairings in 48 of 48 conference-seasons from 2002 to 2025, with or without the points steps. A full build, 10,000 runs for each variant, takes about 6 s. σ = 0.4 improves the Student proxy by an amount too small to tell from noise, and Elo clearly: the Student proxy was already calibrated at the top. The biggest finding came from the first real file: a tile said the Student and the market differ most on TB, 58% to 23%. Eight of TB's nine games had no line, so that "market" was our own fit. Tested on the 29 real lines it hadn't seen, the fit misses by 6.9 points of win chance a game, and the Student by 5.8. The tile is gone and the Market view says how much of it is an estimate. Also caught: closing lines aged by the clock, so every rebuild would have jittered the odds.
+
+**Lesson.** A number with a source label is a claim about the source. Most of "market" was a model, and only holding out real lines showed it was no closer to the market than the thing it was compared with. And fixtures hide scale: 34 fixture games looked fine, 151 real ones ran past 20,000 pixels on a phone.

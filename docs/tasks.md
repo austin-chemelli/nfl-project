@@ -361,6 +361,8 @@ Changed in review (2026-11-05), where the code differs from the tasks above. "Ne
 
 ### Phase 2: the playoff picture (branch `league-playoffs`; about four days)
 
+Built 2026-11-05: M14.6 to M14.12 on `league-playoffs`. What the build measured and changed is in ADR 0019's second amendment.
+
 **Parallel:** M14.6 ∥ M14.7 ∥ M14.8 (new files only, can start before phase 1 merges), then M14.9, then M14.10 ∥ M14.11 (from a hand-written fixture), then M14.12, then M14.13.
 
 - **M14.6 Standings and tiebreakers.** *P.* Files: new `src/nfl/league/standings.py` (W-L-T with ties as half, division and conference records, common opponents, strength of victory, strength of schedule, points ranks; `games_played`, `left`), `src/nfl/league/tiebreak.py` (`rank_division`, `seed_conference(results, conf, rng) -> list[str]`: steps 1–6 with restarts after an elimination, the three-club sweep rule, common games minimum four, division-first reduction for wild cards; points steps 7–10 only when every game has a score, else the seeded coin), `tests/test_league_tiebreak.py` with a fixture of 2023 and 2024 regular-season results. Acceptance: one unit test per step and per rule; the replay test matches the actual qualifiers, byes and wild-card pairings for every 2002–2025 conference-season (skips without data; the fixture seasons always run).
