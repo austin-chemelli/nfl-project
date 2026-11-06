@@ -62,11 +62,14 @@ class FlagSpec:
 
 
 # The flags the page may show, and nothing else: the page never searches for patterns at build
-# time. This list is what survived the same-record test (season bootstrap, Benjamini-Hochberg at
-# 10%) and the 2002-13 vs 2014-25 split-half check, run 2026-11-06 on teams at 6, 8, 10 and 12
-# games, 2002-2025. Table and method: .notes/plans/similar-insights.md and scripts/league_flags.py.
-# Each says what the team's own quarter does against same-record peers, never that the measure
-# matters on its own. Rejected: luck high, EPA trend, rushing offense, special teams.
+# time. Chosen 2026-11-06 after looking at 2002-2025 at 6, 8, 10 and 12 games, among teams on the
+# same record; the split-half check reuses those seasons, so nothing here is a held-out test. The
+# red and strength flags clear Benjamini-Hochberg at 10% and point the same way in both halves. The
+# "fine" flags are nulls, no penalty found, except a low-luck record, which is a real effect. Table
+# and method: .notes/plans/similar-insights.md, scripts/league_flags.py. Each says what the team's
+# own quarter did against same-record peers, never that a measure matters on its own. Rejected:
+# defense (adjusted, -3.4, too close to a penalty to call fine), point margin (conf not significant),
+# high luck, EPA trend, rushing offense, special teams.
 FLAG_SPECS = (
     FlagSpec("red", "strength.epa_off_adj", "lo", "Offense", "made", "higher"),
     FlagSpec("red", "strength.pythag_win_pct", "lo", "Expected win rate", "made", "higher"),
@@ -74,9 +77,7 @@ FLAG_SPECS = (
     FlagSpec("strength", "strength.elo_pre", "hi", "Long-run rating", "conf", "higher"),
     FlagSpec("strength", "strength.qb_epa", "hi", "QB play", "made", "higher"),
     FlagSpec("strength", "strength.epa_off_adj", "hi", "Offense", "made", "higher"),
-    FlagSpec("strength", "strength.point_diff_pg", "hi", "Point margin", "conf", "higher"),
     FlagSpec("fine", "strength.luck", "lo", "Luck", "made", None),  # record undersells them
-    FlagSpec("fine", "strength.epa_def", "lo", "Defense", "made", "lower"),
     FlagSpec("fine", "form.last3_win_pct", "lo", "Last three games", "made", "higher"),
     FlagSpec("fine", "form.streak", "lo", "Streak", "made", "higher"),
     FlagSpec("fine", "decisions.turnover_margin_pg", "lo", "Turnover margin", "made", "higher"),
@@ -85,8 +86,9 @@ FLAG_FEATURES = tuple(dict.fromkeys(f.measure for f in FLAG_SPECS))
 FLAG_KINDS = ("red", "fine", "strength")  # the page's group order
 MIN_FLAGGED = 8
 MIN_OTHERS = 15
-FINE_TOLERANCE = 0.08  # a "fine" card may show a gap no worse than this many points
-MIN_FINE_RATE = 0.10  # below this the record itself decided it, and "fine" says nothing
+MIN_FLAG_GAMES, MAX_FLAG_GAMES = 6, 12  # the study's range; from 13 games the effects fade or flip
+MIN_GAP = 0.02  # under this the two groups are the same; the page's "share" wording uses it too
+MIN_RATE, MAX_RATE = 0.10, 0.90  # outside these the record itself decided it, on either side
 QUARTER = 0.25  # of that season's teams, so a rank and its quarter always agree
 MAX_CARDS = 3
 LOAD_FAMILIES = ("strength", "form", "decisions")
@@ -284,9 +286,9 @@ def profile(pool_x: np.ndarray, x: np.ndarray) -> list[int]:
 
 
 def gaps(pool_x: np.ndarray, x: np.ndarray, y: np.ndarray) -> tuple[list[str], list[str]]:
-    """(closest two, furthest one) measure ids between teams x and y: |difference| in pool standard
-    deviations, record included and unweighted. Ties go to the earlier measure."""
-    g = np.abs(x - y) / _sd(pool_x)
+    """(closest two, furthest one) measure ids between teams x and y: |difference| in percentile
+    points, as the chart draws them, so the words and the dots agree. Ties go to the earlier measure."""
+    g = np.abs(np.array(profile(pool_x, x)) - np.array(profile(pool_x, y)))
     asc = np.argsort(g, kind="stable")
     desc = np.argsort(-g, kind="stable")
     return [MEASURES[i][0] for i in asc[:2]], [MEASURES[desc[0]][0]]
@@ -401,52 +403,65 @@ class FlagTable:
             hit = self._cache[(spec.measure, spec.end)] = (has, x, inq)
         return hit
 
-    def counts(self, spec: FlagSpec, rec_key: int, widen: int) -> tuple | None:
-        """([k, n] flagged, [k, n] others) among same-record peers (wins within `widen` half-win
-        units), or None if short of MIN_FLAGGED or MIN_OTHERS."""
+    def peers(self, rec_key: int) -> dict[str, int]:
+        """How teams on exactly this record did, whatever their measures."""
+        same = self.key == rec_key
+        return {"made": int(self.made[same].sum()), "n": int(same.sum())}
+
+    def counts(self, spec: FlagSpec, rec_key: int) -> tuple | None:
+        """([k, n] flagged, [k, n] others) among teams on exactly this record, or None if short of
+        MIN_FLAGGED or MIN_OTHERS. No widening: a range of records puts the weak teams at its low end
+        and the rest at its high end, and the gap is then mostly the record."""
         has, _, inq = self.column(spec)
         y = self.conf if spec.outcome == "conf" else self.made
-        peers = has & (np.abs(self.key - rec_key) <= widen)
+        peers = has & (self.key == rec_key)
         f, o = peers & inq, peers & ~inq
         if f.sum() < MIN_FLAGGED or o.sum() < MIN_OTHERS:
             return None
         return [int(y[f].sum()), int(f.sum())], [int(y[o].sum()), int(o.sum())]
 
 
-def in_quarter(spec: FlagSpec, rank: int, n: int) -> bool:
-    """This team's quarter among this season's teams. Rank 1 is the best, or the highest on a
-    neutral measure, so a low end is a high rank number either way."""
-    return (n - rank + 1 if spec.end == "lo" else rank) / n <= QUARTER
+def in_quarter(spec: FlagSpec, rank: int, ranks: list[int]) -> bool:
+    """This team's quarter among this season's teams, by average rank, as `FlagTable.column` does for
+    the history. `ranks` are every team's min-ranks: 1 is the best, or the highest on a neutral
+    measure, so a low end is a high rank number either way."""
+    n = len(ranks)
+    mean = rank + (ranks.count(rank) - 1) / 2
+    return (n + 1 - mean if spec.end == "lo" else mean) / n <= QUARTER
 
 
 def flag_cards(
     table: FlagTable, cur: Current, rank_of: dict[str, dict[str, int]], team: str
 ) -> list[dict]:
     """The cards for one team, in the page's group order, at most MAX_CARDS a group, biggest gap
-    first. Peers: same games played and wins; below MIN_FLAGGED flagged or MIN_OTHERS others they
-    widen to one win either way, then no card. A card shows only if its own counts agree with its
-    kind: red a lower rate than the others, strength a higher one, fine no worse than
-    FINE_TOLERANCE below, with a rate worth talking about."""
+    first. Peers: same games played and exactly the same record; below MIN_FLAGGED flagged or
+    MIN_OTHERS others, no card. A card shows only inside the study's range of games, and only if its
+    own counts agree with its kind: red a lower rate than the others, strength a higher one, fine no
+    lower, each by MIN_GAP, with rates that aren't settled by the record alone."""
+    if not MIN_FLAG_GAMES <= cur.n <= MAX_FLAG_GAMES:
+        return []
     key = 2 * cur.rec[0] + cur.rec[2]
     cards = []
     for spec in FLAG_SPECS:
         v = cur.fv.get(spec.measure)
         if v is None or team not in rank_of.get(spec.measure, {}) or not table.pool:
             continue
-        if not in_quarter(spec, rank_of[spec.measure][team], len(rank_of[spec.measure])):
+        if not in_quarter(spec, rank_of[spec.measure][team], list(rank_of[spec.measure].values())):
             continue
-        widened = False
-        got = table.counts(spec, key, 0)
-        if got is None:
-            widened, got = True, table.counts(spec, key, 2)
+        got = table.counts(spec, key)
         if got is None:
             continue
         (fk, fn), (ok, on) = got
-        gap = fk / fn - ok / on
-        # "fine" needs something to be fine about: at 0-7 nobody made it, flagged or not
-        fine = gap >= -FINE_TOLERANCE and fk >= 1 and max(fk / fn, ok / on) >= MIN_FINE_RATE
-        agree = {"red": gap < 0, "strength": gap > 0, "fine": fine}[spec.kind]
-        if not agree:
+        a, b = fk / fn, ok / on
+        gap = a - b
+        if max(a, b) < MIN_RATE or min(a, b) > MAX_RATE:
+            continue  # at 0-7 nobody made it, at 11-3 everybody did: nothing to say either way
+        agree = {
+            "red": gap <= -MIN_GAP,
+            "strength": gap >= MIN_GAP,
+            "fine": gap >= -MIN_GAP and fk >= 1,
+        }
+        if not agree[spec.kind]:
             continue
         cards.append((
             abs(gap), spec.measure,
@@ -454,7 +469,7 @@ def flag_cards(
                 "kind": spec.kind, "measure": spec.measure, "label": spec.label,
                 "rank": rank_of[spec.measure][team],
                 "quarter": "bottom" if spec.end == "lo" else "top", "outcome": spec.outcome,
-                "peers": _rec_str(cur.rec), "widened": widened,
+                "peers": _rec_str(cur.rec),
                 "flagged": [fk, fn], "others": [ok, on],
             },
         ))  # fmt: skip
@@ -499,6 +514,7 @@ def similar_file(games: pl.DataFrame, feats: pl.DataFrame, season: int, now: dat
             "pool": {"seasons": [min(seasons), max(seasons)], "n": len(pool)},
             "profile": profile(pool_x, c.x),
             "nearest": [_nearest_row(d, p, pool_x, c.x) for d, p in near],
+            "peers": table.peers(2 * c.rec[0] + c.rec[2]),
             "flags": flag_cards(table, c, ranks, team),
         }
     return out

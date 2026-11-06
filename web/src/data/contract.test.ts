@@ -217,15 +217,13 @@ describe('contract: similar.json', () => {
     expect(p.teams.DET.flags).toEqual([])
     expect(p.teams.NO).toBeUndefined()
   })
-  it('defaults a missing round, flags and widened', () => {
+  it('defaults a missing round and flags', () => {
     const f = raw()
     delete f.teams.CHI.nearest[0].round
     delete f.teams.CHI.flags
-    delete f.teams.KC.flags[0].widened
     const p = C.SimilarFile.parse(f)
     expect(p.teams.CHI.nearest[0].round).toBeNull()
     expect(p.teams.CHI.flags).toEqual([])
-    expect(p.teams.KC.flags[0].widened).toBe(false)
   })
   it('rejects an entry without its summary or a flag with an unknown kind', () => {
     const f = raw()

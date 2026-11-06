@@ -1,5 +1,5 @@
 import type { SimilarFlag } from '../../data/contract'
-import { flagGroups, type FlagCard } from './similar'
+import { flagGroups, noCards, type FlagCard } from './similar'
 
 const EDGE: Record<SimilarFlag['kind'], string> = {
   red: 'border-l-[var(--critical)]',
@@ -29,11 +29,9 @@ function Bars({ card }: { card: FlagCard }) {
 }
 
 /** What history says about this team, in up to three groups. Each card is built from the counts, on the same record. */
-export function FlagCards({ flags }: { flags: SimilarFlag[] }) {
+export function FlagCards({ flags, gamesPlayed, record, peers }: { flags: SimilarFlag[]; gamesPlayed: number; record: string; peers: { made: number; n: number } | null }) {
   const groups = flagGroups(flags)
-  if (groups.length === 0) {
-    return <p className="text-ink-2">Nothing on our list of measures stands out for this team against past teams at the same record.</p>
-  }
+  if (groups.length === 0) return <p className="text-ink-2">{noCards(gamesPlayed, record, peers)}</p>
   return (
     <div className="flex flex-col gap-4">
       {groups.map((g) => (

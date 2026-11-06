@@ -207,7 +207,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 
 - `site/similar.json`: each team's 25 nearest past team-seasons, its seven-measure profile and its flag cards (ADR 0019).
 - `site/teams.json`: every team's latest season-to-date value, league percentile and rank for every team-level feature, from each team's next-game row as of the last feature build (`nfl.league.teams.team_latest`), plus conference, division, record and games. `feature_bands` reads the same table.
-- `site/league.json`: standings with "seed today", playoff odds per team for two variants (Student, market), game leverage, odds history and similar seasons. Built by `nfl.league.build` at the end of `site.build`.
+- `site/league.json`: standings with "seed today", playoff odds per team for two variants (Student, market), game leverage and odds history (ADR 0019).
 - `marts/league/season=YYYY/snapshots.parquet`: append-only odds snapshots (as_of, kind refresh|lock, variant, team, outputs, model_version, n_sims, seed), written on the Tuesday refresh and after each real lock, never backfilled.
 
 ### 3.7 Site JSON (the UI contract)
@@ -221,7 +221,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | `site/hypotheses.json` | per feature: coefficient, CI, n, verdict, sentence, approaches that lean on it |
 | `site/audit.json` | null rates, freshness |
 | `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet; `wp_series` and `drives` from M15 (ADR 0020), nullable |
-| `site/teams.json`, `site/league.json` | per-team feature table; standings, playoff odds, leverage, similar seasons (ADR 0019, §3.6d) |
+| `site/teams.json`, `site/league.json`, `site/similar.json` | per-team feature table; standings, playoff odds, leverage; similar seasons and flag cards (ADR 0019, §3.6d) |
 | `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, best call and costliest miss, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.

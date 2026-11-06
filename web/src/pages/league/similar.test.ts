@@ -5,7 +5,7 @@ import { LeagueFile, SimilarFile, type SimilarFlag, type SimilarNeighbour } from
 import { teamInfo } from '../../lib/teams'
 import {
   closestText, defaultSimilarTeam, finishGrid, finishLevel, flagCard, flagGroups, laneOffsets, levelCounts, outcomeText, overlapSummary, poolYears,
-  quantile, recordFrom, resolveSimilarTeam, rowSpread, seasonLabel, shareVerdict, similarRows,
+  quantile, noCards, recordFrom, resolveSimilarTeam, rowSpread, seasonLabel, shareVerdict, similarRows,
 } from './similar'
 
 const FIX = path.resolve(import.meta.dirname, '../../test/fixtures/site')
@@ -64,10 +64,10 @@ describe('flag sentences', () => {
     expect(c.title).toBe('Offense: 27th.')
     expect(c.body).toBe('Among past teams at 5-2, those with a bottom-quarter offense made the playoffs 11 of 28 times, against 58 of 80 for the rest.')
   })
-  it('says give or take a win when widened, and a conference game for outcome conf', () => {
-    const c = flagCard(flag({ kind: 'strength', measure: 'strength.elo_pre', label: 'Long-run rating', rank: 3, quarter: 'top', outcome: 'conf', widened: true, flagged: [16, 40], others: [20, 110] }))
+  it('says a conference game for outcome conf', () => {
+    const c = flagCard(flag({ kind: 'strength', measure: 'strength.elo_pre', label: 'Long-run rating', rank: 3, quarter: 'top', outcome: 'conf', flagged: [16, 40], others: [20, 110] }))
     expect(c.title).toBe('Long-run rating: 3rd.')
-    expect(c.body).toBe('Among past teams at 5-2, give or take a win, those with a top-quarter long-run rating reached a conference game 16 of 40 times, against 20 of 110 for the rest.')
+    expect(c.body).toBe('Among past teams at 5-2, those with a top-quarter long-run rating reached a conference game 16 of 40 times, against 20 of 110 for the rest.')
   })
   it('has a template per kept measure', () => {
     const t = (measure: string, quarter: 'bottom' | 'top' = 'bottom') => flagCard(flag({ measure, quarter })).body
@@ -85,9 +85,22 @@ describe('flag sentences', () => {
     expect(c.lead).toBe('Their scoring margin is better than their record.')
     expect(c.body).toContain('a scoring margin better than their record made the playoffs')
   })
-  it('explains that a weak defense is on the same record', () => {
-    expect(flagCard(flag({ kind: 'fine', measure: 'strength.epa_def', label: 'Defense' })).note).toMatch(/offense earned it/)
-    expect(flagCard(flag({})).note).toBeNull()
+  it('says a fine card compares the same record, and claims nothing causal', () => {
+    const c = flagCard(flag({ kind: 'fine', measure: 'form.streak', label: 'Streak', rank: 20 }))
+    expect(c.title).toBe('Streak.') // tied values: a printed rank wouldn't match its quarter
+    expect(c.note).toMatch(/same record/)
+    expect(c.note).not.toMatch(/earned/)
+  })
+  it('says why a team has no cards', () => {
+    expect(noCards(4, '3-1', null)).toMatch(/start at six games/)
+    expect(noCards(13, '9-4', { made: 90, n: 100 })).toMatch(/stop after 12 games/)
+    expect(noCards(7, '0-7', { made: 0, n: 21 })).toBe('No past team at 0-7 made the playoffs, so nothing separates them.')
+    expect(noCards(8, '4-4', { made: 44, n: 137 })).toMatch(/Nothing on our list/)
+  })
+  it('calls a row tight when the seasons sit near this team, not when they are narrow', () => {
+    const near = [40, 41, 42, 43, 44, 45, 46, 47]
+    expect(rowSpread(near, 44)!.tight).toBe('tight')
+    expect(rowSpread(near, 90)!.tight).toBe('loose') // the same narrow band, far from the team
   })
   it('falls back to a generic sentence for a measure it does not know', () => {
     expect(flagCard(flag({ measure: 'x.new_thing', label: 'New Thing' })).body).toContain('a bottom-quarter new Thing')

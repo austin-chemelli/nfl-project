@@ -25,7 +25,7 @@ function Mark({ n, x, y, r }: { n: SimilarNeighbour; x: number; y: number; r: nu
 /**
  * Where the overlap is: one strip per measure (0 to 100 among teams at this many games), this team as one
  * large dot in its color and its nearest seasons as small dots by finish. A faint band marks the middle
- * half of those seasons, so a tight row is a narrow band. The active season (hovered or focused here, in the
+ * half of those seasons; a row is tight when they sit close to this team, however narrow the band. The active season (hovered or focused here, in the
  * list or in the grid) rings its seven dots and joins them with a line.
  */
 export function OverlapChart({ code, name, entry, measures, active, onActive }: {
@@ -52,7 +52,7 @@ export function OverlapChart({ code, name, entry, measures, active, onActive }: 
     const xs = vals.map((v) => (v == null ? NaN : sx(v)))
     const lanes = laneOffsets(xs.map((x) => (Number.isNaN(x) ? -1e9 : x)), 8)
     const ys = lanes.map((l) => cy + Math.max(-MAX_LANE, Math.min(MAX_LANE, l)) * LANE)
-    const spread = rowSpread(vals.filter((v): v is number => v != null))
+    const spread = rowSpread(vals.filter((v): v is number => v != null), entry.profile[mi])
     return { m, mi, top, cy, xs, ys, spread, mine: entry.profile[mi] }
   })
 

@@ -162,26 +162,34 @@ export function shareVerdict(f: Pick<SimilarFlag, 'flagged' | 'others'>): string
   return 'About the same share as the rest'
 }
 
-/**
- * The sentence for one flag. Always teams at this record: "defense looks fine" is only true on the same
- * record, and a bad defense at 6-2 means the offense earned the record.
- */
+/** Measures with few possible values: many teams tie, so a printed rank wouldn't match its quarter. */
+const TIES = new Set(['last3_win_pct', 'streak'])
+
+/** The sentence for one flag. Always teams on exactly this record: nothing here says a measure matters, or doesn't, on its own. */
 export function flagCard(f: SimilarFlag, i = 0): FlagCard {
   const id = suffix(f.measure)
   const luck = id === 'luck'
-  const at = `at ${f.peers}${f.widened ? ', give or take a win' : ''}`
-  const body = `Among past teams ${at}, those with ${trait(f)} ${VERB[f.outcome]} ${f.flagged[0]} of ${f.flagged[1]} times, against ${f.others[0]} of ${f.others[1]} for the rest.`
+  const body = `Among past teams at ${f.peers}, those with ${trait(f)} ${VERB[f.outcome]} ${f.flagged[0]} of ${f.flagged[1]} times, against ${f.others[0]} of ${f.others[1]} for the rest.`
   return {
     key: `${f.kind}-${f.measure}-${i}`,
     kind: f.kind,
-    title: luck ? 'Record undersells them.' : `${f.label}: ${ordinal(f.rank)}.`,
+    title: luck ? 'Record undersells them.' : TIES.has(id) ? `${f.label}.` : `${f.label}: ${ordinal(f.rank)}.`,
     lead: luck ? 'Their scoring margin is better than their record.' : null,
     body,
     verdict: shareVerdict(f),
-    note: id === 'epa_def' ? 'On the same record a weak defense means the offense earned it. It does not say defense stops mattering.' : null,
+    note: f.kind === 'fine' && !luck ? "This compares teams on the same record. It doesn't say the measure stops mattering." : null,
     flagged: f.flagged,
     others: f.others,
   }
+}
+
+/** Why a team has no cards. "Nothing stands out" would be untrue for a team the record alone has settled. */
+export function noCards(gamesPlayed: number, record: string, peers: { made: number; n: number } | null): string {
+  if (gamesPlayed < 6) return 'These cards start at six games, the earliest point tested.'
+  if (gamesPlayed > 12) return 'These cards stop after 12 games: late in a season these patterns fade, and the record says most of it.'
+  if (peers && peers.made === 0) return `No past team at ${record} made the playoffs, so nothing separates them.`
+  if (peers && peers.made === peers.n) return `Every past team at ${record} made the playoffs, so nothing separates them.`
+  return 'Nothing on our list of measures stands out for this team against past teams on the same record.'
 }
 
 export const FLAG_GROUPS: { kind: SimilarFlag['kind']; title: string }[] = [
@@ -235,13 +243,15 @@ export function quantile(values: number[], q: number): number {
 export type RowSpread = { lo: number; hi: number; width: number; tight: 'tight' | 'moderate' | 'loose' }
 
 /** The middle half of the nearest seasons on one measure: the faint band, and how tight it is. */
-export function rowSpread(values: number[]): RowSpread | null {
+export function rowSpread(values: number[], mine?: number | null): RowSpread | null {
   const v = values.filter((x) => Number.isFinite(x))
   if (v.length < 4) return null
   const lo = quantile(v, 0.25)
   const hi = quantile(v, 0.75)
-  const width = hi - lo
-  return { lo, hi, width, tight: width <= 15 ? 'tight' : width <= 30 ? 'moderate' : 'loose' }
+  // how close the seasons sit to this team, not how narrow they are: percentiles bunch up at the ends
+  const off = mine == null ? hi - lo : quantile(v.map((x) => Math.abs(x - mine)), 0.5)
+  const near = mine == null ? 15 : 10
+  return { lo, hi, width: hi - lo, tight: off <= near ? 'tight' : off <= 2 * near ? 'moderate' : 'loose' }
 }
 
 export const spreadText = (s: RowSpread) => `middle half ${Math.round(s.lo)} to ${Math.round(s.hi)}`

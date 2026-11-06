@@ -133,6 +133,11 @@ class Nearest(BaseModel):
     furthest: list[str]
 
 
+class Peers(BaseModel):
+    made: int
+    n: int
+
+
 class Flag(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: Literal["red", "fine", "strength"]
@@ -142,7 +147,6 @@ class Flag(BaseModel):
     quarter: Literal["bottom", "top"]
     outcome: Literal["made", "conf"]
     peers: str
-    widened: bool
     flagged: tuple[int, int]
     others: tuple[int, int]
 
@@ -161,6 +165,7 @@ class SimilarTeam(BaseModel):
     made_playoffs: int
     rounds: Rounds
     pool: Pool
+    peers: Peers
     profile: list[int]
     nearest: list[Nearest]
     flags: list[Flag]
@@ -414,6 +419,9 @@ def write_similar(paths: Paths, every: pl.DataFrame, season: int, as_of: datetim
     try:
         feats = similar.load_features(paths, season)
         obj = similar.similar_file(every, feats, season, as_of)
+        played = regular_season(every.filter(pl.col("season") == season))[0].height
+        if not obj["teams"] and played >= 16 * similar.MIN_GAMES:
+            raise RuntimeError(f"no team has an entry after {played} games: not overwriting")
         SimilarFile.model_validate(obj)
         text = json.dumps(obj, allow_nan=False, separators=(",", ":"))
         out = paths.site / SIMILAR_FILE

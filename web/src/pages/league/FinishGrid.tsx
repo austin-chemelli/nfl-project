@@ -49,7 +49,7 @@ export function FinishGrid({ nearest, active, onActive }: { nearest: SimilarNeig
             )
           })}
         </svg>
-        {card(hovered && <TipTitle note={`Nearest seasons are listed from ${hovered.index + 1} of ${cells.length}`}>{hovered.label}</TipTitle>)}
+        {card(hovered && <TipTitle note={`Season ${hovered.index + 1} of ${cells.length} by finish`}>{hovered.label}</TipTitle>)}
       </div>
       <ul aria-label="Finishes and how many seasons" className="m-0 mt-2 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-[12px] text-ink-2">
         {counts.map((c) => (

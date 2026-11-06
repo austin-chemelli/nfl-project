@@ -100,13 +100,13 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
             <FinishGrid nearest={entry.nearest} active={active} onActive={setActive} />
           </Section>
 
-          <Section title="What history says about this team" lede="Past teams with the same record, split by whether they had the trait. The counts are teams that made the playoffs, or reached a conference game where the card says so.">
-            <FlagCards flags={entry.flags} />
+          <Section title="What history says about this team" lede="Past teams on exactly the same record, split by whether they had the trait. The counts are teams that made the playoffs, or reached a conference game where the card says so.">
+            <FlagCards flags={entry.flags} gamesPlayed={entry.games_played} record={entry.record} peers={entry.peers} />
           </Section>
 
           <Section
             title="Where they overlap"
-            lede={`Each row is one measure, as a percentile from 0 to 100 among teams at ${entry.games_played} games; right is better, except on Schedule, where right is the hardest. The large dot is the ${name}, the small dots are the ${entry.nearest.length} nearest seasons, and the shaded band holds the middle half of those seasons: the narrower the band, the closer the match.`}
+            lede={`Each row is one measure, as a percentile from 0 to 100 among every team at ${entry.games_played} games since 2002; right is better, except on Schedule, where right is the hardest. The large dot is the ${name}, the small dots are the ${entry.nearest.length} nearest seasons, and the shaded band holds the middle half of them. Where the small dots gather around the large dot, they match. Ranks on the cards above are this season's; these percentiles are across all those seasons.`}
           >
             <OverlapChart code={team} name={name} entry={entry} measures={sim.measures} active={active} onActive={setActive} />
             <OverlapKey code={team} name={name} active={active} near={entry.nearest} />
@@ -127,8 +127,8 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
                     key={r.key}
                     tabIndex={0}
                     data-active={active === r.index || undefined}
-                    onMouseEnter={() => setActive(r.index)}
-                    onMouseLeave={() => setActive(null)}
+                    onPointerEnter={(e) => { if (e.pointerType === 'mouse') setActive(r.index) }}
+                    onPointerLeave={(e) => { if (e.pointerType === 'mouse') setActive(null) }}
                     onFocus={() => setActive(r.index)}
                     onBlur={() => setActive(null)}
                     onClick={() => setActive(r.index)}
@@ -165,8 +165,9 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
           offensive efficiency and defensive efficiency adjusted for opponents, the quarterback's efficiency, and strength of schedule. The closest ten are listed and the closest {entry?.k_summary ?? 25} are counted.
         </p>
         <p>
-          The flags come from a fixed list of measures, tested on 2002 to 2025 at 6, 8, 10 and 12 games. Each one held in both the older and the newer seasons, and a quarter means eight teams of that season, and each compares teams on the same record only, which is why a bad defense can look fine here: at the same record, the
-          offense earned it. QB play's penalty was mostly in the newer half of those seasons; in the older half it was weak.
+          The cards come from a fixed list of measures, tested on 2002 to 2025 at 6, 8, 10 and 12 games, and show only from 6 to 12 games. A quarter means about a quarter of that season's teams. Each card compares teams on exactly the same record, so it says what
+          separated teams at that record, not that a measure matters or doesn't on its own. The list was chosen after looking at those same seasons, and each card pointed the same way in the older and newer halves, but nothing here is a true held-out test. QB play's
+          penalty was mostly in the newer half. "Looks bad, wasn't" means no penalty was found, which isn't proof of none. A card is left out when this team's own record doesn't show the pattern, or too few past teams shared it.
         </p>
         <p>
           Before 2020 six teams per conference made the playoffs, and from 2020 seven do, so neighbours from the six-team field had a slightly harder cut to make. The team printed is the one the franchise used then, so a season can appear under a team that has since moved,

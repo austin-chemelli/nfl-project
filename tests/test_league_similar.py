@@ -298,18 +298,20 @@ def test_profile_percentiles_are_oriented_and_defense_is_flipped():
     assert sm.profile(pool, pool[2]) == [50] * 7  # the middle, ties count half
 
 
-def test_closest_and_furthest_on_a_hand_made_case():
-    # pool sd per column is 1, 2, 1, 1, 1, 1, 1 (column 1 has spread 2)
-    pool = np.zeros((4, 7))
-    pool[:, 0] = [-1, 1, -1, 1]
-    pool[:, 1] = [-2, 2, -2, 2]
-    for j in range(2, 7):
-        pool[:, j] = [-1, 1, -1, 1]
-    me = _x(0, 0, 0, 0, 0, 0, 0)
-    them = _x(0.5, 1.0, 3.0, 0.1, 0.2, 5.0, 0.4)  # gaps in sd: .5, .5, 3, .1, .2, 5, .4
+def test_closest_and_furthest_are_in_the_charts_percentile_points():
+    pool = np.tile(np.arange(100.0)[:, None], (1, 7))
+    me = np.full(7, 50.0)
+    them = me + np.array([10, 10, 30, 1, 2, 45, 4.0])
     closest, furthest = sm.gaps(pool, me, them)
     assert closest == ["strength.point_diff_pg", "strength.pythag_win_pct"]
     assert furthest == ["strength.qb_epa"]
+    # a wide spread in standard deviations doesn't change it: only the chart's distance counts
+    pool[:, 5] *= 100
+    wide = me.copy()
+    wide[5] = 5000.0
+    assert sm.gaps(pool, wide, wide + np.array([10, 10, 30, 1, 2, 4500, 4.0]))[1] == [
+        "strength.qb_epa"
+    ]
 
 
 # --- current-season edge cases
@@ -406,32 +408,74 @@ def test_the_quarter_is_within_each_season_not_across_them():
 
 def test_a_rank_and_its_quarter_always_agree():
     top = _spec("strength.epa_off_adj", "hi")
-    assert sm.in_quarter(RED, 25, 32) and not sm.in_quarter(RED, 24, 32)
-    assert sm.in_quarter(top, 8, 32) and not sm.in_quarter(top, 9, 32)
+    ranks = list(range(1, 33))
+    assert sm.in_quarter(RED, 25, ranks) and not sm.in_quarter(RED, 24, ranks)
+    assert sm.in_quarter(top, 8, ranks) and not sm.in_quarter(top, 9, ranks)
     luck = _spec("strength.luck", "lo")  # neutral: rank 1 is the highest, so low luck is rank 32
-    assert sm.in_quarter(luck, 32, 32) and not sm.in_quarter(luck, 1, 32)
+    assert sm.in_quarter(luck, 32, ranks) and not sm.in_quarter(luck, 1, ranks)
 
 
-def test_defense_worst_quarter_is_the_highest_epa_allowed():
-    spec = _spec("strength.epa_def", "lo")
-    t = sm.FlagTable([_cand(i, i / 100, 1, 0, measures=["strength.epa_def"]) for i in range(100)])
+def test_ties_use_the_same_average_rank_as_the_history():
+    """Ten teams tied at the bottom of a streak: min-rank 23, average rank 27.5, so all are in the
+    quarter, as they would be in the history's column."""
+    streak = _spec("form.streak", "lo")
+    ranks = list(range(1, 23)) + [23] * 10
+    assert sm.in_quarter(streak, 23, ranks)
+    pool = [
+        _cand(i, -3.0 if i < 10 else float(i), 1, 0, measures=["form.streak"]) for i in range(32)
+    ]
+    assert sm.FlagTable(pool).column(streak)[2][:10].all()
+
+
+def test_a_lower_is_better_measure_flags_its_highest_values():
+    spec = sm.FlagSpec("red", "strength.epa_def_adj", "lo", "Defense", "made", "lower")
+    t = sm.FlagTable([_cand(i, i / 100, 1, 0, measures=[spec.measure]) for i in range(100)])
     inq = t.column(spec)[2]
     assert inq[99] and not inq[0] and inq.sum() == 25
 
 
-def test_a_fine_card_needs_a_rate_worth_talking_about():
-    """At 0-7 nobody made it, flagged or not: 0 against 0 is not reassurance."""
-    m = "strength.epa_def"
+def test_a_card_needs_rates_the_record_did_not_settle():
+    """At 0-7 nobody made it and at 11-3 everybody did: neither says anything, for any kind."""
+    m = "form.streak"
 
     def table(flagged_made, others_made):
-        pool = [_cand(i, 1.0 if i < 30 else 0.0, i < flagged_made or 30 <= i < 30 + others_made, 0, measures=[m]) for i in range(100)]  # fmt: skip
+        pool = [_cand(i, 1.0 if i >= 30 else 0.0, i < flagged_made or 30 <= i < 30 + others_made, 0, measures=[m]) for i in range(100)]  # fmt: skip
         return sm.FlagTable(pool)
 
     cur, rk = _cur(-5.0, measures=(m,)), _ranks((m,))
     assert sm.flag_cards(table(0, 0), cur, rk, "T") == []
     assert sm.flag_cards(table(0, 20), cur, rk, "T") == []  # none of the flagged teams made it
-    assert sm.flag_cards(table(1, 2), cur, rk, "T") == []  # the rest barely did either
-    assert sm.flag_cards(table(12, 30), cur, rk, "T")[0]["kind"] == "fine"
+    assert sm.flag_cards(table(2, 4), cur, rk, "T") == []  # about 6% on both sides
+    assert sm.flag_cards(table(30, 70), cur, rk, "T") == []  # all of them
+    assert sm.flag_cards(table(12, 28), cur, rk, "T")[0]["kind"] == "fine"
+
+
+def test_a_fine_card_shows_no_lower_share_than_the_rest():
+    m = "form.streak"
+
+    def table(flagged_made):
+        pool = [_cand(i, 1.0 if i >= 30 else 0.0, i < flagged_made or 30 <= i < 58, 0, measures=[m]) for i in range(100)]  # fmt: skip
+        return sm.FlagTable(pool)
+
+    cur, rk = _cur(-5.0, measures=(m,)), _ranks((m,))
+    assert sm.flag_cards(table(9), cur, rk, "T") == []  # 30% against 40%
+    assert sm.flag_cards(table(12), cur, rk, "T")[0]["kind"] == "fine"  # the same 40%
+
+
+def test_no_card_outside_the_games_the_study_covered():
+    pool = _line(lambda i: _cand(i, i, i >= 25 and i % 2 == 0, 0, measures=[OFF]))
+    t = sm.FlagTable(pool)
+    for n, shown in ((5, False), (6, True), (12, True), (13, False)):
+        cur = sm.Current(n, (5, 3, 0), np.zeros(7), {OFF: -5.0})
+        assert bool(sm.flag_cards(t, cur, _ranks(), "T")) is shown
+
+
+def test_a_red_or_strength_card_needs_a_real_gap():
+    def pool(made_low):
+        return sm.FlagTable([_cand(i, i, i < made_low or 25 <= i < 25 + 30, 0, measures=[OFF]) for i in range(100)])  # fmt: skip
+
+    assert sm.flag_cards(pool(10), _cur(-5.0), _ranks(), "T") == []  # 40% against 40%
+    assert sm.flag_cards(pool(8), _cur(-5.0), _ranks(), "T")[0]["kind"] == "red"
 
 
 def test_flags_count_same_record_peers_and_the_card_reads_its_counts():
@@ -441,51 +485,28 @@ def test_flags_count_same_record_peers_and_the_card_reads_its_counts():
     assert len(cards) == 1
     c = cards[0]
     assert c["kind"] == "red" and c["quarter"] == "bottom" and c["outcome"] == "made"
-    assert c["flagged"] == [8, 25] and c["others"] == [60, 75] and not c["widened"]
+    assert c["flagged"] == [8, 25] and c["others"] == [60, 75]
     assert c["peers"] == "5-3" and c["rank"] == 30 and c["label"] == "Offense"
     # a team outside the quarter has no card
     assert sm.flag_cards(sm.FlagTable(pool), _cur(50.0), _ranks(rank=16), "T") == []
 
 
-def test_peers_widen_one_win_either_way_when_short_and_say_so():
-    # 100 teams, offense values 0..99 (worst quarter = values 0..24). Only 10 sit at 5-3 and just
-    # 3 of those are flagged; 4-4 and 6-2 hold the rest of the neighbourhood; 3-5 is out of reach.
+def test_peers_are_exactly_this_record():
+    """A range of records would put the weak teams at its low end and the gap would be the record."""
+
     def rec(i):
-        if i in (0, 1, 2, 50, 51, 52, 53, 54, 55, 56):
-            return (5, 3, 0)
-        return (4, 4, 0) if i < 30 else (6, 2, 0) if i < 90 else (3, 5, 0)
+        return (5, 3, 0) if i in (0, 1, 2, 50, 51, 52, 53, 54, 55, 56) else (4, 4, 0) if i < 30 else (6, 2, 0)  # fmt: skip
 
     pool = [_cand(i, i, i % 3 == 0, 0, rec=rec(i), measures=[OFF]) for i in range(100)]
     t = sm.FlagTable(pool)
-    assert t.counts(RED, 10, 0) is None  # 3 flagged at 5-3
-    got = t.counts(RED, 10, 2)
-    near = [c for c in pool if c.rec != (3, 5, 0)]
-    flagged = [c for c in near if c.fv[OFF] < 25]
-    others = [c for c in near if c.fv[OFF] >= 25]
-    assert got == (
-        [sum(c.outcome.playoffs for c in flagged), len(flagged)],
-        [sum(c.outcome.playoffs for c in others), len(others)],
-    )
-    assert len(flagged) >= sm.MIN_FLAGGED and len(others) >= sm.MIN_OTHERS
-    # exact peers are enough in a pool with 8 flagged and 15 others at the record
-    full = [_cand(i, i, 1, 0, rec=(5, 3, 0), measures=[OFF]) for i in range(100)]
-    assert sm.FlagTable(full).counts(RED, 10, 0) is not None
-    # the card carries the flag: red needs flagged teams to do worse, so make them
-    worse = [_cand(i, i, i >= 25, 0, rec=rec(i), measures=[OFF]) for i in range(100)]
-    cards = sm.flag_cards(sm.FlagTable(worse), _cur(-5.0), _ranks(), "T")
-    assert len(cards) == 1 and cards[0]["widened"] is True
-    assert sm.flag_cards(sm.FlagTable([_cand(i, i, i >= 25, 0, measures=[OFF]) for i in range(100)]), _cur(-5.0), _ranks(), "T")[0]["widened"] is False  # fmt: skip
-
-
-def test_no_card_when_peers_are_still_short_after_widening():
-    # only 10 teams anywhere near the record
-    pool = [
-        _cand(i, i, 1, 0, rec=(5, 3, 0) if i < 10 else (1, 7, 0), measures=[OFF])
-        for i in range(100)
-    ]
-    t = sm.FlagTable(pool)
-    assert t.counts(RED, 10, 2) is None
+    assert t.counts(RED, 10) is None  # 3 flagged at 5-3, and 4-4 and 6-2 don't help
+    assert t.peers(10) == {
+        "made": sum(c.outcome.playoffs for c in pool if c.rec == (5, 3, 0)),
+        "n": 10,
+    }
     assert sm.flag_cards(t, _cur(-5.0), _ranks(), "T") == []
+    full = [_cand(i, i, 1, 0, rec=(5, 3, 0), measures=[OFF]) for i in range(100)]
+    assert sm.FlagTable(full).counts(RED, 10) is not None
 
 
 def test_a_card_is_hidden_when_its_own_counts_disagree_with_its_kind():
@@ -516,7 +537,7 @@ def test_a_card_is_hidden_when_its_own_counts_disagree_with_its_kind():
     assert sm.flag_cards(strength(0.9), _cur(500.0), _ranks(rank=2), "T")[0]["kind"] == "strength"
     assert sm.flag_cards(strength(0.2), _cur(500.0), _ranks(rank=2), "T") == []
 
-    # fine: a gap of -5 points shows, -20 does not; any better gap shows
+    # fine: the same share shows, a lower one does not, a better one does
     fine_m = "strength.luck"
 
     def fine(flag_rate, other_rate=0.5):
@@ -528,14 +549,14 @@ def test_a_card_is_hidden_when_its_own_counts_disagree_with_its_kind():
 
     cur = _cur(-5.0, measures=(fine_m,))
     rk = _ranks((fine_m,))
-    assert sm.flag_cards(fine(0.44), cur, rk, "T")[0]["kind"] == "fine"  # 44% vs 50%
+    assert sm.flag_cards(fine(0.52), cur, rk, "T")[0]["kind"] == "fine"  # 52% vs 51%
     assert sm.flag_cards(fine(0.28), cur, rk, "T") == []  # 28% vs 50%
     assert sm.flag_cards(fine(0.8), cur, rk, "T")[0]["kind"] == "fine"
 
 
-def test_outcome_is_conference_game_for_rating_and_margin_and_made_otherwise():
-    elo, pd_, qb = "strength.elo_pre", "strength.point_diff_pg", "strength.qb_epa"
-    ms = [elo, pd_, qb]
+def test_outcome_is_conference_game_for_the_rating_and_made_otherwise():
+    elo, qb = "strength.elo_pre", "strength.qb_epa"
+    ms = [elo, qb]
 
     # the top quarter is rank/N >= .75 (26 of 100): about 4 in 5 make it, 1 in 5 reach a conference
     # game; the others 40% and 10%
@@ -549,7 +570,7 @@ def test_outcome_is_conference_game_for_rating_and_margin_and_made_otherwise():
     cards = {
         c["measure"]: c for c in sm.flag_cards(t, _cur(500.0, measures=ms), _ranks(ms, rank=2), "T")
     }
-    assert cards[elo]["outcome"] == "conf" and cards[pd_]["outcome"] == "conf"
+    assert cards[elo]["outcome"] == "conf"
     assert cards[qb]["outcome"] == "made"
     top = [mk(i) for i in range(75, 100)]
     assert cards[elo]["flagged"] == [sum(c.outcome.rank >= 3 for c in top), 25]
@@ -559,7 +580,7 @@ def test_outcome_is_conference_game_for_rating_and_margin_and_made_otherwise():
 
 def test_at_most_three_cards_a_group_biggest_gap_first():
     ms = [s.measure for s in sm.FLAG_SPECS if s.kind == "strength"]
-    assert len(set(ms)) == 4
+    assert len(set(ms)) == 3
 
     def mk(i):
         top = i >= 74
@@ -574,6 +595,19 @@ def test_at_most_three_cards_a_group_biggest_gap_first():
     assert [c["measure"] for c in cards] == [
         "strength.epa_off_adj", "strength.qb_epa", "strength.elo_pre",
     ]  # fmt: skip
+
+
+def test_no_group_shows_more_than_three_cards():
+    ms = [s.measure for s in sm.FLAG_SPECS if s.kind == "fine"]
+    assert len(ms) == 4
+
+    def mk(i):
+        return _cand(i, i, i % 2 == 0, 0, measures=ms)
+
+    cards = sm.flag_cards(
+        sm.FlagTable([mk(i) for i in range(100)]), _cur(-5.0, measures=ms), _ranks(ms), "T"
+    )
+    assert len(cards) == sm.MAX_CARDS
 
 
 def test_groups_come_out_in_the_pages_order():
@@ -591,11 +625,11 @@ def test_groups_come_out_in_the_pages_order():
     assert cards[0]["measure"] == OFF
 
 
-def test_rank_is_best_first_by_direction_and_highest_first_when_neutral(world):
+def test_rank_is_best_first_and_every_measure_is_ranked(world):
     g, f = world
     _, ranks = sm._current(g, f, SEASON, NOW)
     # every team has a row, so each flag measure ranks 32 teams 1..32 (no ties in random data)
-    assert sorted(ranks["strength.epa_def"].values()) == list(range(1, 33))
+    assert sorted(ranks["strength.qb_epa"].values()) == list(range(1, 33))
     latest = {
         t: v
         for t, v in sm.team_latest(
@@ -603,12 +637,12 @@ def test_rank_is_best_first_by_direction_and_highest_first_when_neutral(world):
             sm._naive(g.filter((pl.col("season") == SEASON) & (pl.col("game_type") == "REG"))),
             NOW,
         )
-        .filter(pl.col("feature") == "strength.epa_def")
+        .filter(pl.col("feature") == "strength.qb_epa")
         .select("team", "value")
         .iter_rows()
     }
-    best = min(latest, key=latest.get)  # lower EPA allowed is better
-    assert ranks["strength.epa_def"][best] == 1
+    best = max(latest, key=latest.get)
+    assert ranks["strength.qb_epa"][best] == 1
     assert ranks["strength.luck"] is not None
 
 

@@ -696,7 +696,6 @@
      "quarter": "bottom",
      "outcome": "made",
      "peers": "5-2",
-     "widened": false,
      "flagged": [
       11,
       28
@@ -714,7 +713,6 @@
      "quarter": "bottom",
      "outcome": "made",
      "peers": "5-2",
-     "widened": true,
      "flagged": [
       20,
       60
@@ -726,31 +724,12 @@
     },
     {
      "kind": "fine",
-     "measure": "strength.epa_def",
-     "label": "Defense",
-     "rank": 28,
-     "quarter": "bottom",
-     "outcome": "made",
-     "peers": "5-2",
-     "widened": false,
-     "flagged": [
-      30,
-      52
-     ],
-     "others": [
-      40,
-      70
-     ]
-    },
-    {
-     "kind": "fine",
      "measure": "strength.luck",
      "label": "Luck",
      "rank": 9,
      "quarter": "bottom",
      "outcome": "made",
      "peers": "5-2",
-     "widened": false,
      "flagged": [
       22,
       40
@@ -768,7 +747,6 @@
      "quarter": "top",
      "outcome": "conf",
      "peers": "5-2",
-     "widened": false,
      "flagged": [
       16,
       40
@@ -778,7 +756,11 @@
       110
      ]
     }
-   ]
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
   },
   "KC": {
    "games_played": 7,
@@ -1443,7 +1425,6 @@
      "quarter": "top",
      "outcome": "made",
      "peers": "6-1",
-     "widened": false,
      "flagged": [
       40,
       45
@@ -1452,26 +1433,12 @@
       52,
       60
      ]
-    },
-    {
-     "kind": "strength",
-     "measure": "strength.point_diff_pg",
-     "label": "Point margin",
-     "rank": 4,
-     "quarter": "top",
-     "outcome": "conf",
-     "peers": "6-1",
-     "widened": false,
-     "flagged": [
-      22,
-      40
-     ],
-     "others": [
-      12,
-      70
-     ]
     }
-   ]
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
   },
   "BUF": {
    "games_played": 7,
@@ -2136,7 +2103,6 @@
      "quarter": "bottom",
      "outcome": "made",
      "peers": "4-3",
-     "widened": false,
      "flagged": [
       18,
       40
@@ -2146,7 +2112,11 @@
       80
      ]
     }
-   ]
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
   },
   "DET": {
    "games_played": 7,
@@ -2802,7 +2772,11 @@
      ]
     }
    ],
-   "flags": []
+   "flags": [],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
   },
   "SF": {
    "games_played": 7,
@@ -3467,7 +3441,6 @@
      "quarter": "bottom",
      "outcome": "made",
      "peers": "3-4",
-     "widened": true,
      "flagged": [
       6,
       40
@@ -3477,7 +3450,11 @@
       70
      ]
     }
-   ]
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
   },
   "PHI": {
    "games_played": 7,
@@ -4142,7 +4119,6 @@
      "quarter": "top",
      "outcome": "made",
      "peers": "7-0",
-     "widened": false,
      "flagged": [
       28,
       30
@@ -4152,7 +4128,11 @@
       12
      ]
     }
-   ]
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
   },
   "MIA": {
    "games_played": 7,
@@ -4817,7 +4797,6 @@
      "quarter": "bottom",
      "outcome": "made",
      "peers": "2-5",
-     "widened": false,
      "flagged": [
       2,
       30
@@ -4827,7 +4806,11 @@
       40
      ]
     }
-   ]
+   ],
+   "peers": {
+    "made": 60,
+    "n": 100
+   }
   }
  }
 }

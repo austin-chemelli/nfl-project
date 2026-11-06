@@ -235,7 +235,13 @@ def test_an_invalid_file_writes_no_snapshot(tmp_path, monkeypatch):
 def _min_similar(season=2026):
     return {
         "schema_version": "1", "season": season, "as_of": "2026-11-03T12:00:00Z",
-        "measures": [{"id": "record", "label": "Record"}], "teams": {},
+        "measures": [{"id": "record", "label": "Record"}],
+        "teams": {"KC": {
+            "games_played": 6, "record": "4-2", "k_summary": 25, "made_playoffs": 9,
+            "rounds": {"div": 4, "conf": 2, "sb": 1, "champ": 0},
+            "pool": {"seasons": [2002, 2025], "n": 768}, "peers": {"made": 60, "n": 100},
+            "profile": [50], "nearest": [], "flags": [],
+        }},
     }  # fmt: skip
 
 
@@ -320,3 +326,15 @@ def test_history_over_three_tuesdays_with_a_lock_and_a_rerun(tmp_path):
     assert series[1]["student"] == want[1]  # the later refresh of week 6
     assert series[0]["student"] != series[1]["student"] != series[2]["student"]
     assert len(lb.history(path)) == 32
+
+
+def test_an_empty_similar_file_never_replaces_a_good_one_in_season(tmp_path, monkeypatch, capsys):
+    """An empty feature store returns no teams rather than failing."""
+    paths = _paths(tmp_path, monkeypatch)
+    monkeypatch.setattr(lb.similar, "similar_file", lambda *a: _min_similar())
+    lb.build(paths, 2026, now=NOW, n_runs=RUNS)
+    old = (paths.site / "similar.json").read_text()
+    monkeypatch.setattr(lb.similar, "similar_file", lambda *a: {**_min_similar(), "teams": {}})
+    lb.build(paths, 2026, now=NOW, n_runs=RUNS)
+    assert (paths.site / "similar.json").read_text() == old
+    assert "SIMILAR NOT UPDATED" in capsys.readouterr().out

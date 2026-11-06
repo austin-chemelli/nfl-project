@@ -752,7 +752,6 @@ export const SimilarFlag = z.looseObject({
   quarter: z.enum(['bottom', 'top']),
   outcome: z.enum(['made', 'conf']),
   peers: z.string(), // "5-2"
-  widened: z.boolean().default(false),
   flagged: z.tuple([num, num]),
   others: z.tuple([num, num]),
 })
@@ -766,6 +765,7 @@ export const SimilarTeam = z.looseObject({
   rounds: z.looseObject({ div: num, conf: num, sb: num, champ: num }),
   profile: z.array(num).default([]),
   pool: z.looseObject({ seasons: z.tuple([num, num]), n: num }).optional(),
+  peers: z.looseObject({ made: num, n: num }).nullable().default(null), // everyone on exactly this record
   nearest: z.array(SimilarNeighbour).default([]),
   flags: z.array(SimilarFlag).default([]),
 })
