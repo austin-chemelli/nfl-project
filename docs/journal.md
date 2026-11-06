@@ -513,3 +513,13 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 A reviewer pass then checked the numbers independently (records, seeds and the simulation reproduced exactly; nothing can touch a lock) and found what the tests couldn't. Scores arrive up to a day after a game ends, so a finished game could headline the page; the page now keeps only games with a kickoff still ahead. Ratings for playoff games shrank to nothing by Week 18, because they fit remaining games only, and with one game left the home term became that game's logit; played games now anchor the fit. `through_week` moved on a Thursday score, which would have mislabelled Saturday snapshots for good. The σ comparison wasn't paired at 0; paired, the gain stops being significant even at the 12-game cut.
 
 **Lesson.** A number with a source label is a claim about the source. Most of "market" was a model, and only holding out real lines showed it was no closer to the market than the thing it was compared with. And fixtures hide scale: 34 fixture games looked fine, 151 real ones ran past 20,000 pixels on a phone.
+
+## 2026-11-06: Coaches and Build come off the live site for now (M16 planned)
+
+**Why.** Austin wants both pages better before the public sees them again, and wanted them hidden, not removed.
+
+**What changed.** `web/src/lib/hiddenPages.ts` lists them. On the live site they leave the nav, their URLs answer like pages that don't exist, and the League panel's "Scheme profile" and the Season page's "Back to Build your own" links go. `npm run dev` still shows everything, and the code, routes and data files all stay. M16 is parked until Austin picks it up: Coaches needs an accuracy and visuals pass, and Build comes back with the work that puts a custom approach on other pages.
+
+**Findings.** Neither page had ever been in a site walk, and both date from before team colors, UI round 2 and wave 2. Build overflows by 14 px on a phone and runs 7,418 px tall; Coaches has no charts at all. `/season/:year` is only linked from Build, so it's orphaned while Build is hidden.
+
+**Lesson.** A page nobody re-tests falls behind quietly while the rest of the site moves. Site walks need a goal that sends someone to every page.

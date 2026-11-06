@@ -419,3 +419,11 @@ Decided (ADR 0020): `vegas_home_wp`; "Turning points"; CSS tokens, no animation 
 - **M15.10 Route crossfades (optional).** `app/Layout.tsx` links with `viewTransition`; a test that the attribute is set; verified in a browser since jsdom has no view transitions. Only if Austin wants orientation motion after living with phase 1.
 
 Backlog after M15: a sixth summary tile for comebacks (needs the five-tile cap revisited); a headline template from `winner_low`; the boldness view (`.notes/plans/boldness-view.md`, S–M, parked 2026-11-05).
+
+## M16: Coaches and Build, good enough to come back (parked 2026-11-06)
+
+Both pages were taken off the live site on 2026-11-06 and nothing was removed: they stay in the repo and in `npm run dev`. Parked until Austin picks it up. Each returns on its own by coming off the list in `web/src/lib/hiddenPages.ts`, once he says it's good. Notes and measurements: `.notes/project-review-2026-11.md` §11.
+
+- **M16.1 Coaches: refinement.** Make sure the data is accurate, starting with play-callers, the weakest column (`.notes/coordinators-validation.md`), and maybe improve the visuals. Not a rebuild.
+- **M16.2 Build: with the custom-approach work.** Revisit it when a user's own line starts showing up in other places (review §4.3), not on its own. Check it against wave 2 then, fix the 14 px phone overflow, and decide what happens to `/season/:year`, which is only linked from Build.
+- **M16.3 Bring a page back.** A `/site-walk` with a goal for that page (no walk has visited either), Austin's sign-off, then one line off the list restores the nav entry, the route and the League and Season links. Docs: `docs/site.md`, journal, hub.

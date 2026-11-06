@@ -3,6 +3,7 @@ import { NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { useMeta } from '../data/api'
 import { ago, kickoffEt } from '../lib/format'
 import { useTheme, type Theme } from './theme'
+import { isHidden } from '../lib/hiddenPages'
 
 const NAV = [
   { to: '/', label: 'This week', end: true },
@@ -68,7 +69,7 @@ function Header() {
       <div className="mx-auto flex max-w-6xl items-center gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
         <NavLink to="/" className="shrink-0 font-semibold text-ink hover:no-underline">NFL approaches</NavLink>
         <nav ref={navRef} style={navStyle} aria-label="Main" className="-mx-1 flex min-w-0 flex-1 scroll-px-7 gap-1 overflow-x-auto text-[14px]">
-          {NAV.map((n) => (
+          {NAV.filter((n) => !isHidden(n.to)).map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
