@@ -1,13 +1,13 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { FinePrint } from '../components/FinePrint'
-import { SummaryStrip, Tile } from '../components/SummaryStrip'
+import { Condensed, SummaryStrip, Tile } from '../components/SummaryStrip'
 import { Tabs, type TabDef } from '../components/Tabs'
 import { Card, ErrorBox, Loaded, Loading, Page } from '../components/ui'
 import { useGame, useMeta, useRetro, isNotFound } from '../data/api'
 import type { Game, Meta, RetroGame } from '../data/contract'
 import { Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './game/Sections'
-import { GameHeader, GameTitle } from './game/Header'
+import { GameHeader, GameTitle, PinnedResult } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
 import { Preview } from './game/Preview'
 import { Retro } from './game/Retro'
@@ -60,6 +60,7 @@ export default function GamePage() {
 function GameBody({ g, meta }: { g: Game; meta: Meta }) {
   const final = g.result != null
   const rq = useRetro(g.game_id, final)
+  const [strip, setStrip] = useState<HTMLDivElement | null>(null)
   // wait for the retro (a final game's default tab depends on it); a 404 just means not built yet
   if (final && rq.isPending) return <Loading what="game" shape="game" />
   const retro: RetroGame | null = rq.isSuccess ? rq.data : null
@@ -135,11 +136,17 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
     },
   )
 
+  const tiles = summaryTiles(g, meta, retro)
   return (
     <>
+      {final && (
+        <Condensed watch={strip}>
+          <PinnedResult g={g} verdict={tiles.find((t) => t.id === 'result')?.value} ot={retro?.wp_series?.ot ?? false} />
+        </Condensed>
+      )}
       <GameHeader g={g} />
-      <SummaryStrip label="Game summary">
-        {summaryTiles(g, meta, retro).map((t) => (
+      <SummaryStrip ref={setStrip} label="Game summary">
+        {tiles.map((t) => (
           <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} tab={tabs.some((x) => x.id === t.tab) ? t.tab : undefined} modelId={t.modelId} accent={t.team === g.home ? 'var(--team-home)' : t.team === g.away ? 'var(--team-away)' : undefined} />
         ))}
       </SummaryStrip>
