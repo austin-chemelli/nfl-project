@@ -230,3 +230,16 @@ def test_an_invalid_file_writes_no_snapshot(tmp_path, monkeypatch):
     with pytest.raises(ValueError):
         lb.build(paths, 2026, snapshot="refresh", now=NOW, n_runs=RUNS)
     assert not lb.snapshot_path(paths, 2026).exists()
+
+
+def test_a_similar_seasons_failure_keeps_the_odds(monkeypatch, capsys):
+    def fail(*a):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(lb.similar, "similar_file", fail)
+    games = _games()
+    obj, _ = lb.league_file(
+        games, _inputs(games), 2026, NOW, n_runs=RUNS, past=(games, pl.DataFrame())
+    )
+    assert obj["similar"] == {} and obj["odds"]["student"]["teams"]
+    assert "similar seasons failed" in capsys.readouterr().out

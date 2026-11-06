@@ -15,6 +15,7 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -23,6 +24,7 @@ from pydantic import BaseModel, ConfigDict
 
 from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
+from nfl.league import similar
 from nfl.league.divisions import DIVISION_TEAMS, DIVISIONS, conference_of, division_of
 from nfl.league.inputs import VariantInputs, load_inputs
 from nfl.league.simulate import DEFAULT_RUNS, SHOCK_SIGMA, SimResult, simulate_season
@@ -101,6 +103,34 @@ class HistoryPoint(BaseModel):
     market: float | None
 
 
+class Rounds(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    div: int
+    conf: int
+    sb: int
+    champ: int
+
+
+class Neighbour(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    season: int
+    team: str
+    dist: float
+    rec_then: str
+    final: str
+    playoffs: bool
+    round: Literal["wc", "div", "conf", "sb", "champ"] | None
+
+
+class Similar(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    games_played: int
+    k_summary: int
+    made_playoffs: int
+    rounds: Rounds
+    neighbours: list[Neighbour]
+
+
 class LeagueFile(BaseModel):
     model_config = ConfigDict(extra="forbid")
     schema_version: str
@@ -116,7 +146,7 @@ class LeagueFile(BaseModel):
     odds: dict[str, Variant]
     games: list[GameRow]
     history: dict[str, list[HistoryPoint]]
-    similar: dict[str, dict]
+    similar: dict[str, Similar]
 
 
 def _stamp(t: datetime) -> str:
@@ -228,6 +258,20 @@ def _games(sim: SimResult, market: VariantInputs, remaining: pl.DataFrame) -> li
     return out
 
 
+def _similar(past: tuple | None, season: int, as_of: datetime) -> dict:
+    """Context, not the forecast: a failure here costs the Similar tab, never the odds."""
+    if past is None:
+        return {}
+    try:
+        games, feats = past
+        if isinstance(feats, Paths):
+            feats = similar.load_features(feats, season)
+        return similar.similar_file(games, feats, season, as_of)
+    except (Exception, PanicException) as e:  # noqa: BLE001
+        print(f"league: similar seasons failed, continuing: {e!r}")
+        return {}
+
+
 def league_file(
     games: pl.DataFrame,
     inputs: dict[str, VariantInputs] | None,
@@ -235,8 +279,11 @@ def league_file(
     as_of: datetime,
     n_runs: int = DEFAULT_RUNS,
     sigma: float = SHOCK_SIGMA,
+    past: tuple[pl.DataFrame, pl.DataFrame] | None = None,
 ) -> tuple[dict, dict[str, SimResult]]:
-    """The league.json object (history empty) and the runs. Once no regular-season game is left the
+    """The league.json object (history empty) and the runs. `past` is (every season's games from
+    2002 through this one, the similar-seasons feature rows) and fills `similar`; without it that
+    stays empty. Once no regular-season game is left the
     file keeps the final standings with no odds: the engine can't start from playoff results."""
     played, remaining = regular_season(games)
     base = played_results(played)
@@ -267,7 +314,7 @@ def league_file(
         },
         "games": _games(sims["student"], inputs["market"], remaining) if sims else [],
         "history": {},
-        "similar": {},
+        "similar": _similar(past, season, as_of),
     }
     return obj, sims
 
@@ -347,9 +394,11 @@ def build(
     t0 = time.perf_counter()
     season = season or current_season()
     as_of = (now or now_utc()).replace(tzinfo=None, microsecond=0)
-    games = store.games_frame(paths).filter(pl.col("season") == season)
+    every = store.games_frame(paths)
+    games = every.filter(pl.col("season") == season)
     inputs = load_inputs(paths, season, as_of) if regular_season(games)[1].height else None
-    obj, sims = league_file(games, inputs, season, as_of, n_runs=n_runs)
+    past = (every, paths)
+    obj, sims = league_file(games, inputs, season, as_of, n_runs=n_runs, past=past)
     path = snapshot_path(paths, season)
     rows = snapshot_rows(obj, sims, inputs, snapshot, as_of) if snapshot and sims else None
     obj["history"] = history(path, rows)
