@@ -86,7 +86,9 @@ def primary_qbs(paths: Paths, season: int | None = None) -> dict[tuple[int, str]
         for r in q.to_dicts()
     }
     if season is not None:
-        plays = pl.scan_parquet(f"{paths.curated_table('plays').as_posix()}/season={season}/*.parquet")
+        plays = pl.scan_parquet(
+            f"{paths.curated_table('plays').as_posix()}/season={season}/*.parquet"
+        )
         top = (
             plays.filter((pl.col("qb_dropback") == 1) & pl.col("passer_player_id").is_not_null())
             .group_by("posteam", "passer_player_id")
@@ -132,7 +134,9 @@ class Situations:
         if prev is None:
             return None
         if who == prev["person"]:
-            new_qb = side == "off" and self.qbs.get((season, team)) != self.qbs.get((season - 1, team))
+            new_qb = side == "off" and self.qbs.get((season, team)) != self.qbs.get(
+                (season - 1, team)
+            )
             return "same_caller_new_qb" if new_qb else "same_caller"
         on_staff = who in self.staff.get((season - 1, team), set())
         if self.first_called.get((who, side), 9999) >= season:
@@ -140,7 +144,9 @@ class Situations:
         return "took_over" if on_staff else "moved_team"
 
 
-def unit_situations(assign: pl.DataFrame, qbs: dict, spells: pl.DataFrame | None = None) -> pl.DataFrame:
+def unit_situations(
+    assign: pl.DataFrame, qbs: dict, spells: pl.DataFrame | None = None
+) -> pl.DataFrame:
     """Each unit-season with a previous season, labelled, for the study."""
     sit = Situations(assign, qbs, spells)
     out = []

@@ -51,7 +51,10 @@ def load_spells() -> pl.DataFrame:
     last = pl.when(pl.col("season") <= 2020).then(17).otherwise(18)
     # A spell that reached the final regular-season week runs through the playoffs too.
     return spells.with_columns(
-        pl.when(pl.col("end_week") >= last).then(None).otherwise(pl.col("end_week")).alias("end_week")
+        pl.when(pl.col("end_week") >= last)
+        .then(None)
+        .otherwise(pl.col("end_week"))
+        .alias("end_week")
     )
 
 

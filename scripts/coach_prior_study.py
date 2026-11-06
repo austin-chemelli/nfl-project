@@ -64,8 +64,9 @@ def loso_blend(df: pl.DataFrame) -> tuple[float, float]:
         w = best_weight(df.filter(pl.col("season") != s))
         held = df.filter(pl.col("season") == s)
         errs.append(
-            held.select((w * pl.col("prior") + (1 - w) * pl.col("team_prev") - pl.col("pct")).abs())
-            .to_series()
+            held.select(
+                (w * pl.col("prior") + (1 - w) * pl.col("team_prev") - pl.col("pct")).abs()
+            ).to_series()
         )
     return best_weight(df), round(pl.concat(errs).mean() * 100, 1)
 
@@ -153,7 +154,12 @@ def main() -> None:
                f"{r['situation']} {r['len']}" for r in
                labels.group_by("situation").len().sort("situation").to_dicts()), ""]  # fmt: skip
     for name, rates in sets.items():
-        out += [f"## {name}", "", "Decay, same-caller cases and caller moved, MAE of the prior:", ""]
+        out += [
+            f"## {name}",
+            "",
+            "Decay, same-caller cases and caller moved, MAE of the prior:",
+            "",
+        ]
         for d in DECAYS:
             c = cases(assign, labels, rates, d)
             h = c.filter(pl.col("prior").is_not_null())

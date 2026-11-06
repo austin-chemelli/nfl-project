@@ -137,7 +137,9 @@ def test_a_caller_never_outlasts_his_only_job():
     jobs = (
         s.filter(pl.col("role").is_in(["HC", "OC", "DC"]))
         .group_by(keys)
-        .agg(pl.col("end_week").is_null().any().alias("open"), pl.col("end_week").max().alias("last"))
+        .agg(
+            pl.col("end_week").is_null().any().alias("open"), pl.col("end_week").max().alias("last")
+        )
     )
     callers = s.filter(pl.col("role").is_in(["OFF_PC", "DEF_PC"])).join(jobs, on=keys)
     bad = callers.filter(
