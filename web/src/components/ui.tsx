@@ -1,5 +1,5 @@
 /** Small shared building blocks. Pages compose these; keep page-specific UI in the page. */
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { colorVar, REFERENCES, SHORT } from '../lib/models'
 import { pct } from '../lib/format'
@@ -106,8 +106,67 @@ export function ProbCell({ pHome, home, away }: { pHome: number | null | undefin
   )
 }
 
-export function Loading({ what = 'data' }: { what?: string }) {
-  return <div className="py-12 text-center text-ink-3" role="status">Loading {what}…</div>
+/** A neutral placeholder block. Pulses only when the visitor allows motion. */
+export function Skeleton({ className = '', style, ...rest }: { className?: string; style?: CSSProperties } & Record<`data-${string}`, string>) {
+  return <div aria-hidden="true" style={style} {...rest} className={`rounded bg-surface-2 motion-safe:animate-pulse ${className}`} />
+}
+
+export type SkeletonShape = 'game' | 'slate' | 'tracker' | 'page' | 'cards'
+
+/** The shape of a page while its data loads: title, summary tiles (same grid as SummaryStrip), tab bar, content blocks. */
+export function PageSkeleton({ what = 'page', shape = 'page', title = true }: { what?: string; shape?: SkeletonShape; title?: boolean }) {
+  return (
+    <div role="status" aria-label={`Loading ${what}…`} data-shape={shape} className="flex flex-col gap-5">
+      <span className="sr-only">Loading {what}…</span>
+      {title && <Skeleton className="h-8 w-2/3 max-w-sm" />}
+      {shape !== 'cards' && (
+        <div aria-hidden="true" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} data-skeleton="tile" className="min-w-0 rounded-lg border border-t-2 border-line bg-surface-1 p-3">
+              <Skeleton className="h-3.5 w-1/2" />
+              <Skeleton className="mt-2 h-6 w-3/4" />
+              <Skeleton className="mt-2 h-3.5 w-2/3" />
+            </div>
+          ))}
+        </div>
+      )}
+      {shape !== 'slate' && shape !== 'cards' && (
+        <div aria-hidden="true" data-skeleton="tabs" className="flex gap-2 overflow-hidden">
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-9 w-24 shrink-0" />)}
+        </div>
+      )}
+      <div aria-hidden="true" className="flex flex-col gap-4">
+        {shape === 'slate' || shape === 'cards' ? (
+          [0, 1, 2].map((i) => <Skeleton key={i} data-skeleton="card" className="h-28 w-full" />)
+        ) : shape === 'tracker' ? (
+          <Skeleton className="h-72 w-full" />
+        ) : (
+          <>
+            <Skeleton className="h-56 w-full" />
+            <Skeleton className="h-56 w-full" />
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** A small section loading: one or two lines, not a page. */
+function CompactLoading({ what }: { what: string }) {
+  return (
+    <div role="status" aria-label={`Loading ${what}…`} className="flex flex-col gap-2 py-4">
+      <span className="sr-only">Loading {what}…</span>
+      <Skeleton className="h-4 w-1/2" />
+      <Skeleton className="h-4 w-1/3" />
+    </div>
+  )
+}
+
+/** `what="page"` (the route fallback) or an explicit `shape` gives the page shape; anything else is a compact section. */
+export function Loading({ what = 'data', shape }: { what?: string; shape?: SkeletonShape }) {
+  if (what === 'page') return <PageSkeleton what={what} shape={shape} />
+  if (shape) return <PageSkeleton what={what} shape={shape} title={false} />
+  return <CompactLoading what={what} />
 }
 
 export function ErrorBox({ error }: { error: unknown }) {
@@ -128,8 +187,8 @@ export function ErrorBox({ error }: { error: unknown }) {
 }
 
 /** Render children once a query has data; loading and error states are uniform across pages. */
-export function Loaded<T>({ q, what, children }: { q: UseQueryResult<T>; what?: string; children: (data: T) => ReactNode }) {
-  if (q.isPending) return <Loading what={what} />
+export function Loaded<T>({ q, what, shape, children }: { q: UseQueryResult<T>; what?: string; shape?: SkeletonShape; children: (data: T) => ReactNode }) {
+  if (q.isPending) return <Loading what={what} shape={shape} />
   if (q.isError) return <ErrorBox error={q.error} />
   return <>{children(q.data)}</>
 }

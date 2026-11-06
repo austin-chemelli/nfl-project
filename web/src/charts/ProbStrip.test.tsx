@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { ProbStrip, type ProbModel } from './ProbStrip'
 
 const models: ProbModel[] = [
@@ -37,5 +37,32 @@ describe('ProbStrip', () => {
     expect(container.querySelectorAll('text')).toHaveLength(0)
     expect(screen.getAllByTestId('dot')).toHaveLength(6)
     expect(screen.getAllByTestId('dot')[0]).toHaveAttribute('r', '4')
+  })
+
+  it('expanded dots carry the motion class and sit at their final x, with the offset in --from-x', () => {
+    render(<ProbStrip models={models} market={0.61} home="GB" />)
+    const dots = screen.getAllByTestId('dot')
+    const mkt = Number(screen.getByTestId('market').getAttribute('x1'))
+    for (const d of dots) {
+      expect(d).toHaveClass('dot-slide')
+      const cx = Number(d.getAttribute('cx'))
+      expect(Number.parseFloat(d.style.getPropertyValue('--from-x'))).toBeCloseTo(mkt - cx)
+    }
+    expect(Number(dots[2].getAttribute('cx'))).toBeGreaterThan(Number(dots[0].getAttribute('cx')))
+  })
+
+  it('compact carries no motion class and keeps its title', () => {
+    const { container } = render(<ProbStrip models={models} market={0.61} home="GB" compact />)
+    expect(container.querySelector('.dot-slide')).toBeNull()
+    expect(container.querySelectorAll('title')).toHaveLength(6)
+  })
+
+  it('shows a tip on focus with the value, and no <title> when expanded', () => {
+    const { container } = render(<ProbStrip models={models} market={0.61} home="GB" />)
+    expect(container.querySelectorAll('title')).toHaveLength(0)
+    expect(screen.queryByTestId('chart-tip')).not.toBeInTheDocument()
+    fireEvent.focus(container.querySelectorAll('svg g[tabindex="0"]')[2])
+    expect(screen.getByTestId('chart-tip')).toHaveTextContent('Sharp: GB')
+    expect(screen.getByTestId('chart-tip')).toHaveTextContent('70.0%')
   })
 })

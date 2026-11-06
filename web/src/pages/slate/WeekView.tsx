@@ -30,7 +30,7 @@ export function WeekView({ meta, season, week }: { meta: Meta; season: number; w
           <p className="mt-1 text-ink-2">Pick another week above. Slates appear once the schedule for that week is published.</p>
         </Card>
       ) : (
-        <Loaded q={q} what="slate">
+        <Loaded q={q} what="slate" shape="cards">
           {(s) => <Games meta={meta} games={s.games} week={week} />}
         </Loaded>
       )}

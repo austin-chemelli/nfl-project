@@ -12,7 +12,7 @@ export default function SlatePage() {
       docTitle={params.season && params.week ? `Week ${params.week}, ${params.season}` : 'This week'}
       lede="Four forecasting approaches predict every NFL game, lock in before kickoff, and get scored in public against the betting market. The Student, built from results instead of a persona, is the headline pick."
     >
-      <Loaded q={meta} what="site info">
+      <Loaded q={meta} what="slate" shape="slate">
         {(m) => {
           const season = params.season ? Number(params.season) : m.season
           const week = params.week ? Number(params.week) : m.current_week

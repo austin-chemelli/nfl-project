@@ -178,3 +178,13 @@ describe('Slate page', () => {
     fs.rmSync(root, { recursive: true, force: true })
   })
 })
+
+describe('Slate loading', () => {
+  it('shows tiles and matchup-card blocks while pending', async () => {
+    const { container } = renderRoute('/')
+    await screen.findByRole('status', { name: 'Loading slate…' })
+    expect(container.querySelectorAll('[data-skeleton="tile"]')).toHaveLength(5)
+    expect(container.querySelectorAll('[data-skeleton="card"]').length).toBeGreaterThan(1)
+    await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
+  })
+})

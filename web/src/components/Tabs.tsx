@@ -82,7 +82,7 @@ export function Tabs({ tabs, default: defaultId, label }: { tabs: TabDef[]; defa
         </div>
       </div>
       {current && (
-        <div role="tabpanel" id={`${base}-panel-${current.id}`} aria-labelledby={`${base}-tab-${current.id}`} tabIndex={0} className="pt-5 focus-visible:outline-none">
+        <div key={current.id} role="tabpanel" id={`${base}-panel-${current.id}`} aria-labelledby={`${base}-tab-${current.id}`} tabIndex={0} className="tab-panel-in pt-5 focus-visible:outline-none">
           {current.content}
         </div>
       )}

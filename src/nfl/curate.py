@@ -91,6 +91,13 @@ PBP_COLUMNS = [
     "punt_blocked",
     "posteam_score_post",
     "defteam_score_post",
+    "vegas_home_wp",
+    "vegas_home_wpa",
+    "fixed_drive",
+    "fixed_drive_result",
+    "drive_start_yard_line",
+    "drive_end_yard_line",
+    "drive_play_count",
 ]
 FTN_COLUMNS = [
     "starting_hash",

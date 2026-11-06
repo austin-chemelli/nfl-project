@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { SummaryStrip, Tile } from './SummaryStrip'
@@ -26,5 +26,22 @@ describe('SummaryStrip', () => {
     expect(screen.getByText('nw')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/g')
     expect(router.state.location.search).toBe('?tab=news')
+  })
+
+  it('flashes the target panel after a tile click, not on load or a plain tab change', async () => {
+    await new Promise((r) => setTimeout(r, 100)) // let the previous test's frame callbacks (which look up tabs in the document) run out
+    const router = createMemoryRouter(
+      [{ path: '/g', element: (<><SummaryStrip><Tile label="Injuries" value="2 out" tab="news" /></SummaryStrip><Tabs default="forecast" tabs={[{ id: 'forecast', label: 'Forecast', content: <p>fc</p> }, { id: 'news', label: 'News', content: <p>nw</p> }]} /></>) }],
+      { initialEntries: ['/g'] },
+    )
+    render(<RouterProvider router={router} />)
+    expect(screen.getByRole('tabpanel')).not.toHaveClass('tile-flash')
+    await userEvent.click(screen.getByRole('tab', { name: 'News' }))
+    await new Promise((r) => setTimeout(r, 100))
+    expect(screen.getByRole('tabpanel')).not.toHaveClass('tile-flash')
+    await userEvent.click(screen.getByRole('tab', { name: 'Forecast' }))
+    await userEvent.click(screen.getByRole('button', { name: /Injuries/ }))
+    await waitFor(() => expect(screen.getByRole('tabpanel')).toHaveClass('tile-flash'))
+    expect(screen.getByRole('tabpanel')).toHaveClass('tab-panel-in')
   })
 })

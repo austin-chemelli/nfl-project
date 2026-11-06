@@ -65,4 +65,9 @@ describe('Tabs', () => {
     await userEvent.keyboard('{Home}')
     expect(tab('Alpha')).toHaveFocus()
   })
+
+  it('the panel carries the fade class (opacity only, no transform)', () => {
+    setup()
+    expect(screen.getByRole('tabpanel')).toHaveClass('tab-panel-in')
+  })
 })

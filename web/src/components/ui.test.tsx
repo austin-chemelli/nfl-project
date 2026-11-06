@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ErrorBox, ModelBadge, Page, Swatch } from './ui'
+import type { UseQueryResult } from '@tanstack/react-query'
+import { ErrorBox, Loaded, Loading, ModelBadge, Page, PageSkeleton, Skeleton, Swatch } from './ui'
 import { DataError } from '../data/api'
 
 describe('ErrorBox', () => {
@@ -48,5 +49,56 @@ describe('Page document title', () => {
     expect(document.title).toBe('CAR @ GB, Week 8 · NFL approaches')
     rerender(<Page title={<span>Game</span>}>x</Page>)
     expect(document.title).toBe('NFL approaches')
+  })
+})
+
+describe('skeletons', () => {
+  it('Skeleton pulses only under motion-safe', () => {
+    const { container } = render(<Skeleton className="h-4" />)
+    const el = container.firstElementChild as HTMLElement
+    expect(el).toHaveAttribute('aria-hidden', 'true')
+    expect(el.className).toContain('motion-safe:animate-pulse')
+    expect(el.className.split(/\s+/)).not.toContain('animate-pulse')
+  })
+
+  it('PageSkeleton is a labelled status with tiles, tabs and blocks, and no bare animate-pulse', () => {
+    const { container } = render(<PageSkeleton what="game" shape="game" />)
+    expect(screen.getByRole('status', { name: 'Loading game…' })).toBeInTheDocument()
+    expect(screen.getByText('Loading game…')).toHaveClass('sr-only')
+    expect(container.querySelectorAll('[data-skeleton="tile"]')).toHaveLength(5)
+    expect(container.querySelector('[data-skeleton="tabs"]')).not.toBeNull()
+    expect(container.querySelectorAll('.motion-safe\\:animate-pulse').length).toBeGreaterThan(5)
+    expect(container.innerHTML.replace(/motion-safe:animate-pulse/g, '')).not.toContain('animate-pulse')
+  })
+
+  it('cards is the card blocks alone, for a section under a page that already has its tiles', () => {
+    const { container } = render(<PageSkeleton shape="cards" title={false} />)
+    expect(container.querySelectorAll('[data-skeleton="card"]').length).toBeGreaterThan(1)
+    expect(container.querySelector('[data-skeleton="tile"]')).toBeNull()
+    expect(container.querySelector('[data-skeleton="tabs"]')).toBeNull()
+  })
+  it('slate has cards and no tab bar; tracker has tabs and one chart block', () => {
+    const slate = render(<PageSkeleton shape="slate" />)
+    expect(slate.container.querySelectorAll('[data-skeleton="card"]').length).toBeGreaterThan(1)
+    expect(slate.container.querySelector('[data-skeleton="tabs"]')).toBeNull()
+    slate.unmount()
+    const tr = render(<PageSkeleton shape="tracker" />)
+    expect(tr.container.querySelector('[data-skeleton="tabs"]')).not.toBeNull()
+  })
+
+  it('Loading what="page" renders the page shape with a title bar', () => {
+    const { container } = render(<Loading what="page" />)
+    expect(screen.getByRole('status', { name: 'Loading page…' })).toBeInTheDocument()
+    expect(container.querySelector('[data-skeleton="tabs"]')).not.toBeNull()
+  })
+
+  it('a small Loaded caller gets the compact form, and a shaped one the page shape', () => {
+    const pending = { isPending: true, isError: false } as UseQueryResult<number>
+    const small = render(<Loaded q={pending} what="method">{() => null}</Loaded>)
+    expect(screen.getByRole('status', { name: 'Loading method…' })).toBeInTheDocument()
+    expect(small.container.querySelector('[data-skeleton="tile"]')).toBeNull()
+    small.unmount()
+    const shaped = render(<Loaded q={pending} what="game" shape="game">{() => null}</Loaded>)
+    expect(shaped.container.querySelectorAll('[data-skeleton="tile"]')).toHaveLength(5)
   })
 })

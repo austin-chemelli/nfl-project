@@ -6,7 +6,7 @@
  * it is: color on these bars means a team.
  */
 import { scaleLinear } from 'd3-scale'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
 
@@ -63,6 +63,8 @@ export function DivergingBars({ rows, leftLabel, rightLabel, format, rowHeight =
             const o = r.overlay
             const together = o != null && r.value != null && (v === 0 || o === 0 || Math.sign(o) === Math.sign(v))
             const on = hovered?.key === r.key
+            // grows from the axis: a bar going left is anchored at its right end
+            const grow = (v2: number) => ({ className: 'bar-grow', style: { '--i': Math.min(i, 7), transformOrigin: v2 >= 0 ? 'left' : 'right' } as CSSProperties })
             return (
               <g key={r.key} {...(r.tip ? bind(r.key) : {})}>
                 {r.title && !r.tip && <title>{r.title}</title>}
@@ -70,9 +72,9 @@ export function DivergingBars({ rows, leftLabel, rightLabel, format, rowHeight =
                 <foreignObject x={0} y={y} width={lw - 8} height={rowHeight}>
                   <div className="flex h-full items-center truncate text-[13px] text-ink-2">{r.label}</div>
                 </foreignObject>
-                {r.value != null && <rect x={x0} y={y + barY} width={Math.max(1, w)} height={barH} rx={3} fill={fill} />}
+                {r.value != null && <rect x={x0} y={y + barY} width={Math.max(1, w)} height={barH} rx={3} fill={fill} {...grow(v)} />}
                 {o != null && (
-                  <rect data-testid="overlay" x={Math.min(x(0), x(o))} y={y + barY - 4} width={Math.max(1, Math.abs(x(o) - x(0)))} height={barH + 8} rx={3} fill="none" stroke="var(--text-primary)" strokeWidth={1.5} />
+                  <rect data-testid="overlay" x={Math.min(x(0), x(o))} y={y + barY - 4} width={Math.max(1, Math.abs(x(o) - x(0)))} height={barH + 8} rx={3} fill="none" stroke="var(--text-primary)" strokeWidth={1.5} {...grow(o)} />
                 )}
                 {r.value == null && o == null && <text x={x(0) + 6} y={y + rowHeight / 2 + 4} className="fill-[var(--text-muted)]">no data</text>}
                 {r.value != null && !together && label(v, y, format(v))}

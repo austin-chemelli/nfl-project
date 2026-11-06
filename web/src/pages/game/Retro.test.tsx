@@ -77,4 +77,29 @@ describe('Retro', () => {
     render(<Retro r={w1} />)
     expect(screen.getByRole('heading', { name: 'Variance' })).toBeInTheDocument()
   })
+
+  it('puts "How it unfolded" right after the headlines, with the turning points matching the marks', () => {
+    const { container } = render(<Retro r={r} />)
+    const heads = [...container.querySelectorAll('h2')].map((h) => h.textContent)
+    const order = ['What happened', 'How it unfolded', 'Played like']
+    expect(heads.slice(0, 3).map((t, i) => t?.startsWith(order[i]))).toEqual([true, true, true])
+    expect(screen.getByText(/CAR won 23–20 after falling to 16% in Q2\./)).toBeInTheDocument()
+    const items = screen.getAllByRole('listitem').filter((li) => li.closest('ol'))
+    const marks = screen.getAllByTestId('wp-mark')
+    expect(items).toHaveLength(marks.length)
+    expect(items[1]).toHaveTextContent('Q4 3:02 · GB: CAR 36% → 79% (+43 pts). (Shotgun) J.Love')
+    expect(items[1]).toHaveTextContent('Counted in: Fumble recoveries.')
+    expect(screen.getByText('Turning points')).toBeInTheDocument()
+    expect(screen.getByText(/not one of this site's approaches/)).toBeInTheDocument()
+  })
+
+  it('renders no win-probability section when wp_series is null or missing', () => {
+    const { unmount } = render(<Retro r={{ ...r, wp_series: null }} />)
+    expect(screen.queryByRole('heading', { name: /How it unfolded/ })).toBeNull()
+    expect(screen.queryByText('Turning points')).toBeNull()
+    unmount()
+    const { wp_series: _omit, ...rest } = r
+    render(<Retro r={rest as typeof r} />)
+    expect(screen.queryByRole('heading', { name: /How it unfolded/ })).toBeNull()
+  })
 })

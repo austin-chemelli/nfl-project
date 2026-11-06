@@ -33,7 +33,7 @@ export function useChartTip() {
     if (!at || !content) return null
     const left = Math.max(0, Math.min(at.x + 14, at.width - WIDTH))
     return (
-      <div role="tooltip" data-testid="chart-tip" className="pointer-events-none absolute z-30 rounded-lg border border-line bg-surface-1 p-2.5 text-[13px] leading-snug shadow-xl" style={{ left, top: at.above ? at.y - 12 : at.y + 16, width: WIDTH, transform: at.above ? 'translateY(-100%)' : undefined }}>
+      <div role="tooltip" data-testid="chart-tip" className="chart-tip-in pointer-events-none absolute z-30 rounded-lg border border-line bg-surface-1 p-2.5 text-[13px] leading-snug shadow-xl" style={{ left, top: at.above ? at.y - 12 : at.y + 16, width: WIDTH, transform: at.above ? 'translateY(-100%)' : undefined }}>
         {content}
       </div>
     )

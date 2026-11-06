@@ -163,3 +163,13 @@ describe('Game page', () => {
     })
   })
 })
+
+describe('Game loading', () => {
+  it('shows the page shape while the game is pending', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB')
+    await screen.findByRole('status', { name: 'Loading game…' })
+    expect(container.querySelectorAll('[data-skeleton="tile"]')).toHaveLength(5)
+    expect(container.querySelector('[data-skeleton="tabs"]')).not.toBeNull()
+    await screen.findByText(/Lambeau Field/)
+  })
+})

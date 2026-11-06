@@ -42,6 +42,7 @@ from nfl.retro.schema import (
     SCHEMA_VERSION,
     Attribution,
     Bucket,
+    Drive,
     Efficiency,
     Expectations,
     GradedPick,
@@ -52,6 +53,8 @@ from nfl.retro.schema import (
     Result,
     RetroGame,
     TeamRetro,
+    WpPlay,
+    WpSeries,
 )
 
 INT_PRIOR_DROPBACKS = 150
@@ -68,7 +71,15 @@ PLAY_COLS = [
     "fourth_down_converted", "fourth_down_failed", "field_goal_attempt", "field_goal_result",
     "kick_distance", "extra_point_attempt", "extra_point_result", "penalty_team", "penalty_yards",
     "return_touchdown", "td_team", "punt_blocked", "drive", "yardline_100", "touchdown",
+    "qtr", "game_seconds_remaining", "desc", "season_type", "vegas_home_wp", "vegas_home_wpa",
+    "fixed_drive", "fixed_drive_result", "drive_start_yard_line", "drive_end_yard_line",
+    "drive_play_count",
 ]  # fmt: skip
+TEXT_COLS = {  # the rest are doubles; only matters for a column a partition lacks
+    "game_id", "raw_snapshot_ts", "posteam", "defteam", "play_type", "field_goal_result",
+    "extra_point_result", "penalty_team", "td_team", "desc", "season_type", "fixed_drive_result",
+    "drive_start_yard_line", "drive_end_yard_line",
+}  # fmt: skip
 
 OFF_LABELS = {
     "epa_play": ("EPA per play", "epa"),
@@ -142,11 +153,22 @@ def _ts(x: datetime) -> str:
 
 
 def _load_plays(paths: Paths, season: int) -> pl.DataFrame:
-    glob = f"{paths.curated_table('plays').as_posix()}/*/*.parquet"
-    df = duckdb.sql(
-        f"select {', '.join(PLAY_COLS)} from read_parquet('{glob}', hive_partitioning=true) "
-        f"where season = {int(season)}"
-    ).pl()
+    """The season's plays. Reads `season={S}/*.parquet` only: a glob across seasons binds to the
+    first file's schema, so a column older partitions lack would be a Binder Error (daily.py).
+    A partition that predates some columns gets them as typed nulls; no partition, an empty frame."""
+    files = f"{paths.curated_table('plays').as_posix()}/season={int(season)}/*.parquet"
+    if not list(Path(files).parent.glob("*.parquet")):
+        df = pl.DataFrame(schema={c: pl.Utf8 if c in TEXT_COLS else pl.Float64 for c in PLAY_COLS})
+    else:
+        src = f"read_parquet('{files}', hive_partitioning=false, union_by_name=true)"
+        have = set(duckdb.sql(f"select * from {src} limit 0").columns)
+        sel = ", ".join(
+            f'"{c}"'
+            if c in have
+            else f'cast(null as {"varchar" if c in TEXT_COLS else "double"}) as "{c}"'
+            for c in PLAY_COLS
+        )
+        df = duckdb.sql(f"select {sel} from {src}").pl()
     return df.with_columns(
         _canon("posteam"), _canon("defteam"), _canon("penalty_team"), _canon("td_team")
     )
@@ -186,12 +208,16 @@ def league_int_rate(off_before: pl.DataFrame, prior_season_rate: float) -> float
     return prior_season_rate
 
 
-def _offense(plays: pl.DataFrame) -> pl.DataFrame:
-    return plays.filter(
+def _is_offense() -> pl.Expr:
+    return (
         pl.col("play_type").is_in(["pass", "run"])
         & pl.col("epa").is_not_null()
         & pl.col("posteam").is_not_null()
     )
+
+
+def _offense(plays: pl.DataFrame) -> pl.DataFrame:
+    return plays.filter(_is_offense())
 
 
 # ------------------------------------------------------------------------------------- efficiency
@@ -313,21 +339,26 @@ ADJ_PRIOR_PLAYS = 50
 RATE_CLIP = (0.02, 0.98)
 
 
+def _is_go(down: int, conv: str, fail: str) -> pl.Expr:
+    """A 3rd/4th-down go-for-it play the expectations count."""
+    return (
+        (pl.col("down") == down)
+        & pl.col("play_type").is_in(["pass", "run"])
+        & ((pl.col(conv) == 1) | (pl.col(fail) == 1))
+        & pl.col("ydstogo").is_not_null()
+        & (pl.col("interception").fill_null(0) != 1)  # turnovers are priced by their factors
+        & (pl.col("fumble_lost").fill_null(0) != 1)
+        & (pl.col("aborted_play").fill_null(0) != 1)
+    )
+
+
 def _go_plays(plays: pl.DataFrame, E: Expectations) -> pl.DataFrame:
     """3rd/4th-down go-for-it plays (the expectations filter) with `_down`, `_conv`, `_rate`
     (league bucket rate) and `_value` (bucket value)."""
     parts = []
     for down, conv, fail, attr in DOWN_SPEC:
         buckets = getattr(E, attr)
-        df = plays.filter(
-            (pl.col("down") == down)
-            & pl.col("play_type").is_in(["pass", "run"])
-            & ((pl.col(conv) == 1) | (pl.col(fail) == 1))
-            & pl.col("ydstogo").is_not_null()
-            & (pl.col("interception").fill_null(0) != 1)  # turnovers are priced by their factors
-            & (pl.col("fumble_lost").fill_null(0) != 1)
-            & (pl.col("aborted_play").fill_null(0) != 1)
-        )
+        df = plays.filter(_is_go(down, conv, fail))
         parts.append(
             df.with_columns(
                 pl.lit(down).alias("_down"),
@@ -372,18 +403,25 @@ def _down_factors(
     return out
 
 
-def _kicking(plays: pl.DataFrame, team: str, E: Expectations) -> tuple[float, float, int, float]:
-    fg = plays.filter(
-        (pl.col("posteam") == team)
-        & (pl.col("field_goal_attempt") == 1)
+def _is_fg() -> pl.Expr:
+    return (
+        (pl.col("field_goal_attempt") == 1)
         & pl.col("kick_distance").is_not_null()
         & (pl.col("field_goal_result").fill_null("") != "blocked")  # a special-teams big play
-    ).with_columns(
+    )
+
+
+def _is_xp() -> pl.Expr:
+    return pl.col("extra_point_attempt") == 1
+
+
+def _kicking(plays: pl.DataFrame, team: str, E: Expectations) -> tuple[float, float, int, float]:
+    fg = plays.filter((pl.col("posteam") == team) & _is_fg()).with_columns(
         _bucket_expr("kick_distance", E.field_goal, "rate").alias("_rate"),
         _bucket_expr("kick_distance", E.field_goal, "value").alias("_value"),
         (pl.col("field_goal_result") == "made").cast(pl.Float64).alias("_made"),
     )
-    xp = plays.filter((pl.col("posteam") == team) & (pl.col("extra_point_attempt") == 1))
+    xp = plays.filter((pl.col("posteam") == team) & _is_xp())
     xp_made = float((xp["extra_point_result"] == "good").sum())
     actual = float(fg["_made"].sum()) + xp_made
     expected = float(fg["_rate"].sum()) + xp.height * E.extra_point_rate
@@ -392,17 +430,18 @@ def _kicking(plays: pl.DataFrame, team: str, E: Expectations) -> tuple[float, fl
     return actual, expected, fg.height + xp.height, swing
 
 
+def _is_big_play(team: str | None = None) -> pl.Expr:
+    """Return TD on a kick/punt or a blocked punt/FG that benefits `team` (either team if None)."""
+    scorer = pl.col("td_team") == team if team else pl.col("td_team").is_not_null()
+    stopper = pl.col("defteam") == team if team else pl.col("defteam").is_not_null()
+    ret = (pl.col("return_touchdown") == 1) & (pl.col("special_teams_play") == 1) & scorer
+    blocked = ((pl.col("punt_blocked") == 1) | (pl.col("field_goal_result") == "blocked")) & stopper
+    return ret | blocked
+
+
 def _big_plays(plays: pl.DataFrame, team: str) -> int:
     """Return TDs on kicks/punts, blocked punts and blocked FGs that benefit `team`."""
-    ret = (
-        (pl.col("return_touchdown") == 1)
-        & (pl.col("special_teams_play") == 1)
-        & (pl.col("td_team") == team)
-    )
-    blocked = ((pl.col("punt_blocked") == 1) | (pl.col("field_goal_result") == "blocked")) & (
-        pl.col("defteam") == team
-    )
-    return plays.filter(ret | blocked).height
+    return plays.filter(_is_big_play(team)).height
 
 
 def _penalty_yards(plays: pl.DataFrame, team: str | None = None) -> float:
@@ -873,6 +912,205 @@ def _headlines(
 # ---------------------------------------------------------------------------------------- builder
 
 
+# ------------------------------------------------------------------------- win probability, drives
+
+WP_NEEDS = {
+    "vegas_home_wp",
+    "vegas_home_wpa",
+    "qtr",
+    "game_seconds_remaining",
+    "desc",
+    "season_type",
+}
+DRIVE_NEEDS = {
+    "fixed_drive", "fixed_drive_result", "drive_start_yard_line", "drive_end_yard_line",
+    "drive_play_count", "qtr", "game_seconds_remaining", "season_type", "posteam", "play_type",
+}  # fmt: skip
+MARK_TYPES = ["pass", "run", "punt", "field_goal", "extra_point", "kickoff"]
+DRIVE_TYPES = ["pass", "run", "punt", "field_goal", "kickoff", "qb_kneel", "qb_spike"]
+MARK_MIN_WPA = 0.05
+MARKS = 5
+TEXT_MAX = 160
+FACTOR_ORDER = ("interceptions", "fumbles", "special_teams", "kicking", "third_down", "fourth_down")
+
+
+def _timeline(df: pl.DataFrame) -> pl.DataFrame:
+    """Sort by play_id and add `_gsr` (seconds left, null filled from the previous row) and `_t`
+    (elapsed game seconds). `game_seconds_remaining` counts the whole game down and overtime
+    restarts it, so overtime adds the regulation and the earlier periods (10 minutes in the
+    regular season, 15 in the playoffs). `_t` never decreases (a few rows run backwards)."""
+    gsr = pl.col("game_seconds_remaining").cast(pl.Float64).forward_fill()
+    qtr = pl.col("qtr").cast(pl.Float64)
+    ot_len = pl.when(pl.col("season_type") == "POST").then(900).otherwise(600)
+    t = pl.when(qtr >= 5).then(3600 + ot_len * (qtr - 5) + (ot_len - gsr)).otherwise(3600 - gsr)
+    return (
+        df.sort("play_id", nulls_last=True, maintain_order=True)
+        .with_columns(gsr.alias("_gsr"))
+        .with_columns(t.round(0).cum_max().fill_null(0).cast(pl.Int64).alias("_t"))
+    )
+
+
+def _clock(qtr: int | None, gsr: float | None) -> str:
+    """Time left in the quarter as m:ss."""
+    left = 0 if gsr is None else round(gsr)
+    if qtr is not None and qtr < 5:
+        left -= 900 * (4 - qtr)
+    left = max(left, 0)
+    return f"{left // 60}:{left % 60:02d}"
+
+
+def _trim(text: str | None) -> str:
+    if not text or len(text) <= TEXT_MAX:
+        return text or ""
+    cut = text[:TEXT_MAX]
+    if text[TEXT_MAX] != " " and " " in cut:  # mid-word: back up to the last space
+        cut = cut.rsplit(" ", 1)[0]
+    return cut.rstrip()
+
+
+def _factor_expr() -> pl.Expr:
+    """The luck factor a play is counted in, from the predicates `_luck` uses (penalties are not
+    tagged: they are priced per yard, not per play)."""
+    dropback = _is_offense() & (pl.col("qb_dropback").fill_null(0) == 1)
+    fumble = _is_offense() & (pl.col("fumble") == 1) & (pl.col("fumble_lost").fill_null(0) == 1)
+    conds = {
+        "interceptions": dropback & (pl.col("interception").fill_null(0) == 1),
+        "fumbles": fumble,
+        "special_teams": _is_big_play(),
+        "kicking": _is_fg() | _is_xp(),
+    }
+    for down, conv, fail, attr in DOWN_SPEC:
+        conds[attr] = _is_go(down, conv, fail)
+    out = pl.when(conds[FACTOR_ORDER[0]]).then(pl.lit(FACTOR_ORDER[0]))
+    for k in FACTOR_ORDER[1:]:
+        out = out.when(conds[k]).then(pl.lit(k))
+    return out.otherwise(None).alias("_factor")
+
+
+def _code(posteam: str | None, g: dict) -> str | None:
+    """The games-table code of the offense (posteam is canonical on load)."""
+    if posteam is None:
+        return None
+    for code in (g["home_team"], g["away_team"]):
+        if _alias(code) == posteam:
+            return code
+    return None
+
+
+def _wp_series(game_plays: pl.DataFrame, g: dict) -> WpSeries | None:
+    """The home win-probability curve and its turning points (ADR 0020); None when the plays lack
+    the columns or the probabilities."""
+    if not WP_NEEDS <= set(game_plays.columns) or g["home_score"] is None:
+        return None
+    df = _timeline(game_plays)
+    if df["vegas_home_wp"].null_count() == df.height:
+        return None
+    # `play_id` order is not game order around a timeout: an icing timeout sorts after the kick and
+    # repeats the stale probability. A play's value after it is wp + wpa, and the stale row has
+    # wpa 0, so the curve takes only rows where the play changed the probability.
+    after = (pl.col("vegas_home_wp") + pl.col("vegas_home_wpa")).clip(0, 1)
+    df = df.with_columns(
+        after.alias("_after"),
+        _factor_expr(),
+        pl.col("vegas_home_wp").drop_nulls().first().alias("_open"),
+    )
+    curve = df.filter((pl.col("vegas_home_wpa").fill_null(0) != 0) & pl.col("_after").is_not_null())
+
+    marks: list[WpPlay] = []
+    cand = curve.filter(pl.col("play_type").is_in(MARK_TYPES)).with_columns(
+        pl.col("vegas_home_wp").round(3).alias("_pb"), pl.col("_after").round(3).alias("_pa")
+    )
+    cand = (
+        cand.with_columns((pl.col("_pa") - pl.col("_pb")).round(3).alias("_w"))
+        .filter(pl.col("_w").abs() >= MARK_MIN_WPA - 1e-9)
+        .sort(pl.col("_w").abs(), "play_id", descending=[True, False])
+        .head(MARKS)
+    )
+    for r in cand.iter_rows(named=True):
+        qtr = int(r["qtr"]) if r["qtr"] is not None else min(r["_t"] // 900 + 1, 4)
+        marks.append(
+            WpPlay(
+                play_id=int(r["play_id"]), t=r["_t"], qtr=qtr, clock=_clock(qtr, r["_gsr"]),
+                team=_code(r["posteam"], g), p_before=_z(r["_pb"], 3), p_after=_z(r["_pa"], 3),
+                wpa=_z(r["_w"], 3), factor=r["_factor"], text=_trim(r["desc"]),
+            )
+        )  # fmt: skip
+    marked = {m.play_id for m in marks}
+
+    points: list[tuple[int, float]] = [(0, _z(df["_open"][0], 3))]
+    for r in curve.iter_rows(named=True):
+        p = _z(r["_after"], 3)
+        if p != points[-1][1] or int(r["play_id"]) in marked:  # a mark's point is always kept
+            points.append((r["_t"], p))
+    ot = bool((df["qtr"] >= 5).any())
+    end_t = int(df.filter(pl.col("_gsr").is_not_null())["_t"].max() or 0) if ot else 3600
+    hs, as_ = g["home_score"], g["away_score"]
+    result = 1.0 if hs > as_ else 0.0 if hs < as_ else 0.5
+    points.append((end_t, result))  # kept even when it repeats the last value
+    if len(points) < 2:
+        return None
+
+    low = None
+    if result != 0.5:
+        view = [(t, _z(p if result == 1.0 else 1 - p, 3)) for t, p in points]
+        low = min(view, key=lambda x: x[1])  # min keeps the earliest of equal values
+    return WpSeries(
+        model="nflfastr_vegas", points=points, end_t=end_t, ot=ot, plays=marks, winner_low=low
+    )
+
+
+def _own_yard(text: str | None, offense: str | None) -> int | None:
+    """ "ARI 31" is the 31 when ARI has the ball and the 69 when it doesn't, "50" the 50: yards from
+    the offense's own goal line."""
+    if text is None:
+        return None
+    parts = text.split()
+    try:
+        if len(parts) == 1:
+            return int(parts[0])
+        if len(parts) == 2:
+            n = int(parts[1])
+            return n if _alias(parts[0]) == offense else 100 - n
+    except ValueError:
+        pass
+    return None
+
+
+def _drives(game_plays: pl.DataFrame, g: dict) -> list[Drive] | None:
+    """One row per possession from nflverse's `fixed_drive`; the END GAME pseudo-drive (no real
+    plays) is dropped. None when the plays lack the columns or no drive is left."""
+    if not DRIVE_NEEDS <= set(game_plays.columns):
+        return None
+    df = _timeline(game_plays).filter(pl.col("fixed_drive").is_not_null())
+    out: list[Drive] = []
+    for _, d in df.group_by("fixed_drive", maintain_order=True):
+        real = d.filter(pl.col("play_type").is_in(DRIVE_TYPES))
+        if real.is_empty():
+            continue
+        # a kickoff's posteam is the kicking team, so prefer the other plays
+        pos = d.filter(pl.col("play_type") != "kickoff")["posteam"].drop_nulls()
+        pos = pos if len(pos) else d["posteam"].drop_nulls()
+        offense = pos[0] if len(pos) else None
+        code = _code(offense, g)
+        if code is None:
+            continue
+
+        def first(col: str, d=d):
+            v = d[col].drop_nulls()
+            return v[0] if len(v) else None
+
+        n_plays = first("drive_play_count")
+        out.append(
+            Drive(
+                n=len(out) + 1, team=code, qtr=int(real["qtr"][0]), t0=int(real["_t"][0]),
+                t1=int(real["_t"][-1]), start_yl=_own_yard(first("drive_start_yard_line"), offense),
+                end_yl=_own_yard(first("drive_end_yard_line"), offense),
+                plays=None if n_plays is None else int(n_plays), result=first("fixed_drive_result"),
+            )
+        )  # fmt: skip
+    return out or None
+
+
 @dataclass
 class BuildReport:
     written: list[str] = field(default_factory=list)
@@ -905,7 +1143,8 @@ HASH_COLS = [c for c in PLAY_COLS if c != "raw_snapshot_ts"]
 def plays_hash(game_plays: pl.DataFrame) -> str:
     """Stable hash of one game's plays (the columns the retro reads, sorted by play_id); a new
     nflverse snapshot with identical plays hashes the same."""
-    csv = game_plays.sort("play_id", nulls_last=True).select(HASH_COLS).write_csv()
+    cols = [c for c in HASH_COLS if c in game_plays.columns]
+    csv = game_plays.sort("play_id", nulls_last=True).select(cols).write_csv()
     return hashlib.sha256(csv.encode()).hexdigest()[:32]
 
 
@@ -965,6 +1204,8 @@ def build_game(
         predictions=picks,
         best_model=best_id,
         attribution=attribution,
+        wp_series=_wp_series(game_plays, g),
+        drives=_drives(game_plays, g),
     )
 
 

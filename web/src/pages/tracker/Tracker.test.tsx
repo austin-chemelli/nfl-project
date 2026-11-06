@@ -139,3 +139,14 @@ describe('Tracker page', () => {
     expect(screen.getByText('+1.20%')).toBeInTheDocument()
   })
 })
+
+describe('Tracker loading', () => {
+  it('shows the page shape (tiles and tabs) while the data is pending', async () => {
+    const { container } = renderRoute('/tracker')
+    const status = await screen.findByRole('status', { name: 'Loading tracker…' })
+    expect(status).toBeInTheDocument()
+    expect(container.querySelectorAll('[data-skeleton="tile"]')).toHaveLength(5)
+    expect(container.querySelector('[data-skeleton="tabs"]')).not.toBeNull()
+    await screen.findByRole('group', { name: 'Tracker summary' })
+  })
+})

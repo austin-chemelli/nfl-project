@@ -4,6 +4,26 @@ import { colorVar } from '../lib/models'
 import { Swatch } from './ui'
 import { useSetTab } from './Tabs'
 
+/**
+ * Bring a tab's panel into view if it sits below the fold or above the top, then flash it once. Called
+ * from a tile click only. The flash lasts 3 x --dur-base, so reduced motion zeroes it, and the scroll is
+ * instant under reduced motion. The panel can take a frame to mount after the tab switch, so it retries.
+ */
+function showPanel(tab: HTMLElement, tries = 3) {
+  const panel = document.getElementById(tab.getAttribute('aria-controls') ?? '')
+  if (!panel || panel.getAttribute('aria-labelledby') !== tab.id) {
+    if (tries > 0) requestAnimationFrame(() => showPanel(tab, tries - 1))
+    return
+  }
+  const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const top = panel.getBoundingClientRect().top
+  if (top > window.innerHeight * 0.75 || top < 0) panel.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  panel.classList.remove('tile-flash')
+  void panel.offsetWidth // restart the animation on a second click
+  panel.classList.add('tile-flash')
+  panel.onanimationend = (e) => { if (e.animationName === 'tile-flash') panel.classList.remove('tile-flash') }
+}
+
 /** `tab` makes the tile a button that sets `?tab=` (no page navigation); without it the tile is static. `accent` colors its top edge, by default the approach's. */
 export function Tile({ label, value, sub, tab, modelId, accent }: {
   label: string
@@ -14,10 +34,13 @@ export function Tile({ label, value, sub, tab, modelId, accent }: {
   accent?: string
 }) {
   const setTab = useSetTab()
-  // switch the tab, then move focus to it so the change is seen (it can be below the fold on a phone) and announced
   const open = (id: string) => {
     setTab(id)
-    requestAnimationFrame(() => document.querySelector<HTMLElement>(`[role="tab"][data-tab-id="${CSS.escape(id)}"]`)?.focus())
+    requestAnimationFrame(() => {
+      const tab = document.querySelector<HTMLElement>(`[role="tab"][data-tab-id="${CSS.escape(id)}"]`)
+      tab?.focus()
+      if (tab) showPanel(tab)
+    })
   }
   const body = (
     <>

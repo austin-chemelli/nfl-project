@@ -28,6 +28,24 @@
   --good: #0ca30c;
   --warning: #fab219;
   --critical: #d03b3b;
+  /* Motion (ADR 0020, site rule 11): every animation reads these; reduced motion zeroes them below. */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 400ms;
+  --dur-draw: 700ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --stagger: 30ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+    --dur-draw: 0ms;
+    --stagger: 0ms;
+  }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
@@ -132,3 +150,21 @@ a { color: var(--accent); }
     linear-gradient(90deg, color-mix(in srgb, var(--team-away) 26%, transparent), transparent 46%, transparent 54%, color-mix(in srgb, var(--team-home) 26%, transparent)),
     var(--surface-1);
 }
+
+/* Motion classes. Every element is drawn in its final state and animates from an offset back to it. */
+.wp-line { stroke-dasharray: 1; animation: wp-draw var(--dur-draw) var(--ease-in-out); }
+@keyframes wp-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.wp-mark { animation: motion-fade var(--dur-base) var(--ease-out) var(--dur-draw) both; }
+@keyframes motion-fade { from { opacity: 0; } }
+.dot-slide { animation: dot-slide var(--dur-slow) var(--ease-out); }
+@keyframes dot-slide { from { transform: translateX(var(--from-x, 0px)); } }
+.bar-grow {
+  transform-box: fill-box;
+  animation: bar-grow var(--dur-base) var(--ease-out) calc(var(--stagger) * var(--i, 0)) backwards;
+}
+@keyframes bar-grow { from { transform: scaleX(0); } }
+.chart-tip-in { animation: motion-fade var(--dur-fast) var(--ease-out); }
+.tab-panel-in { animation: motion-fade var(--dur-base) var(--ease-out); }
+.tile-flash { animation: tile-flash calc(var(--dur-base) * 3) var(--ease-out); }
+@keyframes tile-flash { from { background-color: color-mix(in srgb, var(--accent) 16%, transparent); } }
+.tab-panel-in.tile-flash { animation: motion-fade var(--dur-base) var(--ease-out), tile-flash calc(var(--dur-base) * 3) var(--ease-out); }

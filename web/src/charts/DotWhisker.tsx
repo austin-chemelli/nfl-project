@@ -1,9 +1,11 @@
 /**
  * Point estimates with intervals, one row each, against a reference line (default 0).
  * Used for "what history says" effects and backtest differences vs the market.
+ * Each row (and the reference line) shows a tip card on hover, focus and tap.
  */
 import { scaleLinear } from 'd3-scale'
 import type { ReactNode } from 'react'
+import { TipRow, TipTitle, useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
 
 export type DotRow = { key: string; label: ReactNode; value: number; lo: number; hi: number; color?: string; title?: string }
@@ -21,6 +23,7 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
   labelWidth?: number
 }) {
   const [ref, width] = useWidth()
+  const { box, at, bind, card } = useChartTip()
   const lw = width < 480 ? Math.min(110, labelWidth) : labelWidth
   const anchors = marker ? [refValue, marker.value] : [refValue]
   const lo = Math.min(...anchors, ...rows.map((r) => r.lo))
@@ -30,9 +33,11 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
   const head = 20
   const foot = marker ? 16 : 0 // the marker's label gets its own line, under the ticks
   const h = head + rows.length * rowHeight + 20 + foot
+  const tipped = rows.find((r) => r.key === at?.key)
   const ticks = x.ticks(width < 480 ? 3 : 5)
   return (
     <div ref={ref} className="w-full">
+      <div ref={box} className="relative">
       <svg width={width} height={h} role="img" className="block text-[12px]">
         <g className="fill-[var(--text-muted)]">
           {leftLabel && <text x={x(refValue) - 6} y={12} textAnchor="end">← {leftLabel}</text>}
@@ -44,9 +49,12 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
             <text x={x(t)} y={h - 4 - foot} textAnchor="middle" className="tabular fill-[var(--text-muted)]">{format(t)}</text>
           </g>
         ))}
-        <line x1={x(refValue)} x2={x(refValue)} y1={head} y2={h - 18 - foot} stroke="var(--text-muted)">
-          {refLabel && <title>{refLabel}</title>}
-        </line>
+        <line x1={x(refValue)} x2={x(refValue)} y1={head} y2={h - 18 - foot} stroke="var(--text-muted)" />
+        {refLabel && (
+          <g {...bind('ref')}>
+            <rect x={x(refValue) - 8} y={head} width={16} height={Math.max(0, h - 18 - foot - head)} fill="transparent" />
+          </g>
+        )}
         {marker && (
           <g>
             <line x1={x(marker.value)} x2={x(marker.value)} y1={head} y2={h - 18 - foot} stroke="var(--text-muted)" strokeWidth={1.5} strokeDasharray="2 3" />
@@ -57,8 +65,8 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
           const y = head + i * rowHeight + rowHeight / 2
           const c = r.color ?? 'var(--accent)'
           return (
-            <g key={r.key}>
-              <title>{r.title ?? `${format(r.value)} (${format(r.lo)} to ${format(r.hi)})`}</title>
+            <g key={r.key} {...bind(r.key)}>
+              <rect x={0} y={y - rowHeight / 2} width={width} height={rowHeight} rx={4} fill={at?.key === r.key ? 'var(--surface-2)' : 'transparent'} />
               <foreignObject x={0} y={y - rowHeight / 2} width={lw - 8} height={rowHeight}>
                 <div className="flex h-full items-center truncate text-[13px] text-ink-2">{r.label}</div>
               </foreignObject>
@@ -68,6 +76,22 @@ export function DotWhisker({ rows, format, refValue = 0, refLabel, leftLabel, ri
           )
         })}
       </svg>
+      {card(
+        at?.key === 'ref' ? (
+          <TipTitle>{refLabel}</TipTitle>
+        ) : (
+          tipped &&
+          (tipped.title ? (
+            <div>{tipped.title}</div>
+          ) : (
+            <>
+              <TipTitle>{tipped.label}</TipTitle>
+              <TipRow color={tipped.color ?? 'var(--accent)'} value={format(tipped.value)} label={`${format(tipped.lo)} to ${format(tipped.hi)}`} />
+            </>
+          ))
+        ),
+      )}
+      </div>
     </div>
   )
 }
