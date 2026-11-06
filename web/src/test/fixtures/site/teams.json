@@ -305,6 +305,7 @@
    "games_played": 8,
    "points_for": 175,
    "points_against": 238,
+   "through_week": 8,
    "last_game_id": "2026_08_ARI_DAL",
    "next_game_id": "2026_09_ARI_SEA",
    "games": [
@@ -512,6 +513,7 @@
    "games_played": 8,
    "points_for": 171,
    "points_against": 189,
+   "through_week": 8,
    "last_game_id": "2026_08_ATL_TB",
    "next_game_id": "2026_09_CIN_ATL",
    "games": [
@@ -719,8 +721,9 @@
    "games_played": 8,
    "points_for": 179,
    "points_against": 203,
+   "through_week": 8,
    "last_game_id": "2026_08_BAL_BUF",
-   "next_game_id": "2026_09_JAX_BAL",
+   "next_game_id": "2026_10_LAC_BAL",
    "games": [
     {
      "id": "2026_01_BAL_IND",
@@ -926,6 +929,7 @@
    "games_played": 7,
    "points_for": 233,
    "points_against": 181,
+   "through_week": 8,
    "last_game_id": "2026_08_BAL_BUF",
    "next_game_id": "2026_09_BUF_MIN",
    "games": [
@@ -1133,6 +1137,7 @@
    "games_played": 7,
    "points_for": 178,
    "points_against": 193,
+   "through_week": 8,
    "last_game_id": "2026_08_CAR_GB",
    "next_game_id": "2026_09_DEN_CAR",
    "games": [
@@ -1340,6 +1345,7 @@
    "games_played": 8,
    "points_for": 214,
    "points_against": 160,
+   "through_week": 8,
    "last_game_id": "2026_08_CHI_SEA",
    "next_game_id": "2026_09_TB_CHI",
    "games": [
@@ -1547,6 +1553,7 @@
    "games_played": 7,
    "points_for": 206,
    "points_against": 158,
+   "through_week": 8,
    "last_game_id": "2026_08_TEN_CIN",
    "next_game_id": "2026_09_CIN_ATL",
    "games": [
@@ -1754,6 +1761,7 @@
    "games_played": 8,
    "points_for": 139,
    "points_against": 173,
+   "through_week": 8,
    "last_game_id": "2026_08_CLE_PIT",
    "next_game_id": "2026_09_CLE_NO",
    "games": [
@@ -1961,6 +1969,7 @@
    "games_played": 8,
    "points_for": 219,
    "points_against": 213,
+   "through_week": 8,
    "last_game_id": "2026_08_ARI_DAL",
    "next_game_id": "2026_09_DAL_IND",
    "games": [
@@ -2168,6 +2177,7 @@
    "games_played": 8,
    "points_for": 172,
    "points_against": 165,
+   "through_week": 8,
    "last_game_id": "2026_08_KC_DEN",
    "next_game_id": "2026_09_DEN_CAR",
    "games": [
@@ -2375,6 +2385,7 @@
    "games_played": 7,
    "points_for": 203,
    "points_against": 180,
+   "through_week": 8,
    "last_game_id": "2026_08_MIN_DET",
    "next_game_id": "2026_09_DET_MIA",
    "games": [
@@ -2582,6 +2593,7 @@
    "games_played": 8,
    "points_for": 171,
    "points_against": 164,
+   "through_week": 8,
    "last_game_id": "2026_08_CAR_GB",
    "next_game_id": "2026_09_GB_NE",
    "games": [
@@ -2789,6 +2801,7 @@
    "games_played": 7,
    "points_for": 165,
    "points_against": 170,
+   "through_week": 7,
    "last_game_id": "2026_07_NYG_HOU",
    "next_game_id": "2026_09_HOU_LAC",
    "games": [
@@ -2996,6 +3009,7 @@
    "games_played": 8,
    "points_for": 161,
    "points_against": 222,
+   "through_week": 8,
    "last_game_id": "2026_08_IND_JAX",
    "next_game_id": "2026_09_DAL_IND",
    "games": [
@@ -3203,8 +3217,9 @@
    "games_played": 7,
    "points_for": 196,
    "points_against": 111,
+   "through_week": 8,
    "last_game_id": "2026_08_IND_JAX",
-   "next_game_id": "2026_09_JAX_BAL",
+   "next_game_id": "2026_10_JAX_TEN",
    "games": [
     {
      "id": "2026_01_CLE_JAX",
@@ -3410,6 +3425,7 @@
    "games_played": 7,
    "points_for": 167,
    "points_against": 131,
+   "through_week": 8,
    "last_game_id": "2026_08_KC_DEN",
    "next_game_id": "2026_09_NYJ_KC",
    "games": [
@@ -3617,6 +3633,7 @@
    "games_played": 8,
    "points_for": 194,
    "points_against": 168,
+   "through_week": 8,
    "last_game_id": "2026_08_LAC_LA",
    "next_game_id": "2026_09_LA_WAS",
    "games": [
@@ -3824,6 +3841,7 @@
    "games_played": 7,
    "points_for": 99,
    "points_against": 175,
+   "through_week": 8,
    "last_game_id": "2026_08_LAC_LA",
    "next_game_id": "2026_09_HOU_LAC",
    "games": [
@@ -4031,6 +4049,7 @@
    "games_played": 8,
    "points_for": 221,
    "points_against": 230,
+   "through_week": 8,
    "last_game_id": "2026_08_LV_NYJ",
    "next_game_id": "2026_09_LV_SF",
    "games": [
@@ -4238,6 +4257,7 @@
    "games_played": 7,
    "points_for": 117,
    "points_against": 181,
+   "through_week": 8,
    "last_game_id": "2026_08_NE_MIA",
    "next_game_id": "2026_09_DET_MIA",
    "games": [
@@ -4445,6 +4465,7 @@
    "games_played": 7,
    "points_for": 140,
    "points_against": 93,
+   "through_week": 8,
    "last_game_id": "2026_08_MIN_DET",
    "next_game_id": "2026_09_BUF_MIN",
    "games": [
@@ -4652,6 +4673,7 @@
    "games_played": 8,
    "points_for": 184,
    "points_against": 162,
+   "through_week": 8,
    "last_game_id": "2026_08_NE_MIA",
    "next_game_id": "2026_09_GB_NE",
    "games": [
@@ -4859,6 +4881,7 @@
    "games_played": 7,
    "points_for": 162,
    "points_against": 194,
+   "through_week": 7,
    "last_game_id": "2026_07_PIT_NO",
    "next_game_id": "2026_09_CLE_NO",
    "games": [
@@ -5066,6 +5089,7 @@
    "games_played": 7,
    "points_for": 163,
    "points_against": 161,
+   "through_week": 7,
    "last_game_id": "2026_07_NYG_HOU",
    "next_game_id": "2026_09_NYG_PHI",
    "games": [
@@ -5273,6 +5297,7 @@
    "games_played": 8,
    "points_for": 170,
    "points_against": 188,
+   "through_week": 8,
    "last_game_id": "2026_08_LV_NYJ",
    "next_game_id": "2026_09_NYJ_KC",
    "games": [
@@ -5480,6 +5505,7 @@
    "games_played": 8,
    "points_for": 137,
    "points_against": 202,
+   "through_week": 8,
    "last_game_id": "2026_08_PHI_WAS",
    "next_game_id": "2026_09_NYG_PHI",
    "games": [
@@ -5687,6 +5713,7 @@
    "games_played": 8,
    "points_for": 180,
    "points_against": 144,
+   "through_week": 8,
    "last_game_id": "2026_08_CLE_PIT",
    "next_game_id": "2026_10_PIT_CIN",
    "games": [
@@ -5894,6 +5921,7 @@
    "games_played": 8,
    "points_for": 185,
    "points_against": 159,
+   "through_week": 8,
    "last_game_id": "2026_08_CHI_SEA",
    "next_game_id": "2026_09_ARI_SEA",
    "games": [
@@ -6101,6 +6129,7 @@
    "games_played": 7,
    "points_for": 197,
    "points_against": 139,
+   "through_week": 7,
    "last_game_id": "2026_07_SF_ATL",
    "next_game_id": "2026_09_LV_SF",
    "games": [
@@ -6308,6 +6337,7 @@
    "games_played": 8,
    "points_for": 178,
    "points_against": 151,
+   "through_week": 8,
    "last_game_id": "2026_08_ATL_TB",
    "next_game_id": "2026_09_TB_CHI",
    "games": [
@@ -6515,6 +6545,7 @@
    "games_played": 8,
    "points_for": 144,
    "points_against": 199,
+   "through_week": 8,
    "last_game_id": "2026_08_TEN_CIN",
    "next_game_id": "2026_10_JAX_TEN",
    "games": [
@@ -6722,6 +6753,7 @@
    "games_played": 7,
    "points_for": 159,
    "points_against": 182,
+   "through_week": 8,
    "last_game_id": "2026_08_PHI_WAS",
    "next_game_id": "2026_09_LA_WAS",
    "games": [

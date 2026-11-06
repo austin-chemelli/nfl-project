@@ -1,18 +1,19 @@
+import type { Ref } from 'react'
 import { Link } from 'react-router'
 import type { TeamRow } from '../../data/contract'
 import { teamInfo } from '../../lib/teams'
 import { recordText, resultText } from './helpers'
 
 /** The selected team: record, every game linking to its page, the next one marked, the scheme profile. */
-export function Panel({ code, team, week, onClose }: { code: string; team: TeamRow; week: number; onClose: () => void }) {
-  const nextId = team.next_game_id ?? team.games.find((g) => g.pf == null)?.id ?? null
+export function Panel({ code, team, onClose, ref }: { code: string; team: TeamRow; onClose: () => void; ref?: Ref<HTMLElement> }) {
   return (
-    <section aria-label={`${teamInfo(code).name} games`} className="mt-4 rounded-lg border border-line bg-surface-1 p-3 text-[13px]">
+    <section ref={ref} tabIndex={-1} aria-label={`${teamInfo(code).name} games`} className="mt-4 rounded-lg border border-line bg-surface-1 p-3 text-[13px] outline-none">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-[15px] font-medium text-ink">{teamInfo(code).name}</h3>
           <p className="text-ink-2">
-            {team.division} · {recordText(team)} · through Week {week - 1}
+            {team.division} · {recordText(team)}
+            {team.through_week != null && ` · through Week ${team.through_week}`}
           </p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close team panel" className="shrink-0 rounded px-2 py-1 text-ink-2 hover:text-ink">
@@ -22,7 +23,7 @@ export function Panel({ code, team, week, onClose }: { code: string; team: TeamR
       <ul className="mt-2 grid gap-x-4 sm:grid-cols-2">
         {team.games.map((g) => {
           const res = resultText(g.pf, g.pa)
-          const next = g.id === nextId
+          const next = g.id === team.next_game_id
           return (
             <li key={g.id} className="border-b border-line">
               <Link to={`/game/${g.id}`} className="flex items-baseline gap-2 py-1.5">

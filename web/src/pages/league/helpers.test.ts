@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { TeamsFile } from '../../data/contract'
+import { TeamsFile, type TeamFeature } from '../../data/contract'
 import raw from '../../test/fixtures/site/teams.json'
-import { buildPoints, colorMode, divisionsOf, featureById, ordinal, quadrantsFor, rankText, resolveAxes, templateQuadrants, toneFor } from './helpers'
+import { buildPoints, colorMode, divisionsOf, featureById, fmtValue, ordinal, quadrantsFor, rankText, resolveAxes, templateQuadrants, toneFor } from './helpers'
 
 const file = TeamsFile.parse(raw)
 const f = (id: string) => featureById(file, id)!
@@ -86,5 +86,27 @@ describe('text', () => {
   })
   it('writes a rank against the field size', () => {
     expect(rankText(file.teams.KC, f('strength.epa_off'))).toBe('5th of 32')
+  })
+})
+
+describe('fmtValue', () => {
+  const m = (id: string, unit: string) => ({ id, unit }) as TeamFeature
+  it('keeps a decimal on rates, so close ranks can be told apart', () => expect(fmtValue(0.0634, m('strength.sack_rate_off', 'pct'))).toBe('6.3%'))
+  it('reads a gap in a rate as a percent, because "pts" means win chance elsewhere', () => {
+    expect(fmtValue(0.168, m('strength.luck', 'prob_diff'))).toBe('+16.8%')
+    expect(fmtValue(6.8, m('decisions.pass_rate_oe', 'pp'))).toBe('+6.8%')
+  })
+  it('signs a gap to the league average, with no negative zero', () => {
+    expect(fmtValue(0.13, m('scheme.off_11_rate_prior', 'pct'))).toBe('+13.0%')
+    expect(fmtValue(-0.0001, m('scheme.def_pressure_rate_prior', 'pct'))).toBe('0.0%')
+    expect(fmtValue(0.11, m('scheme.off_time_to_throw_prior', 'seconds'))).toBe('+0.11 s')
+  })
+  it('shows a dash for no value', () => expect(fmtValue(undefined, m('strength.luck', 'prob_diff'))).toBe('–'))
+})
+
+describe('resolveAxes', () => {
+  it('refuses the same measure on both axes', () => {
+    const a = resolveAxes(file, 'strength.epa_off', 'strength.epa_off')
+    expect([a?.x.id, a?.y.id]).toEqual(['strength.epa_off', 'strength.epa_def'])
   })
 })

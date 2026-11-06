@@ -192,3 +192,50 @@ def test_record_is_the_regular_season():
     t = teams_file(feats, games, NOW, 3)["teams"]["KC"]
     assert t["games_played"] == 1  # week 1 counts, the playoff game doesn't
     assert sum(g["pf"] is not None for g in t["games"]) == 2  # but it stays in the list
+
+
+def test_a_kickoff_without_a_feature_build_changes_nothing():
+    """Site builds run between feature builds: a game kicking off must not move a team onto a later
+    row. Week 3 kicks off on Oct 25 and nothing is rebuilt, so Week 3's row still holds on Oct 26."""
+    feats, games = make()
+    before = team_latest(feats, games, NOW)
+    after = team_latest(feats, games, datetime(2026, 10, 26))
+    assert after.select("feature", "team", "value").equals(
+        before.select("feature", "team", "value")
+    )
+    file = teams_file(feats, games, datetime(2026, 10, 26), 4)
+    assert file["teams"]["KC"]["values"]["strength.epa_off"] == CODES.index("KC") + 300.0
+    assert file["teams"]["KC"]["next_game_id"].startswith("2026_04")  # the panel still looks ahead
+
+
+def test_a_new_feature_build_moves_on():
+    feats, games = make()
+    built = datetime(2026, 10, 26)
+    newer = feats.filter(pl.col("game_id").str.starts_with("2026_04")).with_columns(
+        pl.lit(built).alias("known_as_of")
+    )
+    lat = team_latest(pl.concat([feats, newer]), games, datetime(2026, 10, 27))
+    assert lat["game_id"].str.starts_with("2026_04").all()
+
+
+def test_through_week_is_each_teams_latest_counted_result():
+    feats, games = make()
+    file = teams_file(feats, games, NOW, 3)
+    assert file["teams"]["KC"]["through_week"] == 2
+    games = games.filter(
+        ~(
+            (pl.col("week") == 2) & (pl.col("home_team") == "KC")
+            | (pl.col("week") == 2) & (pl.col("away_team") == "KC")
+        )
+    )
+    file = teams_file(feats.filter(~pl.col("game_id").str.starts_with("2026_02")), games, NOW, 3)
+    assert file["teams"]["KC"]["through_week"] == 1  # a bye
+
+
+def test_after_the_last_game_every_played_game_counts():
+    """No build follows the final kickoff, so the feature cut would leave the last game uncounted."""
+    feats, games = make(played=(1, 2, 3, 4))
+    end = datetime(2026, 11, 3)
+    t = teams_file(feats, games, end, 5)["teams"]["KC"]
+    assert t["games_played"] == 4
+    assert t["next_game_id"] is None

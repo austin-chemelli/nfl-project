@@ -1,6 +1,6 @@
 import type { ScatterPoint, ScatterTone } from '../../charts/Scatter'
 import type { TeamFeature, TeamRow, TeamsFile } from '../../data/contract'
-import { fmtUnit } from '../../lib/format'
+import { dash, fmtUnit } from '../../lib/format'
 import { DEFAULT_PRESET, PRESETS, presetFor, type Quadrants } from './presets'
 
 export type ColorMode = 'conference' | 'division' | 'none'
@@ -26,7 +26,7 @@ export function resolveAxes(file: TeamsFile, x: string | null, y: string | null)
   const ok = (id: string | null) => (id && hasData(file, id) ? featureById(file, id) : undefined)
   const fx = ok(x)
   const fy = ok(y)
-  if (fx && fy) return { x: fx, y: fy }
+  if (fx && fy && fx.id !== fy.id) return { x: fx, y: fy } // one measure on both axes says nothing
   const d = [ok(DEFAULT_PRESET.x), ok(DEFAULT_PRESET.y)]
   if (d[0] && d[1]) return { x: d[0], y: d[1] }
   const use = usableFeatures(file)
@@ -74,9 +74,26 @@ export function ordinal(n: number): string {
   return `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`
 }
 
-/** A value by its unit; EPA and similar rates read as signed numbers (fmtUnit). */
+const signed = (v: number, d: number) => {
+  const r = Number(v.toFixed(d))
+  return `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r).toFixed(d)}`
+}
+
+/**
+ * A value by its unit. Unlike the game page's `fmtUnit`: rates keep a decimal, so ranks can be read
+ * off the table; differences of a rate read as percents, because "pts" elsewhere means win chance;
+ * `_prior` features are gaps to the league average, so they carry a sign.
+ */
 export function fmtValue(v: number | null | undefined, f: TeamFeature): string {
-  return fmtUnit(v, f.unit)
+  if (v == null || Number.isNaN(v)) return dash
+  const gap = f.id.endsWith('_prior')
+  switch (f.unit) {
+    case 'pct': return gap ? `${signed(100 * v, 1)}%` : `${(100 * v).toFixed(1)}%`
+    case 'pp': return `${signed(v, 1)}%`
+    case 'prob_diff': return `${signed(100 * v, 1)}%`
+    case 'seconds': return gap ? `${signed(v, 2)} s` : fmtUnit(v, f.unit)
+    default: return fmtUnit(v, f.unit)
+  }
 }
 
 /** "5th of 32", or null when the file has no rank for the team. */

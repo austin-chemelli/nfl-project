@@ -97,12 +97,19 @@ export function Scatter({ points, x, y, quadrants, selected, onSelect, tip, labe
   })
   const centre = { x: x.mean == null ? undefined : sx(x.mean), y: y.mean == null ? undefined : sy(y.mean) }
   // A highlighted point (tone `strong`) keeps its label, however crowded the plot.
-  const forced = [selected, hovered, ...points.filter((p) => p.tone === 'strong').map((p) => p.key)].filter((k): k is string => !!k)
-  const placed = placeLabels(
-    px.map((p) => ({ key: p.key, text: p.label, x: p.cx, y: p.cy })),
-    { width: M.l + innerW + M.r, height: M.t + innerH + M.b },
+  const forced = [selected, ...points.filter((p) => p.tone === 'strong').map((p) => p.key)].filter((k): k is string => !!k)
+  const area = { width: M.l + innerW + M.r, height: M.t + innerH + M.b }
+  const toLabel = (p: (typeof px)[number]) => ({ key: p.key, text: p.label, x: p.cx, y: p.cy })
+  const base = placeLabels(
+    px.map(toLabel),
+    area,
     { obstacles: caps.map((c) => c.rect), forced, radius: R, center: centre.x != null && centre.y != null ? { x: centre.x, y: centre.y } : undefined },
   )
+  // A hovered point fits around the labels already placed, so its neighbours don't jump as the pointer moves.
+  const hoverPoint = hovered && !base.some((l) => l.key === hovered) ? px.find((p) => p.key === hovered) : undefined
+  const placed = hoverPoint
+    ? [...base, ...placeLabels([toLabel(hoverPoint)], area, { obstacles: [...caps.map((c) => c.rect), ...base], forced: [hoverPoint.key], radius: R })]
+    : base
   const byKey = new Map(px.map((p) => [p.key, p]))
   const labelFor = (k: string) => placed.find((l) => l.key === k)
   const normal = placed.filter((l) => l.key !== selected && l.key !== hovered) // those two draw in the top layer
@@ -153,7 +160,7 @@ export function Scatter({ points, x, y, quadrants, selected, onSelect, tip, labe
           {/* above the plot, not rotated: tick labels vary in width and a rotated title collides with long ones */}
           <text x={M.l} y={14} fontSize={12} className="fill-[var(--text-secondary)]">{yTitle}</text>
           {px.map((p) => (
-            <g key={p.key} data-testid="point" data-key={p.key} {...bind(p.key)} {...act(p.key)} className="cursor-pointer">
+            <g key={p.key} data-testid="point" data-key={p.key} aria-label={`${p.label}: ${x.title} ${x.format(p.x)}, ${y.title} ${y.format(p.y)}`} {...bind(p.key)} {...act(p.key)} className="cursor-pointer">
               <circle cx={p.cx} cy={p.cy} r={HIT} fill="transparent" />
               <circle cx={p.cx} cy={p.cy} r={R} fill={fillOf(p.tone)} fillOpacity={opacityOf(p.tone)} stroke="var(--surface-1)" strokeWidth={1} />
             </g>

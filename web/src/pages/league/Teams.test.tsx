@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ScatterProps } from '../../charts/Scatter'
 import { renderRoute } from '../../test/render'
+import fixture from '../../test/fixtures/site/teams.json'
 
 const last: { props: ScatterProps | null } = { props: null }
 vi.mock('../../charts/Scatter', () => ({
@@ -21,9 +22,9 @@ const open = async (url: string) => {
 const pressed = () => screen.queryAllByRole('button', { pressed: true }).map((b) => b.textContent)
 
 describe('Teams tab', () => {
-  it('opens on preset 1 with the entering week in the lede', async () => {
+  it('opens on preset 1', async () => {
     await open('/league')
-    expect(screen.getByText(/entering Week 9/)).toBeInTheDocument()
+    expect(screen.getByText(/^Every team on any two measures, entering its next game/)).toBeInTheDocument()
     expect(pressed()).toEqual(['Offense vs defense'])
     expect(last.props!.points).toHaveLength(32)
     expect(last.props!.y.flip).toBe(true)
@@ -112,6 +113,54 @@ describe('Teams tab', () => {
   it('has one fine print', async () => {
     await open('/league')
     expect(screen.getAllByText('Fine print')).toHaveLength(1)
+  })
+
+  it('ignores a ?team= that is a property of every object', async () => {
+    await open('/league?team=constructor')
+    expect(screen.queryByRole('region', { name: /games$/ })).toBeNull()
+    expect(last.props!.selected).toBeNull()
+  })
+
+  it('finds a team by name, opens its panel and moves focus there, and returns focus on close', async () => {
+    await open('/league')
+    await userEvent.selectOptions(screen.getByLabelText('Find a team'), 'KC')
+    const panel = await screen.findByRole('region', { name: 'Kansas City Chiefs games' })
+    expect(panel).toHaveFocus()
+    expect(last.props!.selected).toBe('KC')
+    await userEvent.click(within(panel).getByRole('button', { name: 'Close team panel' }))
+    expect(screen.getByLabelText('Find a team')).toHaveFocus()
+  })
+
+  it('leaves focus alone on a shared link', async () => {
+    await open('/league?team=KC')
+    expect(screen.getByRole('region', { name: 'Kansas City Chiefs games' })).not.toHaveFocus()
+  })
+
+  it('says how far each team has played, not the league week', async () => {
+    await open('/league?team=PIT')
+    const panel = screen.getByRole('region', { name: 'Pittsburgh Steelers games' })
+    const through = fixture.teams.PIT.through_week
+    expect(within(panel).getByText(new RegExp(`through Week ${through}`))).toBeInTheDocument()
+  })
+
+  it('keeps the other axis out of each list, so a measure cannot sit on both', async () => {
+    await open('/league')
+    const options = within(screen.getByLabelText('X axis')).getAllByRole('option').map((o) => (o as HTMLOptionElement).value)
+    expect(options).not.toContain('strength.epa_def')
+    expect(options).toContain('strength.epa_off')
+  })
+
+  it('keeps the conference legend while no division is picked', async () => {
+    await open('/league?color=division')
+    expect(screen.getByText('AFC')).toBeInTheDocument()
+    cleanup()
+    await open('/league?color=division&div=AFC%20North')
+    expect(screen.queryByText('AFC')).toBeNull()
+  })
+
+  it('explains the measure on each axis', async () => {
+    await open('/league')
+    expect(screen.getAllByRole('button', { name: /what|help|\?/i }).length).toBeGreaterThanOrEqual(2)
   })
 })
 

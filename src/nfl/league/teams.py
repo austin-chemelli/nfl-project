@@ -1,9 +1,12 @@
 """Team-level latest values and `site/teams.json` (ADR 0019, M14.2).
 
 `team_latest` is the one table both teams.json and the game page's feature bands read: each team's
-value for its next game (the season-to-date numbers entering it), else its last. Rows must be known
-before `now` and finite. The old bands took the last-kickoff row, a Week 18 pregame row, so recency-
-weighted and per-game features were stale; reading the next game fixes that.
+value for its next game as of the last feature build, else its last. Rows must be known before `now`
+and finite. The old bands took the last-kickoff row, a Week 18 pregame row, so recency-weighted and
+per-game features were stale. "Next" is measured from the build, not from `now`: site builds run
+between feature builds (the Sunday odds snapshots), and a kicked-off game must not move a team onto
+a later row, which was built before that game and can differ (`form.epa_trend` averages only the
+played games in its window). The numbers change when the features do, and not otherwise.
 """
 
 from __future__ import annotations
@@ -31,17 +34,24 @@ VALUE_DECIMALS = 4
 LATEST_SCHEMA = ["feature", "team", "value", "game_id", "kickoff_utc", "known_as_of"]
 
 
+def _feature_build(rows: pl.DataFrame) -> datetime:
+    """When the features were last built: the newest `strength.*` stamp. Only the refresh and the
+    locks write that family; market and narrative rows land between builds."""
+    strength = rows.filter(pl.col("feature").str.starts_with("strength."))
+    return (rows if strength.is_empty() else strength)["known_as_of"].max()
+
+
 def team_latest(feats: pl.DataFrame, games: pl.DataFrame, now: datetime) -> pl.DataFrame:
-    """One row per (feature, team): the earliest game kicking off after `now`, else the team's last
-    game. Only rows with known_as_of < now and finite values; team-side rows only. `games` needs
-    game_id, kickoff_utc, home_team, away_team (naive UTC kickoffs, like `now`)."""
+    """One row per (feature, team): the earliest game kicking off after the last feature build,
+    else the team's last game. Only rows with known_as_of < now and finite values; team-side rows
+    only. `games` needs game_id, kickoff_utc, home_team, away_team (naive UTC kickoffs, like `now`).
+    """
     empty = pl.DataFrame(
         schema={"feature": pl.Utf8, "team": pl.Utf8, "value": pl.Float64, "game_id": pl.Utf8,
                 "kickoff_utc": pl.Datetime("us"), "known_as_of": pl.Datetime("us")}
     )  # fmt: skip
     if feats.is_empty() or games.is_empty():
         return empty
-    cut = pl.lit(now.replace(tzinfo=None), dtype=pl.Datetime("us"))
     keys = games.select("game_id", "kickoff_utc", "home_team", "away_team")
     x = (
         store.as_of(feats, now)
@@ -52,13 +62,14 @@ def team_latest(feats: pl.DataFrame, games: pl.DataFrame, now: datetime) -> pl.D
             .then(pl.col("home_team"))
             .otherwise(pl.col("away_team"))
             .alias("team"),
-            (pl.col("kickoff_utc") > cut).fill_null(False).alias("_future"),
         )
-        .select([*LATEST_SCHEMA, "_future"])
+        .select(LATEST_SCHEMA)
         .sort("kickoff_utc", "game_id")
     )
     if x.is_empty():
         return empty
+    build = pl.lit(_feature_build(x), dtype=pl.Datetime("us"))
+    x = x.with_columns((pl.col("kickoff_utc") > build).fill_null(False).alias("_future"))
     by = ["feature", "team"]
     nxt = x.filter(pl.col("_future")).group_by(by, maintain_order=True).first()
     last = (
@@ -105,13 +116,13 @@ def _ranks(values: dict[str, float], better: str | None) -> tuple[dict[str, floa
     return pct, rank
 
 
-def _team_games(games: pl.DataFrame, as_of: datetime, now: datetime) -> dict[str, dict]:
-    """Per team: the games list, record, points, last and next game id. A result counts only when
-    the game kicked off before `as_of` (the feature build), so the record never runs ahead of the
-    values."""
+def _team_games(games: pl.DataFrame, cut: datetime, now: datetime) -> dict[str, dict]:
+    """Per team: the games list, record, points, last and next game id, and the week of its latest
+    counted result. A result counts only when the game kicked off before `cut`, so the record never
+    runs ahead of the values."""
     out: dict[str, dict] = {}
     g = games.sort("kickoff_utc", "game_id", nulls_last=True)
-    cut = as_of.replace(tzinfo=None)
+    cut = cut.replace(tzinfo=None)
     now = now.replace(tzinfo=None)
     for r in g.iter_rows(named=True):
         kick = r["kickoff_utc"].replace(tzinfo=None) if r["kickoff_utc"] else None
@@ -126,7 +137,8 @@ def _team_games(games: pl.DataFrame, as_of: datetime, now: datetime) -> dict[str
             t = out.setdefault(
                 team,
                 {"wins": 0, "losses": 0, "ties": 0, "games_played": 0, "points_for": 0,
-                 "points_against": 0, "last_game_id": None, "next_game_id": None, "games": []},
+                 "points_against": 0, "through_week": None, "last_game_id": None,
+                 "next_game_id": None, "games": []},
             )  # fmt: skip
             pf = pa = None
             if scored:
@@ -141,6 +153,7 @@ def _team_games(games: pl.DataFrame, as_of: datetime, now: datetime) -> dict[str
                     t["points_for"] += pf
                     t["points_against"] += pa
                     t["wins" if pf > pa else "losses" if pf < pa else "ties"] += 1
+                    t["through_week"] = int(r["week"])
             elif kick is not None and kick > now and t["next_game_id"] is None:
                 t["next_game_id"] = r["game_id"]
             t["games"].append(
@@ -185,7 +198,9 @@ def teams_file(feats: pl.DataFrame, games: pl.DataFrame, now: datetime, week: in
     # ahead of the values shown beside it.
     published = [f["id"] for f in features]
     as_of = latest.filter(pl.col("feature").is_in(published))["known_as_of"].max()
-    record = _team_games(games, as_of, now)
+    # With nothing left to play no build will pass the last kickoff, so the cut would strand it.
+    done = games.filter(pl.col("kickoff_utc") > now.replace(tzinfo=None)).is_empty()
+    record = _team_games(games, now if done else as_of, now)
     teams = {}
     for code in sorted(record):
         if not conference_of(code):

@@ -645,6 +645,7 @@ export const TeamRow = z.looseObject({
   games_played: num,
   points_for: num.default(0),
   points_against: num.default(0),
+  through_week: nnum.default(null), // the week of the latest result in the record
   last_game_id: nstr.default(null),
   next_game_id: nstr.default(null),
   games: z.array(TeamGame).default([]),
