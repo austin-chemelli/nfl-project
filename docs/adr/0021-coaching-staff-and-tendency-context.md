@@ -25,16 +25,16 @@ The coordinator table (`src/nfl/data/coordinators.csv`, 352 rows, 2016–2026) w
 - Risks: agent over-confidence (mitigated by the quoted-sentence rule and the reconcile step), thin cells in the prior study (equal blend fallback), and the team page growing into a rebuild (it ships after data, with the design language's caps).
 
 ## Measured (2026-11-06)
-`scripts/coach_prior_study.py` on 2017–2025, unit-seasons with no mid-season change, typical miss in percentile points of the within-season rank (always guessing the league middle: 24 to 27). Weights and misses live in `data/coach_blend.json`, written by the study and read by the team files; nothing is copied by hand. On verified 2022–2026 rows and unverified 2016–2021 rows.
+`scripts/coach_prior_study.py` on 2017–2025, unit-seasons with no mid-season change, typical miss in percentile points of the within-season rank (always guessing the league middle: 23 to 28). Weights and misses live in `data/coach_blend.json`, written by the study and read by the team files, so nothing is copied by hand. The table behind it is partly verified: about two thirds of the 2016–2021 play-caller rows are unconfirmed.
 
 | Situation | Caller's past | Team's last season | Blend, held out |
 |---|---|---|---|
-| Offense, same caller (charted) | 18.2 | 18.1 | 17.7 |
-| Offense, same caller, new QB (charted) | 20.5 | 23.0 | 20.5 |
-| Offense, caller moved (charted) | 22.2 | 26.2 | 19.2 |
-| Defense, same caller (charted) | 20.2 | 20.4 | 20.0 |
-| Defense, caller moved (charted) | 28.2 | 29.7 | 24.9 |
+| Offense, same caller (charted) | 18.0 | 17.7 | 17.4 |
+| Offense, same caller, new QB (charted) | 20.5 | 22.9 | 20.5 |
+| Offense, caller moved (charted) | 21.5 | 28.7 | 20.1 |
+| Defense, same caller (charted) | 20.1 | 20.4 | 19.9 |
+| Defense, caller moved (charted) | 28.4 | 29.8 | 25.0 |
 | Defense, caller moved (live) | 31.0 | 29.5 | 26.9 |
-| Offense, first-time caller from outside (charted) | – | 24.4 | – |
+| Offense, first-time caller from outside (charted) | – | 23.9 | – |
 
-Consequences for the page: pass rate and time to throw lean on the team when a caller moves (the roster and quarterback carry them), personnel and motion lean on the caller, a moved defensive caller is a weak read, and a first-time caller's "expected" is labelled weak because the team's last season barely beats the league middle.
+Consequences for the page: when a caller moves, personnel and motion lean on him and pass rate leans on the team (23 vs 33); a moved defensive caller is a weak read; a first-time caller's "expected" is labelled weak because the team's last season barely beats the league middle (23.9 vs 25.4). Recency matters little: decay from 0.5 to 1.0 moves the same-caller miss from 17.7 to 18.4, so 0.7 stays.

@@ -2,6 +2,10 @@ import polars as pl
 
 from nfl import coaches
 from nfl.coaches import CONFIRMED, EVIDENCE, ROLE_COLUMNS, coordinators_view, load_spells, staff_at
+from nfl.config import get_paths
+from nfl.features.store import games_frame
+
+from .conftest import requires_data
 
 
 def spell(role, person, start=1, end=None, team="LV", season=2024, note=None):
@@ -94,3 +98,26 @@ def test_every_team_season_starts_with_a_head_coach():
     first = s.group_by("season", "team").agg(pl.col("start_week").min())
     assert first.height == 352
     assert (first["start_week"] == 1).all()
+
+
+def test_a_caller_who_left_with_no_known_successor_still_counts_as_a_change():
+    s = frame(spell("HC", "A"), spell("OFF_PC", "B", end=13))
+    assert coordinators_view(s)["changed_midseason"].to_list() == [True]
+
+
+@requires_data
+def test_head_coaches_match_the_schedule_through_2023():
+    """An independent check on the table. The schedule's coach field goes stale from 2024."""
+    games = games_frame(get_paths(), min_season=2016).filter(
+        (pl.col("season") <= 2023) & (pl.col("game_type") == "REG")
+    )
+    sched = pl.concat(
+        [games.select("season", "week", pl.col(f"{s}_team").alias("team"),
+                      pl.col(f"{s}_coach").alias("coach")) for s in ("home", "away")]
+    ).sort("week").group_by("season", "team").agg(pl.col("coach").last())  # fmt: skip
+    view = coaches.load_coordinators().select("season", "team", "head_coach")
+    both = view.join(sched, on=["season", "team"])
+    assert both.height == 256
+    typo = {"Jay Rosburg": "Jerry Rosburg"}  # nflverse, DEN 2022
+    bad = both.filter(pl.col("head_coach") != pl.col("coach").replace(typo))
+    assert bad.is_empty(), bad.to_dicts()

@@ -62,18 +62,21 @@ def staff_at(season: int, team: str, week: int, spells: pl.DataFrame | None = No
     )
 
 
+def _changed_hands() -> pl.Expr:
+    """A spell that began in season, or ended in season even if no successor is established."""
+    return (pl.col("start_week") > 1) | pl.col("end_week").is_not_null()
+
+
 def coordinators_view(spells: pl.DataFrame) -> pl.DataFrame:
     """One row per (season, team): who held each role at the end of the regular season.
 
     The latest-starting spell wins; co-coordinators who started together resolve to the first row
     in the file (the others stay in the spells). `changed_midseason` is true when a coordinator or
-    play-caller spell starts after Week 1; a head-coach change alone doesn't set it. `notes` joins
+    play-caller spell starts or ends in season; a head-coach change alone doesn't set it. `notes` joins
     the team-season's spell notes."""
     keys = ["season", "team"]
     meta = spells.group_by(keys, maintain_order=True).agg(
-        (pl.col("role").is_in(_UNIT_ROLES) & (pl.col("start_week") > 1))
-        .any()
-        .alias("changed_midseason"),
+        (pl.col("role").is_in(_UNIT_ROLES) & _changed_hands()).any().alias("changed_midseason"),
         pl.col("note").drop_nulls().unique(maintain_order=True).str.join("; ").alias("notes"),
         pl.col("source_url").drop_nulls().first().alias("source_url"),
     )
@@ -324,7 +327,7 @@ def assignments() -> pl.DataFrame:
         ("def", "def_play_caller", "defensive_coordinator", ("DC", "DEF_PC")),
     ):
         changed = (
-            spells.filter(pl.col("role").is_in(roles) & (pl.col("start_week") > 1))
+            spells.filter(pl.col("role").is_in(roles) & _changed_hands())
             .select("season", "team", pl.lit(True).alias("unit_changed"))
             .unique()
         )
