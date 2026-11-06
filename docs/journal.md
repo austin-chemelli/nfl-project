@@ -482,3 +482,12 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** Anything keyed to the clock on a file rebuilt by several jobs has to ask which job's clock. A value should change when its inputs do, and a test that advances `now` with nothing else changed is cheap.
 
+## 2026-11-05: who had the ball, and where it went (M15 phase 2)
+
+**Why.** Phase 1 published the drives without drawing them. The curve says how the game swung; drives say what the teams did with the ball.
+
+**What changed.** `PossessionStrip` runs under the curve on the same time axis, and "Drive by drive" draws every drive on one field: a bar from start to end and a glyph for how it ended. Web only. The time scale moved to `charts/wpScale.ts` so both charts read it.
+
+**Findings.** A drive's `end_yl` is the last snap, so a touchdown stops a yard or more short of the goal line; the chart takes touchdowns to the line. Drive results reconcile with the final score in all 242 team-games of 2026 (touchdowns, field goals, defensive scores and safeties, with conversions the only gap), which is the check that says the data is tagged right. Field orientation is a choice: the away team always drives right, which isn't how teams switch ends in a real game, and the help text says so.
+
+**Lesson.** When a new chart only redraws published data, a reconciliation against a number the reader already trusts, here the score, is worth more than more unit tests.
