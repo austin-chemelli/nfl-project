@@ -470,6 +470,18 @@ The 13 coaching and scheme features with no hypotheses row were never built, and
 
 **Lesson.** Tests that can't run the thing they describe pass quietly: jsdom ignores CSS and has no router timing, so anything about motion or scroll needs a browser check before it counts. And a plan's number is worth rechecking against the raw rows when a formula is about to be built on it.
 
+## 2026-11-05: the League page's Teams tab (M14 phase 1)
+
+**Why.** Austin wanted any two features on a chart of all 32 teams, as the first piece of a league page (ADR 0019). It ships first because it needs nothing new from the model, and it gives the page a shell for the playoff picture.
+
+**What changed.** `/league` with a Teams tab: a hand-rolled SVG scatter, eight presets with corner captions, team colors with a division highlight, "Find a team", a team panel with every game, and a numbers table. `site/teams.json` holds every team's value, percentile and rank for 45 features (183 KB, 29 KB gzipped). `feature_bands` reads the same table, so the game page's bands stop using Week 18 pregame rows. `src/nfl/league/` starts with the division map. Built by three implementer agents against a contract and stubs committed first, then integrated.
+
+**Findings.** The review caught what the plan had wrong. The plan said a team's season-to-date numbers are the same in every future row, which holds for most features and not for `form.epa_trend`: its window averages only the played games, so the row after next averages three. Picking "next game" from `now` then moved a team onto that row at kickoff, and on Sundays 28 teams changed by up to 0.203, one by 23 rank places, with no new data, because the odds snapshots rebuild the site between feature builds. "Next" now means next after the last feature build; a replay of Thursday against Monday moves 0 of 2,129 values. The auditor persona checked all 8 presets and found every rank, direction and caption consistent, and every shared number equal to the game page's.
+
+**Team colors.** The plan chose conference colors because one color per team collides: 107 of 496 pairs on dark look alike and three are identical. Austin asked why not team colors anyway, and the answer was that the plan had only tried one color. A ring in each team's second color brings the look-alikes down to 21, and the rest share real colors and have labels.
+
+**Lesson.** Anything keyed to the clock on a file rebuilt by several jobs has to ask which job's clock. A value should change when its inputs do, and a test that advances `now` with nothing else changed is cheap.
+
 ## 2026-11-05: who had the ball, and where it went (M15 phase 2)
 
 **Why.** Phase 1 published the drives without drawing them. The curve says how the game swung; drives say what the teams did with the ball.

@@ -64,6 +64,8 @@ export const useCoaches = () => useJson('coaches', 'site/coaches.json', C.Coache
 export const useDiyMatrix = () => useJson('diy', 'site/diy_matrix.json', C.DiyMatrix)
 export const useSeasonFile = (season?: number) =>
   useJson('season', season ? `site/season_${season}.json` : null, C.SeasonFile)
+/** Every team's season-to-date feature values (ADR 0019): the League page's Teams tab; a 404 means not built yet. */
+export const useTeams = () => useJson('teams', 'site/teams.json', C.TeamsFile)
 export const useAudit = () => useJson('audit', 'site/audit.json', C.Audit)
 /** Post-game retrospective (ADR 0016): ask only once the game has a result; a 404 means not built yet. */
 export const useRetro = (id: string | undefined, enabled: boolean) =>

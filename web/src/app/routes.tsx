@@ -23,6 +23,7 @@ export const routes: RouteObject[] = [
       { index: true, element: page(() => import('../pages/Slate')) },
       { path: 'week/:season/:week', element: page(() => import('../pages/Slate')) },
       { path: 'game/:id', element: page(() => import('../pages/Game')) },
+      { path: 'league', element: page(() => import('../pages/League')) },
       { path: 'tracker', element: page(() => import('../pages/Tracker')) },
       { path: 'hypotheses', element: page(() => import('../pages/Hypotheses')) },
       { path: 'coaches', element: page(() => import('../pages/Coaches')) },

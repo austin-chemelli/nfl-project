@@ -607,8 +607,69 @@ export type WpSeries = z.infer<typeof WpSeries>
 export type WpPlay = z.infer<typeof WpPlay>
 export type Drive = z.infer<typeof Drive>
 export type TeamRetro = z.infer<typeof TeamRetro>
+// ---------------------------------------------------------------------------------- teams (ADR 0019)
+
+export const TeamFeature = z.looseObject({
+  id: z.string(),
+  label: z.string(),
+  short: z.string(), // axis label, at most 22 characters
+  description: z.string(),
+  unit: z.string(),
+  group: z.string(),
+  group_name: z.string(),
+  better: z.enum(['higher', 'lower']).nullable(), // null: a style or neutral measure, no good or bad
+  n: num,
+  mean: num,
+  lo: num,
+  q1: num,
+  med: num,
+  q3: num,
+  hi: num,
+})
+
+export const TeamGame = z.looseObject({
+  id: z.string(),
+  week: num,
+  opp: z.string(),
+  home: z.boolean(),
+  pf: nnum, // null until played
+  pa: nnum,
+})
+
+export const TeamRow = z.looseObject({
+  conference: z.string(),
+  division: z.string(),
+  wins: num,
+  losses: num,
+  ties: num,
+  games_played: num,
+  points_for: num.default(0),
+  points_against: num.default(0),
+  through_week: nnum.default(null), // the week of the latest result in the record
+  last_game_id: nstr.default(null),
+  next_game_id: nstr.default(null),
+  games: z.array(TeamGame).default([]),
+  values: z.record(z.string(), num), // a missing value is an absent key
+  pct: z.record(z.string(), num).optional(), // 0-100 by raw value, 100 = highest value
+  rank: z.record(z.string(), num).optional(), // 1 = best by `better`; 1 = highest when better is null
+})
+
+export const TeamsFile = z.looseObject({
+  schema_version: z.string(),
+  generated_at: z.string(),
+  season: num,
+  week: num,
+  as_of: z.string(),
+  features: z.array(TeamFeature),
+  teams: z.record(z.string(), TeamRow),
+})
+
 export type Efficiency = z.infer<typeof Efficiency>
 export type LuckFactor = z.infer<typeof LuckFactor>
 export type GradedPick = z.infer<typeof GradedPick>
 export type Attribution = z.infer<typeof Attribution>
 export type WeekRecap = z.infer<typeof WeekRecap>
+export type TeamFeature = z.infer<typeof TeamFeature>
+export type TeamGame = z.infer<typeof TeamGame>
+export type TeamRow = z.infer<typeof TeamRow>
+export type TeamsFile = z.infer<typeof TeamsFile>
