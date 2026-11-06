@@ -66,6 +66,7 @@ uv run nfl lock --slot thu|sat [--dry-run] [--commit --push]   # the live lock (
 uv run nfl weekly refresh    # Tuesday job: current-season ingest, odds, curate, features, score unscored finished games (append-only backfill), grade, ledger
 uv run nfl readme            # rewrite the README scorecard section
 uv run nfl site              # UI JSON contract -> marts/site/ (auto after weekly refresh and real locks)
+uv run nfl league [--snapshot refresh|lock]   # standings, simulated playoff odds, leverage -> site/league.json (auto at the end of every `nfl site`)
 uv run nfl hypotheses        # per-feature coef + 90% CI + verdict -> site/hypotheses.json
 uv run nfl diy-matrix        # group composites per game for the build-your-own page
 uv run nfl run-all           # full historical rebuild (POC-era; prefer the individual commands)

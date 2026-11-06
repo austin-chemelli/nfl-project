@@ -21,7 +21,7 @@ function GameRow({ g, file }: { g: LeagueGame; file: LeagueFile }) {
         </span>
       </div>
       {lines.length === 0 ? (
-        <p className="mt-1 text-[13px] text-ink-3">Little here changes anyone's playoff chances.</p>
+        <p className="mt-1 text-[13px] text-ink-3">{Math.min(g.n_home_wins ?? 0, g.n_away_wins ?? 0) < 1000 ? 'Too one-sided to measure what it changes.' : "Little here changes anyone's playoff chances."}</p>
       ) : (
         <ul className="mt-1 list-none p-0 text-[13px] text-ink-2">
           {lines.slice(0, SHOWN).map((l) => (

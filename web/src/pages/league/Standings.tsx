@@ -8,7 +8,7 @@ import { divisionTables, recordOf, type Conf } from './playoffs'
 export function Standings({ file }: { file: LeagueFile }) {
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <p className="text-ink-2">Records by division, leader first{file.through_week != null ? `, through Week ${file.through_week}` : ''}.</p>
+      <p className="text-ink-2">Records by division, leader first{file.through_week ? `, through Week ${file.through_week}` : ''}.</p>
       {(['AFC', 'NFC'] as Conf[]).map((conf) => (
         <section key={conf} aria-label={`${conf} standings`} className="grid min-w-0 gap-4 md:grid-cols-2">
           {divisionTables(file.teams, conf).map(({ division, teams }) => (

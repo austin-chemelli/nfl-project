@@ -108,7 +108,7 @@ def test_scored_games_are_only_the_unlocked_ones():
 
     preds = _preds([("R1", "student", AS_OF - timedelta(days=1), 0.6, False)])
     inputs.build_inputs(GAMES, preds, _mkt([]), fn, 2026, AS_OF)
-    assert seen == [["R2", "R3"]]
+    assert seen == [["R2", "R3"], ["P1", "P2"]]  # the unlocked games, then played ones for the fit
 
 
 def test_market_line_beats_ratings_and_future_line_is_ignored():
@@ -202,3 +202,24 @@ def test_a_later_build_with_no_new_data_prices_the_same():
     a = inputs.market_inputs(remaining, played, feats, AS_OF)
     b = inputs.market_inputs(remaining, played, feats, AS_OF + timedelta(days=2))
     assert np.array_equal(a.p_home, b.p_home)
+
+
+def test_played_games_keep_the_ratings_steady_with_one_game_left():
+    """Fitted on remaining games alone, one game left means every rating is 0 and the home term is
+    that game's logit. Played games have to hold the fit."""
+    teams = [f"T{i}" for i in range(8)]
+    r = {t: (i - 3.5) / 4 for i, t in enumerate(teams)}
+    past = pl.DataFrame(
+        [
+            (h, a, 1 / (1 + np.exp(-(r[h] - r[a] + 0.3))), 1.0)
+            for h in teams
+            for a in teams
+            if h != a
+        ],
+        schema={"home": pl.Utf8, "away": pl.Utf8, "p": pl.Float64, "weight": pl.Float64},
+        orient="row",
+    )
+    rem = pl.DataFrame({"game_id": ["G"], "home": ["T0"], "away": ["T7"]})
+    x = inputs._own_fit("student", rem, [0.2], ["scored"], past)
+    assert x.home_term == pytest.approx(0.3, abs=0.05)
+    assert x.ratings["T7"] - x.ratings["T0"] == pytest.approx(1.75, abs=0.1)

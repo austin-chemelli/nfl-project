@@ -18,6 +18,7 @@ from pathlib import Path
 
 import numpy as np
 import polars as pl
+from polars.exceptions import PanicException
 from pydantic import BaseModel, ConfigDict
 
 from nfl.config import Paths, current_season, now_utc
@@ -143,16 +144,23 @@ def regular_season(games: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
     return reg.filter(done), reg.filter(~done)
 
 
+def through_week(played: pl.DataFrame, remaining: pl.DataFrame) -> int:
+    """The last week with every game final, so a Thursday score doesn't move it."""
+    if remaining.height:
+        return int(remaining["week"].min()) - 1
+    return int(played["week"].max()) if played.height else 0
+
+
 def played_results(played: pl.DataFrame) -> list[GameResult]:
     cols = ("home_team", "away_team", "home_score", "away_score")
     return [GameResult.from_scores(h, a, int(hs), int(s)) for h, a, hs, s in played.select(cols).iter_rows()]  # fmt: skip
 
 
-def seed_of(season: int, played: pl.DataFrame, inputs: dict[str, VariantInputs]) -> int:
+def seed_of(season: int, played: pl.DataFrame, inputs: dict[str, VariantInputs] | None) -> int:
     """From the season, the last result and the inputs: a rebuild on the same inputs is identical."""
     last = played["kickoff_utc"].max() if played.height else None
     h = hashlib.sha256(f"{season}|{last}|{played.height}".encode())
-    for v in VARIANTS:
+    for v in VARIANTS if inputs else ():
         x = inputs[v]
         h.update("|".join(x.game_ids).encode())
         h.update(np.round(np.asarray(x.p_home, dtype=float), 6).tobytes())
@@ -222,17 +230,15 @@ def _games(sim: SimResult, market: VariantInputs, remaining: pl.DataFrame) -> li
 
 def league_file(
     games: pl.DataFrame,
-    inputs: dict[str, VariantInputs],
+    inputs: dict[str, VariantInputs] | None,
     season: int,
     as_of: datetime,
     n_runs: int = DEFAULT_RUNS,
     sigma: float = SHOCK_SIGMA,
-) -> tuple[dict, dict[str, SimResult]] | None:
-    """The league.json object (history empty) and the runs, or None once no regular-season game is
-    left: the engine has no playoff results to start from, so the last in-season file stays up."""
+) -> tuple[dict, dict[str, SimResult]]:
+    """The league.json object (history empty) and the runs. Once no regular-season game is left the
+    file keeps the final standings with no odds: the engine can't start from playoff results."""
     played, remaining = regular_season(games)
-    if remaining.is_empty():
-        return None
     base = played_results(played)
     seed = seed_of(season, played, inputs)
     sims = {
@@ -240,23 +246,26 @@ def league_file(
             base, x.game_ids, x.home, x.away, x.p_home, x.ratings,
             sigma=sigma, home_adv=x.home_term, n_runs=n_runs, rng=seed + i,
         )
-        for i, (v, x) in enumerate((v, inputs[v]) for v in VARIANTS)
+        for i, (v, x) in enumerate((v, inputs[v]) for v in VARIANTS if remaining.height)
     }  # fmt: skip
     obj = {
         "schema_version": SCHEMA_VERSION,
         "season": season,
         "generated_at": _stamp(as_of),
         "as_of": _stamp(as_of),
-        "through_week": int(played["week"].max()) if played.height else 0,
-        "n_sims": n_runs,
+        "through_week": through_week(played, remaining),
+        "n_sims": n_runs if sims else 0,
         "seed": seed,
         "shock_sigma": sigma,
         "tiebreak": TIEBREAK,
         "teams": standings(Results(base), remaining, seed),
         "odds": {
-            v: {"sources": inputs[v].source_counts, "teams": _odds(sims[v])} for v in VARIANTS
+            v: {"sources": inputs[v].source_counts, "teams": _odds(sims[v])}
+            if sims
+            else {"sources": {}, "teams": {}}
+            for v in VARIANTS
         },
-        "games": _games(sims["student"], inputs["market"], remaining),
+        "games": _games(sims["student"], inputs["market"], remaining) if sims else [],
         "history": {},
         "similar": {},
     }
@@ -299,17 +308,20 @@ def append_snapshot(path: Path, rows: pl.DataFrame) -> bool:
             return False
     out = rows if old is None else pl.concat([old, rows.select(old.columns)])
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
+    tmp = path.with_suffix(f".{os.getpid()}.tmp")
     out.write_parquet(tmp)
     os.replace(tmp, path)
     return True
 
 
-def history(path: Path) -> dict[str, list[dict]]:
-    """Each team's P(playoffs) by week from the Tuesday series, the week's last row per variant."""
-    if not path.exists():
+def history(path: Path, new: pl.DataFrame | None = None) -> dict[str, list[dict]]:
+    """Each team's P(playoffs) by week from the Tuesday series, the week's last row per variant.
+    `new` is this build's rows, not yet on disk."""
+    parts = ([pl.read_parquet(path)] if path.exists() else []) + ([new] if new is not None else [])
+    if not parts:
         return {}
-    s = pl.read_parquet(path).filter(pl.col("kind") == HISTORY_KIND)
+    s = pl.concat([p.select(parts[0].columns) for p in parts])
+    s = s.filter(pl.col("kind") == HISTORY_KIND)
     if s.is_empty():
         return {}
     last = s.sort("as_of").group_by("week", "team", "variant").agg(pl.col("playoffs").last())
@@ -328,7 +340,7 @@ def build(
     snapshot: str | None = None,
     now: datetime | None = None,
     n_runs: int = DEFAULT_RUNS,
-) -> dict | None:
+) -> dict:
     """Write site/league.json; with `snapshot` ('refresh' or 'lock') append the snapshot rows too."""
     if snapshot is not None and snapshot not in SNAPSHOT_KINDS:
         raise ValueError(f"snapshot must be one of {SNAPSHOT_KINDS}, got {snapshot!r}")
@@ -336,20 +348,21 @@ def build(
     season = season or current_season()
     as_of = (now or now_utc()).replace(tzinfo=None, microsecond=0)
     games = store.games_frame(paths).filter(pl.col("season") == season)
-    inputs = load_inputs(paths, season, as_of)
-    made = league_file(games, inputs, season, as_of, n_runs=n_runs)
-    if made is None:
-        return None
-    obj, sims = made
+    inputs = load_inputs(paths, season, as_of) if regular_season(games)[1].height else None
+    obj, sims = league_file(games, inputs, season, as_of, n_runs=n_runs)
     path = snapshot_path(paths, season)
-    if snapshot:
-        append_snapshot(path, snapshot_rows(obj, sims, inputs, snapshot, as_of))
-    obj["history"] = history(path)
+    rows = snapshot_rows(obj, sims, inputs, snapshot, as_of) if snapshot and sims else None
+    obj["history"] = history(path, rows)
     LeagueFile.model_validate(obj)
     text = json.dumps(obj, allow_nan=False, separators=(",", ":"))
     out = paths.site / "league.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text)
+    if rows is not None:  # after the page's file, and only rows from a build that validated
+        try:
+            append_snapshot(path, rows)
+        except (Exception, PanicException) as e:  # noqa: BLE001  can't be backfilled, so say so
+            print(f"league: SNAPSHOT NOT SAVED ({snapshot}, {_stamp(as_of)}): {e!r}")
     seconds = round(time.perf_counter() - t0, 1)
     print(f"league: {len(text) / 1024:.0f} KB, {obj['n_sims']} runs per variant, {seconds}s")
     return {"bytes": len(text), "seconds": seconds, "games": len(obj["games"]), "seed": obj["seed"]}

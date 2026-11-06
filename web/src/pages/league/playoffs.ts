@@ -59,9 +59,13 @@ export function marketNote(v: Pick<LeagueVariant, 'sources'>): string | null {
   return `Only ${line} of the ${total} games left have a betting line yet. The rest are estimated from this season's lines, so read this as a rough market view.`
 }
 
+/** Scores reach the file up to a day after a game ends, so kickoff decides what is still to come. */
+export const upcoming = (games: LeagueGame[], now: number) => games.filter((g) => !g.kickoff || Date.parse(g.kickoff) > now)
+
 /** Games from the earliest week that still has one: "this week" on the Games tab and the game-of-the-week tile. */
-export function nextWeek(games: LeagueGame[]): number | null {
-  return games.length ? Math.min(...games.map((g) => g.week)) : null
+export function nextWeek(games: LeagueGame[], now: number = Date.now()): number | null {
+  const ahead = upcoming(games, now)
+  return ahead.length ? Math.min(...ahead.map((g) => g.week)) : null
 }
 
 /** Both branches need this many Student runs before a swing is believed (ADR 0019). */
@@ -96,8 +100,9 @@ export function swingLines(g: LeagueGame, file: LeagueFile): string[] {
 /** The tab is the games that matter, not the schedule: 151 rows ran past 20,000 px on a phone. */
 export const LATER_GAMES = 10
 
-export function gamesByLeverage(games: LeagueGame[]): { next: LeagueGame[]; rest: LeagueGame[]; week: number | null } {
-  const week = nextWeek(games)
+export function gamesByLeverage(all: LeagueGame[], now: number = Date.now()): { next: LeagueGame[]; rest: LeagueGame[]; week: number | null } {
+  const games = upcoming(all, now)
+  const week = nextWeek(games, now)
   const lev = (a: LeagueGame, b: LeagueGame) => b.leverage_total - a.leverage_total || a.game_id.localeCompare(b.game_id)
   return {
     week,

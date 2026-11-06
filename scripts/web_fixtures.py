@@ -67,8 +67,13 @@ def _slice_columns(d: dict, keys: list[str], idx: slice) -> None:
 
 def main() -> None:
     src = get_paths().site
+    # Hand-built to match the slate fixture's game ids and to hold edge cases, so it survives a rerun.
+    league = (OUT / "league.json").read_bytes() if (OUT / "league.json").exists() else None
     if OUT.exists():
         shutil.rmtree(OUT)
+    if league is not None:
+        OUT.mkdir(parents=True)
+        (OUT / "league.json").write_bytes(league)
 
     _dump(_load(src, "meta.json"), "meta.json")
 

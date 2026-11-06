@@ -1,12 +1,20 @@
-import { cleanup, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { LeagueFile } from '../../data/contract'
 import { renderRoute } from '../../test/render'
+import { MemoryRouter } from 'react-router'
+import { Games } from './Games'
+import { Odds } from './Odds'
 import { LATER_GAMES } from './playoffs'
+
+// a day before the fixture's first kickoff: the page only lists games still to come
+const FIXTURE_NOW = new Date('2026-10-31T12:00:00Z')
+beforeAll(() => { vi.useFakeTimers({ toFake: ['Date'], now: FIXTURE_NOW }) })
+afterAll(() => { vi.useRealTimers() })
 
 const FIX = path.resolve(import.meta.dirname, '../../test/fixtures')
 const league = LeagueFile.parse(JSON.parse(fs.readFileSync(path.join(FIX, 'site/league.json'), 'utf8')))
@@ -32,7 +40,7 @@ describe('League page, playoff tabs', () => {
   it('opens a tab from its URL and a tile from a click', async () => {
     renderRoute('/league')
     const strip = await screen.findByRole('group', { name: 'League summary' })
-    await userEvent.click(within(strip).getByRole('button', { name: /Game that matters most/ }))
+    await userEvent.click(within(strip).getByRole('button', { name: /Biggest game this week/ }))
     expect(await screen.findByRole('tab', { name: 'Games that matter' })).toHaveAttribute('aria-selected', 'true')
   })
 
@@ -116,6 +124,19 @@ describe('League page, playoff tabs', () => {
     expect(li.textContent).not.toMatch(/→|\b0\b/)
     const later = screen.getByRole('region', { name: 'Later games' })
     expect(within(later).getAllByRole('link').length).toBeLessThanOrEqual(LATER_GAMES)
+  })
+
+  it('Odds: says when it was simulated', async () => {
+    renderRoute('/league?tab=odds')
+    expect(await screen.findByText(/^Simulated \w{3}, /)).toBeInTheDocument()
+  })
+
+  it('Odds: says so plainly once the regular season is over, and Games has nothing to list', () => {
+    const over = { ...league, games: [], odds: { student: { sources: {}, teams: {} }, market: { sources: {}, teams: {} } } }
+    render(<MemoryRouter><Odds file={over} /></MemoryRouter>)
+    expect(screen.getByText(/regular season is over/)).toBeInTheDocument()
+    render(<MemoryRouter><Games file={over} /></MemoryRouter>)
+    expect(screen.getByText(/No games are left/)).toBeInTheDocument()
   })
 
   it('Market view says most of it is an estimate; the Student view does not', async () => {

@@ -1,6 +1,6 @@
 /** Summary-strip tiles for the League page (ADR 0017): pure functions of `league.json`, each null when the file can't answer. */
 import type { LeagueFile, LeagueGame } from '../../data/contract'
-import { nextWeek, type Conf } from './playoffs'
+import { nextWeek, upcoming, type Conf } from './playoffs'
 
 const confTeams = (file: LeagueFile, conf: Conf) => file.teams.filter((t) => t.conf === conf)
 
@@ -32,8 +32,9 @@ export function closestRace(file: LeagueFile): { division: string; leader: { tea
 }
 
 /** The game of the week: the highest `leverage_total` among the earliest week's games. */
-export function gameOfWeek(file: LeagueFile): LeagueGame | null {
-  const week = nextWeek(file.games)
-  const games = file.games.filter((g) => g.week === week)
+export function gameOfWeek(file: LeagueFile, now: number = Date.now()): LeagueGame | null {
+  const ahead = upcoming(file.games, now)
+  const week = nextWeek(ahead, now)
+  const games = ahead.filter((g) => g.week === week)
   return games.reduce<LeagueGame | null>((best, g) => (best == null || g.leverage_total > best.leverage_total ? g : best), null)
 }

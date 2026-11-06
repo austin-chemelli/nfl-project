@@ -103,10 +103,7 @@ def student_inputs(reg: pl.DataFrame, preds: pl.DataFrame, cut):
     rows = preds.join(
         played.select("game_id", "kickoff_utc", "home_team", "away_team"), on="game_id"
     ).filter(pl.col("lock_ts") < cut)
-    rem_ids = set(reg.filter(pl.col("kickoff_utc") >= cut)["game_id"])
-    # the leakage guard: nothing stamped at or after the cut, nothing for a remaining game
-    assert rows["lock_ts"].max() < cut, "a Student row stamped at or after the cut was used"
-    assert not rem_ids & set(rows["game_id"]), "a Student row for a remaining game was used"
+    # The two filters above are the leakage guard; tests/test_league_simulate.py exercises them.
     assert (rows["lock_ts"] <= rows["kickoff_utc"]).all()
     age = (cut - rows["kickoff_utc"]).dt.total_days().to_numpy()
     fit_in = pl.DataFrame(

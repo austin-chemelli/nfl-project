@@ -105,9 +105,26 @@ def test_games_are_ranked_and_carry_both_probabilities():
     assert g["n_home_wins"] + g["n_away_wins"] == RUNS
 
 
-def test_nothing_left_means_no_file():
+def test_after_the_last_game_the_file_keeps_the_final_standings():
     games = _games(played=10)
-    assert lb.league_file(games, _inputs(_games()), 2026, NOW, n_runs=RUNS) is None
+    obj, sims = lb.league_file(games, None, 2026, NOW, n_runs=RUNS)
+    lb.LeagueFile.model_validate(obj)
+    assert sims == {} and obj["games"] == [] and obj["n_sims"] == 0
+    assert obj["through_week"] == 10 and obj["odds"]["student"]["teams"] == {}
+    assert all(r["left"] == 0 and r["w"] + r["l"] + r["t"] == 10 for r in obj["teams"])
+
+
+def test_through_week_is_the_last_full_week():
+    games = _games(played=6)
+    thursday = pl.col("game_id") == games.filter(pl.col("week") == 7)["game_id"][0]
+    games = games.with_columns(
+        pl.when(thursday).then(24).otherwise(pl.col("home_score")).alias("home_score"),
+        pl.when(thursday).then(20).otherwise(pl.col("away_score")).alias("away_score"),
+    )
+    obj, sims = lb.league_file(games, _inputs(games), 2026, NOW, n_runs=RUNS)
+    assert obj["through_week"] == 6
+    rows = lb.snapshot_rows(obj, sims, _inputs(games), "lock", NOW)
+    assert rows["week"].unique().to_list() == [7]  # a Saturday lock in Week 7 is Week 7
 
 
 def _snap(obj, sims, games, kind="refresh", as_of=NOW):
@@ -173,11 +190,43 @@ def test_callers_ask_for_the_right_snapshot():
     assert inspect.signature(site.build).parameters["league_snapshot"].default is None
 
 
-def test_a_league_failure_leaves_the_site_build_green():
-    """The call sits in its own try/except, after everything else the site writes."""
+def test_a_league_failure_leaves_the_site_build_green(monkeypatch, capsys):
+    for err in (RuntimeError("boom"), pl.exceptions.PanicException("panic")):
+
+        def fail(*a, _e=err, **k):
+            raise _e
+
+        monkeypatch.setattr(lb, "build", fail)
+        site.write_league(None, 2026, "lock")
+        assert "league.json failed, continuing" in capsys.readouterr().out
+
+
+def test_the_site_build_writes_league_last():
     import inspect
 
     src = inspect.getsource(site.build)
-    call = src.index("build_league(paths, season")
-    assert src.rindex("try:", 0, call) > src.index("write_retro(paths, season)")
-    assert "league.json failed, continuing" in src[call:]
+    assert src.index("write_league(") > src.index("write_retro(paths, season)")
+
+
+def test_a_snapshot_failure_keeps_the_fresh_file(tmp_path, monkeypatch, capsys):
+    paths = _paths(tmp_path, monkeypatch)
+
+    def fail(*a):
+        raise OSError("mount gone")
+
+    monkeypatch.setattr(lb, "append_snapshot", fail)
+    lb.build(paths, 2026, snapshot="refresh", now=NOW, n_runs=RUNS)
+    assert json.loads((paths.site / "league.json").read_text())["history"]["KC"]
+    assert "SNAPSHOT NOT SAVED" in capsys.readouterr().out
+
+
+def test_an_invalid_file_writes_no_snapshot(tmp_path, monkeypatch):
+    paths = _paths(tmp_path, monkeypatch)
+
+    def bad(obj):
+        raise ValueError("bad file")
+
+    monkeypatch.setattr(lb.LeagueFile, "model_validate", bad)
+    with pytest.raises(ValueError):
+        lb.build(paths, 2026, snapshot="refresh", now=NOW, n_runs=RUNS)
+    assert not lb.snapshot_path(paths, 2026).exists()

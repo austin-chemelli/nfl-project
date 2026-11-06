@@ -135,16 +135,21 @@ def games_needing_score(remaining: pl.DataFrame, locked: pl.DataFrame) -> pl.Dat
     return remaining.filter(~pl.col("game_id").is_in(locked["game_id"].to_list()))
 
 
-def _own_fit(variant: str, rem: pl.DataFrame, p, source, extra=None) -> VariantInputs:
+def _own_fit(
+    variant: str, rem: pl.DataFrame, p, source, past=None, market_fit=None
+) -> VariantInputs:
     counts: dict[str, int] = {}
     for s in source:
         counts[s] = counts.get(s, 0) + 1
-    fit = fit_ratings(
-        pl.DataFrame(
-            {"home": rem["home"], "away": rem["away"], "p": p, "weight": np.ones(rem.height)}
-        ),
-        teams=sorted(set(rem["home"]) | set(rem["away"])),
+    # Played games anchor the fit: on remaining games alone the ratings shrink to nothing by Week 18,
+    # and with one game left the home term becomes that game's logit.
+    rows = pl.DataFrame(
+        {"home": rem["home"], "away": rem["away"], "p": p, "weight": np.ones(rem.height)},
+        schema_overrides={"home": pl.Utf8, "away": pl.Utf8, "p": pl.Float64, "weight": pl.Float64},
     )
+    if past is not None and past.height:
+        rows = pl.concat([rows, past.select(rows.columns).cast(rows.schema)])
+    fit = fit_ratings(rows, teams=sorted(set(rows["home"]) | set(rows["away"])))
     return VariantInputs(
         variant,
         rem["game_id"].to_list(),
@@ -156,12 +161,22 @@ def _own_fit(variant: str, rem: pl.DataFrame, p, source, extra=None) -> VariantI
         fit.ratings,
         fit.home,
         fit.r2,
-        extra,
+        market_fit,
     )
 
 
+def aged_weight(kickoff: pl.Expr, anchor: datetime, half_life_days: float) -> pl.Expr:
+    """Weight by age from the last game played, not the clock: a site build with no new data must
+    price the same, or every rebuild would nudge these fits and reseed the simulation."""
+    days = (pl.lit(anchor, dtype=pl.Datetime("us")) - kickoff).dt.total_seconds() / 86400
+    return 0.5 ** (days.clip(lower_bound=0) / half_life_days)
+
+
 def student_inputs(
-    remaining: pl.DataFrame, locked: pl.DataFrame, scored: pl.DataFrame
+    remaining: pl.DataFrame,
+    locked: pl.DataFrame,
+    scored: pl.DataFrame,
+    past: pl.DataFrame | None = None,
 ) -> VariantInputs:
     """Merge locked rows (win) with freshly scored rows. Raises if a game has neither."""
     lk = dict(zip(locked["game_id"], locked["p_home"], strict=True))
@@ -182,7 +197,7 @@ def student_inputs(
             missing.append(g)
     if missing:
         raise ValueError(f"no Student probability for {len(missing)} games, e.g. {missing[:3]}")
-    return _own_fit(STUDENT_ID, remaining, p, src)
+    return _own_fit(STUDENT_ID, remaining, p, src, past)
 
 
 def market_inputs(
@@ -202,15 +217,13 @@ def market_inputs(
     up_rows = up.select("game_id", "p_home").join(
         remaining.select("game_id", "home", "away"), on="game_id"
     )
-    # Age from the last game played, not the clock: a site build with no new data must price the
-    # same, or every rebuild would nudge these fits and reseed the simulation.
     anchor = played["kickoff_utc"].max() if played.height else cut
-    age = (pl.lit(anchor, dtype=pl.Datetime("us")) - pl.col("kickoff_utc")).dt.total_seconds()
-    age = age / 86400
     cl_rows = cl.select("game_id", "p_home").join(
         played.select("game_id", "home", "away", "kickoff_utc"), on="game_id"
     )
-    cl_rows = cl_rows.with_columns((0.5 ** (age.clip(lower_bound=0) / half_life_days)).alias("w"))
+    cl_rows = cl_rows.with_columns(
+        aged_weight(pl.col("kickoff_utc"), anchor, half_life_days).alias("w")
+    )
     fit_rows = pl.concat(
         [
             up_rows.select(
@@ -232,7 +245,22 @@ def market_inputs(
         else:
             p.append(price(mfit, h, a))
             src.append("ratings")
-    return _own_fit("market", remaining, p, src, mfit)
+    past = cl_rows.select("home", "away", pl.col("p_home").alias("p"), pl.col("w").alias("weight"))
+    return _own_fit("market", remaining, p, src, past, mfit)
+
+
+def _played_rows(played: pl.DataFrame, score_fn) -> pl.DataFrame | None:
+    """The Student's pregame probabilities for played games, for the rating fit only."""
+    if played.is_empty():
+        return None
+    sc = score_fn(played).filter(pl.col("p_home").is_not_null() & pl.col("p_home").is_not_nan())
+    anchor = played["kickoff_utc"].max()
+    return sc.join(played, on="game_id").select(
+        "home",
+        "away",
+        pl.col("p_home").alias("p"),
+        aged_weight(pl.col("kickoff_utc"), anchor, HALF_LIFE_DAYS).alias("weight"),
+    )
 
 
 def build_inputs(
@@ -264,7 +292,7 @@ def build_inputs(
         else pl.DataFrame(schema={"game_id": pl.Utf8, "p_home": pl.Float64})
     )
     return {
-        STUDENT_ID: student_inputs(remaining, locked, scored),
+        STUDENT_ID: student_inputs(remaining, locked, scored, _played_rows(played, score_fn)),
         "market": market_inputs(remaining, played, feats, as_of),
     }
 

@@ -21,7 +21,7 @@ function Strip({ file }: { file: LeagueFile }) {
   if (afc) tiles.push(<Tile key="afc" label="AFC favourite for the 1 seed" value={afc.team} sub={`${fmtProb(afc.p)} to get it`} tab="odds" />)
   if (nfc) tiles.push(<Tile key="nfc" label="NFC favourite for the 1 seed" value={nfc.team} sub={`${fmtProb(nfc.p)} to get it`} tab="odds" />)
   if (race) tiles.push(<Tile key="race" label="Closest division race" value={race.division} sub={`${race.leader.team} ${fmtProb(race.leader.p)}, ${race.runnerUp.team} ${fmtProb(race.runnerUp.p)}`} tab="standings" />)
-  if (game) tiles.push(<Tile key="game" label="Game that matters most" value={`${game.away} @ ${game.home}`} sub={`Week ${game.week}, moves playoff odds the most`} tab="games" />)
+  if (game) tiles.push(<Tile key="game" label="Biggest game this week" value={`${game.away} @ ${game.home}`} sub={`Week ${game.week}, by how far it moves playoff odds`} tab="games" />)
   return tiles.length ? <SummaryStrip label="League summary">{tiles}</SummaryStrip> : null
 }
 
@@ -32,7 +32,7 @@ export default function LeaguePage() {
 
   const playoffTab = (what: string, render: (f: LeagueFile) => ReactNode) =>
     league.isError && isNotFound(league.error) ? (
-      <Card className="text-ink-2">Playoff {what} appear after the next data update.</Card>
+      <Card className="text-ink-2">{what === 'standings' ? 'Standings appear' : what === 'games' ? 'Games that matter appear' : 'Playoff odds appear'} after the next data update.</Card>
     ) : (
       <Loaded q={league} what={what}>
         {render}

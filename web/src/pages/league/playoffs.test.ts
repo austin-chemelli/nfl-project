@@ -93,8 +93,8 @@ describe('swings', () => {
 
 describe('gamesByLeverage', () => {
   it('puts the earliest week first, each part by leverage', () => {
-    const { next, rest, week } = gamesByLeverage(file.games)
-    expect(week).toBe(nextWeek(file.games))
+    const { next, rest, week } = gamesByLeverage(file.games, 0)
+    expect(week).toBe(nextWeek(file.games, 0))
     expect(next.every((g) => g.week === week)).toBe(true)
     expect(next.map((g) => g.leverage_total)).toEqual(next.map((g) => g.leverage_total).sort((a, b) => b - a))
     expect(rest.every((g) => g.week > week!)).toBe(true)
@@ -102,11 +102,16 @@ describe('gamesByLeverage', () => {
     const lev = rest.map((g) => g.leverage_total)
     expect(lev).toEqual([...lev].sort((a, b) => b - a)) // the biggest later games, not the soonest
   })
+  it('drops games that have kicked off, even with no score yet', () => {
+    const first = Math.min(...file.games.map((g) => Date.parse(g.kickoff!)))
+    const { next, rest } = gamesByLeverage(file.games, first)
+    expect([...next, ...rest].every((g) => Date.parse(g.kickoff!) > first)).toBe(true)
+  })
   it('notes the estimate only while some games lack a line', () => {
     expect(marketNote({ sources: { line: 29, ratings: 122 } })).toContain('Only 29 of the 151 games')
     expect(marketNote({ sources: { line: 151 } })).toBeNull()
   })
-  it('handles no games', () => expect(gamesByLeverage([])).toEqual({ week: null, next: [], rest: [] }))
+  it('handles no games', () => expect(gamesByLeverage([], 0)).toEqual({ week: null, next: [], rest: [] }))
 })
 
 describe('divisionTables', () => {

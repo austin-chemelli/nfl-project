@@ -420,6 +420,17 @@ def _market_by_game(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.Data
 # ------------------------------------------------------------------------------------------ build
 
 
+def write_league(paths: Paths, season: int, snapshot: str | None) -> None:
+    """ADR 0019: a failure here must never stop a site build, and a lock's site build runs after the
+    push. A Polars panic isn't an Exception, so it's named. The page keeps the last file."""
+    try:
+        from nfl.league.build import build as build_league
+
+        build_league(paths, season, snapshot=snapshot)
+    except (Exception, pl.exceptions.PanicException) as e:  # noqa: BLE001
+        print(f"site: league.json failed, continuing: {e!r}")
+
+
 def build(paths: Paths, season: int | None = None, league_snapshot: str | None = None) -> dict:
     t0 = time.perf_counter()
     season = season or current_season()
@@ -505,12 +516,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
         write_retro(paths, season)
     except Exception as e:  # noqa: BLE001  retros must never break the site build
         print(f"site: write_retro failed, continuing: {e!r}")
-    try:  # ADR 0019: last, so the slower simulation never holds up the files above
-        from nfl.league.build import build as build_league
-
-        build_league(paths, season, snapshot=league_snapshot)
-    except Exception as e:  # noqa: BLE001  the page shows its empty state or the last file
-        print(f"site: league.json failed, continuing: {e!r}")
+    write_league(paths, season, league_snapshot)  # last: the simulation holds up nothing above
     return {"weeks": n_weeks, "games": games.height, "seconds": round(time.perf_counter() - t0, 1)}
 
 

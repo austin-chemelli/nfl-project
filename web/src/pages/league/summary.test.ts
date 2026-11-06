@@ -34,13 +34,21 @@ describe('summary tiles on a small league', () => {
     expect(closestRace(tiny())).toEqual({ division: 'NFC North', leader: { team: 'CCC', p: 0.45 }, runnerUp: { team: 'DDD', p: 0.4 } })
   })
   it('gameOfWeek: highest leverage among the earliest week, not the whole schedule', () => {
-    expect(gameOfWeek(tiny())?.game_id).toBe('c')
+    expect(gameOfWeek(tiny(), 0)?.game_id).toBe('c')
+  })
+  it('gameOfWeek: a game already kicked off never counts, and a stuck week lets go', () => {
+    const t = tiny()
+    t.games = [
+      { ...t.games[0], game_id: 'done', week: 9, kickoff: '2026-11-01T18:00:00Z', leverage_total: 0.9 },
+      { ...t.games[0], game_id: 'next', week: 10, kickoff: '2026-11-08T18:00:00Z', leverage_total: 0.2 },
+    ]
+    expect(gameOfWeek(t, Date.parse('2026-11-02T00:00:00Z'))?.game_id).toBe('next')
   })
   it('return null when the file has nothing to say', () => {
     const t = tiny()
     t.games = []
     t.teams = []
-    expect(gameOfWeek(t)).toBeNull()
+    expect(gameOfWeek(t, 0)).toBeNull()
     expect(topSeed(t, 'AFC')).toBeNull()
     expect(closestRace(t)).toBeNull()
   })
@@ -53,7 +61,7 @@ describe('summary tiles on the fixture', () => {
       expect(topSeed(file, conf)!.p).toBe(best)
     }
     const wk = Math.min(...file.games.map((g) => g.week))
-    expect(gameOfWeek(file)!.leverage_total).toBe(Math.max(...file.games.filter((g) => g.week === wk).map((g) => g.leverage_total)))
+    expect(gameOfWeek(file, 0)!.leverage_total).toBe(Math.max(...file.games.filter((g) => g.week === wk).map((g) => g.leverage_total)))
     const lowestLeader = Math.min(
       ...[...new Set(file.teams.map((t) => t.div))].map((d) => Math.max(...file.teams.filter((t) => t.div === d).map((t) => file.odds.student.teams[t.team].division))),
     )

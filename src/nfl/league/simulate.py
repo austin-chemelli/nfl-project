@@ -26,10 +26,10 @@ CONFS = ("AFC", "NFC")
 N_SEEDS = 7
 # Team-strength shock std (logit), per run and team, added to every game of that team. Calibrated
 # 2026-11-05 by scripts/league_backtest.py (2010-2025, cuts at 6/9/12 games, 400 runs, Student
-# proxy); table in .notes/league-calibration.md. Pooled log loss on P(playoffs): 0.3585 at 0,
+# proxy); table in .notes/league-calibration.md. Pooled log loss on P(playoffs): 0.3589 at 0,
 # 0.3579 at 0.2, 0.3556 at 0.3, 0.3541 at 0.4 and 0.5, 0.3548 at 0.7, 0.3619 at 1.0. The gain over
-# 0 at 0.4 is -0.0044 (season-bootstrap 95% interval -0.0115 to +0.0029): a point estimate, not
-# significant pooled (significant at the 12-game cut). Smaller of the tied 0.4 and 0.5.
+# 0 at 0.4 is -0.0047 (season-bootstrap 95% interval -0.0123 to +0.0021): a point estimate, not
+# significant at any cut. Smaller of the tied 0.4 and 0.5.
 SHOCK_SIGMA = 0.4
 ROUNDS = ("div", "conf", "sb", "champ")
 
@@ -126,7 +126,7 @@ def simulate_season(
     rating = np.array([ratings.get(t, 0.0) for t in teams])
 
     # Draw everything random up front, in a fixed order, so a seed fixes the output.
-    delta = gen.normal(0.0, sigma, (n_runs, nt)) if sigma > 0 else np.zeros((n_runs, nt))
+    delta = sigma * gen.standard_normal((n_runs, nt))  # drawn at sigma 0 too: same stream, paired
     u_games = gen.random((n_runs, ng))
     u_bracket = gen.random((n_runs, 13))
 

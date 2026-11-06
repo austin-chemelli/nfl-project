@@ -4,7 +4,7 @@ import { TipNote, TipRow, TipTitle, useChartTip } from '../../charts'
 import { FinePrint } from '../../components/FinePrint'
 import { DataTable, Segmented, td, th } from '../../components/ui'
 import type { LeagueFile } from '../../data/contract'
-import { dash } from '../../lib/format'
+import { dash, kickoffEt } from '../../lib/format'
 import { teamDotVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
 import { barWidth, fmtProb, oddsRows, parseConf, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
@@ -23,17 +23,18 @@ export function SimFinePrint({ file }: { file: LeagueFile }) {
     <FinePrint label="How these odds are made">
       <p>
         Each team's odds come from {file.n_sims.toLocaleString('en-US')} simulations of the rest of the season, run twice. The Student's run used {sourcesText(file.odds.student)}. The market's run used{' '}
-        {sourcesText(file.odds.market)}. Tested on the Week 9 lines it hadn't seen, that estimate missed by about 7 points of win chance a game, and the Student missed by about 6, so a gap between the two views far from
-        this week is weak evidence of anything.
+        {sourcesText(file.odds.market)}.
+        {(file.odds.market.sources.ratings ?? 0) > 0 && " Tested on 29 lines it hadn't seen in November 2026, that estimate missed by about 7 points of win chance a game and the Student by about 6, so a gap between the two views beyond the next week or so is weak evidence of anything."}
       </p>
       <p>
         Each run moves every team's strength up or down a little for all of that team's games, so a team that is better than rated is better all season. The size was tuned on past seasons, and for the Student the gain
         was too small to tell from noise.
       </p>
       <p>
-        Ties in the standings use the real tiebreakers through strength of schedule, then a coin; no real tie from 2002 to 2025 went past strength of victory. Simulated games never end in a tie, and injuries beyond this
-        week are assumed average.
+        Simulated ties in the standings use the real tiebreakers through strength of schedule, then a coin. That procedure matched the real playoff field in all 48 conference-seasons from 2002 to 2025, and no real tie
+        went past strength of victory. Today's seeds use the points steps too. Simulated games never end in a tie, and injuries beyond this week are mostly assumed average.
       </p>
+      <p>A swing compares the runs where a team won with the runs where it lost, so it includes what a win says about how good that team is in that run, not only the win itself.</p>
       <p>These are simulations, not a count of exact playoff scenarios, so no team is ever shown as certain or out.</p>
     </FinePrint>
   )
@@ -63,10 +64,12 @@ export function Odds({ file }: { file: LeagueFile }) {
   const rows = oddsRows(file, conf, view)
   const { box, at, bind, card } = useChartTip()
   const tipRow = rows.find((r) => r.team.team === at?.key)
+  if (Object.keys(file.odds.student.teams).length === 0) return <p className="text-ink-2">The regular season is over. The final records are on the Standings tab.</p>
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <p className="text-ink-2">Each team's chance of reaching the playoffs, the top seven in its conference.</p>
+      <p className="text-[13px] text-ink-3">Simulated {kickoffEt(file.as_of)}.</p>
       <div className="flex flex-wrap items-center gap-3">
         <Segmented<Conf> label="Conference" value={conf} onChange={(v) => set('conf', v, 'AFC')} options={[{ value: 'AFC', label: 'AFC' }, { value: 'NFC', label: 'NFC' }]} />
         <Segmented<View> label="Odds from" value={view} onChange={(v) => set('view', v, 'student')} options={[{ value: 'student', label: 'Student' }, { value: 'market', label: 'Market' }]} />
@@ -133,7 +136,7 @@ export function Odds({ file }: { file: LeagueFile }) {
           ),
         )}
       </div>
-      <p className="text-[13px] text-ink-3">The line between the 7th and 8th rows marks the last playoff spot. Hover or tap a team for its chance in each round.</p>
+      <p className="text-[13px] text-ink-3">The line sits below the seven highest chances, which isn't the same as the current seeds. Hover or tap a team for its chance in each round.</p>
 
       <DataTable>
         <table className="w-full border-collapse text-[13px]">

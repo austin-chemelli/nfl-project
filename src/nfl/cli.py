@@ -476,9 +476,7 @@ def league_cmd(
     """Standings, simulated playoff odds and leverage -> marts/site/league.json (ADR 0019)."""
     from nfl.league.build import build
 
-    out = build(get_paths(), season, snapshot=snapshot)
-    if out is None:
-        console.print("[bold]league:[/bold] no regular-season games left; the last file stays")
+    build(get_paths(), season, snapshot=snapshot)
 
 
 @app.command("publish")
