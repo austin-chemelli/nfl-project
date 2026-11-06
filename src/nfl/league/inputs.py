@@ -57,6 +57,7 @@ class VariantInputs:
     home_term: float
     fit_r2: float | None = None
     market_fit: Ratings | None = field(default=None, repr=False)  # fit behind market fallbacks
+    model_version: str = ""  # the Student's config hash; the snapshot rows carry it
 
 
 def _logit(p):
@@ -173,7 +174,7 @@ def student_inputs(
     for g in remaining["game_id"]:
         if g in lk:
             p.append(lk[g])
-            src.append("lock")
+            src.append("locked")
         elif g in sc:
             p.append(sc[g])
             src.append("scored")
@@ -201,7 +202,11 @@ def market_inputs(
     up_rows = up.select("game_id", "p_home").join(
         remaining.select("game_id", "home", "away"), on="game_id"
     )
-    age = (pl.lit(cut, dtype=pl.Datetime("us")) - pl.col("kickoff_utc")).dt.total_seconds() / 86400
+    # Age from the last game played, not the clock: a site build with no new data must price the
+    # same, or every rebuild would nudge these fits and reseed the simulation.
+    anchor = played["kickoff_utc"].max() if played.height else cut
+    age = (pl.lit(anchor, dtype=pl.Datetime("us")) - pl.col("kickoff_utc")).dt.total_seconds()
+    age = age / 86400
     cl_rows = cl.select("game_id", "p_home").join(
         played.select("game_id", "home", "away", "kickoff_utc"), on="game_id"
     )
@@ -288,4 +293,6 @@ def load_inputs(
         sc = lock.score_approaches(student, feats, slate, as_of)
         return sc[0].frame.select("game_id", "p_home")
 
-    return build_inputs(games, preds, feats, score, season, as_of)
+    out = build_inputs(games, preds, feats, score, season, as_of)
+    out["student"].model_version = str(model.meta.get("config_hash", ""))
+    return out

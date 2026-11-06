@@ -63,7 +63,7 @@ def refresh(paths: Paths, console: Console, odds: bool = True) -> None:
 
     from nfl.site import build as build_site
 
-    step("site", lambda: build_site(paths))
+    step("site", lambda: build_site(paths, league_snapshot="refresh"))
     console.print("weekly refresh: " + ", ".join(f"{n} {s:.0f}s" for n, s in steps))
 
 

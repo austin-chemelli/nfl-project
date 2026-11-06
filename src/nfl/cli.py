@@ -468,6 +468,19 @@ def site_cmd(season: int = typer.Option(None, help="Default: current season.")) 
     )
 
 
+@app.command("league")
+def league_cmd(
+    season: int = typer.Option(None, help="Default: current season."),
+    snapshot: str = typer.Option(None, help="Also append a snapshot: refresh or lock."),
+) -> None:
+    """Standings, simulated playoff odds and leverage -> marts/site/league.json (ADR 0019)."""
+    from nfl.league.build import build
+
+    out = build(get_paths(), season, snapshot=snapshot)
+    if out is None:
+        console.print("[bold]league:[/bold] no regular-season games left; the last file stays")
+
+
 @app.command("publish")
 def publish_cmd(
     bucket: str = typer.Option(None, help="Public site bucket. Default: $NFL_SITE_BUCKET."),

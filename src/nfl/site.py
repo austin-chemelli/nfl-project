@@ -420,7 +420,7 @@ def _market_by_game(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.Data
 # ------------------------------------------------------------------------------------------ build
 
 
-def build(paths: Paths, season: int | None = None) -> dict:
+def build(paths: Paths, season: int | None = None, league_snapshot: str | None = None) -> dict:
     t0 = time.perf_counter()
     season = season or current_season()
     now = now_utc().replace(tzinfo=None, microsecond=0)
@@ -505,6 +505,12 @@ def build(paths: Paths, season: int | None = None) -> dict:
         write_retro(paths, season)
     except Exception as e:  # noqa: BLE001  retros must never break the site build
         print(f"site: write_retro failed, continuing: {e!r}")
+    try:  # ADR 0019: last, so the slower simulation never holds up the files above
+        from nfl.league.build import build as build_league
+
+        build_league(paths, season, snapshot=league_snapshot)
+    except Exception as e:  # noqa: BLE001  the page shows its empty state or the last file
+        print(f"site: league.json failed, continuing: {e!r}")
     return {"weeks": n_weeks, "games": games.height, "seconds": round(time.perf_counter() - t0, 1)}
 
 

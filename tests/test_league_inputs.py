@@ -82,8 +82,8 @@ def test_locked_row_beats_scored_and_latest_lock_wins():
     )
     st = out["student"]
     assert st.p_home.tolist() == [0.70, 0.4, 0.4]
-    assert st.source == ["lock", "scored", "scored"]
-    assert st.source_counts == {"lock": 1, "scored": 2}
+    assert st.source == ["locked", "scored", "scored"]
+    assert st.source_counts == {"locked": 1, "scored": 2}
 
 
 def test_future_stamped_student_lock_is_ignored():
@@ -190,3 +190,15 @@ def test_price_neutral_drops_home_term():
     r = inputs.Ratings({"A": 0.5, "B": -0.5}, 0.3)
     assert inputs.price(r, "A", "B", neutral=True) == pytest.approx(1 / (1 + np.exp(-1.0)))
     assert inputs.price(r, "A", "B") > inputs.price(r, "A", "B", neutral=True)
+
+
+def test_a_later_build_with_no_new_data_prices_the_same():
+    """Closing lines age from the last game, not the clock: a rebuild can't nudge the fallbacks."""
+    feats = _mkt([("P1", 0.6, K0 - timedelta(days=1)), ("P2", 0.55, K0 - timedelta(days=1))])
+    remaining = inputs.remaining_games(GAMES, 2026)
+    played = GAMES.filter(pl.col("result").is_not_null()).rename(
+        {"home_team": "home", "away_team": "away"}
+    )
+    a = inputs.market_inputs(remaining, played, feats, AS_OF)
+    b = inputs.market_inputs(remaining, played, feats, AS_OF + timedelta(days=2))
+    assert np.array_equal(a.p_home, b.p_home)
