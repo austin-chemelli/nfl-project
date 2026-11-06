@@ -14,7 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "5"  # v5 2026-11-05: preview Elo on full history, new swing sentence; v4: the recap's bold calls
+SCHEMA_VERSION = "6"  # v6 2026-11-05: wp_series and drives (ADR 0020)
+# v5 2026-11-05: preview Elo on full history, new swing sentence; v4: the recap's bold calls
 # v3 2026-11-04: played-like inputs, the phase scorecard; game-only headlines
 
 Side = Literal["home", "away"]
@@ -177,6 +178,53 @@ class Attribution(_Model):
     most_valuable: str | None  # group id; None when no group helped
 
 
+class WpPlay(_Model):
+    """A turning point: one of the game's biggest real plays by win-probability swing. Probabilities
+    are the home team's; `factor` names the luck factor the play is counted in, if any."""
+
+    play_id: int
+    t: int  # elapsed game seconds at the snap; overtime continues past 3600
+    qtr: int  # 5 and up = overtime
+    clock: str  # time left in the quarter, "0:10"
+    team: str | None  # the offense, games-table code
+    p_before: float
+    p_after: float
+    wpa: float  # p_after - p_before
+    factor: LuckKind | None
+    text: str  # nflverse's play description, trimmed to 160 characters at a word boundary
+
+
+class WpSeries(_Model):
+    """How the game unfolded (ADR 0020): home win probability after each play that changed it.
+
+    `points` are [t, p] pairs in play order. The first is the kickoff's opening value at t = 0, each
+    later one is the value AFTER the play snapped at t (so a turning point's (t, p_after) lies on
+    the curve), and the last is the result at `end_t`: 1, 0, or 0.5 for a tie."""
+
+    model: Literal["nflfastr_vegas", "nflfastr"]  # which nflfastR win probability fed `points`
+    points: list[tuple[int, float]]
+    end_t: int  # 3600, or 3600 plus the overtime played
+    ot: bool
+    plays: list[WpPlay]  # at most 5 real plays with |wpa| >= 0.05, largest first
+    winner_low: (
+        tuple[int, float] | None
+    )  # (t, the winner's lowest win prob, its own view); None for a tie
+
+
+class Drive(_Model):
+    """One possession. Yard lines are yards from the offense's own goal line."""
+
+    n: int  # 1-based, in time order
+    team: str  # the offense, games-table code
+    qtr: int
+    t0: int  # elapsed game seconds, as in WpSeries
+    t1: int
+    start_yl: int | None
+    end_yl: int | None
+    plays: int | None
+    result: str | None  # nflverse's fixed_drive_result: Punt, Touchdown, Field goal, Turnover, ...
+
+
 class RetroGame(_Model):
     schema_version: str = SCHEMA_VERSION
     game_id: str
@@ -197,6 +245,9 @@ class RetroGame(_Model):
     predictions: list[GradedPick]
     best_model: str | None
     attribution: list[Attribution]  # approaches and the ensemble
+    # None on records from before v6, and when the plays lack the columns
+    wp_series: WpSeries | None = None
+    drives: list[Drive] | None = None
 
 
 # ------------------------------------------------------------------------------------ week recap

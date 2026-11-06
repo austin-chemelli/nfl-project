@@ -312,6 +312,42 @@ export const Phase = z.looseObject({
   home_text: z.string(), away_text: z.string(), leader: z.enum(['home', 'away']).nullable(),
 })
 
+export const WpPlay = z.looseObject({
+  play_id: num,
+  t: num,
+  qtr: num,
+  clock: z.string(),
+  team: nstr,
+  p_before: num,
+  p_after: num,
+  wpa: num,
+  factor: nstr,
+  text: z.string(),
+})
+
+const WpPoint = z.tuple([num, num])
+
+export const WpSeries = z.looseObject({
+  model: z.string(),
+  points: z.array(WpPoint),
+  end_t: num,
+  ot: z.boolean(),
+  plays: z.array(WpPlay),
+  winner_low: WpPoint.nullable(),
+})
+
+export const Drive = z.looseObject({
+  n: num,
+  team: z.string(),
+  qtr: num,
+  t0: num,
+  t1: num,
+  start_yl: nnum,
+  end_yl: nnum,
+  plays: nnum,
+  result: nstr,
+})
+
 export const RetroGame = z.looseObject({
   schema_version: z.string(),
   game_id: z.string(),
@@ -335,6 +371,8 @@ export const RetroGame = z.looseObject({
   predictions: z.array(GradedPick),
   best_model: nstr,
   attribution: z.array(Attribution),
+  wp_series: WpSeries.nullish(), // retros from before schema 6 lack both
+  drives: z.array(Drive).nullish(),
 })
 
 export const RecapModel = z.looseObject({
@@ -565,6 +603,9 @@ export type DiyMatrix = z.infer<typeof DiyMatrix>
 export type SeasonFile = z.infer<typeof SeasonFile>
 export type Audit = z.infer<typeof Audit>
 export type RetroGame = z.infer<typeof RetroGame>
+export type WpSeries = z.infer<typeof WpSeries>
+export type WpPlay = z.infer<typeof WpPlay>
+export type Drive = z.infer<typeof Drive>
 export type TeamRetro = z.infer<typeof TeamRetro>
 export type Efficiency = z.infer<typeof Efficiency>
 export type LuckFactor = z.infer<typeof LuckFactor>
