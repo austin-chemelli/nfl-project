@@ -111,7 +111,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M13 site walk fixes (review §10) | done 2026-11-05 (PR #18), live; retros on schema 5 |
 | M14 league page (ADR 0019) | done 2026-11-06 (#20, #23, #24), live; odds history starts with Tuesday's refresh |
 | M15 retro win probability, motion, drives, story (ADR 0020) | done 2026-11-05 (#19, #21, #22), live; retros on schema 6; M15.10 route crossfades optional, not built |
-| M16 Coaches and Build back on the site | parked 2026-11-06 until Austin picks it up; both hidden from the live site meanwhile. Coaches: accuracy and visuals. Build: with the custom-approach work (review §4.3) |
+| M16 Coaches and Build back on the site | Coaches picked up 2026-11-06: plan on Fable as M17 (ADR 0021 proposed, `.notes/plans/coaches-refinement.md`), waiting on D15 and D16; both pages still hidden. Build: with the custom-approach work (review §4.3) |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -127,6 +127,8 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D12 | Learned Student (§3.1): a fifth line in shadow (recommended) or a replacement for the Student? | shadow / replace | Austin | 2026-11-05 |
 | D13 | Player-level data (§2.2): injury weighting plus four position groups, or wider? | narrow / wide | Austin | 2026-11-05 |
 | D14 | A backup lock run 30 minutes after each lock that acts only if the first didn't, so a badly timed merge fixes itself? | (a) build it, about an hour, plus an "already locked?" check; (b) leave reruns manual | Austin, after the first public lock | 2026-11-04 |
+| D15 | Coaches refinement (ADR 0021): a team page `/team/:code` for state, staff and tendencies (recommended), or the League panel / Coaches page as is? | team page / panel / coaches page | Austin | 2026-11-06 |
+| D16 | Staff verification depth: 2016–2026 with a full bar for 2022+ and a light bar before (recommended), or 2022–2026 only? Launch the 2025–2026 agents now? | full / recent only; launch now / wait | Austin | 2026-11-06 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
