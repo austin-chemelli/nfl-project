@@ -7,6 +7,7 @@ import type { LeagueFile } from '../data/contract'
 import { fmtProb } from './league/playoffs'
 import { Games } from './league/Games'
 import { Odds } from './league/Odds'
+import { Similar } from './league/Similar'
 import { Standings } from './league/Standings'
 import { closestRace, gameOfWeek, topSeed } from './league/summary'
 import { Teams } from './league/Teams'
@@ -32,7 +33,7 @@ export default function LeaguePage() {
 
   const playoffTab = (what: string, render: (f: LeagueFile) => ReactNode) =>
     league.isError && isNotFound(league.error) ? (
-      <Card className="text-ink-2">{what === 'standings' ? 'Standings appear' : what === 'games' ? 'Games that matter appear' : 'Playoff odds appear'} after the next data update.</Card>
+      <Card className="text-ink-2">{what === 'standings' ? 'Standings appear' : what === 'games' ? 'Games that matter appear' : what === 'similar' ? 'Similar seasons appear' : 'Playoff odds appear'} after the next data update.</Card>
     ) : (
       <Loaded q={league} what={what}>
         {render}
@@ -59,6 +60,7 @@ export default function LeaguePage() {
           { id: 'teams', label: 'Teams', content: teamsTab },
           { id: 'standings', label: 'Standings', content: playoffTab('standings', (f) => <Standings file={f} />) },
           { id: 'games', label: 'Games that matter', content: playoffTab('games', (f) => <Games file={f} />) },
+          { id: 'similar', label: 'Similar seasons', content: playoffTab('similar', (f) => <Similar file={f} />) },
         ]}
       />
     </Page>

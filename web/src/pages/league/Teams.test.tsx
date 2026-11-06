@@ -91,7 +91,7 @@ describe('Teams tab', () => {
 
   it('shows the numbers: 32 rows', async () => {
     await open('/league')
-    const table = screen.getByRole('table', { hidden: true })
+    const table = screen.getAllByRole('table', { hidden: true })[0] // the ranks table follows
     expect(within(table).getAllByRole('row', { hidden: true })).toHaveLength(33)
   })
 

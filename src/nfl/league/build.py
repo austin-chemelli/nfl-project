@@ -4,7 +4,8 @@ Called at the end of `site.build`, so every refresh, lock, odds run and `nfl-sit
 Two variants run on the same engine: the Student's probabilities and the market's. A build is a
 snapshot of its inputs and the seed derives from them, so a rebuild with no new data is identical.
 Snapshots append to `marts/league/season=YYYY/snapshots.parquet` only when a caller asks (the Tuesday
-refresh and real locks), and existing rows are never rewritten.
+refresh and real locks), and existing rows are never rewritten. Similar seasons are their own file,
+site/similar.json, written last; if it fails the old file stays and league.json is unaffected.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import polars as pl
@@ -23,6 +25,7 @@ from pydantic import BaseModel, ConfigDict
 
 from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
+from nfl.league import similar
 from nfl.league.divisions import DIVISION_TEAMS, DIVISIONS, conference_of, division_of
 from nfl.league.inputs import VariantInputs, load_inputs
 from nfl.league.simulate import DEFAULT_RUNS, SHOCK_SIGMA, SimResult, simulate_season
@@ -33,6 +36,7 @@ SCHEMA_VERSION = "1"
 TIEBREAK = "steps 1–6, then a coin flip"
 VARIANTS = ("student", "market")
 SNAPSHOT_KINDS = ("refresh", "lock")
+SIMILAR_FILE = "similar.json"
 HISTORY_KIND = "refresh"  # the page shows the Tuesday series
 
 
@@ -101,6 +105,83 @@ class HistoryPoint(BaseModel):
     market: float | None
 
 
+class Rounds(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    div: int
+    conf: int
+    sb: int
+    champ: int
+
+
+class Measure(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    label: str
+
+
+class Nearest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    season: int
+    team: str
+    dist: float
+    rec_then: str
+    final: str
+    playoffs: bool
+    round: Literal["wc", "div", "conf", "sb", "champ"] | None
+    profile: list[int]
+    closest: list[str]
+    furthest: list[str]
+
+
+class Peers(BaseModel):
+    made: int
+    n: int
+
+
+class Flag(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["red", "fine", "strength"]
+    measure: str
+    label: str
+    rank: int
+    quarter: Literal["bottom", "top"]
+    outcome: Literal["made", "conf"]
+    peers: str
+    flagged: tuple[int, int]
+    others: tuple[int, int]
+
+
+class Pool(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    seasons: tuple[int, int]
+    n: int
+
+
+class SimilarTeam(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    games_played: int
+    record: str
+    k_summary: int
+    made_playoffs: int
+    rounds: Rounds
+    pool: Pool
+    peers: Peers
+    profile: list[int]
+    nearest: list[Nearest]
+    flags: list[Flag]
+
+
+class SimilarFile(BaseModel):
+    """site/similar.json: its own file so the slate doesn't load it."""
+
+    model_config = ConfigDict(extra="forbid")
+    schema_version: str
+    season: int
+    as_of: str
+    measures: list[Measure]
+    teams: dict[str, SimilarTeam]
+
+
 class LeagueFile(BaseModel):
     model_config = ConfigDict(extra="forbid")
     schema_version: str
@@ -116,7 +197,6 @@ class LeagueFile(BaseModel):
     odds: dict[str, Variant]
     games: list[GameRow]
     history: dict[str, list[HistoryPoint]]
-    similar: dict[str, dict]
 
 
 def _stamp(t: datetime) -> str:
@@ -267,7 +347,6 @@ def league_file(
         },
         "games": _games(sims["student"], inputs["market"], remaining) if sims else [],
         "history": {},
-        "similar": {},
     }
     return obj, sims
 
@@ -334,6 +413,28 @@ def history(path: Path, new: pl.DataFrame | None = None) -> dict[str, list[dict]
     return out
 
 
+def write_similar(paths: Paths, every: pl.DataFrame, season: int, as_of: datetime) -> int | None:
+    """Write site/similar.json (bytes written, or None on failure). Context, not the forecast: on
+    any failure the previous file stays, league.json is already written, and the message says so."""
+    try:
+        feats = similar.load_features(paths, season)
+        obj = similar.similar_file(every, feats, season, as_of)
+        played = regular_season(every.filter(pl.col("season") == season))[0].height
+        if not obj["teams"] and played >= 16 * similar.MIN_GAMES:
+            raise RuntimeError(f"no team has an entry after {played} games: not overwriting")
+        SimilarFile.model_validate(obj)
+        text = json.dumps(obj, allow_nan=False, separators=(",", ":"))
+        out = paths.site / SIMILAR_FILE
+        out.parent.mkdir(parents=True, exist_ok=True)
+        tmp = out.with_suffix(f".{os.getpid()}.tmp")
+        tmp.write_text(text)
+        os.replace(tmp, out)
+        return len(text)
+    except (Exception, PanicException) as e:  # noqa: BLE001
+        print(f"league: SIMILAR NOT UPDATED: {e!r}")
+        return None
+
+
 def build(
     paths: Paths,
     season: int | None = None,
@@ -341,13 +442,14 @@ def build(
     now: datetime | None = None,
     n_runs: int = DEFAULT_RUNS,
 ) -> dict:
-    """Write site/league.json; with `snapshot` ('refresh' or 'lock') append the snapshot rows too."""
+    """Write site/league.json, then site/similar.json; with `snapshot` ('refresh' or 'lock') append the snapshot rows too."""
     if snapshot is not None and snapshot not in SNAPSHOT_KINDS:
         raise ValueError(f"snapshot must be one of {SNAPSHOT_KINDS}, got {snapshot!r}")
     t0 = time.perf_counter()
     season = season or current_season()
     as_of = (now or now_utc()).replace(tzinfo=None, microsecond=0)
-    games = store.games_frame(paths).filter(pl.col("season") == season)
+    every = store.games_frame(paths)
+    games = every.filter(pl.col("season") == season)
     inputs = load_inputs(paths, season, as_of) if regular_season(games)[1].height else None
     obj, sims = league_file(games, inputs, season, as_of, n_runs=n_runs)
     path = snapshot_path(paths, season)
@@ -363,6 +465,13 @@ def build(
             append_snapshot(path, rows)
         except (Exception, PanicException) as e:  # noqa: BLE001  can't be backfilled, so say so
             print(f"league: SNAPSHOT NOT SAVED ({snapshot}, {_stamp(as_of)}): {e!r}")
+    similar_bytes = write_similar(paths, every, season, as_of)
     seconds = round(time.perf_counter() - t0, 1)
     print(f"league: {len(text) / 1024:.0f} KB, {obj['n_sims']} runs per variant, {seconds}s")
-    return {"bytes": len(text), "seconds": seconds, "games": len(obj["games"]), "seed": obj["seed"]}
+    return {
+        "bytes": len(text),
+        "similar_bytes": similar_bytes,
+        "seconds": seconds,
+        "games": len(obj["games"]),
+        "seed": obj["seed"],
+    }

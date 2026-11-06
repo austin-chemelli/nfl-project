@@ -729,6 +729,56 @@ export const LeagueGame = z.looseObject({
 
 export const LeagueHistoryPoint = z.looseObject({ week: num, student: nnum.default(null), market: nnum.default(null) })
 
+/** The furthest round a past team reached: wc, div, conf, sb, champ, or null. */
+export const SimilarNeighbour = z.looseObject({
+  season: num,
+  team: z.string(), // as printed then (SD, OAK, STL)
+  dist: num,
+  rec_then: z.string(), // "6-2"
+  final: z.string(), // "7-9-0"
+  playoffs: z.boolean(),
+  round: nstr.default(null),
+  profile: z.array(num).default([]), // percentile by `measures` order
+  closest: z.array(z.string()).default([]), // measure ids
+  furthest: z.array(z.string()).default([]),
+})
+
+/** One flag from the fixed list of measures (docs: .notes/plans/similar-insights.md). `flagged` and `others` are [hits, n]. */
+export const SimilarFlag = z.looseObject({
+  kind: z.enum(['red', 'strength', 'fine']),
+  measure: z.string(),
+  label: z.string(),
+  rank: num,
+  quarter: z.enum(['bottom', 'top']),
+  outcome: z.enum(['made', 'conf']),
+  peers: z.string(), // "5-2"
+  flagged: z.tuple([num, num]),
+  others: z.tuple([num, num]),
+})
+
+/** What the nearest team-seasons did (descriptive, ADR 0019). `rounds` count reaching that round or beyond, of the `k_summary` nearest. */
+export const SimilarTeam = z.looseObject({
+  games_played: num,
+  record: z.string().default(''),
+  k_summary: num,
+  made_playoffs: num,
+  rounds: z.looseObject({ div: num, conf: num, sb: num, champ: num }),
+  profile: z.array(num).default([]),
+  pool: z.looseObject({ seasons: z.tuple([num, num]), n: num }).optional(),
+  peers: z.looseObject({ made: num, n: num }).nullable().default(null), // everyone on exactly this record
+  nearest: z.array(SimilarNeighbour).default([]),
+  flags: z.array(SimilarFlag).default([]),
+})
+
+/** site/similar.json: its own file, read only by the Similar seasons tab. */
+export const SimilarFile = z.looseObject({
+  schema_version: z.string(),
+  season: num,
+  as_of: z.string(),
+  measures: z.array(z.looseObject({ id: z.string(), label: z.string() })),
+  teams: z.record(z.string(), SimilarTeam).default({}), // a team under four games has no entry
+})
+
 export const LeagueFile = z.looseObject({
   schema_version: z.string(),
   season: num,
@@ -743,7 +793,6 @@ export const LeagueFile = z.looseObject({
   odds: z.looseObject({ student: LeagueVariant, market: LeagueVariant }),
   games: z.array(LeagueGame).default([]),
   history: z.record(z.string(), z.array(LeagueHistoryPoint)).default({}),
-  similar: z.record(z.string(), z.unknown()).default({}), // empty until phase 3
 })
 
 export type LeagueTeam = z.infer<typeof LeagueTeam>
@@ -751,4 +800,9 @@ export type LeagueOddsTeam = z.infer<typeof LeagueOddsTeam>
 export type LeagueVariant = z.infer<typeof LeagueVariant>
 export type LeagueSwing = z.infer<typeof LeagueSwing>
 export type LeagueGame = z.infer<typeof LeagueGame>
+export type SimilarNeighbour = z.infer<typeof SimilarNeighbour>
+export type SimilarTeam = z.infer<typeof SimilarTeam>
+export type SimilarFlag = z.infer<typeof SimilarFlag>
+export type SimilarFile = z.infer<typeof SimilarFile>
+export type LeagueHistoryPoint = z.infer<typeof LeagueHistoryPoint>
 export type LeagueFile = z.infer<typeof LeagueFile>
