@@ -319,7 +319,9 @@ def _caller(spell: dict | None, coordinator: str | None, head_coach: str | None,
 
 def _metric_rows(kind, side, sit, prior, rates, season, blend, label) -> list[dict]:
     """One entry per metric: expected, and the observed value where this season has one."""
-    metrics = LIVE[side] if kind == "live" else [m for m in SCHEME_METRICS[side] if m not in ALSO_LIVE]
+    metrics = (
+        LIVE[side] if kind == "live" else [m for m in SCHEME_METRICS[side] if m not in ALSO_LIVE]
+    )
     out = []
     for m in metrics:
         p = prior.get(m) or {}
