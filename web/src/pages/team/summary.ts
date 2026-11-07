@@ -22,11 +22,11 @@ const SHORT: Record<string, string> = {
   outside_first_time: 'First year calling NFL plays',
 }
 
-export function callerTile(caller: UnitCaller | null | undefined, side: 'off' | 'def'): TileText | null {
+export function callerTile(caller: UnitCaller | null | undefined, side: 'off' | 'def', since?: number): TileText | null {
   if (!caller) return null
   const unit = side === 'off' ? 'offense' : 'defense'
   if (!caller.confirmed) return { label: `Runs the ${unit}`, value: caller.name, sub: 'Play-caller not confirmed', tab: 'staff' }
-  const sub = caller.situation ? SHORT[caller.situation] : caller.is_head_coach ? 'The head coach' : ''
+  const sub = since ? `Took over in Week ${since}` : caller.situation ? SHORT[caller.situation] : caller.is_head_coach ? 'The head coach' : ''
   return { label: `Calls the ${unit}`, value: caller.name, sub: sub ?? '', tab: 'staff' }
 }
 

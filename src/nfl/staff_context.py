@@ -408,6 +408,8 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
             who = spell["person"] if spell and spell["evidence"] in CONFIRMED else None
             sit = situations.label(season, team, side, who) if who else None
             shown = situations.public(season, team, side, who, sit) if who else None
+            if shown in ("same_caller", "same_caller_new_qb") and spell["start_week"] > 1:
+                shown = None  # he took the calls back in season: "same" hides the change
             caller = _caller(spell, titled.get(title), titled.get("HC"), shown)
             if caller:
                 caller["career"] = career(spells, who, side) if who else []
