@@ -35,7 +35,7 @@ export const VERDICT_TEXT: Record<Verdict, string> = {
   more: 'More than expected',
   less: 'Less than expected',
   rough: 'Rough guess',
-  no_range: 'Too few past cases',
+  no_range: 'Too few cases',
   waiting: 'Expected',
 }
 
@@ -78,3 +78,34 @@ export function fmtRate(v: number, unit: string): string {
   if (unit === 'epa') return `${v >= 0 ? '+' : ''}${v.toFixed(2)}`
   return `${(100 * v).toFixed(1)}%`
 }
+
+/** A prediction in words: with misses this size, a percentage would claim too much. */
+export function expectWords(row: TeamMetric): [string, string] {
+  const p = row.expected?.pct
+  if (p == null) return ['–', '']
+  if (p >= 2 / 3) return [cap(row.hi), 'than most']
+  if (p <= 1 / 3) return [cap(row.lo), 'than most']
+  return ['About', 'average']
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+/** "Weeks 2–6" from a sorted list of weeks, runs joined. */
+export function weekList(weeks: number[]): string {
+  const runs: [number, number][] = []
+  for (const w of [...weeks].sort((a, b) => a - b)) {
+    const last = runs.at(-1)
+    if (last && w === last[1] + 1) last[1] = w
+    else runs.push([w, w])
+  }
+  const text = runs.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join(', ')
+  return `Week${weeks.length > 1 ? 's' : ''} ${text}`
+}
+
+/** Who started when the Week 1 starter didn't: one line per quarterback. */
+export function starterLines(file: TeamFile): string[] {
+  const by = new Map<string, number[]>()
+  for (const s of file.other_starter_weeks) by.set(s.qb, [...(by.get(s.qb) ?? []), s.week])
+  return [...by].map(([qb, weeks]) => `${qb} started ${weekList(weeks)}.`)
+}
+

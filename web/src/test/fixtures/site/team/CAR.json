@@ -4,7 +4,7 @@
  "season": 2026,
  "week": 9,
  "through_week": 8,
- "generated_at": "2026-11-07T00:36:55.071738+00:00",
+ "generated_at": "2026-11-07T00:42:39.254576+00:00",
  "staff": {
   "current": [
    {
@@ -411,30 +411,6 @@
      "observed": null
     },
     {
-     "metric": "shotgun_share",
-     "label": "Shotgun",
-     "help": "Share of offensive snaps taken from shotgun or pistol.",
-     "unit": "pct",
-     "lo": "less",
-     "hi": "more",
-     "expected": {
-      "pct": 0.5156,
-      "miss": null,
-      "weight_on_caller": 0.0,
-      "strength": "weak"
-     },
-     "caller_seasons": 0,
-     "caller_teams": [],
-     "team_last": {
-      "season": 2025,
-      "pct": 0.5156,
-      "rate": 0.6686,
-      "rank": 16,
-      "of": 32
-     },
-     "observed": null
-    },
-    {
      "metric": "time_to_throw",
      "label": "Time to throw",
      "help": "Average seconds from snap to throw on charted dropbacks. Mixes the QB, the protection and the play design.",
@@ -642,32 +618,6 @@
       "pct": 0.6094,
       "rate": 0.4614,
       "rank": 13,
-      "of": 32
-     },
-     "observed": null
-    },
-    {
-     "metric": "blitz_rate",
-     "label": "Five-plus rushers",
-     "help": "Share of dropbacks with five or more pass rushers.",
-     "unit": "pct",
-     "lo": "less",
-     "hi": "more",
-     "expected": {
-      "pct": 0.4516,
-      "miss": 0.265,
-      "weight_on_caller": 0.6,
-      "strength": "weak"
-     },
-     "caller_seasons": 5,
-     "caller_teams": [
-      "JAX"
-     ],
-     "team_last": {
-      "season": 2025,
-      "pct": 0.4531,
-      "rate": 0.2624,
-      "rank": 18,
       "of": 32
      },
      "observed": null

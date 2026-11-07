@@ -34,6 +34,8 @@ LIVE: dict[str, list[str]] = {
     # five-plus rushers, against a 2 to 4 point gap every year before).
     "def": ["pass_rushers_5plus_rate", "box_8plus_vs_run_rate", "box_6minus_vs_run_rate"],
 }  # fmt: skip
+# Charted measures that the live set already shows week by week: no need to predict them.
+ALSO_LIVE = {"shotgun_share", "blitz_rate"}
 SITUATION_TEXT = {
     "same_caller": "Same play-caller as last season",
     "same_caller_new_qb": "Same play-caller, new starting quarterback",
@@ -317,7 +319,7 @@ def _caller(spell: dict | None, coordinator: str | None, head_coach: str | None,
 
 def _metric_rows(kind, side, sit, prior, rates, season, blend, label) -> list[dict]:
     """One entry per metric: expected, and the observed value where this season has one."""
-    metrics = LIVE[side] if kind == "live" else SCHEME_METRICS[side]
+    metrics = LIVE[side] if kind == "live" else [m for m in SCHEME_METRICS[side] if m not in ALSO_LIVE]
     out = []
     for m in metrics:
         p = prior.get(m) or {}
