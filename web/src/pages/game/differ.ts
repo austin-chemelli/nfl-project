@@ -1,4 +1,4 @@
-/** Words for where an approach differs from the market, and for the quarterback what-if (ADR 0023). */
+/** Words for where an approach differs from the market, and for the quarterback what-if (ADR 0024). */
 import type { Game, StrongCall, Swing } from '../../data/contract'
 import { pct } from '../../lib/format'
 import { HEADLINE, SHORT } from '../../lib/models'

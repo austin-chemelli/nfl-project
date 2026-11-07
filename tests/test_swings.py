@@ -62,3 +62,13 @@ def test_a_worse_quarterback_lowers_his_sides_chance_and_leaves_the_rows_alone()
 def test_apply_ignores_a_feature_the_rows_dont_have():
     rows = _rows(0.1, 0.0)
     assert swings.apply(rows, "home", {"availability.qb1_out": 1.0}).equals(rows)
+
+
+def test_weather_is_a_factor_only_past_the_thresholds():
+    assert swings.weather_text(55.0, 8.0, 10.0) is None
+    assert swings.weather_text(None, None, None) is None
+    assert (
+        swings.weather_text(28.4, 17.2, 60.0)
+        == "Kickoff forecast: wind 17 mph, 60% chance of rain or snow, 28°F"
+    )
+    assert swings.weather_text(40.0, 15.0, None) == "Kickoff forecast: wind 15 mph"

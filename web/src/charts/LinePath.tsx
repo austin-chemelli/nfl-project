@@ -1,5 +1,5 @@
 /**
- * One market measure over the week before kickoff (ADR 0023): a step line through each pre-kickoff
+ * One market measure over the week before kickoff (ADR 0024): a step line through each pre-kickoff
  * snapshot (a line holds until the next one), dashed verticals at the locks, and numbered event marks
  * on the time axis that match the list printed under the chart. The first and latest values print at
  * the ends, so nothing needs hover; hovering a point shows its time and books.

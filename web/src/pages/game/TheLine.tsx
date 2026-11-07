@@ -7,7 +7,7 @@ import { etStamp, fmtPts, pathSentence, windowWords } from './line'
 
 const ms = (iso: string) => new Date(iso).getTime()
 
-/** How the market line moved before kickoff, and what changed in the same windows (ADR 0023). */
+/** How the market line moved before kickoff, and what changed in the same windows (ADR 0024). */
 export function TheLine({ g }: { g: Game }) {
   const pts = g.market_history
   const m = g.line_move

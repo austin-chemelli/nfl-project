@@ -1,4 +1,4 @@
-"""Preview scores between locks (ADR 0023, M20.5): what each approach says today, never graded.
+"""Preview scores between locks (ADR 0024, M20.5): what each approach says today, never graded.
 
 Every daily pass scores the upcoming games with the same locked artifacts the next lock will use,
 on features as of now, and appends to `marts/previews.parquet` (game_id, model_id, scored_at,

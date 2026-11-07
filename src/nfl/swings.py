@@ -1,4 +1,4 @@
-"""What could swing a game, and what the model says if it does (ADR 0023, M20.6).
+"""What could swing a game, and what the model says if it does (ADR 0024, M20.6).
 
 **The quarterback what-if.** The quarterback features follow the projected starter (`nfl.features.qb`):
 for an upcoming game that's the depth chart's QB1. When the starter is in doubt (on the injury report
@@ -24,6 +24,21 @@ from nfl.models.elo import TEAM_ALIASES
 
 DOUBT = ("Questionable", "Doubtful", "Out")
 SHORT_REST = 6  # days
+WINDY_MPH, WET_PCT, COLD_F = 15.0, 50.0, 32.0  # where weather starts to show in scoring (ADR 0024)
+
+
+def weather_text(
+    temp_f: float | None, wind_mph: float | None, precip_pct: float | None
+) -> str | None:
+    """The kickoff forecast as a swing factor, or None when it's ordinary football weather."""
+    parts = []
+    if wind_mph is not None and wind_mph >= WINDY_MPH:
+        parts.append(f"wind {wind_mph:.0f} mph")
+    if precip_pct is not None and precip_pct >= WET_PCT:
+        parts.append(f"{precip_pct:.0f}% chance of rain or snow")
+    if temp_f is not None and temp_f <= COLD_F:
+        parts.append(f"{temp_f:.0f}°F")
+    return f"Kickoff forecast: {', '.join(parts)}" if parts else None
 
 
 def _canon(team: str) -> str:

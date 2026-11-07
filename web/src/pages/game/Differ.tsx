@@ -3,7 +3,7 @@ import type { Game } from '../../data/contract'
 import { WHY, factorLines, outcome, whatIfLine, whoText } from './differ'
 
 /**
- * Where the approaches differ from the market, and what could swing the game (ADR 0023). The strong calls
+ * Where the approaches differ from the market, and what could swing the game (ADR 0024). The strong calls
  * were recorded at the lock with their reasons; the what-if is our model's own sensitivity to the
  * quarterback, rescored with the locked models. Nothing here is the market's view.
  */

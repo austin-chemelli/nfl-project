@@ -105,6 +105,7 @@ class LockResult:
     artifact: dict | None = None
     artifact_path: Path | None = None
     bets_opened: int = 0
+    totals: pl.DataFrame | None = None  # student_total (ADR 0024): context, never a scored line
 
 
 def load_models(paths: Paths, trained_through: int) -> tuple[list[tuple[str, Model]], list[str]]:
@@ -292,6 +293,13 @@ def build_artifact(
                     "as_of": m["as_of"].strftime("%Y-%m-%dT%H:%M:%SZ") if m["as_of"] else None,
                     "source": m["source"],
                 }
+    if res.totals is not None:  # additive (ADR 0024): the total, context beside the lines
+        for r in res.totals.iter_rows(named=True):
+            if r["game_id"] in by_game:
+                by_game[r["game_id"]]["student_total"] = {
+                    "total": _r(r["total"]),
+                    "sd": _r(r["sd_total"]),
+                }
     for s in res.scored:
         for r in s.frame.iter_rows(named=True):
             if r["game_id"] in by_game:
@@ -399,6 +407,12 @@ def refresh(paths: Paths, season: int, odds: bool = True) -> str | None:
 
         snap = odds_mod.snapshot(paths).snapshot_ts
     curate(paths)
+    try:  # a forecast is context (ADR 0024): its failure never blocks a lock
+        from nfl import weather
+
+        weather.snapshot(paths, store.games_frame(paths).filter(pl.col("season") == season))
+    except Exception as e:  # noqa: BLE001
+        warnings.warn(f"weather forecast skipped: {e!r}", stacklevel=2)
     build_all(paths)
     return snap
 
@@ -452,6 +466,8 @@ def run(
         games, slate, res.market
     )
 
+    res.totals = _totals(paths, feats, slate, res.market, lock_ts, season, slot)
+
     sha = git_sha()
     data_snap = _latest_raw_snapshot(paths)
     res.artifact = build_artifact(res, sha, data_snap, odds_snap)
@@ -473,6 +489,13 @@ def run(
         _strong_calls(paths, res, feats, games, season)
     except Exception as e:  # noqa: BLE001
         warnings.warn(f"strong calls not recorded: {e!r}", stacklevel=2)
+    if res.totals is not None:
+        from nfl.approaches import totals
+
+        try:
+            totals.append(paths, res.totals)
+        except Exception as e:  # noqa: BLE001
+            warnings.warn(f"totals not recorded: {e!r}", stacklevel=2)
     try:
         from nfl.site import build as build_site
 
@@ -486,7 +509,7 @@ def run(
 def _strong_calls(
     paths: Paths, res: LockResult, feats: pl.DataFrame, games: pl.DataFrame, season: int
 ) -> int:
-    """Record this lock's strong calls (ADR 0023): approach-games 10+ points from the market, with the
+    """Record this lock's strong calls (ADR 0024): approach-games 10+ points from the market, with the
     quarterback each line assumed and the what-if, as of the lock."""
     from nfl import site, strong_calls
 
@@ -496,6 +519,28 @@ def _strong_calls(
                       site._injuries(paths, season))  # fmt: skip
     rows = strong_calls.calls(res.scored, res.market, res.games, res.lock_ts, labels, sw)
     return strong_calls.append(paths, rows)
+
+
+def _totals(
+    paths: Paths,
+    feats: pl.DataFrame,
+    slate: pl.DataFrame,
+    market: pl.DataFrame | None,
+    lock_ts: datetime,
+    season: int,
+    slot: str,
+) -> pl.DataFrame | None:
+    """This lock's totals, or None: the total is context (ADR 0024), so a failure here costs the
+    total and never the lock."""
+    from nfl.approaches import totals
+
+    try:
+        m = totals.load_or_fit(paths, season - 1)
+        scored = totals.score(m, feats, slate, lock_ts)
+        return totals.lock_rows(m, scored, slate, market, lock_ts, slot)
+    except Exception as e:  # noqa: BLE001
+        warnings.warn(f"total skipped: {e!r}", stacklevel=2)
+        return None
 
 
 def _latest_raw_snapshot(paths: Paths) -> str:

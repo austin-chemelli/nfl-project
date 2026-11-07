@@ -9,7 +9,7 @@ import { label } from './names'
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' }) : null)
 const gameLabel = (id: string) => id.split('_').slice(2).join(' @ ')
 
-/** Every approach-game 10+ points from the market at a lock, with its reasons and how it went (ADR 0023). */
+/** Every approach-game 10+ points from the market at a lock, with its reasons and how it went (ADR 0024). */
 export function StrongCalls({ t }: { t: Tracker }) {
   const sc = t.strong_calls
   const since = day(sc?.first_lock ?? null)

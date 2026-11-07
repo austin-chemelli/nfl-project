@@ -462,7 +462,7 @@ def daily_cmd(
     odds: bool = typer.Option(True, help="Take an Odds API snapshot (3 credits)."),
     dry_run: bool = typer.Option(False, "--dry-run", help="List the steps and exit."),
 ) -> None:
-    """The Wed/Fri/Sat evening pass (ADR 0023): ingest, odds, curate, features, site. No grading."""
+    """The Wed/Fri/Sat evening pass (ADR 0024): ingest, odds, curate, features, site. No grading."""
     from nfl import daily
 
     if dry_run:

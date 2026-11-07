@@ -27,6 +27,7 @@ FAMILIES = [
     "availability",
     "scheme",
     "narrative",
+    "weather",
 ]
 
 

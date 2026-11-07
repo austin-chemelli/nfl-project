@@ -1,4 +1,4 @@
-/** Words for the market line's movement (ADR 0023). A spread move > 0 is toward the home team. */
+/** Words for the market line's movement (ADR 0024). A spread move > 0 is toward the home team. */
 import type { LineMove, LinePoint } from '../../data/contract'
 import { spreadLabel } from '../../lib/format'
 

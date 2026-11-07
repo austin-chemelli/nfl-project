@@ -421,7 +421,7 @@ def _market_by_game(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.Data
 
 
 def _line_paths(paths: Paths, season: int, now: datetime) -> dict[str, list[dict]]:
-    """Per game, the pre-kickoff consensus path (ADR 0023), only snapshots taken before `now`."""
+    """Per game, the pre-kickoff consensus path (ADR 0024), only snapshots taken before `now`."""
     from nfl import market_history
     from nfl.odds import read_lines
 
@@ -447,7 +447,7 @@ def _lock_times(paths: Paths, season: int) -> dict[str, datetime]:
 
 
 def _window_sources(paths: Paths, games: pl.DataFrame, season: int, now: datetime) -> dict:
-    """QB1 changes and injury-status changes for the season, as seen up to `now` (ADR 0023, M20.3)."""
+    """QB1 changes and injury-status changes for the season, as seen up to `now` (ADR 0024, M20.3)."""
     from nfl import market_events
 
     try:
@@ -524,7 +524,7 @@ def _strong_calls(paths: Paths, season: int) -> tuple[dict[str, list[dict]], dic
 
 
 def _today(paths: Paths, now: datetime) -> dict[str, dict]:
-    """Per upcoming game, the latest preview score of each approach (ADR 0023): not a lock, never graded."""
+    """Per upcoming game, the latest preview score of each approach (ADR 0024): not a lock, never graded."""
     from nfl import previews
 
     p = previews.latest(paths)
@@ -543,7 +543,7 @@ def _today(paths: Paths, now: datetime) -> dict[str, dict]:
 
 def _swings(paths: Paths, games: pl.DataFrame, season: int, now: datetime, feats: pl.DataFrame,
             injuries: list[dict]) -> dict[str, list[dict]]:  # fmt: skip
-    """Per upcoming game, what could swing it (ADR 0023, M20.6): the quarterback what-if, rescored with
+    """Per upcoming game, what could swing it (ADR 0024, M20.6): the quarterback what-if, rescored with
     the locked artifacts, plus listed factors. A failure costs the what-ifs, never the site build."""
     try:
         return _swings_unsafe(paths, games, season, now, feats, injuries)
@@ -681,8 +681,45 @@ def _swings_unsafe(paths, games, season, now, feats, injuries) -> dict[str, list
                         "text": f"{team} on a short week ({int(rd[0])} days' rest)",
                     }
                 )
+        wx = {
+            f: v
+            for f, v in rows.filter(pl.col("feature").str.starts_with("weather."))
+            .select("feature", "value")
+            .iter_rows()
+        }
+        text = swings.weather_text(
+            wx.get("weather.temp_f"), wx.get("weather.wind_mph"), wx.get("weather.precip_pct")
+        )
+        if text:
+            items.append({"kind": "weather", "team": None, "text": text})
         if items:
             out[gid] = items
+    return out
+
+
+def _totals(paths: Paths, games: pl.DataFrame) -> tuple[dict[str, dict], dict | None]:
+    """(game_id -> last locked total, the tracker block). A failure costs the totals, not the site."""
+    from nfl.approaches import totals
+
+    try:
+        rows = totals.load(paths)
+        last = rows.sort("lock_ts").group_by("game_id", maintain_order=True).last()
+        by_game = {r["game_id"]: r for r in last.iter_rows(named=True)}
+        return by_game, totals.summary(totals.grade(paths, games), rows)
+    except Exception as e:  # noqa: BLE001
+        print(f"site: totals failed, continuing: {e!r}")
+        return {}, None
+
+
+def _expected_score(t: dict | None, detail: dict) -> dict | None:
+    """The locked total split by the headline line's spread at that lock (ADR 0024): context."""
+    if t is None or t["total"] is None:
+        return None
+    sp = (detail.get("models") or {}).get(HEADLINE_ID, {}).get("spread_home")
+    out = {"total": _r(t["total"], 1), "sd": _r(t["sd_total"], 1), "market_total": _r(t["market_total"], 1),
+           "lock_ts": _ts(t["lock_ts"]), "home": None, "away": None}  # fmt: skip
+    if sp is not None:
+        out["home"], out["away"] = _r((t["total"] + sp) / 2, 1), _r((t["total"] - sp) / 2, 1)
     return out
 
 
@@ -769,6 +806,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     swing = _swings(paths, games, season, now, feats, injuries)
     calls_by_game, calls_record = _strong_calls(paths, season)
     today = _today(paths, now)
+    totals_by_game, totals_record = _totals(paths, games)
     from nfl.llm.narrative import load_records
 
     narr = {r.game_id: r for r in load_records(paths, (season, season))}
@@ -799,6 +837,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["swings"] = swing.get(g["game_id"], [])
             detail["strong_calls"] = calls_by_game.get(g["game_id"], [])
             detail["today"] = today.get(g["game_id"])
+            detail["expected_score"] = _expected_score(totals_by_game.get(g["game_id"]), detail)
             detail["market_events"] = _game_events(
                 g,
                 points,
@@ -838,7 +877,10 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             "last_lock": _last_lock(paths),
         },
     )
-    _write(site / "tracker.json", tracker(paths, season, reg) | {"strong_calls": calls_record})
+    _write(
+        site / "tracker.json",
+        tracker(paths, season, reg) | {"strong_calls": calls_record, "totals": totals_record},
+    )
     _write(site / "audit.json", audit(paths))
     try:  # additive page data (ADR 0019): a failure must never stop the site build
         teams = teams_file(feats, games, now, current_week)

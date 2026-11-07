@@ -123,7 +123,7 @@ export const CardData = z.looseObject({
     .default(null),
 })
 
-// The market line's path before kickoff (ADR 0023). Spread + = home favored; a move > 0 is toward home.
+// The market line's path before kickoff (ADR 0024). Spread + = home favored; a move > 0 is toward home.
 const LineWindow = z.looseObject({ spread_home: nnum.default(null), total: nnum.default(null), p_home: nnum.default(null), hours: nnum.default(null) })
 export const LineMove = z.looseObject({
   first_seen: z.string(), // our first snapshot of the game, not the opener
@@ -143,17 +143,17 @@ export const MarketEvent = z.looseObject({
   source_url: nstr.default(null),
   after: num, // index of the last line point before it: the event sits in the move from `after` to `after + 1`
 })
-// What could swing a game, and the quarterback what-if (ADR 0023): the model's sensitivity, not the market's.
+// What could swing a game, and the quarterback what-if (ADR 0024): the model's sensitivity, not the market's.
 const QbScenario = z.looseObject({ qb: nstr.default(null), name: nstr.default(null), status: nstr.default(null), p_home: z.record(z.string(), nnum) })
 export const Swing = z.looseObject({
-  kind: z.string(), // qb, injury, coaching, rest
+  kind: z.string(), // qb, injury, coaching, rest, weather
   team: nstr.default(null),
   text: nstr.default(null),
   why: nstr.default(null), // qb only: status, chart, usual
   assumed: QbScenario.nullable().default(null),
   alternative: QbScenario.nullable().default(null),
 })
-// One approach 10+ points of win chance from the market at lock (ADR 0023), graded after the game.
+// One approach 10+ points of win chance from the market at lock (ADR 0024), graded after the game.
 export const StrongCall = z.looseObject({
   game_id: z.string(), week: num, model_id: z.string(), lock_ts: nstr.default(null), side: z.string(), team: z.string(),
   p_home: num, market_p: num, spread_home: nnum.default(null), market_spread: nnum.default(null),
@@ -162,6 +162,8 @@ export const StrongCall = z.looseObject({
   what_if_p_home: nnum.default(null), sentence: z.string(),
   result: nstr.default(null), log_loss: nnum.default(null), market_log_loss: nnum.default(null), closing_toward: z.boolean().nullable().default(null),
 })
+export const ExpectedScore = z.looseObject({ total: num, sd: nnum.default(null), market_total: nnum.default(null), lock_ts: nstr.default(null), home: nnum.default(null), away: nnum.default(null) })
+export type ExpectedScore = z.infer<typeof ExpectedScore>
 export const Today = z.looseObject({ scored_at: z.string(), models: z.record(z.string(), z.looseObject({ p_home: nnum, spread_home: nnum.default(null) })) })
 export type Swing = z.infer<typeof Swing>
 export type StrongCall = z.infer<typeof StrongCall>
@@ -292,6 +294,7 @@ export const Game = GameRow.extend({
   swings: z.array(Swing).default([]),
   strong_calls: z.array(StrongCall).default([]),
   today: Today.nullable().default(null), // the latest preview score: not a lock, never graded
+  expected_score: ExpectedScore.nullable().default(null), // the locked total split by the headline spread: context (ADR 0024)
 })
 
 // --------------------------------------------------------------------------- retrospective
@@ -501,6 +504,11 @@ export const Tracker = z.looseObject({
       record: z.array(z.looseObject({ model_id: z.string(), n: num, decided: num, right: num, log_loss: nnum, market_log_loss: nnum, moved_toward: num, with_close: num })),
       calls: z.array(StrongCall).default([]),
     })
+    .nullable()
+    .default(null),
+  // student_total at live locks (ADR 0024): context, never in the headline scorecard
+  totals: z
+    .looseObject({ first_lock: nstr.default(null), weeks: num, n: num, mae: nnum.default(null), market_mae: nnum.default(null), side_right: num, side_n: num })
     .nullable()
     .default(null),
 })

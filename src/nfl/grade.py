@@ -312,7 +312,7 @@ def grade(paths: Paths, console: Console) -> None:
 
 
 def grade_strong_calls(paths: Paths) -> int:
-    """Derived each run (ADR 0023): results, log loss vs the market, and the line's move after the lock."""
+    """Derived each run (ADR 0024): results, log loss vs the market, and the line's move after the lock."""
     from nfl import market_history, strong_calls
     from nfl.features import store
     from nfl.odds import read_lines

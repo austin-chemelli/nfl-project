@@ -1,4 +1,4 @@
-"""`nfl daily`: the Wed, Fri and Sat evening pass (ADR 0023, M20.1).
+"""`nfl daily`: the Wed, Fri and Sat evening pass (ADR 0024, M20.1).
 
 Between the Tuesday refresh and the locks, keep the week's games current: this season's ingest
 (injury reports, depth charts, schedules), one odds snapshot, curate, tendencies, features, then the
@@ -12,6 +12,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
+import polars as pl
 from rich.console import Console
 
 from nfl.config import Paths, current_season
@@ -40,6 +41,14 @@ def _odds(paths: Paths, season: int, console: Console) -> None:
     console.print(
         f"odds: {m.n_events} events, credits used {m.requests_used}, remaining {m.requests_remaining}"
     )
+
+
+def _forecast(paths: Paths, season: int, console: Console) -> None:
+    from nfl import weather
+    from nfl.features import store
+
+    n = weather.snapshot(paths, store.games_frame(paths).filter(pl.col("season") == season))
+    console.print(f"weather: {n} open-air games forecast")
 
 
 def _curate(paths: Paths, season: int, console: Console) -> None:
@@ -76,6 +85,7 @@ STEPS: list[Step] = [
     Step("ingest", _ingest),
     Step("odds snapshot", _odds, needs_odds=True),
     Step("curate", _curate),
+    Step("forecast", _forecast),
     Step("tendencies", _tendencies),
     Step("features", _features),
     Step("previews", _previews),

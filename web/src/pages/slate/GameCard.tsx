@@ -79,7 +79,12 @@ export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Me
         {fav && <span className="text-ink-3"> · market {fav}</span>}
       </div>
       {move && <div className="text-[13px] text-ink-2">{move}</div>}
-      {pk && <div className="text-[14px] font-medium text-ink">{SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}</div>}
+      {pk && (
+        <div className="text-[14px] font-medium text-ink">
+          {SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}
+          {g.models[HEADLINE]?.spread_home != null && <span className="font-normal text-ink-2"> ({spreadLabel(g.models[HEADLINE].spread_home, g.home, g.away)})</span>}
+        </div>
+      )}
       {why && <div id={`${id}-why`} className="text-[14px] text-ink">{why}</div>}
       {contrast && <div className="text-[13px] text-ink-2">{contrast}</div>}
       {stakes && <div className="tabular text-[13px] text-ink-2">{stakes}</div>}

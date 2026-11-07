@@ -10,3 +10,8 @@ def test_plan_runs_the_snapshot_before_the_features_and_ends_with_the_site():
 
 def test_no_odds_skips_only_the_snapshot():
     assert daily.plan(odds=False) == [s for s in daily.plan() if s != "odds snapshot"]
+
+
+def test_the_forecast_runs_after_curate_and_before_the_features():
+    steps = daily.plan()
+    assert steps.index("curate") < steps.index("forecast") < steps.index("features")

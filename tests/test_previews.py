@@ -1,4 +1,4 @@
-"""Previews are never the record (ADR 0023): only the daily pass writes them and only the game page's
+"""Previews are never the record (ADR 0024): only the daily pass writes them and only the game page's
 `today` block reads them."""
 
 from datetime import datetime

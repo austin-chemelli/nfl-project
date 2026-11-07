@@ -1,4 +1,4 @@
-"""What changed in the window: dated events that line up with a line move (ADR 0023, M20.3).
+"""What changed in the window: dated events that line up with a line move (ADR 0024, M20.3).
 
 The words are "in the same window", never "because": a move and an event at the same time are
 shown together, and the reader judges. Every event carries the time we first saw it.

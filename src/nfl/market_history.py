@@ -1,4 +1,4 @@
-"""The market line's path before kickoff (ADR 0023, M20.2).
+"""The market line's path before kickoff (ADR 0024, M20.2).
 
 Per game, the consensus across books at every odds snapshot strictly before kickoff: the home spread
 (nflverse sign, + = home favored), the total and the vig-free home win chance. Snapshots after kickoff

@@ -1,4 +1,4 @@
-"""Strong calls: where an approach differs from the market, why, and how it turned out (ADR 0023, M20.7).
+"""Strong calls: where an approach differs from the market, why, and how it turned out (ADR 0024, M20.7).
 
 At each live lock, every approach-game whose win chance is at least `STRONG_GAP` from the market's
 becomes a row of `marts/strong_calls.parquet`, append-only like the predictions. A row holds the side
