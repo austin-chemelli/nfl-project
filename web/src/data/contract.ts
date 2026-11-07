@@ -123,6 +123,30 @@ export const CardData = z.looseObject({
     .default(null),
 })
 
+// The market line's path before kickoff (ADR 0023). Spread + = home favored; a move > 0 is toward home.
+const LineWindow = z.looseObject({ spread_home: nnum.default(null), total: nnum.default(null), p_home: nnum.default(null), hours: nnum.default(null) })
+export const LineMove = z.looseObject({
+  first_seen: z.string(), // our first snapshot of the game, not the opener
+  latest: z.string(),
+  n_points: num,
+  lock_ts: nstr.default(null),
+  since_first: LineWindow.nullable().default(null),
+  since_lock: LineWindow.nullable().default(null),
+  last_day: LineWindow.nullable().default(null),
+})
+export const LinePoint = z.looseObject({ ts: z.string(), spread_home: nnum.default(null), total: nnum.default(null), p_home: nnum.default(null), n_books: num })
+export const MarketEvent = z.looseObject({
+  ts: z.string(),
+  kind: z.string(), // qb, injury, coaching, lock
+  team: nstr.default(null),
+  text: z.string(),
+  source_url: nstr.default(null),
+  after: num, // index of the last line point before it: the event sits in the move from `after` to `after + 1`
+})
+export type LineMove = z.infer<typeof LineMove>
+export type LinePoint = z.infer<typeof LinePoint>
+export type MarketEvent = z.infer<typeof MarketEvent>
+
 export const GameRow = z.looseObject({
   game_id: z.string(),
   season: num,
@@ -143,6 +167,7 @@ export const GameRow = z.looseObject({
     console.warn('slate card dropped', ctx.error.issues.slice(0, 3))
     return null
   }),
+  line_move: LineMove.nullable().default(null),
 })
 
 export const Slate = z.looseObject({
@@ -240,6 +265,8 @@ export const Game = GameRow.extend({
   tendencies: z.array(Tendency),
   injuries: z.array(Injury),
   narrative: Narrative.nullable(),
+  market_history: z.array(LinePoint).default([]),
+  market_events: z.array(MarketEvent).default([]),
 })
 
 // --------------------------------------------------------------------------- retrospective

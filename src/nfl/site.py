@@ -417,6 +417,93 @@ def _market_by_game(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.Data
     )
 
 
+# ------------------------------------------------------------------------------- market movement
+
+
+def _line_paths(paths: Paths, season: int, now: datetime) -> dict[str, list[dict]]:
+    """Per game, the pre-kickoff consensus path (ADR 0023), only snapshots taken before `now`."""
+    from nfl import market_history
+    from nfl.odds import read_lines
+
+    lines = read_lines(paths, (season, season))
+    if lines.is_empty():
+        return {}
+    lines = lines.filter(pl.col("snapshot_ts") <= pl.lit(now, dtype=pl.Datetime("us")))
+    out: dict[str, list[dict]] = {}
+    for r in market_history.paths(lines).iter_rows(named=True):
+        out.setdefault(r["game_id"], []).append(r)
+    return out
+
+
+def _lock_times(paths: Paths, season: int) -> dict[str, datetime]:
+    """The live lock of each game's headline line, if it has one."""
+    pred = _read(paths, "predictions")
+    if pred.is_empty():
+        return {}
+    live = pred.filter(
+        (pl.col("season") == season) & ~pl.col("is_backfill") & (pl.col("model_id") == HEADLINE_ID)
+    )
+    return {r["game_id"]: r["lock_ts"] for r in live.group_by("game_id").agg(pl.col("lock_ts").max()).iter_rows(named=True)}  # fmt: skip
+
+
+def _window_sources(paths: Paths, games: pl.DataFrame, season: int, now: datetime) -> dict:
+    """QB1 changes and injury-status changes for the season, as seen up to `now` (ADR 0023, M20.3)."""
+    from nfl import market_events
+
+    try:
+        depth = pl.concat(
+            [
+                pl.read_parquet(f)
+                for f in (paths.curated_table("depth_charts") / f"season={season}").glob(
+                    "*.parquet"
+                )
+            ],
+            how="diagonal_relaxed",
+        )
+    except ValueError:  # no files
+        depth = pl.DataFrame()
+    qbs = [q for q in market_events.qb_changes(depth) if q["ts"] <= now]
+    snaps = [(ts, df) for ts, df in market_events.load_injury_snapshots(paths, season) if ts <= now]
+    done = games.filter(
+        pl.col("kickoff_utc") + market_events.GAME_LENGTH <= pl.lit(now, dtype=pl.Datetime("us"))
+    )
+    return {
+        "qbs": qbs,
+        "injuries": market_events.injury_transitions(snaps),
+        "results": market_events.results(done),
+    }
+
+
+def _game_events(g, points, window, starters, record, lock_ts) -> list[dict]:
+    from nfl import market_events
+
+    notes = market_events.narrative_notes(record) if record is not None else []
+    ev = market_events.game_events(
+        g, points, window["qbs"], window["injuries"],
+        starters.get((g["game_id"], g["home_team"]), set()) | starters.get((g["game_id"], g["away_team"]), set()),
+        notes, lock_ts, window.get("results", []),
+    )  # fmt: skip
+    return [{**e, "ts": _ts(e["ts"])} for e in ev]
+
+
+def _line_point(p: dict) -> dict:
+    return {"ts": _ts(p["snapshot_ts"]), "spread_home": _r(p["spread_home"], 2),
+            "total": _r(p["total"], 2), "p_home": _r(p["p_home"]), "n_books": p["n_books"]}  # fmt: skip
+
+
+def _line_move(points: list[dict], lock_ts: datetime | None) -> dict | None:
+    from nfl import market_history
+
+    s = market_history.summary(points, lock_ts)
+    if s is None:
+        return None
+    return {
+        "first_seen": _ts(s["first_seen"]), "latest": _ts(s["latest"]), "n_points": s["n_points"],
+        "lock_ts": _ts(lock_ts) if lock_ts else None,
+        "since_first": s["since_first"], "since_lock": s["since_lock"], "last_day": s["last_day"],
+    }  # fmt: skip
+
+
 # ------------------------------------------------------------------------------------------ build
 
 
@@ -472,6 +559,9 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
 
     allrows = display_rows(paths, games, now)
     market = _market_by_game(paths, games, now)
+    lines = _line_paths(paths, season, now)
+    locks = _lock_times(paths, season)
+    window = _window_sources(paths, games, season, now)
 
     feats = store.read_features(paths, seasons=(season, season))
     tend = _read(paths, "tendencies")
@@ -498,8 +588,19 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
         for g in wk.iter_rows(named=True):
             row = _game_row(g, allrows, market, reg)
             row["card"] = _card(g, edges, injuries, now, **card_ctx)
+            points = lines.get(g["game_id"], [])
+            row["line_move"] = _line_move(points, locks.get(g["game_id"]))
             slate_games.append(row)
             detail = row | _game_detail(g, allrows, feats, tend, injuries, narr, now, edges)
+            detail["market_history"] = [_line_point(p) for p in points]
+            detail["market_events"] = _game_events(
+                g,
+                points,
+                window,
+                card_ctx["starters"],
+                narr.get(g["game_id"]),
+                locks.get(g["game_id"]),
+            )
             _write(site / "game" / f"{g['game_id']}.json", detail)
         _write(
             site / f"slate_{season}_{int(week):02d}.json",
@@ -681,6 +782,7 @@ CONTRASTS = [
 CONTRAST_TOP = 5  # both sides must rank this high among the league's teams
 CONTRAST_MIN_TEAMS = 24
 WEATHER_FEATURE = "narrative.weather_concern"
+HEADLINE_ID = "student"  # the headline line (D5); the web's HEADLINE in lib/models.ts
 USUAL_QB_MIN_STARTS = 3  # fewer, or a tie, and "usually" would name whoever filled in
 
 

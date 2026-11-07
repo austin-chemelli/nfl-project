@@ -60,6 +60,7 @@ The cloud rows are checked against `infra/jobs.tf` by `scripts/state_check.py`; 
 | Thu 08:30 | `nfl-narrative-check`: fails (emails) if an upcoming game has no `local` record since the last pass | cloud | `30 8 * * 4` | nothing | executions list |
 | Thu 09:00 | `nfl-lock-thu`: lock the Thursday games, commit + push the artifact | cloud | `0 9 * * 4` | predictions, bets, `public/predictions/` on `main`, site | `git log origin/main -1`; executions list |
 | Thu 20:05 | `nfl-odds-snapshot`: closing lines for CLV, publish | cloud | `5 20 * * 4` | `curated/lines`, site | executions list |
+| Wed, Fri, Sat 20:05 | `nfl-daily`: this season's ingest, an odds snapshot, curate, tendencies, features, site, publish (ADR 0023) | cloud | `5 20 * * 3`, `5 20 * * 5`, `5 20 * * 6` | lines, features, site | executions list |
 | Sat 07:00 | desktop narrative pass, Sunday and Monday games (after Friday's designations) | desktop | `sat 07:00` | `marts/narrative/` | desktop log |
 | Sat 11:30 | `nfl-narrative-check` | cloud | `30 11 * * 6` | nothing | executions list |
 | Sat 12:00 | `nfl-lock-sat`: lock every Saturday to Monday game | cloud | `0 12 * * 6` | as Thursday | as Thursday |
@@ -69,7 +70,7 @@ The cloud rows are checked against `infra/jobs.tf` by `scripts/state_check.py`; 
 | On demand | `nfl-site`: rebuild and publish the site JSON (started by the desktop after an upload) | cloud | none | site JSON | executions list |
 | Push to `main` | `ci` (ruff, pytest, web typecheck/lint/test/build), then `image` when job code changed and `site` when `web/` changed; `infra` plans on PRs and applies on `main` | GitHub | none | Artifact Registry, Firebase, GCP | [Actions](https://github.com/austin-chemelli/nfl-project/actions) |
 
-About 24 Odds API credits a week. A failed cloud execution and a failed desktop pass each email Austin; nothing retries by itself. The lock job refuses to run if `main` has job-code commits newer than its image. An image builds in 3 to 4 minutes, so job code can merge anytime except the last 10 minutes before Thu 09:00 and Sat 12:00; a refused lock emails and can be rerun by hand (`docs/runbook.md`, Merging job code).
+About 33 Odds API credits a week (daily snapshots from M20, ADR 0023). A failed cloud execution and a failed desktop pass each email Austin; nothing retries by itself. The lock job refuses to run if `main` has job-code commits newer than its image. An image builds in 3 to 4 minutes, so job code can merge anytime except the last 10 minutes before Thu 09:00 and Sat 12:00; a refused lock emails and can be rerun by hand (`docs/runbook.md`, Merging job code).
 
 ### Links
 

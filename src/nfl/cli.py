@@ -457,6 +457,20 @@ def llm_calls(
     console.print(t)
 
 
+@app.command("daily")
+def daily_cmd(
+    odds: bool = typer.Option(True, help="Take an Odds API snapshot (3 credits)."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="List the steps and exit."),
+) -> None:
+    """The Wed/Fri/Sat evening pass (ADR 0023): ingest, odds, curate, features, site. No grading."""
+    from nfl import daily
+
+    if dry_run:
+        console.print("daily: " + " -> ".join(daily.plan(odds)))
+        return
+    daily.run(get_paths(), console, odds=odds)
+
+
 @app.command("site")
 def site_cmd(season: int = typer.Option(None, help="Default: current season.")) -> None:
     """Write the UI JSON contract (marts/site/): meta, slates, games, tracker, audit."""

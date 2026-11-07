@@ -5,7 +5,7 @@ import { gapToMarket, cardSentence, contrastLine, correct, disagreements, diverg
 const pick = (p: number, div: number | null = null) => ({ p_home: p, spread_home: null, status: 'preview' as const, lock_ts: null, divergence: div })
 const game = (over: Partial<GameRow> = {}): GameRow => ({
   game_id: 'g', season: 2026, week: 8, kickoff_utc: '2026-10-30T00:15:00Z', away: 'CAR', home: 'GB', stadium: null, roof: null,
-  neutral_site: false, away_qb: null, home_qb: null, result: null, market: null, card: null,
+  neutral_site: false, away_qb: null, home_qb: null, result: null, market: null, card: null, line_move: null,
   models: { traditionalist: pick(0.7), analyst: pick(0.4), sharp: pick(0.55), student: pick(0.5) },
   ...over,
 })

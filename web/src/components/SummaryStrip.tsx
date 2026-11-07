@@ -3,7 +3,7 @@
 const valueSize = (value: unknown) => {
   if (typeof value !== 'string') return 'text-xl'
   const longest = Math.max(...value.split(/\s+/).map((w) => w.length))
-  return longest >= 12 ? 'text-sm' : value.length > 16 ? 'text-base' : 'text-xl'
+  return longest >= 11 ? 'text-sm' : value.length > 16 ? 'text-base' : 'text-xl'
 }
 import { Children, useEffect, useState, type ReactNode, type Ref } from 'react'
 import { colorVar } from '../lib/models'
