@@ -1,6 +1,6 @@
 """Scheme-prior features (M1.16): what the team's current play-callers have done before.
 
-For every game from 2017 on, each team's offensive and defensive play-caller (the CSV's
+For every game from 2017 on, each team's offensive and defensive play-caller (the table's
 end-of-season person: `off_play_caller` else OC, `def_play_caller` else DC; see
 `nfl.coaches.assignments`) is looked up and his profile is read from seasons strictly **before the
 game's season**. The profile follows the person across teams. Nothing from the target season is
@@ -30,7 +30,7 @@ from nfl.features import store
 from nfl.models.elo import TEAM_ALIASES
 
 SOURCE = "participation"
-VERSION = "2"
+VERSION = "3"
 FIRST_TARGET = 2017  # needs a prior season (participation starts 2016)
 
 # feature -> (side, metric in nfl.scheme)
@@ -72,7 +72,7 @@ def compute(games: pl.DataFrame, rows: pl.DataFrame, assign: pl.DataFrame) -> pl
     )
     parts = []
     for feature, (side, metric) in MAP.items():
-        # A unit whose play-caller changed mid-season gets no prior for that season: the CSV names
+        # A unit whose play-caller changed mid-season gets no prior for that season: the table names
         # the end-of-season person, so using him for earlier weeks would be look-ahead (review
         # 2026-10-28). Null -> league average downstream.
         who = assign.filter(pl.col("side") == side).select(
