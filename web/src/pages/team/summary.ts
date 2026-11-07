@@ -1,0 +1,44 @@
+/** Summary-strip tiles for the team page (ADR 0017, 0022): pure functions of the files, each null when it can't be stated. */
+import type { LeagueFile, UnitCaller, TeamFile, TeamRow } from '../../data/contract'
+import { ordinal } from '../league/helpers'
+import { fmtProb } from '../league/playoffs'
+import { furthest, verdict } from './tendencies'
+
+export type TileText = { label: string; value: string; sub: string; tab: string }
+
+export function playoffTile(league: LeagueFile | undefined, code: string): TileText | null {
+  const odds = league?.odds.student.teams[code]
+  if (!odds) return null
+  const seed = league?.teams.find((t) => t.team === code)?.seed_today
+  return { label: 'Playoff chance', value: fmtProb(odds.playoffs), sub: seed ? `Seed ${seed} today` : 'Outside the seeds today', tab: 'overview' }
+}
+
+const SHORT: Record<string, string> = {
+  same_caller: 'Same as last season',
+  same_caller_new_qb: 'New starting quarterback',
+  took_over: 'Took over from inside',
+  moved_team: 'New play-caller',
+  promoted_first_time: 'First year calling, promoted',
+  outside_first_time: 'First year calling plays',
+}
+
+export function callerTile(caller: UnitCaller | null | undefined, side: 'off' | 'def'): TileText | null {
+  if (!caller) return null
+  const unit = side === 'off' ? 'offense' : 'defense'
+  if (!caller.confirmed) return { label: `Runs the ${unit}`, value: caller.name, sub: 'Play-caller not confirmed', tab: 'staff' }
+  const sub = caller.situation ? SHORT[caller.situation] : caller.is_head_coach ? 'The head coach' : ''
+  return { label: `Calls the ${unit}`, value: caller.name, sub: sub ?? '', tab: 'staff' }
+}
+
+export function furthestTile(file: TeamFile | undefined): TileText | null {
+  const top = file && furthest(file)
+  if (!top?.row.observed) return null
+  const word = verdict(top.row) === 'more' ? 'more' : 'less'
+  return { label: 'Furthest from expected', value: top.row.label, sub: `${ordinal(top.row.observed.rank)}, ${word} than expected`, tab: 'tendencies' }
+}
+
+export function nextGameTile(row: TeamRow | undefined): TileText | null {
+  const g = row?.games.find((x) => x.id === row.next_game_id)
+  if (!g) return null
+  return { label: 'Next game', value: `${g.home ? 'vs' : '@'} ${g.opp}`, sub: `Week ${g.week}`, tab: 'games' }
+}

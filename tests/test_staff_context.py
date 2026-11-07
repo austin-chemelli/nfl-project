@@ -137,3 +137,49 @@ def test_a_first_timer_from_the_staff_is_promoted():
     rows = [unit(2030, "AAA", "Ann"), unit(2031, "AAA", "Hal")]
     out = ctx.unit_situations(pl.DataFrame(rows), {}, STAFF)
     assert out.filter(pl.col("season") == 2031)["situation"].item() == "promoted_first_time"
+
+
+def test_career_merges_seasons_and_keeps_only_confirmed_calling():
+    s = pl.DataFrame(
+        [
+            {"season": 2020, "team": "AAA", "role": "OFF_PC", "person": "Ann", "evidence": "news"},
+            {"season": 2021, "team": "AAA", "role": "OFF_PC", "person": "Ann", "evidence": "news"},
+            {
+                "season": 2022,
+                "team": "AAA",
+                "role": "OFF_PC",
+                "person": "Ann",
+                "evidence": "inferred",
+            },
+            {
+                "season": 2023,
+                "team": "BBB",
+                "role": "OFF_PC",
+                "person": "Ann",
+                "evidence": "roundup",
+            },
+            {"season": 2024, "team": "BBB", "role": "DEF_PC", "person": "Ann", "evidence": "news"},
+        ]
+    )
+    assert ctx.career(s, "Ann", "off") == [
+        {"team": "AAA", "from": 2020, "to": 2021},
+        {"team": "BBB", "from": 2023, "to": 2023},
+    ]
+
+
+def test_replaced_names_a_confirmed_caller_only():
+    first = {**spell("Evero", "inferred", role="DEF_PC"), "start_week": 1}
+    wash = {**spell("Wash", role="DEF_PC"), "start_week": 9}
+    assert ctx.replaced([first, wash], wash) is None
+    assert ctx.replaced([{**first, "evidence": "news"}, wash], wash) == "Evero"
+    title = {**spell("Evero", "wiki", role="DC"), "start_week": 1}
+    assert ctx.replaced([title, {**wash, "role": "DC"}], {**wash, "role": "DC"}) == "Evero"
+
+
+def test_rank_is_one_for_the_most_and_ties_share():
+    df = pl.DataFrame({
+        "season": [2030] * 3, "team": ["A", "B", "C"], "side": ["off"] * 3, "metric": ["m"] * 3,
+        "n": [200] * 3, "rate": [0.2, 0.5, 0.5], "pct": [0.1, 0.6, 0.6],
+    })  # fmt: skip
+    out = dict(zip(*ctx._ranked(df).select("team", "rank").to_dict().values(), strict=True))
+    assert out == {"B": 1, "C": 1, "A": 3}

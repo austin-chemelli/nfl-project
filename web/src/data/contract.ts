@@ -806,3 +806,67 @@ export type SimilarFlag = z.infer<typeof SimilarFlag>
 export type SimilarFile = z.infer<typeof SimilarFile>
 export type LeagueHistoryPoint = z.infer<typeof LeagueHistoryPoint>
 export type LeagueFile = z.infer<typeof LeagueFile>
+
+/** `site/team/<code>.json` (ADR 0021, 0022): one team's staff, evidence and tendencies. */
+const TeamSpell = z.looseObject({
+  role: z.string(), // HC, OC, DC, OFF_PC, DEF_PC
+  name: z.string(),
+  start_week: num,
+  end_week: nnum.default(null),
+  evidence: z.string(),
+  confirmed: z.boolean(),
+  source_url: nstr.default(null),
+})
+const TeamChange = TeamSpell.extend({ replaced: nstr.default(null) })
+const UnitCaller = z.looseObject({
+  name: z.string(),
+  confirmed: z.boolean(), // false: this is the coordinator, and nobody is named as the play-caller
+  is_head_coach: z.boolean(),
+  evidence: nstr.default(null),
+  source_url: nstr.default(null),
+  situation: nstr.default(null),
+  situation_text: nstr.default(null),
+  career: z.array(z.looseObject({ team: z.string(), from: num, to: num })).default([]),
+})
+const TeamExpected = z.looseObject({
+  pct: num, // 0 to 1, the share of the league below
+  miss: nnum.default(null), // typical miss on the same scale; null where no cell was measured
+  weight_on_caller: num,
+  strength: z.enum(['fair', 'weak']),
+})
+const TeamSeasonValue = z.looseObject({ pct: num, rate: num, rank: num, of: num })
+const TeamMetric = z.looseObject({
+  metric: z.string(),
+  label: z.string(),
+  help: z.string(),
+  unit: z.string(), // pct, seconds, epa
+  lo: z.string(), // the axis's ends: less and more, shorter and longer
+  hi: z.string(),
+  expected: TeamExpected.nullable(),
+  caller_seasons: num,
+  caller_teams: z.array(z.string()).default([]),
+  team_last: TeamSeasonValue.extend({ season: num }).nullable(),
+  observed: TeamSeasonValue.extend({ n: num }).nullable(), // charted measures: null until the spring drop
+})
+const TeamUnit = z.looseObject({
+  caller: UnitCaller.nullable(),
+  live: z.array(TeamMetric),
+  charted: z.array(TeamMetric),
+})
+export const TeamFile = z.looseObject({
+  schema_version: z.string(),
+  team: z.string(),
+  season: num,
+  week: num, // the next week to be played
+  through_week: nnum.default(null),
+  generated_at: z.string(),
+  staff: z.looseObject({ current: z.array(TeamSpell), changes: z.array(TeamChange) }),
+  other_starter_weeks: z.array(z.looseObject({ week: num, qb: z.string() })).default([]),
+  units: z.looseObject({ off: TeamUnit, def: TeamUnit }),
+})
+export type TeamFile = z.infer<typeof TeamFile>
+export type TeamUnit = z.infer<typeof TeamUnit>
+export type TeamMetric = z.infer<typeof TeamMetric>
+export type UnitCaller = z.infer<typeof UnitCaller>
+export type TeamChange = z.infer<typeof TeamChange>
+

@@ -50,6 +50,9 @@ export function canonicalTeam(code: string): string {
   return ALIAS[k] ?? k
 }
 
+/** Whether a code, of any era, is a franchise. */
+export const isTeam = (code: string) => canonicalTeam(code) in TEAMS
+
 export function teamInfo(code: string | null | undefined): TeamInfo {
   if (!code) return { ...FALLBACK, name: 'Unknown' }
   const k = code.toUpperCase()

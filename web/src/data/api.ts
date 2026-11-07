@@ -67,6 +67,8 @@ export const useSeasonFile = (season?: number) =>
 /** Every team's season-to-date feature values (ADR 0019): the League page's Teams tab; a 404 means not built yet. */
 export const useTeams = () => useJson('teams', 'site/teams.json', C.TeamsFile)
 /** Simulated playoff odds, standings and game leverage (ADR 0019): the League page's other tabs and the slate's stakes line; a 404 means not built yet. */
+/** One team's staff and tendencies (ADR 0022); a 404 means not built yet. */
+export const useTeam = (code?: string) => useJson('team', code ? `site/team/${code}.json` : null, C.TeamFile)
 export const useLeague = () => useJson('league', 'site/league.json', C.LeagueFile)
 /** Look-alike past seasons and flags (ADR 0019): its own file, read only by the Similar seasons tab; a 404 means not built yet. */
 export const useSimilar = () => useJson('similar', 'site/similar.json', C.SimilarFile)

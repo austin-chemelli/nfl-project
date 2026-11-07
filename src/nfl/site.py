@@ -444,7 +444,13 @@ def write_team_files(paths: Paths, season: int, week: int, games: pl.DataFrame) 
 
         def label(metric: str) -> dict:
             d = TENDENCY_METRICS[metric]
-            return {"label": d["label"], "help": d["help"]}
+            return {
+                "label": d["label"],
+                "help": d["help"],
+                "unit": d["unit"],
+                "lo": "less",
+                "hi": "more",
+            }
 
         for team, body in team_files(paths, season, week, games, label).items():
             _write(paths.site / "team" / f"{team}.json", body, compact=True)
