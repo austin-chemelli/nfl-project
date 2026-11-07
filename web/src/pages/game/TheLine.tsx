@@ -1,6 +1,8 @@
 import { LinePath, type PathPoint } from '../../charts'
 import { Section } from '../../components/ui'
 import type { Game } from '../../data/contract'
+import { HEADLINE, SHORT } from '../../lib/models'
+import { pick } from '../../lib/format'
 import { etStamp, fmtPts, pathSentence, windowWords } from './line'
 
 const ms = (iso: string) => new Date(iso).getTime()
@@ -30,6 +32,7 @@ export function TheLine({ g }: { g: Game }) {
   const lastDay = windowWords(m.last_day?.spread_home, g.home, g.away)
   return (
     <Section title="How the line moved" help="The consensus across sportsbooks at each of our snapshots before kickoff: the median spread and total, needing at least three books.">
+      <TodayLine g={g} />
       <p className="m-0 text-ink">
         Since we first saw it ({etStamp(m.first_seen)}): {path ?? 'no change'}.
         {sinceLock && <> Since the lock: {sinceLock}.</>}
@@ -60,3 +63,23 @@ export function TheLine({ g }: { g: Game }) {
     </Section>
   )
 }
+
+/** The headline line as locked beside today's preview score: whether we moved with the market. */
+function TodayLine({ g }: { g: Game }) {
+  const t = g.today?.models[HEADLINE]
+  if (!g.today || t?.p_home == null || g.result) return null
+  const locked = g.models[HEADLINE]
+  const name = `The ${SHORT[HEADLINE]}`
+  const now = pick(t.p_home, g.home, g.away)
+  return (
+    <p className="m-0 mb-2 text-[14px] text-ink-2">
+      {locked?.status === 'locked' && locked.p_home != null ? (
+        <>{name} locked {pick(locked.p_home, g.home, g.away)}; on the data as of {etStamp(g.today.scored_at)} it reads {now}.</>
+      ) : (
+        <>On the data as of {etStamp(g.today.scored_at)}, the {SHORT[HEADLINE]} reads {now}.</>
+      )}{' '}
+      <span className="text-ink-3">A preview, not locked, and never graded.</span>
+    </p>
+  )
+}
+

@@ -87,5 +87,5 @@ def test_last_weeks_game_is_an_event_with_its_score():
         "kickoff_utc": [T - timedelta(days=1), T - timedelta(days=1)],
     })  # fmt: skip
     ev = me.game_events(GAME, POINTS, [], [], set(), [], None, me.results(done))
-    assert [e["text"] for e in ev] == ["Last game: BAL lost to MIA 17–24 (vs MIA)"]
+    assert [e["text"] for e in ev] == ["Result: BAL lost to MIA 17–24 (vs MIA)"]
     assert ev[0]["kind"] == "game"

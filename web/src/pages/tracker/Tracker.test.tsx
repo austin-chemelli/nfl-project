@@ -19,10 +19,16 @@ describe('Tracker page', () => {
     expect(screen.queryByRole('heading', { name: /Backtest: how far/ })).not.toBeInTheDocument()
   })
 
-  it('has exactly four tabs', async () => {
+  it('has exactly five tabs, strong calls before the paper bets', async () => {
     renderRoute('/tracker')
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((x) => x.textContent)).toEqual(['This season', 'Backtest', 'Calibration', 'Paper bets'])
+    expect(tabs.map((x) => x.textContent)).toEqual(['This season', 'Backtest', 'Calibration', 'Strong calls', 'Paper bets'])
+  })
+
+  it('strong calls tab: says none are recorded yet and still shows the backtest context', async () => {
+    renderRoute('/tracker?tab=strong')
+    expect(await screen.findByText(/No strong calls recorded yet/)).toBeInTheDocument()
+    expect(screen.getByText('The same gap in the backtest')).toBeInTheDocument()
   })
 
   it('season tab: the gap chart says which way is good and draws the noise band', async () => {

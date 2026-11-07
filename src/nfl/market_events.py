@@ -12,7 +12,7 @@ Sources, all already in the pipeline:
 - **Narrative notes** (the desktop passes): injury and coaching notes the pass rated at the strongest
   impact (|impact| = 2), with their cited source, at the record's `known_as_of`; at most
   `MAX_NOTES` a game, since one record lands as one burst.
-- **Last week's games**: each team's previous game, at its end (kickoff + `GAME_LENGTH`), with the
+- **Recent results**: each team's games in the window, at their end (kickoff + `GAME_LENGTH`), with the
   score. A line often moves most while a team is playing the week before.
 - **The lock** of the headline line.
 
@@ -101,6 +101,8 @@ def _status_text(e: dict) -> str:
 def results(games: pl.DataFrame) -> list[dict]:
     """(team, ts, text) for every finished game, once per team, timed at its end."""
     out = []
+    if not {"home_score", "away_score"} <= set(games.columns):
+        return out
     done = games.filter(pl.col("home_score").is_not_null() & pl.col("away_score").is_not_null())
     for g in done.iter_rows(named=True):
         ts = g["kickoff_utc"] + GAME_LENGTH
@@ -109,7 +111,7 @@ def results(games: pl.DataFrame) -> list[dict]:
                                       (g["away_team"], g["home_team"], as_, hs, "@")):  # fmt: skip
             word = "beat" if pf > pa else "lost to" if pf < pa else "tied"
             out.append({"team": _canon(team), "ts": ts,
-                        "text": f"Last game: {team} {word} {opp} {pf}–{pa} ({at} {opp})"})  # fmt: skip
+                        "text": f"Result: {team} {word} {opp} {pf}–{pa} ({at} {opp})"})  # fmt: skip
     return out
 
 

@@ -2398,7 +2398,7 @@
    "kind": "game",
    "team": "ARI",
    "source_url": null,
-   "text": "Last game: ARI lost to DEN 16\u201330 (vs DEN)",
+   "text": "Result: ARI lost to DEN 16\u201330 (vs DEN)",
    "after": -1
   },
   {
@@ -2406,7 +2406,7 @@
    "kind": "game",
    "team": "DAL",
    "source_url": null,
-   "text": "Last game: DAL beat PHI 38\u201321 (@ PHI)",
+   "text": "Result: DAL beat PHI 38\u201321 (@ PHI)",
    "after": 0
   }
  ]

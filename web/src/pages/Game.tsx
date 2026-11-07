@@ -9,6 +9,7 @@ import type { Game, Meta, RetroGame } from '../data/contract'
 import { Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './game/Sections'
 import { GameHeader, GameTitle, PinnedResult } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
+import { Differ, StrongCallsOutcome } from './game/Differ'
 import { TheLine } from './game/TheLine'
 import { Preview } from './game/Preview'
 import { Retro } from './game/Retro'
@@ -70,7 +71,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
 
   const tabs: TabDef[] = []
   if (retro || retroError)
-    tabs.push({ id: 'retro', label: 'What happened', content: retro ? <Retro r={retro} /> : <ErrorBox error={retroError} /> })
+    tabs.push({ id: 'retro', label: 'What happened', content: retro ? <TabBody><Retro r={retro} /><StrongCallsOutcome g={g} /></TabBody> : <ErrorBox error={retroError} /> })
   tabs.push(
     {
       id: 'preview',
@@ -90,6 +91,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Approaches',
       content: (
         <TabBody>
+          <Differ g={g} />
           <ApproachesVsMarket g={g} meta={meta} />
           <Why g={g} meta={meta} />
           <FinePrint>

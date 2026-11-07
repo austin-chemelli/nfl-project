@@ -143,6 +143,28 @@ export const MarketEvent = z.looseObject({
   source_url: nstr.default(null),
   after: num, // index of the last line point before it: the event sits in the move from `after` to `after + 1`
 })
+// What could swing a game, and the quarterback what-if (ADR 0023): the model's sensitivity, not the market's.
+const QbScenario = z.looseObject({ qb: nstr.default(null), name: nstr.default(null), status: nstr.default(null), p_home: z.record(z.string(), nnum) })
+export const Swing = z.looseObject({
+  kind: z.string(), // qb, injury, coaching, rest
+  team: nstr.default(null),
+  text: nstr.default(null),
+  why: nstr.default(null), // qb only: status, chart, usual
+  assumed: QbScenario.nullable().default(null),
+  alternative: QbScenario.nullable().default(null),
+})
+// One approach 10+ points of win chance from the market at lock (ADR 0023), graded after the game.
+export const StrongCall = z.looseObject({
+  game_id: z.string(), week: num, model_id: z.string(), lock_ts: nstr.default(null), side: z.string(), team: z.string(),
+  p_home: num, market_p: num, spread_home: nnum.default(null), market_spread: nnum.default(null),
+  top_groups: z.array(z.looseObject({ group: z.string(), name: z.string(), logit: num })).default([]),
+  assumption: z.looseObject({ team: nstr.default(null), assumed: nstr.default(null), alternative: nstr.default(null) }).nullable().default(null),
+  what_if_p_home: nnum.default(null), sentence: z.string(),
+  result: nstr.default(null), log_loss: nnum.default(null), market_log_loss: nnum.default(null), closing_toward: z.boolean().nullable().default(null),
+})
+export const Today = z.looseObject({ scored_at: z.string(), models: z.record(z.string(), z.looseObject({ p_home: nnum, spread_home: nnum.default(null) })) })
+export type Swing = z.infer<typeof Swing>
+export type StrongCall = z.infer<typeof StrongCall>
 export type LineMove = z.infer<typeof LineMove>
 export type LinePoint = z.infer<typeof LinePoint>
 export type MarketEvent = z.infer<typeof MarketEvent>
@@ -267,6 +289,9 @@ export const Game = GameRow.extend({
   narrative: Narrative.nullable(),
   market_history: z.array(LinePoint).default([]),
   market_events: z.array(MarketEvent).default([]),
+  swings: z.array(Swing).default([]),
+  strong_calls: z.array(StrongCall).default([]),
+  today: Today.nullable().default(null), // the latest preview score: not a lock, never graded
 })
 
 // --------------------------------------------------------------------------- retrospective
@@ -469,6 +494,15 @@ export const Tracker = z.looseObject({
   ledger_seasons: z.array(
     z.looseObject({ model_id: z.string(), season: num, bets: num, live_bets: num, units: num, no_edge_units: num }),
   ).optional(),
+  strong_calls: z
+    .looseObject({
+      gap: num,
+      first_lock: nstr.default(null),
+      record: z.array(z.looseObject({ model_id: z.string(), n: num, decided: num, right: num, log_loss: nnum, market_log_loss: nnum, moved_toward: num, with_close: num })),
+      calls: z.array(StrongCall).default([]),
+    })
+    .nullable()
+    .default(null),
 })
 
 // --------------------------------------------------------------------------------- hypotheses

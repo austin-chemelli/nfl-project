@@ -7,6 +7,7 @@ import { useMeta, useTracker } from '../data/api'
 import { CurrentSeason } from './tracker/CurrentSeason'
 import { Backtest } from './tracker/Backtest'
 import { Calibration } from './tracker/Calibration'
+import { StrongCalls } from './tracker/StrongCalls'
 import { Divergence } from './tracker/Divergence'
 import { Ledger } from './tracker/Ledger'
 import { PersonaHistory } from './tracker/PersonaHistory'
@@ -78,6 +79,19 @@ export default function TrackerPage() {
                           <Calibration t={t} meta={m} />
                           <FinePrint>
                             <p>The dotted diagonal is perfect calibration. Each game counts toward the team the approach favored (so a 25% home team is a 75% away team). The highest bins hold few games, so their wobble is mostly noise.</p>
+                          </FinePrint>
+                        </TabBody>
+                      ),
+                    },
+                    {
+                      id: 'strong',
+                      label: 'Strong calls',
+                      content: (
+                        <TabBody>
+                          <StrongCalls t={t} />
+                          <FinePrint>
+                            <p>Strong calls are recorded at each live lock since this record started (the date above); earlier locks have none. The sentence is built from the stored numbers: the chances, the groups that pulled the approach&apos;s way, and the quarterback its line assumed.</p>
+                            <p>The what-if in a sentence is our own model rescored with the other quarterback, not the market&apos;s view.</p>
                           </FinePrint>
                         </TabBody>
                       ),

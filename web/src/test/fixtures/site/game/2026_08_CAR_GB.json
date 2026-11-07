@@ -2782,7 +2782,7 @@
    "kind": "game",
    "team": "CAR",
    "source_url": null,
-   "text": "Last game: CAR lost to TB 13\u201343 (vs TB)",
+   "text": "Result: CAR lost to TB 13\u201343 (vs TB)",
    "after": -1
   },
   {
@@ -2790,7 +2790,7 @@
    "kind": "game",
    "team": "GB",
    "source_url": null,
-   "text": "Last game: GB lost to DET 17\u201320 (@ DET)",
+   "text": "Result: GB lost to DET 17\u201320 (@ DET)",
    "after": -1
   },
   {

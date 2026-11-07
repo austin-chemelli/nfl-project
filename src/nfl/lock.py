@@ -469,6 +469,10 @@ def run(
         commit_lock(repo, [res.artifact_path, res.artifact_path.with_suffix(".json.sha256")], msg)
         if push:
             push_locks(repo)
+    try:  # after the record is committed and pushed: a failure here never blocks the lock
+        _strong_calls(paths, res, feats, games, season)
+    except Exception as e:  # noqa: BLE001
+        warnings.warn(f"strong calls not recorded: {e!r}", stacklevel=2)
     try:
         from nfl.site import build as build_site
 
@@ -477,6 +481,21 @@ def run(
     except Exception as e:  # noqa: BLE001 - the lock is already recorded; the UI can be rebuilt
         warnings.warn(f"site rebuild after lock failed: {e!r}; run `nfl site`", stacklevel=2)
     return res
+
+
+def _strong_calls(
+    paths: Paths, res: LockResult, feats: pl.DataFrame, games: pl.DataFrame, season: int
+) -> int:
+    """Record this lock's strong calls (ADR 0023): approach-games 10+ points from the market, with the
+    quarterback each line assumed and the what-if, as of the lock."""
+    from nfl import site, strong_calls
+
+    labels = {a.id: a.name for a in load_all().values()}
+    g = games.with_columns(pl.col("kickoff_utc").dt.replace_time_zone(None).cast(pl.Datetime("us")))
+    sw = site._swings(paths, g.filter(pl.col("season") == season), season, res.lock_ts, feats,
+                      site._injuries(paths, season))  # fmt: skip
+    rows = strong_calls.calls(res.scored, res.market, res.games, res.lock_ts, labels, sw)
+    return strong_calls.append(paths, rows)
 
 
 def _latest_raw_snapshot(paths: Paths) -> str:
