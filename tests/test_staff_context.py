@@ -248,3 +248,15 @@ def test_profiles_need_a_source_and_a_claim():
         assert p["sources"], person
         assert p["tree"] or p["known_for"], person
         assert all(u.startswith("http") for u in p["sources"]), person
+
+
+def test_profiles_never_say_who_calls_plays():
+    """That claim lives in the staff table, under its evidence rule (ADR 0021)."""
+    import re
+
+    calling = re.compile(
+        r"play-?call|calls? (the )?plays|calling (the )?plays|call plays", re.IGNORECASE
+    )
+    for person, p in ctx.load_profiles().items():
+        assert not calling.search(p["known_for"] or ""), person
+        assert not calling.search(p["tree"] or ""), person

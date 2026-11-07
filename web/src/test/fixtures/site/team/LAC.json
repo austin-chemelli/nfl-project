@@ -1,11 +1,37 @@
 {
- "profiles": {},
+ "profiles": {
+  "Chris O'Leary": {
+   "tree": "Jesse Minter / Jim Harbaugh. Chargers safeties coach 2024; Western Michigan 2025.",
+   "known_for": "Expected to run the same scheme as predecessor Jesse Minter; he ran a very similar version at Western Michigan in 2025.",
+   "sources": [
+    "https://www.si.com/nfl/chargers/onsi/chargers-hit-tough-questions-jesse-minter-departure",
+    "https://www.profootballrumors.com/2026/01/chargers-to-hire-chris-oleary-as-defensive-coordinator"
+   ]
+  },
+  "Jim Harbaugh": {
+   "tree": null,
+   "known_for": "Plays physical football: his teams want to control the line of scrimmage and wear defenses down, with a commitment to running the football.",
+   "sources": [
+    "https://roundtable.io/sports/nfl/chargers/opinion/jim-harbaugh-s-physical-style-of-football-still-looms-important-for-the-chargers",
+    "https://africa.espn.com/nfl/story/_/id/39908584/harbaugh-wants-help-qb-justin-herbert-strong-run-game"
+   ]
+  },
+  "Mike McDaniel": {
+   "tree": "Kyle Shanahan (five seasons on his 49ers staff)",
+   "known_for": "Wide-zone running game that relies on linemen who move quickly and together. The Chargers plan to run much more wide zone with him calling the offense.",
+   "sources": [
+    "https://www.chargers.com/team/coaches-roster/mike-mcdaniel",
+    "https://www.si.com/nfl/chargers/onsi/mike-mcdaniel-chargers-offense-no-secrets-hide-chargers-telegraphing-plan",
+    "https://boltbeat.com/mike-mcdaniel-s-new-plan-for-chargers-o-line-could-bring-joe-alt-to-the-next-level"
+   ]
+  }
+ },
  "schema_version": "1",
  "team": "LAC",
  "season": 2026,
  "week": 9,
  "through_week": 8,
- "generated_at": "2026-11-07T17:19:02.491653+00:00",
+ "generated_at": "2026-11-07T17:24:57.209505+00:00",
  "staff": {
   "current": [
    {

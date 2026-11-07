@@ -27,7 +27,8 @@ describe('Staff tab', () => {
     render(<Staff file={f} />)
     expect(screen.getByText('Runs the offense')).toBeInTheDocument()
     expect(screen.getByText('Play-caller not confirmed')).toBeInTheDocument()
-    expect(document.querySelector('a[href*="to-call-plays"]')).toBeNull()
+    const card = screen.getByText('Runs the offense').closest('div')!
+    expect(card.querySelector('a')).toBeNull()
     expect(screen.queryByText('First year calling NFL plays, promoted from this staff')).toBeNull()
   })
 
