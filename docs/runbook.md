@@ -1,6 +1,6 @@
 # Weekly runbook
 
-Status: current, verified 2026-11-05. The cloud runs the week (§In the cloud); the hand commands are the fallback.
+Status: current, verified 2026-11-07. The cloud runs the week (§In the cloud); the hand commands are the fallback.
 
 How to operate the live pipeline by hand when a cloud job can't. Every command runs from the repo root. Times are US Eastern (Daylight Time until Nov 1, 2026, then Standard). The Odds API free tier allows 500 credits a month; `nfl odds status` shows usage, and the code refuses past a soft cap of 400.
 
@@ -50,6 +50,7 @@ Job code is `src/`, `scripts/`, `pyproject.toml`, `uv.lock` and `Dockerfile`. Me
 - **Merge anytime except the last 10 minutes before a lock** (Thu 09:00, Sat 12:00 ET). Web-only and docs-only changes have no limit.
 - **If a lock is refused**, it emails. Wait for the image (`gh run list --workflow ci.yml --limit 1`) and rerun the job. Rerunning is safe, and the only hard deadline is kickoff.
 - **Dry-run a risky change**, not every merge: `gcloud run jobs execute nfl-lock-thu --region us-central1 --args="lock,thu,--dry-run,--no-odds" --wait`.
+- **A merge with job code also rebuilds the site data** (ADR 0023): CI runs `nfl-site` with the new image, checks the web contract against the live files, then deploys the web. If `contract-live` fails, the old page stays up: read the failing file and field in the job log, then fix the contract or the job.
 - **Model changes are the exception.** The lock checks each fit against its config, so a change to approach configs has to ship with its refit and upload, in one go.
 
 ## If something breaks

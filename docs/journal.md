@@ -562,3 +562,11 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** A number built for a model (a blend with a miss) isn't a number a reader can use: show what it's made of. And any free text about coaches will drift into stating who calls plays, so the guard belongs in a test, not a reviewer's eye.
 
+## 2026-11-07: The team page broke on deploy, and the fix (ADR 0023)
+
+**What happened.** PR #27 made new team-file fields required in the web contract. The web deployed minutes after the merge, while the public bucket still held team files from the previous image, so the live Staff and Tendencies tabs failed to load. The next scheduled site build was up to three days away; `nfl-site` was run by hand (`nfl-site-jg257`) and the page recovered.
+
+**What changed.** CI now runs `nfl-site` after a new image deploys, then parses every kind of live site file with the new contract (`web/src/data/live.contract.test.ts`), and deploys the web only if that passes. Proven against today's bug: requiring a field production doesn't have fails the check on all 32 team files.
+
+**Lesson.** ADR 0015 said contract changes stay additive, and I broke it in the same week I wrote rules about honesty in the data: a rule nothing checks is a hope. The check runs where the failure happens, in the deploy, not in review.
+

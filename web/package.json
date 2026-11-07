@@ -9,7 +9,8 @@
     "typecheck": "tsc -b",
     "lint": "oxlint",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:live": "LIVE_CONTRACT=1 vitest run src/data/live.contract.test.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.105.0",
