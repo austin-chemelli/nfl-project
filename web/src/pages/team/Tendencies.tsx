@@ -48,8 +48,13 @@ function Legend({ color, caller }: { color: string; caller: string | null }) {
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
       <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} /> This season</span>
       {caller && <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rotate-45 border-2 border-[var(--text-secondary)]" /> {caller}'s past</span>}
-      <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-0.5 bg-[var(--text-secondary)]" /> Last season</span>
-      <span className="text-ink-3">Middle tick: league average · further right: more of it</span>
+      <span className="inline-flex items-center gap-1">
+        <svg aria-hidden width="13" height="11" viewBox="0 0 13 11"><path d="M6.5 0.5 L12.5 10.5 H0.5 Z" fill="var(--text-secondary)" /></svg> Last season
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <svg aria-hidden width="4" height="12" viewBox="0 0 4 12"><line x1="2" x2="2" y1="0" y2="12" stroke="var(--text-muted)" strokeDasharray="2 3" /></svg> League average
+      </span>
+      <span className="text-ink-3">Further right: more of it</span>
     </div>
   )
 }
@@ -117,7 +122,7 @@ export function Tendencies({ file }: { file: TeamFile }) {
       })}
       <FinePrint label="How to read this">
         <ul className="list-disc space-y-1.5 pl-5">
-          <li>Every mark is a place in the league that season: the middle tick is average, further right is more of it. More isn't better: these describe what a team does.</li>
+          <li>Every mark is a place in the league that season: the dashed line is the league average, further right is more of it. More isn't better: these describe what a team does.</li>
           <li>The diamond is the play-caller's own past, averaged over his earlier seasons with recent ones counting most, wherever he called plays. None means no past as a play-caller in our data.</li>
           <li>"Matches" means this season is within about five places of that mark.</li>
           <li>"Watch the caller" or "watch last year" says which mark has predicted better when a caller moved before, from 2017 to 2025. No tag means neither did much better than a guess.</li>

@@ -7,7 +7,9 @@ const row = (o: Partial<TendencyRowData>): TendencyRowData => ({ key: 'm', label
 describe('TendencyRow', () => {
   it('draws this season, the caller\'s past and last season, and prints the value', () => {
     const { container } = render(<TendencyRow rows={[row({})]} />)
-    for (const id of ['this-season', 'caller-past', 'last-season']) expect(screen.getByTestId(id)).toBeInTheDocument()
+    for (const id of ['this-season', 'caller-past', 'last-season', 'league-average']) expect(screen.getByTestId(id)).toBeInTheDocument()
+    expect(screen.getByTestId('last-season').tagName).toBe('path') // a triangle, not a tick like the average
+    expect(screen.getAllByTestId('league-average')).toHaveLength(1)
     expect(container.textContent).toContain('73.8%')
     expect(screen.getByRole('img')).toHaveAttribute('aria-label', 'Motion, 3rd')
   })
