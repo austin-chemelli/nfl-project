@@ -222,3 +222,22 @@ def test_replaced_is_the_spell_right_before_and_never_the_same_person():
     assert ctx.replaced([a, b, c], c) is None
     again = {**spell("A"), "start_week": 12}
     assert ctx.replaced([a, again], again) is None
+
+
+def test_traits_need_every_season_on_one_side():
+    row = {"metric": "m", "kind": "live", "prior": 0.9, "prior_min": 0.7, "prior_max": 0.99,
+           "prior_seasons": 4, "prior_first": 2022}  # fmt: skip
+    assert [t["metric"] for t in ctx.traits([row])] == ["m"]
+    assert ctx.traits([{**row, "prior_min": 0.4}]) == []  # one season below the middle
+    assert ctx.traits([{**row, "prior_seasons": 1}]) == []
+    assert ctx.traits([{**row, "prior": 0.7}]) == []  # not far enough from the middle
+    low = {**row, "metric": "low", "prior": 0.05, "prior_min": 0.01, "prior_max": 0.2}
+    assert [t["metric"] for t in ctx.traits([row, low])] == ["low", "m"]
+
+
+def test_lean_follows_the_study_and_drops_weak_cells():
+    assert ctx.lean({"strength": "fair", "weight_on_caller": 0.8}) == "caller"
+    assert ctx.lean({"strength": "fair", "weight_on_caller": 0.3}) == "team"
+    assert ctx.lean({"strength": "fair", "weight_on_caller": 0.5}) == "both"
+    assert ctx.lean({"strength": "weak", "weight_on_caller": 0.9}) is None
+    assert ctx.lean(None) is None

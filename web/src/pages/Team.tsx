@@ -12,7 +12,7 @@ import NotFoundPage from './NotFound'
 import { Games } from './team/Games'
 import { Overview } from './team/Overview'
 import { Staff } from './team/Staff'
-import { callerTile, furthestTile, nextGameTile, playoffTile, type TileText } from './team/summary'
+import { callerTile, changeTile, nextGameTile, playoffTile, type TileText } from './team/summary'
 import { TeamPicker } from './team/TeamPicker'
 import { callerChange } from './team/tendencies'
 import { Tendencies } from './team/Tendencies'
@@ -39,7 +39,7 @@ function Body({ code }: { code: string }) {
     playoffTile(league.data, code),
     callerTile(file.data?.units.off.caller, 'off', file.data && callerChange(file.data, 'off')?.start_week),
     callerTile(file.data?.units.def.caller, 'def', file.data && callerChange(file.data, 'def')?.start_week),
-    furthestTile(file.data),
+    changeTile(file.data),
     nextGameTile(row),
   ].filter((t): t is TileText => t != null)
 

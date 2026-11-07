@@ -45,9 +45,10 @@ describe('team page', () => {
 
   it('draws the tendencies: so far, then what to expect', async () => {
     renderRoute('/team/LAC?tab=tendencies')
-    expect(await screen.findByRole('heading', { name: 'Offense so far' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Offense: what to expect' })).toBeInTheDocument()
-    expect(screen.getAllByTestId('so-far-dot').length).toBeGreaterThan(0)
+    expect(await screen.findByRole('heading', { name: 'Offense this season' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Offense: what to watch for' })).toBeInTheDocument()
+    expect(screen.getAllByTestId('this-season').length).toBeGreaterThan(0)
+    expect(screen.getAllByTestId('caller-past').length).toBeGreaterThan(0)
     expect(screen.getByText(/isn't in yet/)).toBeInTheDocument()
   })
 
@@ -59,7 +60,7 @@ describe('team page', () => {
 
   it('doesn\'t predict what the weekly numbers already show', async () => {
     renderRoute('/team/LAC?tab=tendencies')
-    await screen.findByRole('heading', { name: 'Offense: what to expect' })
+    await screen.findByRole('heading', { name: 'Offense: what to watch for' })
     expect(screen.queryByText('Shotgun', { exact: true })).not.toBeInTheDocument()
   })
 

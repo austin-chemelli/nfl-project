@@ -4,7 +4,7 @@
  "season": 2026,
  "week": 9,
  "through_week": 8,
- "generated_at": "2026-11-07T00:59:30.397992+00:00",
+ "generated_at": "2026-11-07T17:14:03.913764+00:00",
  "staff": {
   "current": [
    {
@@ -93,7 +93,8 @@
       "from": 2026,
       "to": 2026
      }
-    ]
+    ],
+    "traits": []
    },
    "live": [
     {
@@ -109,6 +110,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -139,6 +142,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -169,6 +174,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -199,6 +206,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -229,6 +238,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -259,6 +270,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -289,6 +302,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -319,6 +334,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -351,6 +368,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -375,6 +394,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -399,6 +420,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -423,6 +446,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -447,6 +472,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -475,7 +502,8 @@
       "from": 2026,
       "to": 2026
      }
-    ]
+    ],
+    "traits": []
    },
    "live": [
     {
@@ -491,6 +519,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -521,6 +551,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -551,6 +583,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -583,6 +617,12 @@
       "weight_on_caller": 0.9,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.5045,
+      "seasons": 3,
+      "first": 2018
+     },
+     "lean": null,
      "caller_seasons": 3,
      "caller_teams": [
       "JAX"
@@ -609,6 +649,12 @@
       "weight_on_caller": 0.5,
       "strength": "fair"
      },
+     "caller_past": {
+      "pct": 0.2341,
+      "seasons": 3,
+      "first": 2018
+     },
+     "lean": "both",
      "caller_seasons": 3,
      "caller_teams": [
       "JAX"
@@ -635,6 +681,12 @@
       "weight_on_caller": 0.3,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.5154,
+      "seasons": 5,
+      "first": 2016
+     },
+     "lean": null,
      "caller_seasons": 5,
      "caller_teams": [
       "JAX"

@@ -207,6 +207,9 @@ def caller_prior(assign: pl.DataFrame, rates: pl.DataFrame, decay: float = DECAY
                 ((pl.col("pct") * pl.col("w")).sum() / pl.col("w").sum()).alias("prior"),
                 pl.col("season").n_unique().alias("prior_seasons"),
                 pl.col("team").unique(maintain_order=True).alias("prior_teams"),
+                pl.col("pct").min().alias("prior_min"),
+                pl.col("pct").max().alias("prior_max"),
+                pl.col("season").min().alias("prior_first"),
             )
             .with_columns(pl.lit(target).alias("season"))
         )
@@ -244,6 +247,35 @@ def expected(prior: float | None, team_prev: float | None, cell: dict | None) ->
         "weight_on_caller": weight,
         "strength": "weak" if weak else "fair",
     }
+
+
+def lean(exp: dict | None) -> str | None:
+    """Which past the study says to trust for this row: the caller's, the team's, or both. None
+    when the study's guess was little better than the league middle."""
+    if not exp or exp["strength"] != "fair":
+        return None
+    w = exp["weight_on_caller"]
+    return "caller" if w >= 0.6 else "team" if w <= 0.4 else "both"
+
+
+TRAIT_EDGE = 0.3  # a trait sits at least this far from the league middle on average
+MAX_TRAITS = 3
+
+
+def traits(rows: list[dict]) -> list[dict]:
+    """A caller's most consistent habits: measures where every past season sat on the same side of
+    the league middle, at least two seasons, furthest from the middle first."""
+    out = []
+    for r in rows:
+        p, lo, hi = r["prior"], r["prior_min"], r["prior_max"]
+        if r["prior_seasons"] < 2 or abs(p - 0.5) < TRAIT_EDGE:
+            continue
+        if not (lo > 0.5 or hi < 0.5):
+            continue
+        out.append({"metric": r["metric"], "kind": r["kind"], "pct": round(p, 4),
+                    "seasons": r["prior_seasons"], "first": r["prior_first"]})  # fmt: skip
+    out.sort(key=lambda t: -abs(t["pct"] - 0.5))
+    return out[:MAX_TRAITS]
 
 
 def other_starter_weeks(games: pl.DataFrame, team: str) -> list[dict]:
@@ -356,6 +388,9 @@ def _metric_rows(kind, side, sit, prior, rates, season, blend, label) -> list[di
         out.append({
             "metric": m, **label(m),
             "expected": exp,
+            "caller_past": {"pct": round(p["prior"], 4), "seasons": p["prior_seasons"],
+                            "first": p["prior_first"]} if p.get("prior") is not None else None,
+            "lean": lean(exp) if p.get("prior") is not None else None,
             "caller_seasons": p.get("prior_seasons", 0),
             "caller_teams": p.get("prior_teams", []),
             "team_last": {"season": season - 1, "pct": round(prev["pct"], 4),
@@ -382,6 +417,7 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
         k: caller_prior(assign, v).filter(pl.col("season") == season) for k, v in sets.items()
     }
     now = now_utc().isoformat()
+    labels = {"live": metric_label, "charted": _charted_label}
     out = {}
     for team in sorted(spells.filter(pl.col("season") == season)["team"].unique().to_list()):
         at = coaches.staff_at(season, team, week, spells).to_dicts()
@@ -413,6 +449,16 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
             caller = _caller(spell, titled.get(title), titled.get("HC"), shown)
             if caller:
                 caller["career"] = career(spells, who, side) if who else []
+                mine = [
+                    {**r, "kind": k}
+                    for k in sets
+                    for r in priors[k]
+                    .filter((pl.col("person") == who) & (pl.col("side") == side))
+                    .to_dicts()
+                    if not (k == "charted" and r["metric"] in ALSO_LIVE)
+                    and r["metric"] in (LIVE[side] if k == "live" else SCHEME_METRICS[side])
+                ] if who else []  # fmt: skip
+                caller["traits"] = [{**t, **labels[t["kind"]](t["metric"])} for t in traits(mine)]
             block = {"caller": caller}
             for kind, rates in sets.items():
                 mine = rates.filter((pl.col("team") == team) & (pl.col("side") == side))

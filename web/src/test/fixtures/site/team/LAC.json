@@ -4,7 +4,7 @@
  "season": 2026,
  "week": 9,
  "through_week": 8,
- "generated_at": "2026-11-07T00:59:30.397992+00:00",
+ "generated_at": "2026-11-07T17:14:03.913764+00:00",
  "staff": {
   "current": [
    {
@@ -77,6 +77,44 @@
       "from": 2026,
       "to": 2026
      }
+    ],
+    "traits": [
+     {
+      "metric": "motion_rate",
+      "kind": "live",
+      "pct": 0.9844,
+      "seasons": 4,
+      "first": 2022,
+      "label": "Pre-snap motion",
+      "help": "Share of plays with a player in motion before the snap (FTN charting).",
+      "unit": "pct",
+      "lo": "less",
+      "hi": "more"
+     },
+     {
+      "metric": "pers_11_share",
+      "kind": "charted",
+      "pct": 0.07,
+      "seasons": 4,
+      "first": 2022,
+      "label": "11 personnel (3 WR)",
+      "help": "Share of offensive snaps with 1 back, 1 tight end and 3 receivers.",
+      "unit": "pct",
+      "lo": "less",
+      "hi": "more"
+     },
+     {
+      "metric": "time_to_throw",
+      "kind": "charted",
+      "pct": 0.0911,
+      "seasons": 4,
+      "first": 2022,
+      "label": "Time to throw",
+      "help": "Average seconds from snap to throw on charted dropbacks. Mixes the QB, the protection and the play design.",
+      "unit": "seconds",
+      "lo": "shorter",
+      "hi": "longer"
+     }
     ]
    },
    "live": [
@@ -93,6 +131,12 @@
       "weight_on_caller": 0.2,
       "strength": "fair"
      },
+     "caller_past": {
+      "pct": 0.3954,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": "team",
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -125,6 +169,12 @@
       "weight_on_caller": 0.9,
       "strength": "fair"
      },
+     "caller_past": {
+      "pct": 0.6834,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": "caller",
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -157,6 +207,12 @@
       "weight_on_caller": 1.0,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.1647,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -189,6 +245,12 @@
       "weight_on_caller": 0.9,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.9844,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -221,6 +283,12 @@
       "weight_on_caller": 0.9,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.8449,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -253,6 +321,12 @@
       "weight_on_caller": 0.9,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.4406,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -285,6 +359,12 @@
       "weight_on_caller": 0.9,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.8201,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -317,6 +397,12 @@
       "weight_on_caller": 0.9,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.3166,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -351,6 +437,12 @@
       "weight_on_caller": 0.9,
       "strength": "fair"
      },
+     "caller_past": {
+      "pct": 0.07,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": "caller",
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -377,6 +469,12 @@
       "weight_on_caller": 0.7,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.1836,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -403,6 +501,12 @@
       "weight_on_caller": 0.9,
       "strength": "fair"
      },
+     "caller_past": {
+      "pct": 0.8993,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": "caller",
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -429,6 +533,12 @@
       "weight_on_caller": 0.7,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.0911,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -455,6 +565,12 @@
       "weight_on_caller": 0.6,
       "strength": "weak"
      },
+     "caller_past": {
+      "pct": 0.2992,
+      "seasons": 4,
+      "first": 2022
+     },
+     "lean": null,
      "caller_seasons": 4,
      "caller_teams": [
       "MIA"
@@ -485,7 +601,8 @@
       "from": 2026,
       "to": 2026
      }
-    ]
+    ],
+    "traits": []
    },
    "live": [
     {
@@ -501,6 +618,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -531,6 +650,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -561,6 +682,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -593,6 +716,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -617,6 +742,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {
@@ -641,6 +768,8 @@
       "weight_on_caller": 0.0,
       "strength": "weak"
      },
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 0,
      "caller_teams": [],
      "team_last": {

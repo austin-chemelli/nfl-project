@@ -827,6 +827,7 @@ const UnitCaller = z.looseObject({
   situation: nstr.default(null),
   situation_text: nstr.default(null),
   career: z.array(z.looseObject({ team: z.string(), from: num, to: num })).default([]),
+  traits: z.array(z.looseObject({ metric: z.string(), label: z.string(), pct: num, seasons: num, first: num, lo: z.string(), hi: z.string() })).default([]),
 })
 const TeamExpected = z.looseObject({
   pct: num, // 0 to 1, the share of the league below
@@ -837,6 +838,8 @@ const TeamExpected = z.looseObject({
 const TeamSeasonValue = z.looseObject({ pct: num, rate: num, rank: num, of: num })
 const TeamMetric = z.looseObject({
   metric: z.string(),
+  caller_past: z.looseObject({ pct: num, seasons: num, first: num }).nullable().default(null), // the caller's own seasons before this one
+  lean: z.enum(['caller', 'team', 'both']).nullable().default(null), // which past has predicted best, per the study
   label: z.string(),
   help: z.string(),
   unit: z.string(), // pct, seconds, epa

@@ -53,7 +53,7 @@ export function Tile({ label, value, sub, tab, modelId, accent }: {
         {modelId && <Swatch modelId={modelId} />}
         <span>{label}</span>
       </span>
-      <span className="tabular mt-1 block text-xl font-semibold leading-tight">{value}</span>
+      <span className="tabular mt-1 block text-xl font-semibold leading-tight [overflow-wrap:anywhere]">{value}</span>
       {sub && <span className="mt-1 block text-[13px] text-ink-2">{sub}</span>}
     </>
   )

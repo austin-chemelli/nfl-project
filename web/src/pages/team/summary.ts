@@ -2,7 +2,7 @@
 import type { LeagueFile, UnitCaller, TeamFile, TeamRow } from '../../data/contract'
 import { ordinal } from '../league/helpers'
 import { fmtProb } from '../league/playoffs'
-import { furthest, verdict } from './tendencies'
+import { biggestChange } from './tendencies'
 
 export type TileText = { label: string; value: string; sub: string; tab: string }
 
@@ -30,11 +30,10 @@ export function callerTile(caller: UnitCaller | null | undefined, side: 'off' | 
   return { label: `Calls the ${unit}`, value: caller.name, sub: sub ?? '', tab: 'staff' }
 }
 
-export function furthestTile(file: TeamFile | undefined): TileText | null {
-  const top = file && furthest(file)
-  if (!top?.row.observed) return null
-  const word = verdict(top.row) === 'more' ? 'more' : 'less'
-  return { label: 'Furthest from expected', value: top.row.label, sub: `${ordinal(top.row.observed.rank)}, ${word} than expected`, tab: 'tendencies' }
+export function changeTile(file: TeamFile | undefined): TileText | null {
+  const m = file && biggestChange(file)
+  if (!m?.observed || !m.team_last) return null
+  return { label: 'Biggest change', value: m.label, sub: `${ordinal(m.team_last.rank)} last year, ${ordinal(m.observed.rank)} now`, tab: 'tendencies' }
 }
 
 export function nextGameTile(row: TeamRow | undefined): TileText | null {
