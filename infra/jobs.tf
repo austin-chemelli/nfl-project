@@ -8,7 +8,7 @@ locals {
     lock-thu       = { args = ["lock", "thu"], timeout = "3600s", secrets_key = true }
     lock-sat       = { args = ["lock", "sat"], timeout = "3600s", secrets_key = true }
     odds-snapshot  = { args = ["odds"], timeout = "1800s", secrets_key = false }
-    # Wed/Fri/Sat evenings between the refresh and the locks (ADR 0023): ingest, odds, features, site
+    # Wed/Fri/Sat evenings between the refresh and the locks (ADR 0024): ingest, odds, features, site
     daily = { args = ["daily"], timeout = "3600s", secrets_key = false }
     retro = { args = ["retro"], timeout = "1800s", secrets_key = false }
     # site: started by the desktop after it uploads narrative records (scripts/desktop-narrative.sh)

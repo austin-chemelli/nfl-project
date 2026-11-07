@@ -3,7 +3,7 @@
 #   refresh          nfl weekly refresh, then publish the site JSON
 #   lock <slot>      clone the repo, nfl lock --slot <slot> --commit --push, publish site + lock files
 #   odds             nfl odds snapshot, rebuild site JSON, publish
-#   daily            nfl daily (ingest, odds, curate, features, site), publish (ADR 0023)
+#   daily            nfl daily (ingest, odds, curate, features, site), publish (ADR 0024)
 #   site             rebuild site JSON and publish (after the desktop uploads narrative records)
 #   narrative-check  fail (and so alert) if an upcoming game has no record from the last desktop pass
 #   retro            nfl retro daily (current-season ingest, curate, game retros + recaps), publish
