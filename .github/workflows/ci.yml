@@ -86,9 +86,48 @@ jobs:
           echo "site=$(has '^(web/|scripts/firebase_deploy\.py$|\.github/workflows/site\.yml$)')" >> "$GITHUB_OUTPUT"
           echo "image=$(has '^(src/|scripts/|pyproject\.toml$|uv\.lock$|Dockerfile$|\.dockerignore$|\.github/workflows/image\.yml$)')" >> "$GITHUB_OUTPUT"
 
+  # ADR 0023: new code's data goes out before the web code that reads it, and the web deploys only
+  # if this commit's contract parses the live data. A failed check leaves the old page up.
+  site-data:
+    needs: [changes, deploy-image]
+    if: needs.changes.outputs.image == 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: site-data
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Rebuild the site data with the new image
+        run: gcloud run jobs execute nfl-site --region "${{ vars.GCP_REGION }}" --project "${{ vars.GCP_PROJECT_ID }}" --wait
+
+  contract-live:
+    needs: [changes, site-data]
+    if: ${{ !cancelled() && !failure() && (needs.changes.outputs.site == 'true' || needs.changes.outputs.image == 'true') }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: This commit's contract against the live data
+        run: npm run test:live
+
   deploy-site:
-    needs: [test, web, changes]
-    if: needs.changes.outputs.site == 'true'
+    needs: [test, web, changes, contract-live]
+    if: ${{ !cancelled() && !failure() && needs.changes.outputs.site == 'true' }}
     concurrency:
       group: site-deploy
       cancel-in-progress: false
