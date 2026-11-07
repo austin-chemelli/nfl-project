@@ -4,6 +4,7 @@ import { FinePrint } from '../../components/FinePrint'
 import { Card, ErrorBox, Loading } from '../../components/ui'
 import { isNotFound, useSimilar } from '../../data/api'
 import type { LeagueFile, SimilarFile, SimilarTeam } from '../../data/contract'
+import { TeamLink } from '../../components/TeamLink'
 import { teamInfo } from '../../lib/teams'
 import { FinishGrid } from './FinishGrid'
 import { FlagCards } from './FlagCards'
@@ -64,6 +65,7 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
           {entry ? `Teams that looked like the ${name} after ${entry.games_played} games finished like this. ` : ''}This describes the past and isn't a forecast; the{' '}
           <Link to={{ search: '?tab=odds' }}>playoff odds</Link> are the forecast.
         </p>
+        <p className="m-0 text-[13px]"><TeamLink team={team}>{name} team page</TeamLink></p>
 
         <label className="flex w-full min-w-0 max-w-xs flex-col gap-0.5 text-[12px] text-ink-3">
           Team

@@ -238,3 +238,25 @@ describe('contract: similar.json', () => {
     expect('similar' in JSON.parse(fs.readFileSync(path.join(FIX, 'league.json'), 'utf8'))).toBe(false)
   })
 })
+
+describe('contract: team files', () => {
+  const dir = path.join(FIX, 'team')
+  const load = (code: string) => C.TeamFile.parse(JSON.parse(fs.readFileSync(path.join(dir, `${code}.json`), 'utf8')))
+  it('parses every fixture', () => {
+    const files = fs.readdirSync(dir)
+    expect(files.length).toBeGreaterThanOrEqual(2)
+    for (const f of files) expect(load(f.replace('.json', '')).team).toBe(f.replace('.json', ''))
+  })
+  it('carries the ranks: LAC motion from 22nd to 3rd', () => {
+    const row = load('LAC').units.off.live.find((m) => m.metric === 'motion_rate')
+    expect(row?.observed?.rank).toBe(3)
+    expect(row?.team_last?.rank).toBe(22)
+  })
+  it('names no unconfirmed play-caller in the staff lists', () => {
+    for (const code of ['LAC', 'CAR']) {
+      const { staff } = load(code)
+      for (const s of [...staff.current, ...staff.changes]) if (s.role.endsWith('_PC')) expect(s.confirmed).toBe(true)
+    }
+  })
+})
+

@@ -1,0 +1,830 @@
+{
+ "profiles": {
+  "Chris O'Leary": {
+   "tree": "Jesse Minter / Jim Harbaugh. Chargers safeties coach 2024; Western Michigan 2025.",
+   "known_for": "Expected to run the same scheme as predecessor Jesse Minter; he ran a very similar version at Western Michigan in 2025.",
+   "sources": [
+    "https://www.si.com/nfl/chargers/onsi/chargers-hit-tough-questions-jesse-minter-departure",
+    "https://www.profootballrumors.com/2026/01/chargers-to-hire-chris-oleary-as-defensive-coordinator"
+   ]
+  },
+  "Jim Harbaugh": {
+   "tree": null,
+   "known_for": "Plays physical football: his teams want to control the line of scrimmage and wear defenses down, with a commitment to running the football.",
+   "sources": [
+    "https://roundtable.io/sports/nfl/chargers/opinion/jim-harbaugh-s-physical-style-of-football-still-looms-important-for-the-chargers",
+    "https://africa.espn.com/nfl/story/_/id/39908584/harbaugh-wants-help-qb-justin-herbert-strong-run-game"
+   ]
+  },
+  "Mike McDaniel": {
+   "tree": "Kyle Shanahan (five seasons on his 49ers staff)",
+   "known_for": "Wide-zone running game that relies on linemen who move quickly and together.",
+   "sources": [
+    "https://www.chargers.com/team/coaches-roster/mike-mcdaniel",
+    "https://www.si.com/nfl/chargers/onsi/mike-mcdaniel-chargers-offense-no-secrets-hide-chargers-telegraphing-plan",
+    "https://boltbeat.com/mike-mcdaniel-s-new-plan-for-chargers-o-line-could-bring-joe-alt-to-the-next-level"
+   ]
+  }
+ },
+ "schema_version": "1",
+ "team": "LAC",
+ "season": 2026,
+ "week": 9,
+ "through_week": 8,
+ "generated_at": "2026-11-07T17:58:38.597768+00:00",
+ "staff": {
+  "current": [
+   {
+    "role": "HC",
+    "name": "Jim Harbaugh",
+    "start_week": 1,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.chargers.com/team/coaches-roster/"
+   },
+   {
+    "role": "OC",
+    "name": "Mike McDaniel",
+    "start_week": 1,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.chargers.com/news/mike-mcdaniel-chris-oleary-new-coordinator-2026"
+   },
+   {
+    "role": "DC",
+    "name": "Chris O'Leary",
+    "start_week": 1,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.chargers.com/news/mike-mcdaniel-chris-oleary-new-coordinator-2026"
+   },
+   {
+    "role": "OFF_PC",
+    "name": "Mike McDaniel",
+    "start_week": 1,
+    "end_week": null,
+    "evidence": "roundup",
+    "confirmed": true,
+    "source_url": "https://www.espn.com/nfl/story/_/id/49711157/nfl-playcallers-32-teams-mike-mcdaniel-sean-mcvay-mike-mccarthy"
+   },
+   {
+    "role": "DEF_PC",
+    "name": "Chris O'Leary",
+    "start_week": 1,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.chargers.com/news/mike-mcdaniel-bye-week-storylines-2026"
+   }
+  ],
+  "changes": []
+ },
+ "other_starter_weeks": [],
+ "units": {
+  "off": {
+   "caller": {
+    "name": "Mike McDaniel",
+    "confirmed": true,
+    "is_head_coach": false,
+    "evidence": "roundup",
+    "source_url": "https://www.espn.com/nfl/story/_/id/49711157/nfl-playcallers-32-teams-mike-mcdaniel-sean-mcvay-mike-mccarthy",
+    "situation": "moved_team",
+    "situation_text": "New play-caller, has called plays before",
+    "career": [
+     {
+      "team": "MIA",
+      "from": 2022,
+      "to": 2025
+     },
+     {
+      "team": "LAC",
+      "from": 2026,
+      "to": 2026
+     }
+    ],
+    "traits": [
+     {
+      "metric": "motion_rate",
+      "kind": "live",
+      "pct": 0.9844,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025,
+      "label": "Pre-snap motion",
+      "help": "Share of plays with a player in motion before the snap (FTN charting).",
+      "unit": "pct",
+      "lo": "less",
+      "hi": "more"
+     },
+     {
+      "metric": "pers_11_share",
+      "kind": "charted",
+      "pct": 0.07,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025,
+      "label": "11 personnel (3 WR)",
+      "help": "Share of offensive snaps with 1 back, 1 tight end and 3 receivers.",
+      "unit": "pct",
+      "lo": "less",
+      "hi": "more"
+     },
+     {
+      "metric": "time_to_throw",
+      "kind": "charted",
+      "pct": 0.0911,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025,
+      "label": "Time to throw",
+      "help": "Average seconds from snap to throw on charted dropbacks. Mixes the QB, the protection and the play design.",
+      "unit": "seconds",
+      "lo": "shorter",
+      "hi": "longer"
+     }
+    ]
+   },
+   "live": [
+    {
+     "metric": "pass_rate",
+     "label": "Pass rate",
+     "help": "Share of plays that are passes (including sacks and scrambles).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.7416,
+      "miss": 0.215,
+      "weight_on_caller": 0.2,
+      "strength": "fair"
+     },
+     "caller_past": {
+      "pct": 0.3954,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": "team",
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.8281,
+      "rate": 0.6365,
+      "rank": 6,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.4844,
+      "rate": 0.5981,
+      "n": 428,
+      "rank": 17,
+      "of": 32
+     }
+    },
+    {
+     "metric": "shotgun_rate",
+     "label": "Shotgun rate",
+     "help": "Share of plays with the QB in shotgun.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.6822,
+      "miss": 0.22,
+      "weight_on_caller": 0.9,
+      "strength": "fair"
+     },
+     "caller_past": {
+      "pct": 0.6834,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": "caller",
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.6719,
+      "rate": 0.7155,
+      "rank": 11,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.7656,
+      "rate": 0.6729,
+      "n": 428,
+      "rank": 8,
+      "of": 32
+     }
+    },
+    {
+     "metric": "no_huddle_rate",
+     "label": "No-huddle rate",
+     "help": "Share of plays run without a huddle.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.1647,
+      "miss": 0.237,
+      "weight_on_caller": 1.0,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.1647,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.2344,
+      "rate": 0.0457,
+      "rank": 25,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.4844,
+      "rate": 0.0514,
+      "n": 428,
+      "rank": 17,
+      "of": 32
+     }
+    },
+    {
+     "metric": "motion_rate",
+     "label": "Pre-snap motion",
+     "help": "Share of plays with a player in motion before the snap (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.9187,
+      "miss": 0.253,
+      "weight_on_caller": 0.9,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.9844,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3281,
+      "rate": 0.5233,
+      "rank": 22,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.9219,
+      "rate": 0.7383,
+      "n": 428,
+      "rank": 3,
+      "of": 32
+     }
+    },
+    {
+     "metric": "play_action_rate",
+     "label": "Play-action",
+     "help": "Share of passes with a play-action fake (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.812,
+      "miss": 0.253,
+      "weight_on_caller": 0.9,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.8449,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.5156,
+      "rate": 0.2251,
+      "rank": 16,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.6094,
+      "rate": 0.2393,
+      "n": 234,
+      "rank": 13,
+      "of": 32
+     }
+    },
+    {
+     "metric": "rpo_rate",
+     "label": "RPO rate",
+     "help": "Share of plays that are run-pass options (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.4137,
+      "miss": 0.253,
+      "weight_on_caller": 0.9,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.4406,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.1719,
+      "rate": 0.0246,
+      "rank": 27,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.2656,
+      "rate": 0.0327,
+      "n": 428,
+      "rank": 24,
+      "of": 32
+     }
+    },
+    {
+     "metric": "screen_rate",
+     "label": "Screen rate",
+     "help": "Share of passes that are screens (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.7584,
+      "miss": 0.253,
+      "weight_on_caller": 0.9,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.8201,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.2031,
+      "rate": 0.0619,
+      "rank": 26,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.8125,
+      "rate": 0.1154,
+      "n": 234,
+      "rank": 6,
+      "of": 32
+     }
+    },
+    {
+     "metric": "under_center_rate",
+     "label": "Under center",
+     "help": "Share of plays with the QB under center (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.324,
+      "miss": 0.253,
+      "weight_on_caller": 0.9,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.3166,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3906,
+      "rate": 0.2853,
+      "rank": 20,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.2344,
+      "rate": 0.3131,
+      "n": 428,
+      "rank": 25,
+      "of": 32
+     }
+    }
+   ],
+   "charted": [
+    {
+     "metric": "pers_11_share",
+     "label": "11 personnel (3 WR)",
+     "help": "Share of offensive snaps with 1 back, 1 tight end and 3 receivers.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.0958,
+      "miss": 0.165,
+      "weight_on_caller": 0.9,
+      "strength": "fair"
+     },
+     "caller_past": {
+      "pct": 0.07,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": "caller",
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3281,
+      "rate": 0.5777,
+      "rank": 22,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "pers_12_share",
+     "label": "12 personnel (2 TE)",
+     "help": "Share of offensive snaps with 1 back, 2 tight ends and 2 receivers.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.1332,
+      "miss": 0.229,
+      "weight_on_caller": 0.7,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.1836,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.0156,
+      "rate": 0.0553,
+      "rank": 32,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "pers_heavy_share",
+     "label": "Heavy sets",
+     "help": "Share of snaps with two or more tight ends or two or more backs.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.8453,
+      "miss": 0.212,
+      "weight_on_caller": 0.9,
+      "strength": "fair"
+     },
+     "caller_past": {
+      "pct": 0.8993,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": "caller",
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3594,
+      "rate": 0.3582,
+      "rank": 21,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "time_to_throw",
+     "label": "Time to throw",
+     "help": "Average seconds from snap to throw on charted dropbacks. Mixes the QB, the protection and the play design.",
+     "unit": "seconds",
+     "lo": "shorter",
+     "hi": "longer",
+     "expected": {
+      "pct": 0.2466,
+      "miss": 0.217,
+      "weight_on_caller": 0.7,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.0911,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.6094,
+      "rate": 2.7103,
+      "rank": 13,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "pressure_allowed_rate",
+     "label": "Pressure allowed",
+     "help": "Share of charted dropbacks where the QB was pressured.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.5608,
+      "miss": 0.233,
+      "weight_on_caller": 0.6,
+      "strength": "weak"
+     },
+     "caller_past": {
+      "pct": 0.2992,
+      "seasons": 4,
+      "first": 2022,
+      "last": 2025
+     },
+     "lean": null,
+     "caller_seasons": 4,
+     "caller_teams": [
+      "MIA"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.9531,
+      "rate": 0.3614,
+      "rank": 2,
+      "of": 32
+     },
+     "observed": null
+    }
+   ]
+  },
+  "def": {
+   "caller": {
+    "name": "Chris O'Leary",
+    "confirmed": true,
+    "is_head_coach": false,
+    "evidence": "official",
+    "source_url": "https://www.chargers.com/news/mike-mcdaniel-bye-week-storylines-2026",
+    "situation": "outside_first_time",
+    "situation_text": "First year calling NFL plays",
+    "career": [
+     {
+      "team": "LAC",
+      "from": 2026,
+      "to": 2026
+     }
+    ],
+    "traits": []
+   },
+   "live": [
+    {
+     "metric": "pass_rushers_5plus_rate",
+     "label": "5+ pass rushers",
+     "help": "Share of opponent dropbacks with five or more rushers (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.0781,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.0781,
+      "rate": 0.2006,
+      "rank": 30,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.3281,
+      "rate": 0.2651,
+      "n": 215,
+      "rank": 22,
+      "of": 32
+     }
+    },
+    {
+     "metric": "box_8plus_vs_run_rate",
+     "label": "8+ in the box vs runs",
+     "help": "Share of opponent runs faced with 8 or more defenders in the box.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.2656,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.2656,
+      "rate": 0.0602,
+      "rank": 24,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.6719,
+      "rate": 0.0995,
+      "n": 201,
+      "rank": 11,
+      "of": 32
+     }
+    },
+    {
+     "metric": "box_6minus_vs_run_rate",
+     "label": "Light box vs runs",
+     "help": "Share of opponent runs faced with 6 or fewer defenders in the box.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.8906,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.8906,
+      "rate": 0.6829,
+      "rank": 4,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.7031,
+      "rate": 0.4826,
+      "n": 201,
+      "rank": 10,
+      "of": 32
+     }
+    }
+   ],
+   "charted": [
+    {
+     "metric": "man_rate",
+     "label": "Man coverage",
+     "help": "Share of charted dropbacks defended in man coverage (2018+). Compare within a season only: the charting provider changed in 2023.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.1719,
+      "miss": 0.259,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.1719,
+      "rate": 0.2309,
+      "rank": 27,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "two_high_rate",
+     "label": "Two-high shells",
+     "help": "Share of charted dropbacks with two safeties deep at the snap (2018+).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.7969,
+      "miss": 0.281,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.7969,
+      "rate": 0.5033,
+      "rank": 7,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "pressure_rate",
+     "label": "Pressure rate",
+     "help": "Share of charted dropbacks where the defense pressured the QB.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.3906,
+      "miss": 0.255,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3906,
+      "rate": 0.2962,
+      "rank": 20,
+      "of": 32
+     },
+     "observed": null
+    }
+   ]
+  }
+ }
+}

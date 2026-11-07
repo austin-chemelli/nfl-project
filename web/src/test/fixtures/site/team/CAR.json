@@ -1,0 +1,720 @@
+{
+ "profiles": {
+  "Brad Idzik": {
+   "tree": "Dave Canales: the only Seahawks assistant Canales took to Tampa Bay in 2023, then his offensive coordinator in Carolina.",
+   "known_for": null,
+   "sources": [
+    "https://abc11.com/post/dave-canales-trusts-brad-izdik-panthers-playcaller/18656928/",
+    "https://www.panthers.com/news/dave-canales-offensive-coordinator-brad-idzik-to-call-plays-in-2026"
+   ]
+  },
+  "Dave Canales": {
+   "tree": "Pete Carroll coaching tree (Carroll's tree has spread far and wide and Canales brings that branch to Charlotte).",
+   "known_for": "Known for getting the best from quarterbacks (Geno Smith and Baker Mayfield had career seasons with him).",
+   "sources": [
+    "https://www.si.com/nfl/seahawks/seahawks-news/former-seattle-seahawks-coach-pete-carroll-excited-for-disciple-dave-canales",
+    "https://www.panthers.com/news/dave-canales-offensive-coordinator-brad-idzik-to-call-plays-in-2026"
+   ]
+  },
+  "Todd Wash": {
+   "tree": "Pete Carroll: on Carroll's Seattle staff in 2012 with Gus Bradley, Marquand Manuel and Robert Saleh.",
+   "known_for": "Says his defense is defined more by how versatile its players are than by scheme.",
+   "sources": [
+    "https://www.espn.com/espn/wire/_/section/nfl/id/21950327",
+    "https://www.jaguars.com/news/offseason-update-we-re-not-a-true-3-4"
+   ]
+  }
+ },
+ "schema_version": "1",
+ "team": "CAR",
+ "season": 2026,
+ "week": 9,
+ "through_week": 8,
+ "generated_at": "2026-11-07T17:58:38.597768+00:00",
+ "staff": {
+  "current": [
+   {
+    "role": "HC",
+    "name": "Dave Canales",
+    "start_week": 1,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.panthers.com/team/coaches-roster/"
+   },
+   {
+    "role": "OC",
+    "name": "Brad Idzik",
+    "start_week": 1,
+    "end_week": null,
+    "evidence": "news",
+    "confirmed": true,
+    "source_url": "https://amp.nfl.com/news/panthers-retain-defensive-coordinator-ejiro-evero-name-brad-idzik-offensive-coordinator"
+   },
+   {
+    "role": "DC",
+    "name": "Todd Wash",
+    "start_week": 9,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.panthers.com/team/coaches-roster/"
+   },
+   {
+    "role": "OFF_PC",
+    "name": "Brad Idzik",
+    "start_week": 1,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.panthers.com/news/dave-canales-offensive-coordinator-brad-idzik-to-call-plays-in-2026"
+   },
+   {
+    "role": "DEF_PC",
+    "name": "Todd Wash",
+    "start_week": 9,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.panthers.com/news/panthers-announce-changes-to-defensive-coaching-staff"
+   }
+  ],
+  "changes": [
+   {
+    "role": "DC",
+    "name": "Todd Wash",
+    "start_week": 9,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.panthers.com/team/coaches-roster/",
+    "replaced": "Ejiro Evero"
+   },
+   {
+    "role": "DEF_PC",
+    "name": "Todd Wash",
+    "start_week": 9,
+    "end_week": null,
+    "evidence": "official",
+    "confirmed": true,
+    "source_url": "https://www.panthers.com/news/panthers-announce-changes-to-defensive-coaching-staff",
+    "replaced": null
+   }
+  ]
+ },
+ "other_starter_weeks": [],
+ "units": {
+  "off": {
+   "caller": {
+    "name": "Brad Idzik",
+    "confirmed": true,
+    "is_head_coach": false,
+    "evidence": "official",
+    "source_url": "https://www.panthers.com/news/dave-canales-offensive-coordinator-brad-idzik-to-call-plays-in-2026",
+    "situation": "promoted_first_time",
+    "situation_text": "First year calling NFL plays, promoted from this staff",
+    "career": [
+     {
+      "team": "CAR",
+      "from": 2026,
+      "to": 2026
+     }
+    ],
+    "traits": []
+   },
+   "live": [
+    {
+     "metric": "pass_rate",
+     "label": "Pass rate",
+     "help": "Share of plays that are passes (including sacks and scrambles).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.3594,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3594,
+      "rate": 0.594,
+      "rank": 21,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.9219,
+      "rate": 0.6602,
+      "n": 462,
+      "rank": 3,
+      "of": 32
+     }
+    },
+    {
+     "metric": "shotgun_rate",
+     "label": "Shotgun rate",
+     "help": "Share of plays with the QB in shotgun.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.5156,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.5156,
+      "rate": 0.6686,
+      "rank": 16,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.6719,
+      "rate": 0.6558,
+      "n": 462,
+      "rank": 11,
+      "of": 32
+     }
+    },
+    {
+     "metric": "no_huddle_rate",
+     "label": "No-huddle rate",
+     "help": "Share of plays run without a huddle.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.3594,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3594,
+      "rate": 0.0595,
+      "rank": 21,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.6094,
+      "rate": 0.0606,
+      "n": 462,
+      "rank": 13,
+      "of": 32
+     }
+    },
+    {
+     "metric": "motion_rate",
+     "label": "Pre-snap motion",
+     "help": "Share of plays with a player in motion before the snap (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.0469,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.0469,
+      "rate": 0.4363,
+      "rank": 31,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.4531,
+      "rate": 0.5649,
+      "n": 462,
+      "rank": 18,
+      "of": 32
+     }
+    },
+    {
+     "metric": "play_action_rate",
+     "label": "Play-action",
+     "help": "Share of passes with a play-action fake (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.2656,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.2656,
+      "rate": 0.2057,
+      "rank": 24,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.7656,
+      "rate": 0.2593,
+      "n": 297,
+      "rank": 8,
+      "of": 32
+     }
+    },
+    {
+     "metric": "rpo_rate",
+     "label": "RPO rate",
+     "help": "Share of plays that are run-pass options (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.8906,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.8906,
+      "rate": 0.102,
+      "rank": 4,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.9844,
+      "rate": 0.1342,
+      "n": 462,
+      "rank": 1,
+      "of": 32
+     }
+    },
+    {
+     "metric": "screen_rate",
+     "label": "Screen rate",
+     "help": "Share of passes that are screens (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.3281,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3281,
+      "rate": 0.0675,
+      "rank": 22,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.0469,
+      "rate": 0.0471,
+      "n": 297,
+      "rank": 31,
+      "of": 32
+     }
+    },
+    {
+     "metric": "under_center_rate",
+     "label": "Under center",
+     "help": "Share of plays with the QB under center (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.4531,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.4531,
+      "rate": 0.3267,
+      "rank": 18,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.3281,
+      "rate": 0.3398,
+      "n": 462,
+      "rank": 22,
+      "of": 32
+     }
+    }
+   ],
+   "charted": [
+    {
+     "metric": "pers_11_share",
+     "label": "11 personnel (3 WR)",
+     "help": "Share of offensive snaps with 1 back, 1 tight end and 3 receivers.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.7656,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.7656,
+      "rate": 0.6657,
+      "rank": 8,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "pers_12_share",
+     "label": "12 personnel (2 TE)",
+     "help": "Share of offensive snaps with 1 back, 2 tight ends and 2 receivers.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.3906,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3906,
+      "rate": 0.2096,
+      "rank": 20,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "pers_heavy_share",
+     "label": "Heavy sets",
+     "help": "Share of snaps with two or more tight ends or two or more backs.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.2344,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.2344,
+      "rate": 0.3229,
+      "rank": 25,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "time_to_throw",
+     "label": "Time to throw",
+     "help": "Average seconds from snap to throw on charted dropbacks. Mixes the QB, the protection and the play design.",
+     "unit": "seconds",
+     "lo": "shorter",
+     "hi": "longer",
+     "expected": {
+      "pct": 0.3594,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3594,
+      "rate": 2.6792,
+      "rank": 21,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "pressure_allowed_rate",
+     "label": "Pressure allowed",
+     "help": "Share of charted dropbacks where the QB was pressured.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.7969,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.7969,
+      "rate": 0.318,
+      "rank": 7,
+      "of": 32
+     },
+     "observed": null
+    }
+   ]
+  },
+  "def": {
+   "caller": {
+    "name": "Todd Wash",
+    "confirmed": true,
+    "is_head_coach": false,
+    "evidence": "official",
+    "source_url": "https://www.panthers.com/news/panthers-announce-changes-to-defensive-coaching-staff",
+    "situation": null,
+    "situation_text": null,
+    "career": [
+     {
+      "team": "CAR",
+      "from": 2026,
+      "to": 2026
+     }
+    ],
+    "traits": []
+   },
+   "live": [
+    {
+     "metric": "pass_rushers_5plus_rate",
+     "label": "5+ pass rushers",
+     "help": "Share of opponent dropbacks with five or more rushers (FTN charting).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.4531,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.4531,
+      "rate": 0.2624,
+      "rank": 18,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.7969,
+      "rate": 0.3866,
+      "n": 269,
+      "rank": 7,
+      "of": 32
+     }
+    },
+    {
+     "metric": "box_8plus_vs_run_rate",
+     "label": "8+ in the box vs runs",
+     "help": "Share of opponent runs faced with 8 or more defenders in the box.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.1406,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.1406,
+      "rate": 0.0407,
+      "rank": 28,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.0781,
+      "rate": 0.025,
+      "n": 200,
+      "rank": 30,
+      "of": 32
+     }
+    },
+    {
+     "metric": "box_6minus_vs_run_rate",
+     "label": "Light box vs runs",
+     "help": "Share of opponent runs faced with 6 or fewer defenders in the box.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.3906,
+      "miss": null,
+      "weight_on_caller": 0.0,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 0,
+     "caller_teams": [],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.3906,
+      "rate": 0.5377,
+      "rank": 20,
+      "of": 32
+     },
+     "observed": {
+      "pct": 0.7656,
+      "rate": 0.51,
+      "n": 200,
+      "rank": 8,
+      "of": 32
+     }
+    }
+   ],
+   "charted": [
+    {
+     "metric": "man_rate",
+     "label": "Man coverage",
+     "help": "Share of charted dropbacks defended in man coverage (2018+). Compare within a season only: the charting provider changed in 2023.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.465,
+      "miss": 0.267,
+      "weight_on_caller": 0.9,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 3,
+     "caller_teams": [
+      "JAX"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.1094,
+      "rate": 0.2116,
+      "rank": 29,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "two_high_rate",
+     "label": "Two-high shells",
+     "help": "Share of charted dropbacks with two safeties deep at the snap (2018+).",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.4217,
+      "miss": 0.224,
+      "weight_on_caller": 0.5,
+      "strength": "fair"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 3,
+     "caller_teams": [
+      "JAX"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.6094,
+      "rate": 0.4614,
+      "rank": 13,
+      "of": 32
+     },
+     "observed": null
+    },
+    {
+     "metric": "pressure_rate",
+     "label": "Pressure rate",
+     "help": "Share of charted dropbacks where the defense pressured the QB.",
+     "unit": "pct",
+     "lo": "less",
+     "hi": "more",
+     "expected": {
+      "pct": 0.1656,
+      "miss": 0.26,
+      "weight_on_caller": 0.3,
+      "strength": "weak"
+     },
+     "caller_past": null,
+     "lean": null,
+     "caller_seasons": 5,
+     "caller_teams": [
+      "JAX"
+     ],
+     "team_last": {
+      "season": 2025,
+      "pct": 0.0156,
+      "rate": 0.2112,
+      "rank": 32,
+      "of": 32
+     },
+     "observed": null
+    }
+   ]
+  }
+ }
+}

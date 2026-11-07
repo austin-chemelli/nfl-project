@@ -57,7 +57,7 @@ export default function LeaguePage() {
         default="odds"
         tabs={[
           { id: 'odds', label: 'Playoff odds', content: playoffTab('odds', (f) => <Odds file={f} />) },
-          { id: 'teams', label: 'Teams', content: teamsTab },
+          { id: 'teams', label: 'Team charts', content: teamsTab },
           { id: 'standings', label: 'Standings', content: playoffTab('standings', (f) => <Standings file={f} />) },
           { id: 'games', label: 'Games that matter', content: playoffTab('games', (f) => <Games file={f} />) },
           { id: 'similar', label: 'Similar seasons', content: playoffTab('similar', (f) => <Similar file={f} />) },

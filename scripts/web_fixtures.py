@@ -71,9 +71,13 @@ def main() -> None:
     kept = {
         n: (OUT / n).read_bytes() for n in ("league.json", "similar.json") if (OUT / n).exists()
     }
+    team_files = {f.name: f.read_bytes() for f in (OUT / "team").glob("*.json")}
     if OUT.exists():
         shutil.rmtree(OUT)
     OUT.mkdir(parents=True)
+    (OUT / "team").mkdir()
+    for name, body in team_files.items():  # real files for LAC and CAR (ADR 0022), kept as they are
+        (OUT / "team" / name).write_bytes(body)
     for name, data in kept.items():
         (OUT / name).write_bytes(data)
 

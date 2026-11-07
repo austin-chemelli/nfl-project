@@ -2,6 +2,8 @@ import polars as pl
 
 from nfl import staff_context as ctx
 
+from .conftest import requires_data
+
 
 def unit(season, team, person, side="off", source="play_caller", changed=False):
     return {"season": season, "team": team, "side": side, "person": person, "source": source,
@@ -137,3 +139,159 @@ def test_a_first_timer_from_the_staff_is_promoted():
     rows = [unit(2030, "AAA", "Ann"), unit(2031, "AAA", "Hal")]
     out = ctx.unit_situations(pl.DataFrame(rows), {}, STAFF)
     assert out.filter(pl.col("season") == 2031)["situation"].item() == "promoted_first_time"
+
+
+def test_career_merges_seasons_and_keeps_only_confirmed_calling():
+    s = pl.DataFrame(
+        [
+            {"season": 2020, "team": "AAA", "role": "OFF_PC", "person": "Ann", "evidence": "news"},
+            {"season": 2021, "team": "AAA", "role": "OFF_PC", "person": "Ann", "evidence": "news"},
+            {
+                "season": 2022,
+                "team": "AAA",
+                "role": "OFF_PC",
+                "person": "Ann",
+                "evidence": "inferred",
+            },
+            {
+                "season": 2023,
+                "team": "BBB",
+                "role": "OFF_PC",
+                "person": "Ann",
+                "evidence": "roundup",
+            },
+            {"season": 2024, "team": "BBB", "role": "DEF_PC", "person": "Ann", "evidence": "news"},
+        ]
+    )
+    assert ctx.career(s, "Ann", "off") == [
+        {"team": "AAA", "from": 2020, "to": 2021},
+        {"team": "BBB", "from": 2023, "to": 2023},
+    ]
+
+
+def test_replaced_names_a_confirmed_caller_only():
+    first = {**spell("Evero", "inferred", role="DEF_PC"), "start_week": 1}
+    wash = {**spell("Wash", role="DEF_PC"), "start_week": 9}
+    assert ctx.replaced([first, wash], wash) is None
+    assert ctx.replaced([{**first, "evidence": "news"}, wash], wash) == "Evero"
+    title = {**spell("Evero", "wiki", role="DC"), "start_week": 1}
+    assert ctx.replaced([title, {**wash, "role": "DC"}], {**wash, "role": "DC"}) == "Evero"
+
+
+def test_rank_is_one_for_the_most_and_ties_share():
+    df = pl.DataFrame({
+        "season": [2030] * 3, "team": ["A", "B", "C"], "side": ["off"] * 3, "metric": ["m"] * 3,
+        "n": [200] * 3, "rate": [0.2, 0.5, 0.5], "pct": [0.1, 0.6, 0.6],
+    })  # fmt: skip
+    out = dict(zip(*ctx._ranked(df).select("team", "rank").to_dict().values(), strict=True))
+    assert out == {"B": 1, "C": 1, "A": 3}
+
+
+def spells_frame(*rows):
+    cols = ("season", "team", "role", "person", "evidence")
+    return pl.DataFrame([dict(zip(cols, r, strict=True)) for r in rows])
+
+
+def test_a_same_caller_claim_needs_last_season_confirmed():
+    rows = [unit(2030, "AAA", "Ann"), unit(2031, "AAA", "Ann")]
+    weak = spells_frame(
+        (2030, "AAA", "OFF_PC", "Ann", "inferred"), (2031, "AAA", "OFF_PC", "Ann", "news")
+    )
+    good = spells_frame(
+        (2030, "AAA", "OFF_PC", "Ann", "news"), (2031, "AAA", "OFF_PC", "Ann", "news")
+    )
+    for spells, want in ((weak, None), (good, "same_caller")):
+        sit = ctx.Situations(pl.DataFrame(rows), {}, spells)
+        label = sit.label(2031, "AAA", "off", "Ann")
+        assert label == "same_caller"  # the blend still knows
+        assert sit.public(2031, "AAA", "off", "Ann", label) == want
+
+
+def test_called_before_needs_a_confirmed_past():
+    rows = [unit(2030, "AAA", "Bob"), unit(2030, "BBB", "Ann"), unit(2031, "AAA", "Ann")]
+    weak = spells_frame(
+        (2030, "BBB", "OFF_PC", "Ann", "inferred"), (2031, "AAA", "OFF_PC", "Ann", "news")
+    )
+    sit = ctx.Situations(pl.DataFrame(rows), {}, weak)
+    assert sit.label(2031, "AAA", "off", "Ann") == "moved_team"
+    assert sit.public(2031, "AAA", "off", "Ann", "moved_team") is None
+
+
+def test_replaced_is_the_spell_right_before_and_never_the_same_person():
+    a = {**spell("A"), "start_week": 1}
+    b = {**spell("B", "inferred"), "start_week": 5}
+    c = {**spell("C"), "start_week": 9}
+    assert ctx.replaced([a, b, c], c) is None
+    again = {**spell("A"), "start_week": 12}
+    assert ctx.replaced([a, again], again) is None
+
+
+def test_traits_need_every_season_on_one_side():
+    row = {"metric": "m", "kind": "live", "prior": 0.9, "prior_min": 0.7, "prior_max": 0.99,
+           "prior_seasons": 4, "prior_first": 2022, "prior_last": 2025}  # fmt: skip
+    assert [t["metric"] for t in ctx.traits([row])] == ["m"]
+    assert ctx.traits([{**row, "prior_min": 0.4}]) == []  # one season below the middle
+    assert ctx.traits([{**row, "prior_seasons": 1}]) == []
+    assert ctx.traits([{**row, "prior": 0.7}]) == []  # not far enough from the middle
+    low = {**row, "metric": "low", "prior": 0.05, "prior_min": 0.01, "prior_max": 0.2}
+    assert [t["metric"] for t in ctx.traits([row, low])] == ["low", "m"]
+
+
+def test_lean_follows_the_study_and_drops_weak_cells():
+    assert ctx.lean({"strength": "fair", "weight_on_caller": 0.8}) == "caller"
+    assert ctx.lean({"strength": "fair", "weight_on_caller": 0.3}) == "team"
+    assert ctx.lean({"strength": "fair", "weight_on_caller": 0.4}) == "both"  # about a tie
+    assert ctx.lean({"strength": "fair", "weight_on_caller": 0.5}) == "both"
+    assert ctx.lean({"strength": "weak", "weight_on_caller": 0.9}) is None
+    assert ctx.lean(None) is None
+
+
+def test_profiles_need_a_source_and_a_claim():
+    """On the raw file: the loader drops a row without a source, so it can't catch one."""
+    import csv
+    from importlib import resources
+
+    text = resources.files("nfl.data").joinpath("coach_profiles.csv").read_text()
+    for r in csv.DictReader(text.splitlines()):
+        urls = [u.strip() for u in r["sources"].split(" ; ") if u.strip()]
+        assert urls and all(u.startswith("http") for u in urls), r["person"]
+        assert r["tree"] or r["known_for"], r["person"]
+
+
+def test_profiles_never_say_who_calls_plays():
+    """That claim lives in the staff table, under its evidence rule (ADR 0021)."""
+    import re
+
+    calling = re.compile(
+        r"play[- ]?call|\bcall(s|ed|ing)?\b[^.]{0,40}\b(plays?|offen[sc]e|defen[sc]e)\b",
+        re.IGNORECASE,
+    )
+    for person, p in ctx.load_profiles().items():
+        assert not calling.search(p["known_for"] or ""), person
+        assert not calling.search(p["tree"] or ""), person
+
+
+def test_profiles_carry_no_percentages():
+    """Our data owns the numbers; a source's share is often measured another way."""
+    for person, p in ctx.load_profiles().items():
+        assert "%" not in (p["known_for"] or "") + (p["tree"] or ""), person
+
+
+@requires_data
+def test_the_page_draws_only_confirmed_calling_seasons():
+    """Todd Wash's JAX 2016-2020 seasons are unconfirmed, so CAR's defense shows no past for him."""
+    import polars as pl
+
+    from nfl.config import get_paths
+    from nfl.features import store
+
+    paths = get_paths()
+    games = store.games_frame(paths).filter(pl.col("season") == 2026)
+
+    def label(m):
+        return {"label": m, "help": "", "unit": "pct", "lo": "less", "hi": "more"}
+
+    car = ctx.team_files(paths, 2026, 9, games, label)["CAR"]["units"]["def"]
+    assert car["caller"]["name"] == "Todd Wash"
+    assert all(m["caller_past"] is None for m in car["live"] + car["charted"])
+    assert car["caller"]["traits"] == []

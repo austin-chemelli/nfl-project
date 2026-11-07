@@ -1,8 +1,8 @@
-import { Link } from 'react-router'
 import { TableScroll, td, th } from '../../components/ui'
 import type { LeagueFile } from '../../data/contract'
 import { teamInfo } from '../../lib/teams'
 import { divisionTables, recordOf, type Conf } from './playoffs'
+import { TeamLink } from '../../components/TeamLink'
 
 /** The Standings tab: eight division tables as they stand today (ADR 0019). */
 export function Standings({ file }: { file: LeagueFile }) {
@@ -31,7 +31,7 @@ export function Standings({ file }: { file: LeagueFile }) {
                     {teams.map((t) => (
                       <tr key={t.team}>
                         <td className={td} title={teamInfo(t.team).name}>
-                          <Link to={`/league?tab=teams&team=${t.team}`}>{t.team}</Link>
+                          <TeamLink team={t.team} />
                         </td>
                         <td className={`${td} tabular text-right`}>{recordOf(t).replaceAll('–', '-')}</td>
                         <td className={`${td} tabular text-right`}>{t.div_rec}</td>

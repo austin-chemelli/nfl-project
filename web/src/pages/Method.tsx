@@ -33,7 +33,7 @@ export default function MethodPage() {
           <Tabs
             label="Method sections"
             tabs={[
-              { id: 'how', label: 'How it works', content: <Stack><HowItWorks meta={m} /><Approaches meta={m} /><Locks /><Retrospective /></Stack> },
+              { id: 'how', label: 'How it works', content: <Stack><HowItWorks meta={m} /><Approaches meta={m} /><Locks /><Retrospective /><TeamPages /></Stack> },
               { id: 'limits', label: 'Limits and mistakes', content: <Stack><Limits /><Leaks /></Stack> },
               {
                 id: 'data',
@@ -169,6 +169,19 @@ function Retrospective() {
         <li><strong>Played like.</strong> The &quot;played like&quot; chance is a logistic model of how often teams win when they are this efficient, with turnovers left out, fitted on the same history.</li>
         <li><strong>Which groups mattered.</strong> A group&apos;s value is the drop-one change in log loss: how much worse the forecast would have scored on this game with that group left out. Values overlap, so they do not add up.</li>
         <li><strong>Read it as description.</strong> It is descriptive, not causal, and one game is noise. A forecast that looked bad here can still be a good forecast.</li>
+      </ul>
+    </Section>
+  )
+}
+
+function TeamPages() {
+  return (
+    <Section title="Team pages" help="One page per team: where it stands, who coaches it, what it tends to do.">
+      <ul className="max-w-3xl list-disc space-y-1 pl-5 text-[15px] leading-relaxed">
+        <li><strong>Who calls the plays.</strong> A coach shows as the play-caller only when a team site, a news report or a 32-team play-caller list says so, linked on the page. Otherwise the coordinator shows, marked not confirmed. Changes during the season are dated to the week.</li>
+        <li><strong>Tendencies.</strong> Each measure shows this season, the play-caller&apos;s own past (his earlier seasons calling plays that a source confirms, recent ones counting most) and the team&apos;s last season, all as places among the 32 teams, with the league&apos;s middle team marked. A row says which of the two this season looks like.</li>
+        <li><strong>What to watch for.</strong> Personnel, coverage, time to throw and pressure are charted once a year, so in season the page shows only the past. A short tag says which past predicted better in past cases like this one, from a study of 2017 to 2025. No tag means no confirmed past, too few cases like it, or neither did much better than a guess.</li>
+        <li><strong>Coach profiles.</strong> Known for and coaching tree come from reporting, each checked against the page it cites and linked. In the numbers comes from our data, over seasons a source confirms the coach called plays: a habit shows only if every one sat on the same side of the league&apos;s middle team.</li>
       </ul>
     </Section>
   )

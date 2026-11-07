@@ -5,6 +5,7 @@ import { matchupVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
 import { compareDomain, compareGroups, type CompareRow } from './context'
 import { fmtValue, rankText } from './helpers'
+import { TeamLink } from '../../components/TeamLink'
 
 const NONE = <></>
 
@@ -54,7 +55,7 @@ export function Compare({ file, a, b, onClose, ref }: { file: TeamsFile; a: stri
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-[15px] font-medium text-ink">
-            {an} and {bn}
+            <TeamLink team={a}>{an}</TeamLink> and <TeamLink team={b}>{bn}</TeamLink>
           </h3>
           <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-2">
             <span className="inline-flex items-center gap-1">

@@ -6,6 +6,7 @@ import type { Game } from '../../data/contract'
 import { kickoffEt } from '../../lib/format'
 import { teamInfo } from '../../lib/teams'
 import { gameStatus } from '../slate/helpers'
+import { TeamLink } from '../../components/TeamLink'
 
 /** The matchup as a banner: each team's color washing in from its own side. Works from the id alone, before the data arrives. */
 export function GameTitle({ away, home }: { away: string; home: string }) {
@@ -21,9 +22,9 @@ export function GameTitle({ away, home }: { away: string; home: string }) {
 function TeamSide({ team, color, right = false }: { team: string; color: string; right?: boolean }) {
   return (
     <span className={`flex min-w-0 flex-col gap-1 ${right ? 'items-end text-right' : ''}`} title={teamInfo(team).name}>
-      <span className="text-3xl font-bold leading-none">{team}</span>
+      <TeamLink team={team} className="text-3xl font-bold leading-none text-ink no-underline hover:underline">{team}</TeamLink>
       <TeamAccent team={team} color={color} className="!w-14" />
-      <span className="hidden text-[13px] font-normal tracking-normal text-ink-2 sm:block">{teamInfo(team).name}</span>
+      <TeamLink team={team} tabIndex={-1} className="hidden text-[13px] font-normal tracking-normal text-ink-2 sm:block">{teamInfo(team).name}</TeamLink>
     </span>
   )
 }

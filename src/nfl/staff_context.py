@@ -12,6 +12,8 @@ situation and, where there are enough cases, metric (`data/coach_blend.json`).
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from importlib import resources
 
@@ -34,18 +36,29 @@ LIVE: dict[str, list[str]] = {
     # five-plus rushers, against a 2 to 4 point gap every year before).
     "def": ["pass_rushers_5plus_rate", "box_8plus_vs_run_rate", "box_6minus_vs_run_rate"],
 }  # fmt: skip
+# Charted measures that the live set already shows week by week: no need to predict them.
+ALSO_LIVE = {"shotgun_share", "blitz_rate"}
 SITUATION_TEXT = {
     "same_caller": "Same play-caller as last season",
     "same_caller_new_qb": "Same play-caller, new starting quarterback",
     "took_over": "Took over the calls, already on this staff",
     "moved_team": "New play-caller, has called plays before",
-    "promoted_first_time": "First year calling plays, promoted from this staff",
-    "outside_first_time": "First year calling plays",
+    "promoted_first_time": "First year calling NFL plays, promoted from this staff",
+    "outside_first_time": "First year calling NFL plays",
 }
 
 
 def _franchise(col: str = "team") -> pl.Expr:
     return pl.col(col).replace(TEAM_ALIASES)
+
+
+def _ranked(df: pl.DataFrame) -> pl.DataFrame:
+    """Adds `rank` (1 = the most of it, ties share) and `of` (teams with a value that season)."""
+    g = ["season", "side", "metric"]
+    return df.with_columns(
+        pl.col("rate").rank("min", descending=True).over(g).cast(pl.Int64).alias("rank"),
+        pl.len().over(g).cast(pl.Int64).alias("of"),
+    ).select("season", "team", "side", "metric", "n", "rate", "pct", "rank", "of")
 
 
 def live_rates(paths: Paths) -> pl.DataFrame:
@@ -60,21 +73,19 @@ def live_rates(paths: Paths) -> pl.DataFrame:
         [t.filter((pl.col("side") == s) & pl.col("metric").is_in(ms)) for s, ms in LIVE.items()]
     ).with_columns(_franchise())
     g = ["season", "side", "metric"]
-    return t.with_columns(
-        ((pl.col("raw_rate").rank("average").over(g) - 0.5) / pl.len().over(g)).alias("pct"),
-        pl.col("raw_rate").alias("rate"),
-    ).select("season", "team", "side", "metric", "n", "rate", "pct")
+    return _ranked(
+        t.with_columns(
+            ((pl.col("raw_rate").rank("average").over(g) - 0.5) / pl.len().over(g)).alias("pct"),
+            pl.col("raw_rate").alias("rate"),
+        )
+    )
 
 
 def charted_rates(paths: Paths) -> pl.DataFrame:
     """Charted-set team-seasons, the same columns as `live_rates`."""
     rates = pl.read_parquet(paths.marts / "scheme_team_season.parquet")
     keep = [m for ms in SCHEME_METRICS.values() for m in ms]
-    return (
-        coaches.league_percentiles(rates)
-        .filter(pl.col("metric").is_in(keep))
-        .select("season", "team", "side", "metric", "n", "rate", "pct")
-    )
+    return _ranked(coaches.league_percentiles(rates).filter(pl.col("metric").is_in(keep)))
 
 
 def primary_qbs(paths: Paths, season: int | None = None) -> dict[tuple[int, str], str]:
@@ -113,10 +124,16 @@ class Situations:
         s = s.with_columns(_franchise())
         self.staff: dict[tuple[int, str], set[str]] = {}
         self.first_called: dict[tuple[str, str], int] = {}
+        self.confirmed: dict[tuple[str, str], set[tuple[int, str]]] = {}
         for r in s.to_dicts():
             self.staff.setdefault((r["season"], r["team"]), set()).add(r["person"])
             if r["role"] in ("OFF_PC", "DEF_PC"):  # all spells: replaced callers still called
-                self._called(r["person"], "off" if r["role"] == "OFF_PC" else "def", r["season"])
+                side = "off" if r["role"] == "OFF_PC" else "def"
+                self._called(r["person"], side, r["season"])
+                if r["evidence"] in CONFIRMED:
+                    self.confirmed.setdefault((r["person"], side), set()).add(
+                        (r["season"], r["team"])
+                    )
         for x in self.rows:
             self.staff.setdefault((x["season"], x["team"]), set()).add(x["person"])
             if x["source"] == "play_caller":
@@ -142,6 +159,17 @@ class Situations:
         if self.first_called.get((who, side), 9999) >= season:
             return "promoted_first_time" if on_staff else "outside_first_time"
         return "took_over" if on_staff else "moved_team"
+
+    def public(self, season: int, team: str, side: str, who: str, label: str | None) -> str | None:
+        """The label as a claim on the site. `label` uses unconfirmed seasons, which is right for
+        picking a blend, but "same play-caller as last season" states last season's caller and "has
+        called plays before" states a past: both need a source, or the label isn't shown."""
+        held = self.confirmed.get((who, side), set())
+        if label in ("same_caller", "same_caller_new_qb"):
+            return label if (season - 1, team) in held else None
+        if label in ("took_over", "moved_team"):
+            return label if any(s < season for s, _ in held) else None
+        return label
 
 
 def unit_situations(
@@ -181,10 +209,27 @@ def caller_prior(assign: pl.DataFrame, rates: pl.DataFrame, decay: float = DECAY
                 ((pl.col("pct") * pl.col("w")).sum() / pl.col("w").sum()).alias("prior"),
                 pl.col("season").n_unique().alias("prior_seasons"),
                 pl.col("team").unique(maintain_order=True).alias("prior_teams"),
+                pl.col("pct").min().alias("prior_min"),
+                pl.col("pct").max().alias("prior_max"),
+                pl.col("season").min().alias("prior_first"),
+                pl.col("season").max().alias("prior_last"),
             )
             .with_columns(pl.lit(target).alias("season"))
         )
     return pl.concat(parts)
+
+
+def load_profiles() -> dict[str, dict]:
+    """Sourced coach profiles (`data/coach_profiles.csv`): a tree, what they're known for, and the
+    pages that say so, ` ; `-separated. Only claims a fetched page confirmed are in the file."""
+    text = resources.files("nfl.data").joinpath("coach_profiles.csv").read_text()
+    out = {}
+    for r in csv.DictReader(io.StringIO(text)):
+        sources = [u.strip() for u in r["sources"].split(" ; ") if u.strip()]
+        if sources and (r["tree"] or r["known_for"]):
+            out[r["person"]] = {"tree": r["tree"] or None, "known_for": r["known_for"] or None,
+                                "sources": sources}  # fmt: skip
+    return out
 
 
 def load_blend() -> dict:
@@ -220,6 +265,36 @@ def expected(prior: float | None, team_prev: float | None, cell: dict | None) ->
     }
 
 
+def lean(exp: dict | None) -> str | None:
+    """Which past the study says to trust for this row: the caller's, the team's, or both. None
+    when the study's guess was little better than the league middle."""
+    if not exp or exp["strength"] != "fair":
+        return None
+    w = exp["weight_on_caller"]
+    return "caller" if w >= 0.7 else "team" if w <= 0.3 else "both"
+
+
+TRAIT_EDGE = 0.3  # a trait sits at least this far from the league middle on average
+MAX_TRAITS = 3
+
+
+def traits(rows: list[dict]) -> list[dict]:
+    """A caller's most consistent habits: measures where every past season sat on the same side of
+    the league middle, at least two seasons, furthest from the middle first."""
+    out = []
+    for r in rows:
+        p, lo, hi = r["prior"], r["prior_min"], r["prior_max"]
+        if r["prior_seasons"] < 2 or abs(p - 0.5) < TRAIT_EDGE:
+            continue
+        if not (lo > 0.5 or hi < 0.5):
+            continue
+        out.append({"metric": r["metric"], "kind": r["kind"], "pct": round(p, 4),
+                    "seasons": r["prior_seasons"], "first": r["prior_first"],
+                    "last": r["prior_last"]})  # fmt: skip
+    out.sort(key=lambda t: -abs(t["pct"] - 0.5))
+    return out[:MAX_TRAITS]
+
+
 def other_starter_weeks(games: pl.DataFrame, team: str) -> list[dict]:
     """Weeks someone other than the Week 1 starter started, from the schedule's QB names."""
     played = games.filter(pl.col("home_score").is_not_null())
@@ -229,6 +304,16 @@ def other_starter_weeks(games: pl.DataFrame, team: str) -> list[dict]:
         rows += [{"week": r["week"], "qb": r[f"{side}_qb_name"]} for r in g.to_dicts()]
     rows = sorted((r for r in rows if r["qb"]), key=lambda r: r["week"])
     return [r for r in rows if r["qb"] != rows[0]["qb"]]
+
+
+def through_week(games: pl.DataFrame, team: str) -> int | None:
+    """The latest regular-season week this team has played."""
+    g = games.filter(
+        pl.col("home_score").is_not_null()
+        & (pl.col("week") <= 18)
+        & ((_franchise("home_team") == team) | (_franchise("away_team") == team))
+    )
+    return None if g.is_empty() else int(g["week"].max())
 
 
 def _spell(r: dict) -> dict:
@@ -244,6 +329,44 @@ def _public(rows: list[dict]) -> list[dict]:
     table stay out of the site."""
     return [_spell(r) for r in rows if r["role"] not in ("OFF_PC", "DEF_PC")
             or r["evidence"] in CONFIRMED]  # fmt: skip
+
+
+def career(spells: pl.DataFrame, person: str, side: str) -> list[dict]:
+    """Confirmed calling spells as `{team, from, to}`, consecutive seasons on a team merged."""
+    role = "OFF_PC" if side == "off" else "DEF_PC"
+    held = (
+        spells.filter(
+            (pl.col("person") == person)
+            & (pl.col("role") == role)
+            & pl.col("evidence").is_in(CONFIRMED)
+        )
+        .select("season", "team")
+        .unique()
+        .sort("season")
+    )
+    out: list[dict] = []
+    for r in held.to_dicts():
+        if out and out[-1]["team"] == r["team"] and out[-1]["to"] == r["season"] - 1:
+            out[-1]["to"] = r["season"]
+        else:
+            out.append({"team": r["team"], "from": r["season"], "to": r["season"]})
+    return out
+
+
+def replaced(rows: list[dict], change: dict) -> str | None:
+    """Who held the job right before `change`, if the table can stand on it: a caller must be
+    confirmed, and the same person moving between spells replaced nobody."""
+    before = [
+        r for r in rows if r["role"] == change["role"] and r["start_week"] < change["start_week"]
+    ]
+    if not before:
+        return None
+    prev = max(before, key=lambda r: r["start_week"])
+    if prev["person"] == change["person"]:
+        return None
+    if prev["role"] in ("OFF_PC", "DEF_PC") and prev["evidence"] not in CONFIRMED:
+        return None
+    return prev["person"]
 
 
 def _caller(spell: dict | None, coordinator: str | None, head_coach: str | None,
@@ -265,12 +388,19 @@ def _caller(spell: dict | None, coordinator: str | None, head_coach: str | None,
     }
 
 
-def _metric_rows(kind, side, sit, prior, rates, season, blend, label) -> list[dict]:
-    """One entry per metric: expected, and the observed value where this season has one."""
-    metrics = LIVE[side] if kind == "live" else SCHEME_METRICS[side]
+def _metric_rows(kind, side, sit, prior, rates, season, blend, label, shown=None) -> list[dict]:
+    """One entry per metric: expected, and the observed value where this season has one.
+
+    `prior` (every past season of the person) picks the study's blend; `shown`, the seasons a
+    source confirms he called plays, is what the page draws as his past."""
+    shown = shown or {}
+    metrics = (
+        LIVE[side] if kind == "live" else [m for m in SCHEME_METRICS[side] if m not in ALSO_LIVE]
+    )
     out = []
     for m in metrics:
         p = prior.get(m) or {}
+        mine = shown.get(m)
         prev = rates.get((season - 1, m))
         now = rates.get((season, m))
         exp = expected(
@@ -280,12 +410,16 @@ def _metric_rows(kind, side, sit, prior, rates, season, blend, label) -> list[di
         out.append({
             "metric": m, **label(m),
             "expected": exp,
+            "caller_past": {"pct": round(mine["prior"], 4), "seasons": mine["prior_seasons"],
+                            "first": mine["prior_first"], "last": mine["prior_last"]} if mine else None,
+            "lean": lean(exp) if mine else None,
             "caller_seasons": p.get("prior_seasons", 0),
             "caller_teams": p.get("prior_teams", []),
             "team_last": {"season": season - 1, "pct": round(prev["pct"], 4),
-                          "rate": round(prev["rate"], 4)} if prev else None,
+                          "rate": round(prev["rate"], 4), "rank": prev["rank"],
+                          "of": prev["of"]} if prev else None,
             "observed": {"pct": round(now["pct"], 4), "rate": round(now["rate"], 4),
-                         "n": now["n"]} if now else None,
+                         "n": now["n"], "rank": now["rank"], "of": now["of"]} if now else None,
         })  # fmt: skip
     return out
 
@@ -304,18 +438,45 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
     priors = {
         k: caller_prior(assign, v).filter(pl.col("season") == season) for k, v in sets.items()
     }
+    # What the page shows as a caller's past: only seasons a source confirms he called plays
+    # (ADR 0021). The study and the blend above still use every season.
+    confirmed = (
+        spells.filter(
+            pl.col("role").is_in(["OFF_PC", "DEF_PC"]) & pl.col("evidence").is_in(CONFIRMED)
+        )
+        .select(
+            "season",
+            "team",
+            pl.col("role").replace({"OFF_PC": "off", "DEF_PC": "def"}).alias("side"),
+            "person",
+        )
+        .unique()
+    )
+    called = assign.join(confirmed, on=["season", "team", "side", "person"], how="semi")
+    shown_priors = {
+        k: caller_prior(called, v).filter(pl.col("season") == season) for k, v in sets.items()
+    }
     now = now_utc().isoformat()
+    labels = {"live": metric_label, "charted": _charted_label}
+    profiles = load_profiles()
     out = {}
     for team in sorted(spells.filter(pl.col("season") == season)["team"].unique().to_list()):
         at = coaches.staff_at(season, team, week, spells).to_dicts()
         titled = {r["role"]: r["person"] for r in reversed(at)}
         calling = {r["role"]: r for r in at if r["role"] in ("OFF_PC", "DEF_PC")}
-        changes = spells.filter(
-            (pl.col("season") == season) & (pl.col("team") == team) & (pl.col("start_week") > 1)
-        ).sort("start_week")
+        rows = spells.filter((pl.col("season") == season) & (pl.col("team") == team)).to_dicts()
+        changes = sorted((r for r in rows if r["start_week"] > 1), key=lambda r: r["start_week"])
+        moves = [
+            {**_spell(r), "replaced": replaced(rows, r)}
+            for r in changes
+            if r["role"] not in ("OFF_PC", "DEF_PC") or r["evidence"] in CONFIRMED
+        ]
+        on_staff = {r["person"] for r in rows}
         body: dict = {
-            "team": team, "season": season, "week": week, "generated_at": now,
-            "staff": {"current": _public(at), "changes": _public(changes.to_dicts())},
+            "profiles": {p: profiles[p] for p in sorted(on_staff) if p in profiles},
+            "schema_version": "1", "team": team, "season": season, "week": week,
+            "through_week": through_week(games, team), "generated_at": now,
+            "staff": {"current": _public(at), "changes": moves},
             "other_starter_weeks": other_starter_weeks(games, team),
             "units": {},
         }  # fmt: skip
@@ -325,7 +486,23 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
             spell = calling.get(pc)
             who = spell["person"] if spell and spell["evidence"] in CONFIRMED else None
             sit = situations.label(season, team, side, who) if who else None
-            block = {"caller": _caller(spell, titled.get(title), titled.get("HC"), sit)}
+            shown = situations.public(season, team, side, who, sit) if who else None
+            if shown in ("same_caller", "same_caller_new_qb") and spell["start_week"] > 1:
+                shown = None  # he took the calls back in season: "same" hides the change
+            caller = _caller(spell, titled.get(title), titled.get("HC"), shown)
+            if caller:
+                caller["career"] = career(spells, who, side) if who else []
+                mine = [
+                    {**r, "kind": k}
+                    for k in sets
+                    for r in shown_priors[k]
+                    .filter((pl.col("person") == who) & (pl.col("side") == side))
+                    .to_dicts()
+                    if not (k == "charted" and r["metric"] in ALSO_LIVE)
+                    and r["metric"] in (LIVE[side] if k == "live" else SCHEME_METRICS[side])
+                ] if who else []  # fmt: skip
+                caller["traits"] = [{**t, **labels[t["kind"]](t["metric"])} for t in traits(mine)]
+            block = {"caller": caller}
             for kind, rates in sets.items():
                 mine = rates.filter((pl.col("team") == team) & (pl.col("side") == side))
                 by_metric = {(r["season"], r["metric"]): r for r in mine.to_dicts()}
@@ -338,7 +515,17 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
                         .to_dicts()
                     }
                 label = metric_label if kind == "live" else _charted_label
-                block[kind] = _metric_rows(kind, side, sit, prior, by_metric, season, blend, label)
+                shown = {}
+                if who:
+                    shown = {
+                        r["metric"]: r
+                        for r in shown_priors[kind]
+                        .filter((pl.col("person") == who) & (pl.col("side") == side))
+                        .to_dicts()
+                    }
+                block[kind] = _metric_rows(
+                    kind, side, sit, prior, by_metric, season, blend, label, shown
+                )
             body["units"][side] = block
         out[team] = body
     return out
@@ -346,4 +533,4 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
 
 def _charted_label(metric: str) -> dict:
     d = METRICS[metric]
-    return {"label": d["label"], "help": d["help"]}
+    return {"label": d["label"], "help": d["help"], "unit": d["unit"], "lo": d["lo"], "hi": d["hi"]}

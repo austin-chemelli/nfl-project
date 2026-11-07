@@ -295,3 +295,24 @@ Portability rules: one image with CLI subcommands; config via env; data root is 
 ## 9. Not in 2026
 
 Matchup and Narrative approaches on the public scorecard (Narrative capture *does* run), Monte Carlo drive sim, totals modeling, player modeling, coordinator table and tendency discontinuities, participation-based coverage/personnel tendencies (data lands Feb 2027), Approach C (user predictions), API server, accounts, Langfuse, self-hosting.
+
+## Team page (ADR 0022, M18)
+
+`/team/:code` joins four site files in the browser: `team/<code>.json` (staff, evidence, situations, expected and observed tendencies; ADR 0021), and `teams.json`, `league.json`, `similar.json` (shared with the League page). Each failing only removes what needs it.
+
+```mermaid
+%%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%
+flowchart LR
+    SP[(staff_spells.csv)] --> TF[team/CODE.json]
+    BL[(coach_blend.json)] --> TF
+    TD[(tendencies + scheme marts)] --> TF
+    TF --> ST[Staff]
+    TF --> TN[Tendencies]
+    TJ[teams.json] --> OV[Overview]
+    LJ[league.json] --> OV
+    SJ[similar.json] --> OV
+    TJ --> GM[Games]
+    LJ --> GM
+    TF --> GM
+```
+

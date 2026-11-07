@@ -39,7 +39,7 @@ describe('Similar seasons tab', () => {
   it('is the fifth tab, after Games that matter', async () => {
     renderRoute('/league')
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((t) => t.textContent)).toEqual(['Playoff odds', 'Teams', 'Standings', 'Games that matter', 'Similar seasons'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['Playoff odds', 'Team charts', 'Standings', 'Games that matter', 'Similar seasons'])
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
   })
 

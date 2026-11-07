@@ -52,7 +52,7 @@ describe('Teams tab', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Swap axes' }))
     expect(last.props!.x.title).toBe('Defense EPA')
     expect(last.props!.x.flip).toBe(true)
-    expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Team charts' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('groups the selector options by feature group', async () => {
@@ -68,7 +68,7 @@ describe('Teams tab', () => {
     expect(link).toHaveAttribute('href', '/game/2026_01_DEN_KC')
     expect(within(panel).getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/game/'))).toHaveLength(17)
     expect(within(panel).getByRole('link', { name: /Wk 9 vs NYJ.*next/ })).toBeInTheDocument()
-    expect(within(panel).getByRole('link', { name: 'Scheme profile' })).toHaveAttribute('href', '/coaches?team=KC')
+    expect(within(panel).getByRole('link', { name: /Team page/ })).toHaveAttribute('href', '/team/KC')
     expect(last.props!.selected).toBe('KC')
     await userEvent.click(within(panel).getByRole('button', { name: 'Close team panel' }))
     expect(screen.queryByRole('region', { name: /Kansas City Chiefs/ })).toBeNull()

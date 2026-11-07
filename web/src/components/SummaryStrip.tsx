@@ -1,4 +1,10 @@
 /** The one-answer-first row of tiles at the top of a page or tab (ADR 0017). */
+// Long values (a name like Brian Schottenheimer) step down so a word never breaks mid-word in a phone tile.
+const valueSize = (value: unknown) => {
+  if (typeof value !== 'string') return 'text-xl'
+  const longest = Math.max(...value.split(/\s+/).map((w) => w.length))
+  return longest >= 12 ? 'text-sm' : value.length > 16 ? 'text-base' : 'text-xl'
+}
 import { Children, useEffect, useState, type ReactNode, type Ref } from 'react'
 import { colorVar } from '../lib/models'
 import { Swatch } from './ui'
@@ -53,7 +59,7 @@ export function Tile({ label, value, sub, tab, modelId, accent }: {
         {modelId && <Swatch modelId={modelId} />}
         <span>{label}</span>
       </span>
-      <span className="tabular mt-1 block text-xl font-semibold leading-tight">{value}</span>
+      <span className={`tabular mt-1 block font-semibold leading-tight [overflow-wrap:anywhere] ${valueSize(value)}`}>{value}</span>
       {sub && <span className="mt-1 block text-[13px] text-ink-2">{sub}</span>}
     </>
   )

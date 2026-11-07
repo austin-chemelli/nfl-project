@@ -1,3 +1,4 @@
+import { TeamLink } from '../../components/TeamLink'
 import { useState } from 'react'
 import { DivergingBars, Dumbbell, MatchupBand, ProbStrip } from '../../charts'
 import { Help } from '../../components/Help'
@@ -282,6 +283,9 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
       help="How each offense has played this season next to how the opposing defense has been played against, with the league average for scale."
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">Where an offense and the defense it faces sit far apart, expect a mismatch.</p>
+      <p className="mb-3 text-[13px] text-ink-2">
+        Who calls the plays and what to expect from them: <TeamLink team={g.away}>{g.away} team page</TeamLink> · <TeamLink team={g.home}>{g.home} team page</TeamLink>
+      </p>
       <div className="mb-4 overflow-x-auto">
         <Segmented label="Situation" value={sit} onChange={setSit} options={sits.map(([value, label]) => ({ value, label }))} />
       </div>
