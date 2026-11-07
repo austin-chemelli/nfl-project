@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-06 (sections 3.6c and 8 updated with the retrospective); the live state is [state.md](state.md).
+Status: current, verified 2026-11-07 (sections 3.6c and 8 updated with the retrospective); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
@@ -168,6 +168,8 @@ Fit artifacts: `marts/fits/<model_id>/<trained_through>.json` with scaler, weigh
 
 `marts/bets.parquet` (append-only, immutable): `bet_id, model_id, game_id, lock_ts, market ('h2h'|'spreads'), side, price_american, point, model_p, market_p_vigfree, edge, stake_units (1.0), book, closing_price, closing_point, clv, result ('win'|'loss'|'push'|null), units_net`. A bet exists when `|model_p − market_p_vigfree| > 0.05` at lock.
 
+`marts/previews.parquet` (append-only, ADR 0023): `game_id, model_id, scored_at, p_home, spread_home` from the daily pass with the locked artifacts; never graded. `marts/strong_calls.parquet` (append-only, ADR 0023): per approach-game 10+ points from the market at lock: `game_id, model_id, lock_ts, side, p_home, market_p, spread_home, market_spread, top_groups (json), assumption (json), what_if_p, sentence`, filled at grade with `result, log_loss, market_log_loss, closing_toward_us`.
+
 `marts/graded.parquet`, `marts/scorecard.parquet` (per model × season × week + cumulative: n, log_loss, brier, spread_mae, ece, ats_pct, units, clv_avg), `marts/divergence.parquet` (per model × bucket of |model_p − market_p|: n, hit_rate, log_loss).
 
 ### 3.6 LLM artifacts
@@ -222,6 +224,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | `site/audit.json` | null rates, freshness |
 | `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet; `wp_series` and `drives` from M15 (ADR 0020), nullable |
 | `site/teams.json`, `site/league.json`, `site/similar.json` | per-team feature table; standings, playoff odds, leverage; similar seasons and flag cards (ADR 0019, §3.6d) |
+| game and slate files, additive (ADR 0023) | `market_history[]` (pre-kickoff consensus path), `market_moves`, `events[]` (what changed in each window), `swings[]` (what could move the game, with what-ifs), `strong_calls[]`, `today` (the preview score), `expected_score`; `tracker.json.strong_calls`, `tracker.json.totals` |
 | `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, best call and costliest miss, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.
@@ -250,6 +253,10 @@ sequenceDiagram
 Until P2 these are commands Austin runs (`nfl weekly refresh`, `nfl lock --slot thu|sat`, `nfl weekly grade`). From P2 Cloud Scheduler triggers the same commands as Cloud Run Jobs.
 
 Daily at 07:00 ET (`nfl-retro`, ADR 0016): ingest this season's pbp and schedules, curate this season's games and plays, build retrospectives for finished games without one (or with a newer pbp snapshot), publish. Thursday, Sunday and Monday games get theirs the next morning.
+
+### 4.1a Daily pass (ADR 0023)
+
+Wed, Fri and Sat 20:05 ET (`nfl daily`, the odds job): current-season ingest, one odds snapshot, curate, features, the Open-Meteo forecast, preview scores of upcoming games with the locked artifacts, site JSON (line history, window events, swing factors, what-ifs), publish. Thursday, Sunday and Monday keep their snapshot times; Sunday and Monday snapshots are in-play lines for games under way and never count as movement.
 
 ### 4.2 Lock
 
@@ -294,7 +301,7 @@ Portability rules: one image with CLI subcommands; config via env; data root is 
 
 ## 9. Not in 2026
 
-Matchup and Narrative approaches on the public scorecard (Narrative capture *does* run), Monte Carlo drive sim, totals modeling, player modeling, coordinator table and tendency discontinuities, participation-based coverage/personnel tendencies (data lands Feb 2027), Approach C (user predictions), API server, accounts, Langfuse, self-hosting.
+Matchup and Narrative approaches on the public scorecard (Narrative capture *does* run), Monte Carlo drive sim, player modeling, coordinator table and tendency discontinuities, participation-based coverage/personnel tendencies (data lands Feb 2027), Approach C (user predictions), API server, accounts, Langfuse, self-hosting.
 
 ## Team page (ADR 0022, M18)
 

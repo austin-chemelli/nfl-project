@@ -570,3 +570,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** ADR 0015 said contract changes stay additive, and I broke it in the same week I wrote rules about honesty in the data: a rule nothing checks is a hope. The check runs where the failure happens, in the deploy, not in review.
 
+## 2026-11-07: Planning the predictions against the market (M20, ADR 0023)
+
+**Why.** Austin wants the prediction to read like a line (spread and total next to the chance), the market's movement over the week and why, the things that swing a game with what-ifs, and the approaches' disagreements with the market explained and tracked.
+
+**What was decided.** Daily odds snapshots; a scored totals line as context; a labelled daily preview score between locks; template explanations, no LLM; a strong-calls ledger at lock; the quarterback what-if as the model's own sensitivity with the locked artifacts; weather at lock for the totals model only, the group registry untouched until wave 3.
+
+**Findings.** Movement can't be backtested (no odds history before 2026-10-26, the API's is paid), so every week not recorded is lost: that puts movement and the ledger first. The Sunday and Monday snapshots are in-play lines (IND @ JAX reads 7.5 → 35.5 if you take the last snapshot), so movement must stop at kickoff. The Student moves about 1.6 points of spread for a QB1 listed out; the closing spread docks the same for that coarse flag, and the home side covers 1.2 points worse when its QB1 is out (n 158): the quarterback gap, not the flag, is the lever, and the quarterback features already follow the projected starter. The closing total misses by 10.5 points on average, so the total is context, not a contest.
+
+**Lesson.** The measurements changed the order of the plan: the data that exists but isn't recorded (movement, calls with reasons) comes before the new model, whatever is more fun to build.
+
