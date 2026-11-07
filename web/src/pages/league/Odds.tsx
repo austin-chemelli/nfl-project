@@ -10,6 +10,7 @@ import { teamInfo } from '../../lib/teams'
 import { hasSpark, sparkSeries } from './context'
 import { Spark } from './Spark'
 import { barWidth, fmtProb, oddsRows, parseConf, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
+import { TeamLink } from '../../components/TeamLink'
 
 const MAX_WINS = 17
 const ROUNDS = [
@@ -108,7 +109,7 @@ export function Odds({ file }: { file: LeagueFile }) {
                 {anySpark && (hasSpark(sparkSeries(file, team.team, view)) ? <Spark points={sparkSeries(file, team.team, view)} /> : <span aria-hidden className="w-16 shrink-0" />)}
               </span>
               <span className="order-2 flex items-baseline gap-2 md:order-1" title={teamInfo(team.team).name}>
-                <span className="font-medium text-ink">{team.team}</span>
+                <TeamLink team={team.team} className="font-medium">{team.team}</TeamLink>
                 <span className="tabular whitespace-nowrap text-ink-3">{recordOf(team)}</span>
               </span>
               <span className="tabular order-3 text-right text-ink-2 md:order-2 md:text-left">

@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -74,6 +74,25 @@ describe('team page', () => {
   it('keeps the tab when it redirects a code', async () => {
     renderRoute('/team/car?tab=staff')
     expect(await screen.findByRole('tab', { name: 'Staff' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('is in the nav, after League', async () => {
+    renderRoute('/team')
+    const nav = await screen.findByRole('navigation')
+    const labels = within(nav).getAllByRole('link').map((a) => a.textContent)
+    expect(labels.indexOf('Teams')).toBe(labels.indexOf('League') + 1)
+  })
+
+  it('is linked from the game header without nesting links', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB')
+    expect((await screen.findAllByRole('link', { name: 'CAR' }))[0]).toHaveAttribute('href', '/team/CAR')
+    expect(container.querySelector('a a')).toBeNull()
+  })
+
+  it('is linked from the playoff odds without nesting links', async () => {
+    const { container } = renderRoute('/league')
+    expect((await screen.findAllByRole('link', { name: 'KC' }))[0]).toHaveAttribute('href', '/team/KC')
+    expect(container.querySelector('a a')).toBeNull()
   })
 
   it('lists the teams by division', async () => {

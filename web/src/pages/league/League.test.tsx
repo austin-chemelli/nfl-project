@@ -31,7 +31,7 @@ describe('League page, playoff tabs', () => {
   it('shows the five tabs in order, Playoff odds first and selected, and a summary strip', async () => {
     renderRoute('/league')
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((t) => t.textContent)).toEqual(['Playoff odds', 'Teams', 'Standings', 'Games that matter', 'Similar seasons'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['Playoff odds', 'Team charts', 'Standings', 'Games that matter', 'Similar seasons'])
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
     const strip = await screen.findByRole('group', { name: 'League summary' })
     expect(within(strip).getAllByRole('button')).toHaveLength(4)
@@ -204,7 +204,7 @@ describe('League page, playoff tabs', () => {
 describe('League page', () => {
   it('renders the Teams tab from teams.json and names the page', async () => {
     renderRoute('/league?tab=teams')
-    expect(await screen.findByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('tab', { name: 'Team charts' })).toHaveAttribute('aria-selected', 'true')
     expect(document.title).toMatch(/^League/)
   })
 

@@ -40,3 +40,8 @@ What the data allows (ADR 0021): weekly tendencies give "so far vs expected"; ch
 - A row with no measured range shows the team's last season alone.
 - A team's file, `teams.json` and `league.json` each only remove what needs them; the picker comes from the static team list.
 
+## Revised after Austin's look (2026-11-07)
+- **Tendencies show the inputs, not a blend.** The expected value and its typical-miss band read as abstract. Each row now draws this season (a dot), the play-caller's own past (a diamond) and the team's last season (a triangle) against the league average (a dashed line), with a tag saying which this season matches. Charted measures with no season yet carry "watch the caller" or "watch last year" where the study backs one. `ExpectRow` became `TendencyRow`; the "furthest from expected" tile became "biggest change" from last season.
+- **Coach profiles on Staff.** "In the numbers" is computed: a habit shows when every past season sat on the same side of the league. "Known for" and the coaching tree come from reporting: research agents drafted them, a second pass kept only what each cited page says, and anything about who calls plays is left out so the staff table's evidence rule stays the only source of that claim. 86 current coaches have one.
+- **Nav.** "Teams" sits after League; League's tab became "Team charts".
+

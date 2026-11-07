@@ -8,6 +8,7 @@ import { isHidden } from '../lib/hiddenPages'
 const NAV = [
   { to: '/', label: 'This week', end: true },
   { to: '/league', label: 'League' },
+  { to: '/team', label: 'Teams' },
   { to: '/tracker', label: 'Tracker' },
   { to: '/hypotheses', label: 'Evidence' },
   { to: '/coaches', label: 'Coaches' },
