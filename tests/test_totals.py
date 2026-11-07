@@ -110,3 +110,13 @@ def test_expected_score_splits_the_locked_total_by_the_headline_spread():
     assert (e["home"], e["away"], e["total"], e["market_total"]) == (25.0, 22.0, 47.0, 44.5)
     assert site._expected_score(t, {"models": {}})["home"] is None
     assert site._expected_score(None, {}) is None
+
+
+def test_the_weather_family_stays_out_of_the_global_fit_and_hypotheses():
+    from nfl.approaches import ensemble
+
+    a = ensemble.global_approach({"strength.epa_off", "weather.wind_mph", "weather.temp_f"})
+    assert "weather" in ensemble.EXCLUDED_FAMILIES
+    assert (
+        "weather.wind_mph" not in a.model_dump_json() and "strength.epa_off" in a.model_dump_json()
+    )

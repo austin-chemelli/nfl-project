@@ -23,6 +23,9 @@ class Step:
     name: str
     run: Callable[[Paths, int, Console], object]
     needs_odds: bool = False
+    optional: bool = (
+        False  # context (a forecast, preview scores): a failure warns, the pass goes on
+    )
 
 
 def _ingest(paths: Paths, season: int, console: Console) -> None:
@@ -85,10 +88,10 @@ STEPS: list[Step] = [
     Step("ingest", _ingest),
     Step("odds snapshot", _odds, needs_odds=True),
     Step("curate", _curate),
-    Step("forecast", _forecast),
+    Step("forecast", _forecast, optional=True),
     Step("tendencies", _tendencies),
     Step("features", _features),
-    Step("previews", _previews),
+    Step("previews", _previews, optional=True),
     Step("site", _site),
 ]
 
@@ -106,6 +109,11 @@ def run(paths: Paths, console: Console, odds: bool = True, season: int | None = 
             continue
         t0 = time.perf_counter()
         console.rule(s.name)
-        s.run(paths, season, console)
+        try:
+            s.run(paths, season, console)
+        except Exception as e:
+            if not s.optional:
+                raise
+            console.print(f"[yellow]{s.name} failed, continuing: {e!r}[/]")
         took.append((s.name, time.perf_counter() - t0))
     console.print("daily: " + ", ".join(f"{n} {t:.0f}s" for n, t in took))

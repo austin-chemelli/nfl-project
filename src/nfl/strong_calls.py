@@ -29,6 +29,8 @@ APPROACHES = ("traditionalist", "analyst", "sharp", "student")
 FILE = "strong_calls.parquet"
 GRADED = "strong_calls_graded.parquet"
 TOP_GROUPS = 3
+GRADE_COLS = {"result": pl.Utf8, "log_loss": pl.Float64, "market_log_loss": pl.Float64,
+              "closing_toward": pl.Boolean}  # fmt: skip
 SCHEMA = {
     "game_id": pl.Utf8, "season": pl.Int64, "week": pl.Int64, "model_id": pl.Utf8,
     "lock_ts": pl.Datetime("us"), "side": pl.Utf8, "team": pl.Utf8, "p_home": pl.Float64,
@@ -103,9 +105,9 @@ def calls(
             side = "home" if gap > 0 else "away"
             team = g["home_team"] if side == "home" else g["away_team"]
             groups = top_groups(r.get("contributions"), side)
-            qb = next(
-                (x for x in (swings or {}).get(r["game_id"], []) if x.get("kind") == "qb"), None
-            )
+            qbs = [x for x in (swings or {}).get(r["game_id"], []) if x.get("kind") == "qb"]
+            # the call's own team's quarterback first: its sentence is about that side
+            qb = next((x for x in qbs if x.get("team") == team), qbs[0] if qbs else None)
             assumption = what = None
             if qb:
                 assumption = {"team": qb["team"], "assumed": qb["assumed"]["name"], "alternative": qb["alternative"]["name"],
@@ -180,12 +182,42 @@ def grade(
                 "closing_toward": toward,
             }
         )
-    return pl.DataFrame(out)
+    return pl.DataFrame(out, schema={**dict(calls_df.schema), **GRADE_COLS})
+
+
+def grade_all(paths) -> pl.DataFrame:
+    """Every recorded call graded as of now: results for finished games, the line's move since the
+    lock from the last pre-kickoff snapshot so far. Cheap; the site and `nfl grade` both call it."""
+    from nfl import market_history
+    from nfl.features import store
+    from nfl.odds import read_lines
+
+    calls = load(paths)
+    if calls.is_empty():
+        return grade(calls, pl.DataFrame(), {})
+    seasons = (int(calls["season"].min()), int(calls["season"].max()))
+    games = store.games_frame(paths).filter(
+        pl.col("game_id").is_in(calls["game_id"].unique().to_list())
+    )
+    pts = market_history.paths(read_lines(paths, seasons))
+    closing = {
+        r["game_id"]: r["spread_home"]
+        for r in pts.filter(pl.col("spread_home").is_not_null()).sort("snapshot_ts").group_by("game_id").last().iter_rows(named=True)
+    }  # fmt: skip
+    return grade(calls, games.select("game_id", "result"), closing)
+
+
+def last_lock(calls: pl.DataFrame) -> pl.DataFrame:
+    """One row per approach-game: the call from its latest lock (a relocked game counts once)."""
+    if calls.is_empty():
+        return calls
+    return calls.sort("lock_ts").group_by("game_id", "model_id", maintain_order=True).last()
 
 
 def record(graded: pl.DataFrame) -> list[dict]:
     """Per approach: calls, decided, right, log loss vs the market's on those games, line moved toward."""
     out = []
+    graded = last_lock(graded)
     for m in APPROACHES:
         g = graded.filter(pl.col("model_id") == m) if not graded.is_empty() else graded
         decided = g.filter(pl.col("result").is_in(["right", "wrong"])) if not g.is_empty() else g

@@ -3,6 +3,7 @@ from datetime import datetime
 
 import httpx
 import polars as pl
+import pytest
 
 from nfl import weather
 from nfl.config import Paths
@@ -94,3 +95,24 @@ def test_features_use_recorded_weather_for_played_games_and_forecasts_for_upcomi
     assert (
         rows.filter(pl.col("feature") == "weather.precip_pct").height == 1
     )  # a null chance is dropped
+
+
+def test_a_fetch_that_lands_at_or_after_kickoff_is_dropped():
+    fc = pl.DataFrame({"game_id": ["2026_10_BUF_KC"] * 2, "fetched_at": [datetime(2026, 11, 8, 17), KICK],
+                       "temp_f": [30.0, 31.0], "wind_mph": [9.0, 9.0], "gusts_mph": [None, None],
+                       "precip_pct": [None, None]})  # fmt: skip
+    rows = wfeat.compute(_games(), fc).filter(pl.col("game_id") == "2026_10_BUF_KC")
+    assert rows["known_as_of"].unique().to_list() == [datetime(2026, 11, 8, 17)]
+
+
+def test_a_half_written_snapshot_is_skipped_and_an_odd_payload_costs_one_game(tmp_path):
+    paths = Paths(root=tmp_path)
+    (weather.raw_root(paths) / "snapshot_ts=20261107T120000Z").mkdir(parents=True)
+    bad = weather.raw_root(paths) / "snapshot_ts=20261107T130000Z"
+    bad.mkdir()
+    (bad / "forecasts.json").write_text("[{")
+    with pytest.warns(UserWarning):
+        assert weather.load_snapshots(paths).is_empty()
+    odd = lambda r: httpx.Response(200, json={"hourly": {"time": ["2026-11-08T18:00"]}})
+    with httpx.Client(transport=httpx.MockTransport(odd)) as c:
+        assert weather.fetch_one(c, 39.0, -94.5, KICK) is None

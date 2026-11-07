@@ -183,7 +183,7 @@ def save(paths: Paths, m: TotalModel) -> Path:
     return p
 
 
-def load_or_fit(paths: Paths, trained_through: int) -> TotalModel:
+def load_or_fit(paths: Paths, trained_through: int, save_fit: bool = True) -> TotalModel:
     """The artifact for a season, refitted when it's missing or its config changed (the fit is
     deterministic from data through `trained_through`, so a refit can't see the future)."""
     p = artifact_path(paths, trained_through)
@@ -193,7 +193,8 @@ def load_or_fit(paths: Paths, trained_through: int) -> TotalModel:
             return m
     data = dataset(paths, (trained_through - TRAIN_SEASONS + 1, trained_through))
     m = fit(data, trained_through)
-    save(paths, m)
+    if save_fit:  # a dry run fits in memory and leaves marts alone
+        save(paths, m)
     return m
 
 

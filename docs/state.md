@@ -17,7 +17,7 @@ flowchart LR
     end
     subgraph GCP[GCP nfl-project-prod, us-central1]
         SCHED[Cloud Scheduler]
-        JOBS[Cloud Run Jobs<br/>refresh · lock-thu · lock-sat · odds<br/>retro · site · narrative-check]
+        JOBS[Cloud Run Jobs<br/>refresh · lock-thu · lock-sat · odds<br/>daily · retro · site · narrative-check]
         DATA[(nfl-project-prod-data<br/>private: raw · curated · marts)]
         PUB[(nfl-project-prod-site<br/>public: site/*.json · predictions/)]
         SM[Secret Manager<br/>Odds key · deploy key]
@@ -183,7 +183,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [adr/](adr/) | before re-opening a decision; ADR 0020 is the newest (0019 league page, 0020 retro win probability and motion) | 2026-11-05 |
 | [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-07 |
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-07 |
-| [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-04 |
+| [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-07 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-07 |
 | [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-07 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |

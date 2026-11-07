@@ -11,6 +11,7 @@ turns the snapshots into features.
 from __future__ import annotations
 
 import json
+import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -58,8 +59,8 @@ def fetch_one(client: httpx.Client, lat: float, lon: float, kickoff: datetime) -
     try:
         r = client.get(f"{URL}?{q}")
         return _hour(r.json().get("hourly", {}), kickoff) if r.status_code == 200 else None
-    except httpx.HTTPError, ValueError:
-        return None
+    except httpx.HTTPError, ValueError, KeyError, IndexError, TypeError, AttributeError:
+        return None  # an odd payload costs this game's forecast, nothing else
 
 
 def snapshot(
@@ -102,10 +103,15 @@ def load_snapshots(paths: Paths) -> pl.DataFrame:
     """Every forecast we fetched: game_id, fetched_at, temp_f, wind_mph, gusts_mph, precip_pct."""
     rows = []
     for d in sorted(raw_root(paths).glob("snapshot_ts=*")) if raw_root(paths).exists() else []:
-        ts = datetime.strptime(d.name.split("=", 1)[1], "%Y%m%dT%H%M%SZ")
-        for r in json.loads((d / "forecasts.json").read_text()):
-            rows.append({"game_id": r["game_id"], "fetched_at": ts, "temp_f": r["temp_f"], "wind_mph": r["wind_mph"],
-                         "gusts_mph": r.get("gusts_mph"), "precip_pct": r.get("precip_pct")})  # fmt: skip
+        try:  # a half-written snapshot (killed job, full disk) is skipped, never fatal
+            ts = datetime.strptime(d.name.split("=", 1)[1], "%Y%m%dT%H%M%SZ")
+            got = [{"game_id": r["game_id"], "fetched_at": ts, "temp_f": r["temp_f"], "wind_mph": r["wind_mph"],
+                    "gusts_mph": r.get("gusts_mph"), "precip_pct": r.get("precip_pct")}
+                   for r in json.loads((d / "forecasts.json").read_text())]  # fmt: skip
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            warnings.warn(f"weather: skipping {d.name}: {e!r}", stacklevel=2)
+            continue
+        rows.extend(got)
     schema = {"game_id": pl.Utf8, "fetched_at": pl.Datetime("us"), "temp_f": pl.Float64, "wind_mph": pl.Float64,
               "gusts_mph": pl.Float64, "precip_pct": pl.Float64}  # fmt: skip
     return pl.DataFrame(rows, schema=schema) if rows else pl.DataFrame(schema=schema)

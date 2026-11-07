@@ -312,23 +312,18 @@ def grade(paths: Paths, console: Console) -> None:
 
 
 def grade_strong_calls(paths: Paths) -> int:
-    """Derived each run (ADR 0024): results, log loss vs the market, and the line's move after the lock."""
-    from nfl import market_history, strong_calls
-    from nfl.features import store
-    from nfl.odds import read_lines
+    """Derived each run (ADR 0024): results, log loss vs the market, and the line's move after the
+    lock. Context: a failure warns and never stops the grade."""
+    import warnings
 
-    calls = strong_calls.load(paths)
-    if calls.is_empty():
+    from nfl import strong_calls
+
+    try:
+        out = strong_calls.grade_all(paths)
+        if out.is_empty():
+            return 0
+        out.write_parquet(paths.marts / strong_calls.GRADED)
+        return out.height
+    except Exception as e:  # noqa: BLE001
+        warnings.warn(f"strong calls not graded: {e!r}", stacklevel=2)
         return 0
-    seasons = (int(calls["season"].min()), int(calls["season"].max()))
-    games = store.games_frame(paths).filter(
-        pl.col("game_id").is_in(calls["game_id"].unique().to_list())
-    )
-    pts = market_history.paths(read_lines(paths, seasons))
-    closing = {
-        r["game_id"]: r["spread_home"]
-        for r in pts.filter(pl.col("spread_home").is_not_null()).sort("snapshot_ts").group_by("game_id").last().iter_rows(named=True)
-    }  # fmt: skip
-    out = strong_calls.grade(calls, games.select("game_id", "result"), closing)
-    out.write_parquet(paths.marts / strong_calls.GRADED)
-    return out.height

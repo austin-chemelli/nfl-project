@@ -169,7 +169,7 @@ Fit artifacts: `marts/fits/<model_id>/<trained_through>.json` with scaler, weigh
 
 `marts/bets.parquet` (append-only, immutable): `bet_id, model_id, game_id, lock_ts, market ('h2h'|'spreads'), side, price_american, point, model_p, market_p_vigfree, edge, stake_units (1.0), book, closing_price, closing_point, clv, result ('win'|'loss'|'push'|null), units_net`. A bet exists when `|model_p − market_p_vigfree| > 0.05` at lock.
 
-`marts/previews.parquet` (append-only, ADR 0024): `game_id, model_id, scored_at, p_home, spread_home` from the daily pass with the locked artifacts; never graded. `marts/strong_calls.parquet` (append-only, ADR 0024): per approach-game 10+ points from the market at lock: `game_id, model_id, lock_ts, side, p_home, market_p, spread_home, market_spread, top_groups (json), assumption (json), what_if_p, sentence`, filled at grade with `result, log_loss, market_log_loss, closing_toward_us`.
+`marts/previews.parquet` (append-only, ADR 0024): `game_id, model_id, scored_at, p_home, spread_home` from the daily pass with the locked artifacts; never graded. `marts/strong_calls.parquet` (append-only, ADR 0024): per approach-game 10+ points from the market at lock: `game_id, model_id, lock_ts, side, p_home, market_p, spread_home, market_spread, top_groups (json), assumption (json), what_if_p_home, sentence`. Graded on the fly by the site and `nfl grade` (`strong_calls.grade_all`: `result, log_loss, market_log_loss, closing_toward`); `nfl grade` also writes the derived `strong_calls_graded.parquet`. A relocked game counts once, at its last lock.
 
 `marts/totals.parquet` (append-only, ADR 0024): `game_id, season, week, model_id ('student_total'), model_version, lock_ts, slot, total, sd_total, market_total`, one row per game per lock; graded on the fly by the site, never in the scorecard. Artifacts under `marts/fits/student_total/<trained_through>.json`, refitted by the lock when missing or stale.
 
@@ -259,7 +259,7 @@ Daily at 07:00 ET (`nfl-retro`, ADR 0016): ingest this season's pbp and schedule
 
 ### 4.1a Daily pass (ADR 0024)
 
-Wed, Fri and Sat 20:05 ET (`nfl daily`, the odds job): current-season ingest, one odds snapshot, curate, features, the Open-Meteo forecast, preview scores of upcoming games with the locked artifacts, site JSON (line history, window events, swing factors, what-ifs), publish. Thursday, Sunday and Monday keep their snapshot times; Sunday and Monday snapshots are in-play lines for games under way and never count as movement.
+Wed, Fri and Sat 20:05 ET (`nfl daily`, the odds job): current-season ingest, one odds snapshot, curate, the Open-Meteo forecast, tendencies, features, preview scores of upcoming games with the locked artifacts, site JSON (line history, window events, swing factors, what-ifs), publish. Thursday, Sunday and Monday keep their snapshot times; Sunday and Monday snapshots are in-play lines for games under way and never count as movement.
 
 ### 4.2 Lock
 

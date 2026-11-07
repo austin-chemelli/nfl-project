@@ -94,6 +94,7 @@ export default function TrackerPage() {
                           <FinePrint>
                             <p>Strong calls are recorded at each live lock since this record started (the date above); earlier locks have none. The sentence is built from the stored numbers: the chances, the groups that pulled the approach&apos;s way, and the quarterback its line assumed.</p>
                             <p>The what-if in a sentence is our own model rescored with the other quarterback, not the market&apos;s view.</p>
+                            <p>The total learned from the weather recorded at kickoff in past seasons, while a lock only has the forecast, so its weather reads a little sharper in the backtest than it can live.</p>
                           </FinePrint>
                         </TabBody>
                       ),

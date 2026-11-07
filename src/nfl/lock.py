@@ -466,7 +466,7 @@ def run(
         games, slate, res.market
     )
 
-    res.totals = _totals(paths, feats, slate, res.market, lock_ts, season, slot)
+    res.totals = _totals(paths, feats, slate, res.market, lock_ts, season, slot, dry_run)
 
     sha = git_sha()
     data_snap = _latest_raw_snapshot(paths)
@@ -529,13 +529,14 @@ def _totals(
     lock_ts: datetime,
     season: int,
     slot: str,
+    dry_run: bool = False,
 ) -> pl.DataFrame | None:
     """This lock's totals, or None: the total is context (ADR 0024), so a failure here costs the
     total and never the lock."""
     from nfl.approaches import totals
 
     try:
-        m = totals.load_or_fit(paths, season - 1)
+        m = totals.load_or_fit(paths, season - 1, save_fit=not dry_run)
         scored = totals.score(m, feats, slate, lock_ts)
         return totals.lock_rows(m, scored, slate, market, lock_ts, slot)
     except Exception as e:  # noqa: BLE001

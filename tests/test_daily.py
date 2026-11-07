@@ -15,3 +15,25 @@ def test_no_odds_skips_only_the_snapshot():
 def test_the_forecast_runs_after_curate_and_before_the_features():
     steps = daily.plan()
     assert steps.index("curate") < steps.index("forecast") < steps.index("features")
+
+
+def test_an_optional_step_failing_never_stops_the_site(monkeypatch):
+    from rich.console import Console
+
+    ran = []
+
+    def boom(*a):
+        raise RuntimeError("config hash mismatch")
+
+    steps = [
+        daily.Step("forecast", boom, optional=True),
+        daily.Step("site", lambda *a: ran.append("site")),
+    ]
+    monkeypatch.setattr(daily, "STEPS", steps)
+    daily.run(None, Console(quiet=True), season=2026)
+    assert ran == ["site"]
+    assert {s.name for s in daily.STEPS if s.optional} <= {"forecast"}
+
+
+def test_only_context_steps_are_optional():
+    assert {s.name for s in daily.STEPS if s.optional} == {"forecast", "previews"}

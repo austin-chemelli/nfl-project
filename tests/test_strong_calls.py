@@ -86,3 +86,58 @@ def test_record_counts_per_approach():
     r = {x["model_id"]: x for x in sc.record(c)}
     assert r["student"]["decided"] == 1 and r["student"]["right"] == 0
     assert r["analyst"]["n"] == 0
+
+
+def test_a_call_takes_its_own_teams_quarterback_what_if():
+    other = {"kind": "qb", "team": "JAX", "why": "status",
+             "assumed": {"name": "Trevor Lawrence", "p_home": {"student": 0.62}},
+             "alternative": {"name": "Mac Jones", "p_home": {"student": 0.70}}}  # fmt: skip
+    own = {"kind": "qb", "team": "BAL", "why": "status",
+           "assumed": {"name": "Lamar Jackson", "p_home": {"student": 0.62}},
+           "alternative": {"name": "Tyler Huntley", "p_home": {"student": 0.54}}}  # fmt: skip
+    out = sc.calls(
+        [scored(0.62, 0.65)], MARKET, SLATE, LOCK, {"student": "The Student"}, {"G": [other, own]}
+    )
+    assert out["what_if_p_home"][0] == 0.54 and "Lamar Jackson" in out["sentence"][0]
+
+
+def test_grading_types_hold_when_late_rows_fill_columns_early_ones_left_empty():
+    one = sc.calls([scored(0.62, 0.65)], MARKET, SLATE, LOCK, {})
+    c = pl.concat([one.with_columns(pl.lit(f"A{i:03d}").alias("game_id")) for i in range(120)])
+    late = [
+        f"A{i:03d}" for i in range(110, 120)
+    ]  # the first 110 have no result and no closing line
+    games = pl.DataFrame({"game_id": late, "result": [7] * 10})
+    g = sc.grade(c, games, dict.fromkeys(late, 2.5))
+    assert g.height == 120 and g["closing_toward"].sum() == 10 and g["result"].null_count() == 110
+    assert g.schema["closing_toward"] == pl.Boolean and g.schema["log_loss"] == pl.Float64
+
+
+def test_a_relocked_game_counts_once_at_its_last_lock():
+    first = sc.calls([scored(0.62, 0.65)], MARKET, SLATE, LOCK, {})
+    again = sc.calls([scored(0.66, 0.65)], MARKET, SLATE, datetime(2026, 11, 7, 17), {})
+    g = sc.grade(pl.concat([first, again]), pl.DataFrame({"game_id": ["G"], "result": [7]}), {})
+    r = {x["model_id"]: x for x in sc.record(g)}
+    assert r["student"]["n"] == 1 and r["student"]["right"] == 1
+    assert sc.last_lock(g)["p_home"].to_list() == [0.66]
+
+
+def test_the_site_sees_a_call_appended_after_the_last_grade(tmp_path, monkeypatch):
+    from nfl import site
+    from nfl.config import Paths
+
+    paths = Paths(tmp_path)
+    paths.marts.mkdir(parents=True)
+    sc.append(paths, sc.calls([scored(0.62, 0.65)], MARKET, SLATE, LOCK, {}))
+    sc.grade(sc.load(paths), pl.DataFrame({"game_id": ["G"], "result": [None]}), {}).write_parquet(
+        paths.marts / sc.GRADED
+    )
+    sc.append(
+        paths, sc.calls([scored(0.62, 0.30)], MARKET, SLATE, datetime(2026, 11, 7, 17), {})
+    )  # Saturday's lock
+    graded = lambda p: sc.grade(
+        sc.load(p), pl.DataFrame({"game_id": ["G", "H"], "result": [None, None]}), {}
+    )
+    monkeypatch.setattr(sc, "grade_all", graded)
+    by_game, rec = site._strong_calls(paths, 2026)
+    assert set(by_game) == {"G", "H"} and len(rec["calls"]) == 2

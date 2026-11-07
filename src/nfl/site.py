@@ -492,12 +492,11 @@ def _strong_calls(paths: Paths, season: int) -> tuple[dict[str, list[dict]], dic
 
     from nfl import strong_calls
 
-    f = paths.marts / strong_calls.GRADED
-    calls = pl.read_parquet(f) if f.exists() else strong_calls.load(paths)
+    calls = strong_calls.grade_all(paths)  # the append-only record, graded now: never a stale file
     first = None
     if not calls.is_empty():
         first = calls["lock_ts"].min()
-        calls = calls.filter(pl.col("season") == season)
+        calls = strong_calls.last_lock(calls.filter(pl.col("season") == season))
     by_game: dict[str, list[dict]] = {}
     items = []
     for r in (
@@ -515,10 +514,7 @@ def _strong_calls(paths: Paths, season: int) -> tuple[dict[str, list[dict]], dic
         }  # fmt: skip
         by_game.setdefault(r["game_id"], []).append(x)
         items.append(x)
-    graded = calls if "result" in calls.columns else calls.with_columns(
-        pl.lit(None, dtype=pl.Utf8).alias("result"), pl.lit(None, dtype=pl.Float64).alias("log_loss"),
-        pl.lit(None, dtype=pl.Float64).alias("market_log_loss"), pl.lit(None, dtype=pl.Boolean).alias("closing_toward"))  # fmt: skip
-    record = {"gap": strong_calls.STRONG_GAP, "first_lock": _ts(first), "record": strong_calls.record(graded),
+    record = {"gap": strong_calls.STRONG_GAP, "first_lock": _ts(first), "record": strong_calls.record(calls),
               "calls": items}  # fmt: skip
     return by_game, record
 
@@ -539,6 +535,15 @@ def _today(paths: Paths, now: datetime) -> dict[str, dict]:
         }
         d["scored_at"] = max(d["scored_at"], _ts(r["scored_at"]))
     return out
+
+
+def _safe(fn, default, *args):
+    """fn(*args), or `default` with a printed warning: for page data that must never stop a build."""
+    try:
+        return fn(*args)
+    except Exception as e:  # noqa: BLE001
+        print(f"site: {getattr(fn, '__name__', 'step')} failed, continuing: {e!r}")
+        return default
 
 
 def _swings(paths: Paths, games: pl.DataFrame, season: int, now: datetime, feats: pl.DataFrame,
@@ -796,16 +801,17 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
 
     allrows = display_rows(paths, games, now)
     market = _market_by_game(paths, games, now)
-    lines = _line_paths(paths, season, now)
-    locks = _lock_times(paths, season)
-    window = _window_sources(paths, games, season, now)
+    # the market pieces (ADR 0024) are additive page data: a failure costs that piece, never the build
+    lines = _safe(_line_paths, {}, paths, season, now)
+    locks = _safe(_lock_times, {}, paths, season)
+    window = _safe(_window_sources, {}, paths, games, season, now)
 
     feats = store.read_features(paths, seasons=(season, season))
     tend = _read(paths, "tendencies")
     injuries = _injuries(paths, season)
     swing = _swings(paths, games, season, now, feats, injuries)
-    calls_by_game, calls_record = _strong_calls(paths, season)
-    today = _today(paths, now)
+    calls_by_game, calls_record = _safe(_strong_calls, ({}, None), paths, season)
+    today = _safe(_today, {}, paths, now)
     totals_by_game, totals_record = _totals(paths, games)
     from nfl.llm.narrative import load_records
 
@@ -830,15 +836,19 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             row = _game_row(g, allrows, market, reg)
             row["card"] = _card(g, edges, injuries, now, **card_ctx)
             points = lines.get(g["game_id"], [])
-            row["line_move"] = _line_move(points, locks.get(g["game_id"]))
+            row["line_move"] = _safe(_line_move, None, points, locks.get(g["game_id"]))
             slate_games.append(row)
             detail = row | _game_detail(g, allrows, feats, tend, injuries, narr, now, edges)
-            detail["market_history"] = [_line_point(p) for p in points]
+            detail["market_history"] = _safe(lambda pts: [_line_point(p) for p in pts], [], points)
             detail["swings"] = swing.get(g["game_id"], [])
             detail["strong_calls"] = calls_by_game.get(g["game_id"], [])
             detail["today"] = today.get(g["game_id"])
-            detail["expected_score"] = _expected_score(totals_by_game.get(g["game_id"]), detail)
-            detail["market_events"] = _game_events(
+            detail["expected_score"] = _safe(
+                _expected_score, None, totals_by_game.get(g["game_id"]), detail
+            )
+            detail["market_events"] = _safe(
+                _game_events,
+                [],
                 g,
                 points,
                 window,
