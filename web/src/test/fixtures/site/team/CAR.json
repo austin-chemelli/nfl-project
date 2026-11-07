@@ -4,7 +4,7 @@
  "season": 2026,
  "week": 9,
  "through_week": 8,
- "generated_at": "2026-11-07T00:42:39.254576+00:00",
+ "generated_at": "2026-11-07T00:56:36.093742+00:00",
  "staff": {
   "current": [
    {
@@ -86,7 +86,7 @@
     "evidence": "official",
     "source_url": "https://www.panthers.com/news/dave-canales-offensive-coordinator-brad-idzik-to-call-plays-in-2026",
     "situation": "promoted_first_time",
-    "situation_text": "First year calling plays, promoted from this staff",
+    "situation_text": "First year calling NFL plays, promoted from this staff",
     "career": [
      {
       "team": "CAR",
@@ -467,8 +467,8 @@
     "is_head_coach": false,
     "evidence": "official",
     "source_url": "https://www.panthers.com/news/panthers-announce-changes-to-defensive-coaching-staff",
-    "situation": "moved_team",
-    "situation_text": "New play-caller, has called plays before",
+    "situation": null,
+    "situation_text": null,
     "career": [
      {
       "team": "CAR",

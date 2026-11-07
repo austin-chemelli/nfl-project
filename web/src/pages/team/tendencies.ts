@@ -1,33 +1,45 @@
 /** Reads a tendency row (ADR 0022): is this team doing what its play-caller's past and its own last season suggested? */
-import type { TeamFile, TeamMetric, TeamUnit } from '../../data/contract'
+import type { TeamChange, TeamFile, TeamMetric, TeamUnit } from '../../data/contract'
 
-/** `rough`: the study says this guess is little better than the league middle, so no verdict. `no_range`: no measured miss to judge by. */
-export type Verdict = 'as_expected' | 'more' | 'less' | 'rough' | 'no_range' | 'waiting'
+/**
+ * `rough`: the study says this guess is little better than the league middle, so no verdict. `no_range`: no
+ * measured miss to judge by. `mixed`: a caller changed during the season, so the rates aren't his alone.
+ */
+export type Verdict = 'as_expected' | 'more' | 'less' | 'rough' | 'no_range' | 'waiting' | 'mixed'
 
-export function verdict(row: TeamMetric): Verdict {
+/** Keeps a value exactly on the edge of the range inside it, past float error. */
+const EDGE = 1e-9
+/**
+ * The range is the typical miss, so about half of all rows land outside it. A row has to be this many misses
+ * from expected to be called out in the tile or the line above a chart.
+ */
+export const NOTABLE = 1.5
+
+export function verdict(row: TeamMetric, mixed = false): Verdict {
   const { expected: e, observed: o } = row
   if (!e || e.miss == null) return 'no_range'
   if (e.strength === 'weak') return 'rough'
   if (!o) return 'waiting'
-  if (Math.abs(o.pct - e.pct) <= e.miss) return 'as_expected'
+  if (mixed) return 'mixed'
+  if (Math.abs(o.pct - e.pct) <= e.miss + EDGE) return 'as_expected'
   return o.pct > e.pct ? 'more' : 'less'
 }
 
 /** How far outside its typical miss a row is: 1 is on the edge of the range. Rows with no verdict score 0. */
-export const distance = (row: TeamMetric): number => {
-  const v = verdict(row)
+export const distance = (row: TeamMetric, mixed = false): number => {
+  const v = verdict(row, mixed)
   if (v !== 'as_expected' && v !== 'more' && v !== 'less') return 0
   return Math.abs(row.observed!.pct - row.expected!.pct) / row.expected!.miss!
 }
 
-const tier = (row: TeamMetric): number => {
-  const v = verdict(row)
-  return v === 'more' || v === 'less' ? 0 : v === 'as_expected' || v === 'waiting' ? 1 : v === 'rough' ? 2 : 3
+const tier = (row: TeamMetric, mixed: boolean): number => {
+  const v = verdict(row, mixed)
+  return v === 'more' || v === 'less' ? 0 : v === 'as_expected' || v === 'waiting' || v === 'mixed' ? 1 : v === 'rough' ? 2 : 3
 }
 
-/** Surprises first, then what's on course, then rough guesses, then rows with no range. */
-export function sortRows(rows: TeamMetric[]): TeamMetric[] {
-  return [...rows].sort((a, b) => tier(a) - tier(b) || distance(b) - distance(a) || a.label.localeCompare(b.label))
+/** Furthest from expected first, then what's on course, then rough guesses, then rows with no range. */
+export function sortRows(rows: TeamMetric[], mixed = false): TeamMetric[] {
+  return [...rows].sort((a, b) => tier(a, mixed) - tier(b, mixed) || distance(b, mixed) - distance(a, mixed) || a.label.localeCompare(b.label))
 }
 
 export const VERDICT_TEXT: Record<Verdict, string> = {
@@ -35,17 +47,31 @@ export const VERDICT_TEXT: Record<Verdict, string> = {
   more: 'More than expected',
   less: 'Less than expected',
   rough: 'Rough guess',
-  no_range: 'Too few cases',
-  waiting: 'Expected',
+  no_range: 'No measured range',
+  waiting: 'Prediction',
+  mixed: 'Two callers',
 }
 
-/** The row furthest outside its range across both units, for the tile. Null when everything is on course. */
+/** The latest play-calling change on a side this season, if there was one. */
+export function callerChange(file: TeamFile, side: 'off' | 'def'): TeamChange | null {
+  const role = side === 'off' ? 'OFF_PC' : 'DEF_PC'
+  return file.staff.changes.filter((c) => c.role === role).at(-1) ?? null
+}
+
+/** Why a unit's rates aren't its current caller's alone. */
+export function changeLine(c: TeamChange, through: number | null): string {
+  if (through != null && c.start_week > through) return `${c.name} took over in Week ${c.start_week}, so these games were called by someone else.`
+  const weeks = c.start_week === 2 ? 'Week 1' : `Weeks 1–${c.start_week - 1}`
+  return c.replaced ? `${weeks} ${c.start_week === 2 ? 'was' : 'were'} called by ${c.replaced}, so these rates mix two callers.` : `${c.name} took over in Week ${c.start_week}, so these rates mix two callers.`
+}
+
+/** The row furthest from expected across both units, for the tile. Null when nothing is well outside its range, or a unit changed callers. */
 export function furthest(file: TeamFile): { row: TeamMetric; side: 'off' | 'def' } | null {
   let best: { row: TeamMetric; side: 'off' | 'def' } | null = null
   for (const side of ['off', 'def'] as const) {
+    if (callerChange(file, side)) continue
     for (const row of file.units[side].live) {
-      const v = verdict(row)
-      if (v !== 'more' && v !== 'less') continue
+      if (distance(row) < NOTABLE || (verdict(row) !== 'more' && verdict(row) !== 'less')) continue
       if (best == null || distance(row) > distance(best.row)) best = { row, side }
     }
   }
@@ -62,15 +88,16 @@ export function basis(row: TeamMetric, file: TeamFile, caller: string | null): s
   return e.weight_on_caller === 1 || !last ? `From ${seasons}` : `From ${seasons} and ${last}`
 }
 
-/** One line about the unit: the biggest surprise, or nothing when none clears its range. */
+/** One line about the unit: its furthest row, naming only the sources that row's expected value used. */
 export function unitLine(unit: TeamUnit): string | null {
   const name = unit.caller?.confirmed ? unit.caller.name : null
   const top = sortRows(unit.live)[0]
-  if (!top) return null
+  if (!top?.expected || distance(top) < NOTABLE) return null
   const v = verdict(top)
   if (v !== 'more' && v !== 'less') return null
-  const word = v === 'more' ? 'above' : 'below'
-  return `${top.label} is running ${word} what ${name ? `${name}'s past and ` : ''}last season suggested.`
+  const w = top.expected.weight_on_caller
+  const source = !name || w === 0 ? 'last season' : w === 1 ? `${name}'s past` : `${name}'s past and last season`
+  return `${top.label} is running ${v === 'more' ? 'above' : 'below'} what ${source} suggested.`
 }
 
 export function fmtRate(v: number, unit: string): string {

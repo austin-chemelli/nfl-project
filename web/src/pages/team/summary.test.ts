@@ -18,7 +18,7 @@ describe('team tiles', () => {
   })
   it('names a confirmed caller with his situation', () => {
     const t = callerTile(car.units.off.caller, 'off')
-    expect(t).toMatchObject({ label: 'Calls the offense', value: 'Brad Idzik', sub: 'First year calling, promoted' })
+    expect(t).toMatchObject({ label: 'Calls the offense', value: 'Brad Idzik', sub: 'First NFL year calling, promoted' })
   })
   it('an unconfirmed unit never reads as calling', () => {
     const t = callerTile({ ...car.units.off.caller!, confirmed: false }, 'off')

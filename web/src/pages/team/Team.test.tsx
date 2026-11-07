@@ -1,6 +1,17 @@
 import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { renderRoute } from '../../test/render'
+
+/** The fixtures without one site file. */
+function without(file: string): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'team-'))
+  fs.cpSync(path.resolve(import.meta.dirname, '../../test/fixtures'), root, { recursive: true })
+  fs.rmSync(path.join(root, 'site', file))
+  return root
+}
 
 describe('team page', () => {
   it('opens on the overview with the tiles and all four tabs', async () => {
@@ -50,6 +61,18 @@ describe('team page', () => {
     renderRoute('/team/LAC?tab=tendencies')
     await screen.findByRole('heading', { name: 'Offense: what to expect' })
     expect(screen.queryByText('Shotgun', { exact: true })).not.toBeInTheDocument()
+  })
+
+  it('keeps the league sections, the picker and the tabs without teams.json', async () => {
+    renderRoute('/team/CAR', without('teams.json'))
+    expect(await screen.findByText('Where they stand')).toBeInTheDocument()
+    expect(screen.queryByText('Best and worst')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toHaveValue('CAR')
+  })
+
+  it('keeps the tab when it redirects a code', async () => {
+    renderRoute('/team/car?tab=staff')
+    expect(await screen.findByRole('tab', { name: 'Staff' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('lists the teams by division', async () => {

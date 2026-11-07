@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { Navigate, useParams } from 'react-router'
+import { Navigate, useLocation, useParams } from 'react-router'
 import { SummaryStrip, Tile } from '../components/SummaryStrip'
 import { Tabs } from '../components/Tabs'
 import { TeamAccent } from '../components/TeamAccent'
-import { Card, Loaded, Page } from '../components/ui'
+import { Card, Loaded, Page, PageSkeleton } from '../components/ui'
 import { isNotFound, useLeague, useSimilar, useTeam, useTeams } from '../data/api'
-import { canonicalTeam, isTeam, teamInfo } from '../lib/teams'
+import { TEAM_CODES, canonicalTeam, isTeam, teamInfo } from '../lib/teams'
 import { recordText } from './league/helpers'
 import NotFoundPage from './NotFound'
 import { Games } from './team/Games'
@@ -42,6 +42,8 @@ function Body({ code }: { code: string }) {
     nextGameTile(row),
   ].filter((t): t is TileText => t != null)
 
+  const settled = !teams.isPending && !league.isPending && !file.isPending
+  const noNumbers = <Card className="text-ink-2">Team numbers appear after the next data update.</Card>
   const line = row && [row.division, recordText(row), row.through_week != null ? `through Week ${row.through_week}` : null].filter(Boolean).join(' · ')
 
   return (
@@ -55,24 +57,30 @@ function Body({ code }: { code: string }) {
       }
       lede={line}
     >
-      {teams.data && <TeamPicker code={code} codes={Object.keys(teams.data.teams)} />}
-      {tiles.length > 0 && (
-        <SummaryStrip label={`${name} summary`}>
-          {tiles.map((t) => (
-            <Tile key={t.label} label={t.label} value={t.value} sub={t.sub} tab={t.tab} />
-          ))}
-        </SummaryStrip>
+      <TeamPicker code={code} codes={TEAM_CODES} />
+      {!settled ? (
+        <PageSkeleton what={name} shape="tracker" title={false} />
+      ) : (
+        <>
+          {tiles.length > 0 && (
+            <SummaryStrip label={`${name} summary`}>
+              {tiles.map((t) => (
+                <Tile key={t.label} label={t.label} value={t.value} sub={t.sub} tab={t.tab} />
+              ))}
+            </SummaryStrip>
+          )}
+          <Tabs
+            label={`${name} views`}
+            default="overview"
+            tabs={[
+              { id: 'overview', label: 'Overview', content: teams.data || league.data ? <Overview code={code} teams={teams.data} league={league.data} similar={similar.data} /> : noNumbers },
+              { id: 'staff', label: 'Staff', content: <Part q={file} what="Staff details">{(f) => <Staff file={f} />}</Part> },
+              { id: 'tendencies', label: 'Tendencies', content: <Part q={file} what="Tendencies">{(f) => <Tendencies file={f} />}</Part> },
+              { id: 'games', label: 'Games', content: <Games code={code} teams={teams.data} league={league.data} file={file.data} /> },
+            ]}
+          />
+        </>
       )}
-      <Tabs
-        label={`${name} views`}
-        default="overview"
-        tabs={[
-          { id: 'overview', label: 'Overview', content: <Part q={teams} what="Team numbers">{(t) => <Overview code={code} teams={t} league={league.data} similar={similar.data} />}</Part> },
-          { id: 'staff', label: 'Staff', content: <Part q={file} what="Staff details">{(f) => <Staff file={f} />}</Part> },
-          { id: 'tendencies', label: 'Tendencies', content: <Part q={file} what="Tendencies">{(f) => <Tendencies file={f} />}</Part> },
-          { id: 'games', label: 'Games', content: <Part q={teams} what="Games">{(t) => <Games code={code} teams={t} league={league.data} file={file.data} />}</Part> },
-        ]}
-      />
     </Page>
   )
 }
@@ -80,8 +88,9 @@ function Body({ code }: { code: string }) {
 /** One team (ADR 0022). Each file failing only removes what needs it. */
 export default function TeamPage() {
   const { code = '' } = useParams()
+  const { search } = useLocation()
   if (!isTeam(code)) return <NotFoundPage />
   const canon = canonicalTeam(code)
-  if (canon !== code) return <Navigate to={`/team/${canon}`} replace />
+  if (canon !== code) return <Navigate to={`/team/${canon}${search}`} replace />
   return <Body key={canon} code={canon} />
 }

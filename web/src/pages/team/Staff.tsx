@@ -54,7 +54,7 @@ export function Staff({ file }: { file: TeamFile }) {
   const changes = changeLines(file.staff.changes)
   return (
     <div className="flex flex-col gap-8">
-      <Block title="Who calls the plays">
+      <Block title={`Who calls the plays in ${file.season}`}>
         <div className="grid gap-4 md:grid-cols-2">
           <CallerCard side="off" caller={file.units.off.caller} />
           <CallerCard side="def" caller={file.units.def.caller} />
@@ -82,6 +82,7 @@ export function Staff({ file }: { file: TeamFile }) {
       <FinePrint>
         <p>Team site: the team's own coaches page or announcement. News: a news report. 32-team list: a league-wide roundup of play-callers.</p>
         <p>When no source names a unit's play-caller, the card shows the coordinator and says so.</p>
+        <p>Career lines list seasons a source confirms, from 2016, so a gap doesn't mean time off. First year means first in our table of NFL staffs.</p>
       </FinePrint>
     </div>
   )

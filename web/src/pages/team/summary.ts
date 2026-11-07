@@ -17,9 +17,9 @@ const SHORT: Record<string, string> = {
   same_caller: 'Same as last season',
   same_caller_new_qb: 'New starting quarterback',
   took_over: 'Took over from inside',
-  moved_team: 'New play-caller',
-  promoted_first_time: 'First year calling, promoted',
-  outside_first_time: 'First year calling plays',
+  moved_team: 'New play-caller here',
+  promoted_first_time: 'First NFL year calling, promoted',
+  outside_first_time: 'First year calling NFL plays',
 }
 
 export function callerTile(caller: UnitCaller | null | undefined, side: 'off' | 'def'): TileText | null {

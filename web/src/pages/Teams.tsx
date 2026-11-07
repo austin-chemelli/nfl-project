@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { TeamAccent } from '../components/TeamAccent'
-import { Loaded, Page } from '../components/ui'
-import { useTeams } from '../data/api'
+import { Card, Loaded, Page } from '../components/ui'
+import { isNotFound, useTeams } from '../data/api'
 import { teamInfo } from '../lib/teams'
 import { divisionsOf, recordText } from './league/helpers'
 
@@ -10,7 +10,7 @@ export default function TeamsPage() {
   const q = useTeams()
   return (
     <Page title="Teams" lede="Pick a team to see where it stands, who calls its plays and what to expect from them.">
-      <Loaded q={q} what="teams">
+      {q.isError && isNotFound(q.error) ? <Card className="text-ink-2">The team list appears after the next data update.</Card> : <Loaded q={q} what="teams">
         {(file) => (
           <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
             {divisionsOf(file).map((d) => (
@@ -36,7 +36,7 @@ export default function TeamsPage() {
             ))}
           </div>
         )}
-      </Loaded>
+      </Loaded>}
     </Page>
   )
 }

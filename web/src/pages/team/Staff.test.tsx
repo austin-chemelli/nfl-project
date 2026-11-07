@@ -13,7 +13,7 @@ describe('Staff tab', () => {
   it('CAR shows Idzik, his situation and the Week 9 change', () => {
     render(<Staff file={carFile()} />)
     expect(screen.getByText('Brad Idzik')).toBeInTheDocument()
-    expect(screen.getByText('First year calling plays, promoted from this staff')).toBeInTheDocument()
+    expect(screen.getByText('First year calling NFL plays, promoted from this staff')).toBeInTheDocument()
     expect(screen.getByText('Week 9: Todd Wash took over the defense from Ejiro Evero')).toBeInTheDocument()
     expect(screen.getAllByText('Brad Idzik')).toHaveLength(1)
     const link = screen.getAllByRole('link', { name: 'Team site' })[0]
@@ -28,7 +28,7 @@ describe('Staff tab', () => {
     expect(screen.getByText('Runs the offense')).toBeInTheDocument()
     expect(screen.getByText('Play-caller not confirmed')).toBeInTheDocument()
     expect(document.querySelector('a[href*="to-call-plays"]')).toBeNull()
-    expect(screen.queryByText('First year calling plays, promoted from this staff')).toBeNull()
+    expect(screen.queryByText('First year calling NFL plays, promoted from this staff')).toBeNull()
   })
 
   it('says so when a unit has no caller', () => {

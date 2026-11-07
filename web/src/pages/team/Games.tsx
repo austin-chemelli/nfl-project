@@ -4,11 +4,11 @@ import { resultText } from '../league/helpers'
 import { gameNotes, gamesThatMatter } from './games'
 
 /** Games that matter, then every game of the team (M18.6). `league` and `file` are undefined when those files are missing: what needs them drops. */
-export function Games({ code, teams, league, file }: { code: string; teams: TeamsFile; league?: LeagueFile; file?: TeamFile }) {
-  const team = teams.teams[code]
-  if (!team) return null
+export function Games({ code, teams, league, file }: { code: string; teams?: TeamsFile; league?: LeagueFile; file?: TeamFile }) {
+  const team = teams?.teams[code]
   const matter = league ? gamesThatMatter(code, league) : []
-  const notes = gameNotes(team.games, file)
+  if (!team && matter.length === 0) return <p className="m-0 text-ink-2">The schedule appears after the next data update.</p>
+  const notes = gameNotes(team?.games ?? [], file)
   return (
     <div className="flex min-w-0 flex-col gap-6 text-[13px]">
       {matter.length > 0 && (
@@ -27,6 +27,7 @@ export function Games({ code, teams, league, file }: { code: string; teams: Team
           </ul>
         </section>
       )}
+      {team && (
       <section aria-label="Every game">
         <h3 className="text-[15px] font-medium text-ink">Every game</h3>
         <ul className="m-0 grid list-none gap-x-4 p-0 sm:grid-cols-2">
@@ -55,6 +56,7 @@ export function Games({ code, teams, league, file }: { code: string; teams: Team
           })}
         </ul>
       </section>
+      )}
     </div>
   )
 }

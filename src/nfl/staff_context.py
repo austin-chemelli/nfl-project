@@ -41,8 +41,8 @@ SITUATION_TEXT = {
     "same_caller_new_qb": "Same play-caller, new starting quarterback",
     "took_over": "Took over the calls, already on this staff",
     "moved_team": "New play-caller, has called plays before",
-    "promoted_first_time": "First year calling plays, promoted from this staff",
-    "outside_first_time": "First year calling plays",
+    "promoted_first_time": "First year calling NFL plays, promoted from this staff",
+    "outside_first_time": "First year calling NFL plays",
 }
 
 
@@ -122,10 +122,16 @@ class Situations:
         s = s.with_columns(_franchise())
         self.staff: dict[tuple[int, str], set[str]] = {}
         self.first_called: dict[tuple[str, str], int] = {}
+        self.confirmed: dict[tuple[str, str], set[tuple[int, str]]] = {}
         for r in s.to_dicts():
             self.staff.setdefault((r["season"], r["team"]), set()).add(r["person"])
             if r["role"] in ("OFF_PC", "DEF_PC"):  # all spells: replaced callers still called
-                self._called(r["person"], "off" if r["role"] == "OFF_PC" else "def", r["season"])
+                side = "off" if r["role"] == "OFF_PC" else "def"
+                self._called(r["person"], side, r["season"])
+                if r["evidence"] in CONFIRMED:
+                    self.confirmed.setdefault((r["person"], side), set()).add(
+                        (r["season"], r["team"])
+                    )
         for x in self.rows:
             self.staff.setdefault((x["season"], x["team"]), set()).add(x["person"])
             if x["source"] == "play_caller":
@@ -151,6 +157,17 @@ class Situations:
         if self.first_called.get((who, side), 9999) >= season:
             return "promoted_first_time" if on_staff else "outside_first_time"
         return "took_over" if on_staff else "moved_team"
+
+    def public(self, season: int, team: str, side: str, who: str, label: str | None) -> str | None:
+        """The label as a claim on the site. `label` uses unconfirmed seasons, which is right for
+        picking a blend, but "same play-caller as last season" states last season's caller and "has
+        called plays before" states a past: both need a source, or the label isn't shown."""
+        held = self.confirmed.get((who, side), set())
+        if label in ("same_caller", "same_caller_new_qb"):
+            return label if (season - 1, team) in held else None
+        if label in ("took_over", "moved_team"):
+            return label if any(s < season for s, _ in held) else None
+        return label
 
 
 def unit_situations(
@@ -241,9 +258,10 @@ def other_starter_weeks(games: pl.DataFrame, team: str) -> list[dict]:
 
 
 def through_week(games: pl.DataFrame, team: str) -> int | None:
-    """The latest week this team has played."""
+    """The latest regular-season week this team has played."""
     g = games.filter(
         pl.col("home_score").is_not_null()
+        & (pl.col("week") <= 18)
         & ((_franchise("home_team") == team) | (_franchise("away_team") == team))
     )
     return None if g.is_empty() else int(g["week"].max())
@@ -287,15 +305,19 @@ def career(spells: pl.DataFrame, person: str, side: str) -> list[dict]:
 
 
 def replaced(rows: list[dict], change: dict) -> str | None:
-    """Who held the job before `change`, if the table can stand on it: a caller must be confirmed."""
+    """Who held the job right before `change`, if the table can stand on it: a caller must be
+    confirmed, and the same person moving between spells replaced nobody."""
     before = [
-        r
-        for r in rows
-        if r["role"] == change["role"]
-        and r["start_week"] < change["start_week"]
-        and (r["role"] not in ("OFF_PC", "DEF_PC") or r["evidence"] in CONFIRMED)
+        r for r in rows if r["role"] == change["role"] and r["start_week"] < change["start_week"]
     ]
-    return max(before, key=lambda r: r["start_week"])["person"] if before else None
+    if not before:
+        return None
+    prev = max(before, key=lambda r: r["start_week"])
+    if prev["person"] == change["person"]:
+        return None
+    if prev["role"] in ("OFF_PC", "DEF_PC") and prev["evidence"] not in CONFIRMED:
+        return None
+    return prev["person"]
 
 
 def _caller(spell: dict | None, coordinator: str | None, head_coach: str | None,
@@ -385,7 +407,8 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
             spell = calling.get(pc)
             who = spell["person"] if spell and spell["evidence"] in CONFIRMED else None
             sit = situations.label(season, team, side, who) if who else None
-            caller = _caller(spell, titled.get(title), titled.get("HC"), sit)
+            shown = situations.public(season, team, side, who, sit) if who else None
+            caller = _caller(spell, titled.get(title), titled.get("HC"), shown)
             if caller:
                 caller["career"] = career(spells, who, side) if who else []
             block = {"caller": caller}

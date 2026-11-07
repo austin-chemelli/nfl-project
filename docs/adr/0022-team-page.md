@@ -32,3 +32,11 @@ What the data allows (ADR 0021): weekly tendencies give "so far vs expected"; ch
 - The Overview depends on three League files, so a change to those contracts now reaches two pages.
 - Risk: readers take "expected" as a forecast. The range, the "rough guess" label and a `FinePrint` are the guard, and the site walk checks it.
 - Risk: the page grows. Not in v1: comparing two teams, a user's own line, past seasons of a team, charts of a caller across seasons (coach view), and news (review §12).
+
+## Review changes (2026-11-06)
+- A situation is a claim about the past, so "same play-caller as last season" and "has called plays before" need a confirmed earlier spell (ADR 0021's rule). The unconfirmed label still picks the blend.
+- The band is the typical miss, not a likely range: about half of all rows land outside it. The tile and the line above a chart need 1.5 misses (`NOTABLE`).
+- A unit that changed callers this season gets no verdicts, a line saying who called which weeks, and no tile.
+- A row with no measured range shows the team's last season alone.
+- A team's file, `teams.json` and `league.json` each only remove what needs them; the picker comes from the static team list.
+

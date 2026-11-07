@@ -183,3 +183,42 @@ def test_rank_is_one_for_the_most_and_ties_share():
     })  # fmt: skip
     out = dict(zip(*ctx._ranked(df).select("team", "rank").to_dict().values(), strict=True))
     assert out == {"B": 1, "C": 1, "A": 3}
+
+
+def spells_frame(*rows):
+    cols = ("season", "team", "role", "person", "evidence")
+    return pl.DataFrame([dict(zip(cols, r, strict=True)) for r in rows])
+
+
+def test_a_same_caller_claim_needs_last_season_confirmed():
+    rows = [unit(2030, "AAA", "Ann"), unit(2031, "AAA", "Ann")]
+    weak = spells_frame(
+        (2030, "AAA", "OFF_PC", "Ann", "inferred"), (2031, "AAA", "OFF_PC", "Ann", "news")
+    )
+    good = spells_frame(
+        (2030, "AAA", "OFF_PC", "Ann", "news"), (2031, "AAA", "OFF_PC", "Ann", "news")
+    )
+    for spells, want in ((weak, None), (good, "same_caller")):
+        sit = ctx.Situations(pl.DataFrame(rows), {}, spells)
+        label = sit.label(2031, "AAA", "off", "Ann")
+        assert label == "same_caller"  # the blend still knows
+        assert sit.public(2031, "AAA", "off", "Ann", label) == want
+
+
+def test_called_before_needs_a_confirmed_past():
+    rows = [unit(2030, "AAA", "Bob"), unit(2030, "BBB", "Ann"), unit(2031, "AAA", "Ann")]
+    weak = spells_frame(
+        (2030, "BBB", "OFF_PC", "Ann", "inferred"), (2031, "AAA", "OFF_PC", "Ann", "news")
+    )
+    sit = ctx.Situations(pl.DataFrame(rows), {}, weak)
+    assert sit.label(2031, "AAA", "off", "Ann") == "moved_team"
+    assert sit.public(2031, "AAA", "off", "Ann", "moved_team") is None
+
+
+def test_replaced_is_the_spell_right_before_and_never_the_same_person():
+    a = {**spell("A"), "start_week": 1}
+    b = {**spell("B", "inferred"), "start_week": 5}
+    c = {**spell("C"), "start_week": 9}
+    assert ctx.replaced([a, b, c], c) is None
+    again = {**spell("A"), "start_week": 12}
+    assert ctx.replaced([a, again], again) is None

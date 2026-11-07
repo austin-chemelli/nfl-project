@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { TeamFile, type TeamMetric } from '../../data/contract'
-import { basis, distance, expectWords, fmtRate, furthest, sortRows, starterLines, unitLine, verdict, weekList } from './tendencies'
+import { NOTABLE, basis, callerChange, changeLine, distance, expectWords, fmtRate, furthest, sortRows, starterLines, unitLine, verdict, weekList } from './tendencies'
 
 const load = (c: string) => TeamFile.parse(JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, `../../test/fixtures/site/team/${c}.json`), 'utf8')))
 
@@ -17,6 +17,13 @@ describe('verdict', () => {
   it('reads the edges of the range as expected', () => {
     expect(verdict(row({}, 0.5, 0.2, 'fair', 0.7))).toBe('as_expected')
     expect(verdict(row({}, 0.5, 0.2, 'fair', 0.3))).toBe('as_expected')
+  })
+  it('holds the upper edge past float error', () => {
+    expect(verdict(row({}, 0.6, 0.2, 'fair', 0.8))).toBe('as_expected')
+  })
+  it('gives no verdict on a unit that changed callers', () => {
+    expect(verdict(row({}, 0.2, 0.1, 'fair', 0.9), true)).toBe('mixed')
+    expect(distance(row({}, 0.2, 0.1, 'fair', 0.9), true)).toBe(0)
   })
   it('says more or less only outside the range', () => {
     expect(verdict(row({}, 0.5, 0.2, 'fair', 0.71))).toBe('more')
@@ -51,6 +58,32 @@ describe('order and the tile', () => {
   })
   it('has no line when nothing clears its range', () => {
     expect(unitLine({ caller: null, live: [row()], charted: [] })).toBeNull()
+  })
+  it('only calls out a row well outside its range', () => {
+    const caller = null
+    expect(unitLine({ caller, live: [row({}, 0.5, 0.2, 'fair', 0.75)], charted: [] })).toBeNull()
+    const far = 0.5 + 0.2 * NOTABLE + 0.01
+    expect(unitLine({ caller, live: [row({}, 0.5, 0.2, 'fair', far)], charted: [] })).toContain('above what last season suggested')
+  })
+  it('names only the sources the expected value used', () => {
+    const caller = { name: 'Ann', confirmed: true, is_head_coach: false, evidence: 'news', source_url: null, situation: null, situation_text: null, career: [] }
+    const at = (w: number) => { const r = row({}, 0.2, 0.1, 'fair', 0.9); r.expected!.weight_on_caller = w; return unitLine({ caller, live: [r], charted: [] }) }
+    expect(at(0)).toContain('what last season suggested')
+    expect(at(0)).not.toContain('Ann')
+    expect(at(1)).toContain("what Ann's past suggested")
+    expect(at(0.6)).toContain("Ann's past and last season")
+  })
+  it('explains a mid-season change, and a caller who has not coached yet', () => {
+    const c = { role: 'OFF_PC', name: 'Payton', start_week: 5, end_week: null, evidence: 'news', confirmed: true, source_url: null, replaced: 'Webb' }
+    expect(changeLine(c, 8)).toBe('Weeks 1–4 were called by Webb, so these rates mix two callers.')
+    expect(changeLine({ ...c, replaced: null }, 8)).toBe('Payton took over in Week 5, so these rates mix two callers.')
+    expect(changeLine({ ...c, start_week: 9 }, 8)).toContain('these games were called by someone else')
+    expect(changeLine({ ...c, start_week: 2 }, 8)).toContain('Week 1 ')
+  })
+  it('skips a unit that changed callers for the tile', () => {
+    const f = load('CAR')
+    expect(callerChange(f, 'def')?.name).toBe('Todd Wash')
+    expect(furthest(f)?.side).not.toBe('def')
   })
   it('names a confirmed caller only', () => {
     const caller = { name: 'Ann', confirmed: true, is_head_coach: false, evidence: 'news', source_url: null, situation: null, situation_text: null, career: [] }

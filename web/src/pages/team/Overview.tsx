@@ -54,9 +54,10 @@ function Stand({ s }: { s: Standing }) {
   const seedText = s.seed ? `Seed ${s.seed} today` : 'Outside the seven playoff seeds today'
   const divText = `${ordinal(s.divRank)} in the division`
   if (!s.odds) {
+    const seed = !s.over ? `${seedText}.` : s.seed ? `Finished as seed ${s.seed}.` : 'Out of the playoff seeds.'
     return (
       <p className="m-0 text-ink">
-        <span className="tabular font-medium">{s.record}</span>, {divText}. {s.seed ? `Finished as seed ${s.seed}.` : 'Out of the playoff seeds.'}
+        <span className="tabular font-medium">{s.record}</span>, {divText}. {seed}
       </p>
     )
   }
@@ -112,10 +113,10 @@ function Group({ title, rows, team }: { title: string; rows: Extreme[]; team: Te
 }
 
 /** M18.3. `league` and `similar` are undefined when those files are missing: their sections drop. */
-export function Overview({ code, teams, league, similar }: { code: string; teams: TeamsFile; league?: LeagueFile; similar?: SimilarFile }) {
+export function Overview({ code, teams, league, similar }: { code: string; teams?: TeamsFile; league?: LeagueFile; similar?: SimilarFile }) {
   const stand = league ? standing(league, code) : null
-  const team = Object.hasOwn(teams.teams, code) ? teams.teams[code] : undefined
-  const ex = extremes(teams, code)
+  const team = teams && Object.hasOwn(teams.teams, code) ? teams.teams[code] : undefined
+  const ex = teams ? extremes(teams, code) : null
   const entry = similar && Object.hasOwn(similar.teams, code) ? similar.teams[code] : undefined
   return (
     <div data-matchup style={teamDotVars(code)} className="flex min-w-0 flex-col gap-6">
@@ -124,7 +125,7 @@ export function Overview({ code, teams, league, similar }: { code: string; teams
           <Stand s={stand} />
         </Section>
       )}
-      {team && (ex.best.length > 0 || ex.worst.length > 0) && (
+      {team && ex && (ex.best.length > 0 || ex.worst.length > 0) && (
         <Section title="Best and worst" lede="Where they rank in the league, among measures where more or less is clearly better.">
           <div className="grid gap-4 md:grid-cols-2">
             <Group title="Best" rows={ex.best} team={team} />
