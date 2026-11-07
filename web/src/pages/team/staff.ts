@@ -1,4 +1,6 @@
 import type { TeamFile } from '../../data/contract'
+import { ordinal } from '../league/helpers'
+import { placeOf } from './tendencies'
 
 export type Side = 'off' | 'def'
 type Spell = TeamFile['staff']['current'][number]
@@ -77,3 +79,13 @@ export function changeLines(changes: Change[]): ChangeLine[] {
   }
   return lines.sort((a, b) => a.week - b.week)
 }
+
+type Trait = Caller['traits'][number]
+
+/** "More pre-snap motion than most: about 1st on average, every season since 2022." */
+export function traitLine(t: Trait): string {
+  const word = t.pct >= 0.5 ? t.hi : t.lo
+  const label = /^[A-Z][a-z]/.test(t.label) ? t.label.charAt(0).toLowerCase() + t.label.slice(1) : t.label
+  return `${word.charAt(0).toUpperCase()}${word.slice(1)} ${label} than most: about ${ordinal(placeOf(t.pct))} on average, every season since ${t.first}.`
+}
+

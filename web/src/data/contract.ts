@@ -856,7 +856,9 @@ const TeamUnit = z.looseObject({
   live: z.array(TeamMetric),
   charted: z.array(TeamMetric),
 })
+const CoachProfile = z.looseObject({ tree: nstr.default(null), known_for: nstr.default(null), sources: z.array(z.string()) })
 export const TeamFile = z.looseObject({
+  profiles: z.record(z.string(), CoachProfile).default({}), // sourced, by name; only people on this staff
   schema_version: z.string(),
   team: z.string(),
   season: num,
@@ -872,4 +874,5 @@ export type TeamUnit = z.infer<typeof TeamUnit>
 export type TeamMetric = z.infer<typeof TeamMetric>
 export type UnitCaller = z.infer<typeof UnitCaller>
 export type TeamChange = z.infer<typeof TeamChange>
+export type CoachProfile = z.infer<typeof CoachProfile>
 

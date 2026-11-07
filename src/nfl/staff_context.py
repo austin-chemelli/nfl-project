@@ -12,6 +12,8 @@ situation and, where there are enough cases, metric (`data/coach_blend.json`).
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from importlib import resources
 
@@ -216,6 +218,19 @@ def caller_prior(assign: pl.DataFrame, rates: pl.DataFrame, decay: float = DECAY
     return pl.concat(parts)
 
 
+def load_profiles() -> dict[str, dict]:
+    """Sourced coach profiles (`data/coach_profiles.csv`): a tree, what they're known for, and the
+    pages that say so, ` ; `-separated. Only claims a fetched page confirmed are in the file."""
+    text = resources.files("nfl.data").joinpath("coach_profiles.csv").read_text()
+    out = {}
+    for r in csv.DictReader(io.StringIO(text)):
+        sources = [u.strip() for u in r["sources"].split(" ; ") if u.strip()]
+        if sources and (r["tree"] or r["known_for"]):
+            out[r["person"]] = {"tree": r["tree"] or None, "known_for": r["known_for"] or None,
+                                "sources": sources}  # fmt: skip
+    return out
+
+
 def load_blend() -> dict:
     return json.loads(resources.files("nfl.data").joinpath("coach_blend.json").read_text())
 
@@ -418,6 +433,7 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
     }
     now = now_utc().isoformat()
     labels = {"live": metric_label, "charted": _charted_label}
+    profiles = load_profiles()
     out = {}
     for team in sorted(spells.filter(pl.col("season") == season)["team"].unique().to_list()):
         at = coaches.staff_at(season, team, week, spells).to_dicts()
@@ -430,7 +446,9 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
             for r in changes
             if r["role"] not in ("OFF_PC", "DEF_PC") or r["evidence"] in CONFIRMED
         ]
+        on_staff = {r["person"] for r in rows}
         body: dict = {
+            "profiles": {p: profiles[p] for p in sorted(on_staff) if p in profiles},
             "schema_version": "1", "team": team, "season": season, "week": week,
             "through_week": through_week(games, team), "generated_at": now,
             "staff": {"current": _public(at), "changes": moves},

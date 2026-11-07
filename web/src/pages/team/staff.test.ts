@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TeamFile } from '../../data/contract'
 import car from '../../test/fixtures/site/team/CAR.json'
-import { careerLine, changeLines, evidenceLabel, otherStaff } from './staff'
+import { careerLine, changeLines, evidenceLabel, otherStaff, traitLine } from './staff'
 
 const row = (role: string, name: string, week: number, replaced: string | null = null) =>
   ({ role, name, start_week: week, end_week: null, evidence: 'official', confirmed: true, source_url: null, replaced })
@@ -52,3 +52,13 @@ describe('otherStaff', () => {
     expect(otherStaff(f).map((s) => s.name)).toEqual(['Brad Idzik', 'Second Oc'])
   })
 })
+
+describe('traitLine', () => {
+  it('reads a habit in plain words with its place and first season', () => {
+    const t = { metric: 'motion_rate', label: 'Pre-snap motion', pct: 0.98, seasons: 4, first: 2022, lo: 'less', hi: 'more' }
+    expect(traitLine(t)).toBe('More pre-snap motion than most: about 1st on average, every season since 2022.')
+    expect(traitLine({ ...t, label: '11 personnel (3 WR)', pct: 0.07 })).toBe('Less 11 personnel (3 WR) than most: about 30th on average, every season since 2022.')
+    expect(traitLine({ ...t, label: 'Time to throw', pct: 0.09, lo: 'shorter', hi: 'longer' })).toContain('Shorter time to throw')
+  })
+})
+

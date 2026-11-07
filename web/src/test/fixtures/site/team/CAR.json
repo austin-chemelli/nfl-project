@@ -1,10 +1,11 @@
 {
+ "profiles": {},
  "schema_version": "1",
  "team": "CAR",
  "season": 2026,
  "week": 9,
  "through_week": 8,
- "generated_at": "2026-11-07T17:14:03.913764+00:00",
+ "generated_at": "2026-11-07T17:19:02.491653+00:00",
  "staff": {
   "current": [
    {

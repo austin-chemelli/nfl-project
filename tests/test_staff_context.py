@@ -241,3 +241,10 @@ def test_lean_follows_the_study_and_drops_weak_cells():
     assert ctx.lean({"strength": "fair", "weight_on_caller": 0.5}) == "both"
     assert ctx.lean({"strength": "weak", "weight_on_caller": 0.9}) is None
     assert ctx.lean(None) is None
+
+
+def test_profiles_need_a_source_and_a_claim():
+    for person, p in ctx.load_profiles().items():
+        assert p["sources"], person
+        assert p["tree"] or p["known_for"], person
+        assert all(u.startswith("http") for u in p["sources"]), person
