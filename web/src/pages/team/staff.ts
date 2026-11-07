@@ -82,10 +82,16 @@ export function changeLines(changes: Change[]): ChangeLine[] {
 
 type Trait = Caller['traits'][number]
 
-/** "More pre-snap motion than most: about 1st on average, every season since 2022." */
+const yearSpan = (first: number, last?: number) => (last == null || last === first ? `${first}` : `${first}–${String(last).slice(-2)}`)
+
+/** "More pre-snap motion than most: about the highest, in each of 4 seasons calling plays (2022–25)." */
 export function traitLine(t: Trait): string {
-  const word = t.pct >= 0.5 ? t.hi : t.lo
+  const high = t.pct >= 0.5
+  const word = high ? t.hi : t.lo
   const label = /^[A-Z][a-z]/.test(t.label) ? t.label.charAt(0).toLowerCase() + t.label.slice(1) : t.label
-  return `${word.charAt(0).toUpperCase()}${word.slice(1)} ${label} than most: about ${ordinal(placeOf(t.pct))} on average, every season since ${t.first}.`
+  const n = high ? placeOf(t.pct) : 33 - placeOf(t.pct)
+  const where = n === 1 ? `the ${high ? 'highest' : 'lowest'}` : `${ordinal(n)}-${high ? 'highest' : 'lowest'}`
+  const seasons = t.seasons === 1 ? 'in his season' : `in each of ${t.seasons} seasons`
+  return `${word.charAt(0).toUpperCase()}${word.slice(1)} ${label} than most: about ${where} on average, ${seasons} calling plays (${yearSpan(t.first, t.last)}).`
 }
 

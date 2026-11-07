@@ -212,6 +212,7 @@ def caller_prior(assign: pl.DataFrame, rates: pl.DataFrame, decay: float = DECAY
                 pl.col("pct").min().alias("prior_min"),
                 pl.col("pct").max().alias("prior_max"),
                 pl.col("season").min().alias("prior_first"),
+                pl.col("season").max().alias("prior_last"),
             )
             .with_columns(pl.lit(target).alias("season"))
         )
@@ -270,7 +271,7 @@ def lean(exp: dict | None) -> str | None:
     if not exp or exp["strength"] != "fair":
         return None
     w = exp["weight_on_caller"]
-    return "caller" if w >= 0.6 else "team" if w <= 0.4 else "both"
+    return "caller" if w >= 0.7 else "team" if w <= 0.3 else "both"
 
 
 TRAIT_EDGE = 0.3  # a trait sits at least this far from the league middle on average
@@ -288,7 +289,8 @@ def traits(rows: list[dict]) -> list[dict]:
         if not (lo > 0.5 or hi < 0.5):
             continue
         out.append({"metric": r["metric"], "kind": r["kind"], "pct": round(p, 4),
-                    "seasons": r["prior_seasons"], "first": r["prior_first"]})  # fmt: skip
+                    "seasons": r["prior_seasons"], "first": r["prior_first"],
+                    "last": r["prior_last"]})  # fmt: skip
     out.sort(key=lambda t: -abs(t["pct"] - 0.5))
     return out[:MAX_TRAITS]
 
@@ -386,14 +388,19 @@ def _caller(spell: dict | None, coordinator: str | None, head_coach: str | None,
     }
 
 
-def _metric_rows(kind, side, sit, prior, rates, season, blend, label) -> list[dict]:
-    """One entry per metric: expected, and the observed value where this season has one."""
+def _metric_rows(kind, side, sit, prior, rates, season, blend, label, shown=None) -> list[dict]:
+    """One entry per metric: expected, and the observed value where this season has one.
+
+    `prior` (every past season of the person) picks the study's blend; `shown`, the seasons a
+    source confirms he called plays, is what the page draws as his past."""
+    shown = shown or {}
     metrics = (
         LIVE[side] if kind == "live" else [m for m in SCHEME_METRICS[side] if m not in ALSO_LIVE]
     )
     out = []
     for m in metrics:
         p = prior.get(m) or {}
+        mine = shown.get(m)
         prev = rates.get((season - 1, m))
         now = rates.get((season, m))
         exp = expected(
@@ -403,9 +410,9 @@ def _metric_rows(kind, side, sit, prior, rates, season, blend, label) -> list[di
         out.append({
             "metric": m, **label(m),
             "expected": exp,
-            "caller_past": {"pct": round(p["prior"], 4), "seasons": p["prior_seasons"],
-                            "first": p["prior_first"]} if p.get("prior") is not None else None,
-            "lean": lean(exp) if p.get("prior") is not None else None,
+            "caller_past": {"pct": round(mine["prior"], 4), "seasons": mine["prior_seasons"],
+                            "first": mine["prior_first"], "last": mine["prior_last"]} if mine else None,
+            "lean": lean(exp) if mine else None,
             "caller_seasons": p.get("prior_seasons", 0),
             "caller_teams": p.get("prior_teams", []),
             "team_last": {"season": season - 1, "pct": round(prev["pct"], 4),
@@ -430,6 +437,24 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
     sets = {"live": live_rates(paths), "charted": charted_rates(paths)}
     priors = {
         k: caller_prior(assign, v).filter(pl.col("season") == season) for k, v in sets.items()
+    }
+    # What the page shows as a caller's past: only seasons a source confirms he called plays
+    # (ADR 0021). The study and the blend above still use every season.
+    confirmed = (
+        spells.filter(
+            pl.col("role").is_in(["OFF_PC", "DEF_PC"]) & pl.col("evidence").is_in(CONFIRMED)
+        )
+        .select(
+            "season",
+            "team",
+            pl.col("role").replace({"OFF_PC": "off", "DEF_PC": "def"}).alias("side"),
+            "person",
+        )
+        .unique()
+    )
+    called = assign.join(confirmed, on=["season", "team", "side", "person"], how="semi")
+    shown_priors = {
+        k: caller_prior(called, v).filter(pl.col("season") == season) for k, v in sets.items()
     }
     now = now_utc().isoformat()
     labels = {"live": metric_label, "charted": _charted_label}
@@ -470,7 +495,7 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
                 mine = [
                     {**r, "kind": k}
                     for k in sets
-                    for r in priors[k]
+                    for r in shown_priors[k]
                     .filter((pl.col("person") == who) & (pl.col("side") == side))
                     .to_dicts()
                     if not (k == "charted" and r["metric"] in ALSO_LIVE)
@@ -490,7 +515,17 @@ def team_files(paths: Paths, season: int, week: int, games: pl.DataFrame,
                         .to_dicts()
                     }
                 label = metric_label if kind == "live" else _charted_label
-                block[kind] = _metric_rows(kind, side, sit, prior, by_metric, season, blend, label)
+                shown = {}
+                if who:
+                    shown = {
+                        r["metric"]: r
+                        for r in shown_priors[kind]
+                        .filter((pl.col("person") == who) & (pl.col("side") == side))
+                        .to_dicts()
+                    }
+                block[kind] = _metric_rows(
+                    kind, side, sit, prior, by_metric, season, blend, label, shown
+                )
             body["units"][side] = block
         out[team] = body
     return out

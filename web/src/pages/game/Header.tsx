@@ -24,7 +24,7 @@ function TeamSide({ team, color, right = false }: { team: string; color: string;
     <span className={`flex min-w-0 flex-col gap-1 ${right ? 'items-end text-right' : ''}`} title={teamInfo(team).name}>
       <TeamLink team={team} className="text-3xl font-bold leading-none text-ink no-underline hover:underline">{team}</TeamLink>
       <TeamAccent team={team} color={color} className="!w-14" />
-      <TeamLink team={team} className="hidden text-[13px] font-normal tracking-normal text-ink-2 sm:block">{teamInfo(team).name}</TeamLink>
+      <TeamLink team={team} tabIndex={-1} className="hidden text-[13px] font-normal tracking-normal text-ink-2 sm:block">{teamInfo(team).name}</TeamLink>
     </span>
   )
 }

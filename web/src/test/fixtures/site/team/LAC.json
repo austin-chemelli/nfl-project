@@ -18,7 +18,7 @@
   },
   "Mike McDaniel": {
    "tree": "Kyle Shanahan (five seasons on his 49ers staff)",
-   "known_for": "Wide-zone running game that relies on linemen who move quickly and together. The Chargers plan to run much more wide zone with him calling the offense.",
+   "known_for": "Wide-zone running game that relies on linemen who move quickly and together.",
    "sources": [
     "https://www.chargers.com/team/coaches-roster/mike-mcdaniel",
     "https://www.si.com/nfl/chargers/onsi/mike-mcdaniel-chargers-offense-no-secrets-hide-chargers-telegraphing-plan",
@@ -31,7 +31,7 @@
  "season": 2026,
  "week": 9,
  "through_week": 8,
- "generated_at": "2026-11-07T17:24:57.209505+00:00",
+ "generated_at": "2026-11-07T17:58:38.597768+00:00",
  "staff": {
   "current": [
    {
@@ -112,6 +112,7 @@
       "pct": 0.9844,
       "seasons": 4,
       "first": 2022,
+      "last": 2025,
       "label": "Pre-snap motion",
       "help": "Share of plays with a player in motion before the snap (FTN charting).",
       "unit": "pct",
@@ -124,6 +125,7 @@
       "pct": 0.07,
       "seasons": 4,
       "first": 2022,
+      "last": 2025,
       "label": "11 personnel (3 WR)",
       "help": "Share of offensive snaps with 1 back, 1 tight end and 3 receivers.",
       "unit": "pct",
@@ -136,6 +138,7 @@
       "pct": 0.0911,
       "seasons": 4,
       "first": 2022,
+      "last": 2025,
       "label": "Time to throw",
       "help": "Average seconds from snap to throw on charted dropbacks. Mixes the QB, the protection and the play design.",
       "unit": "seconds",
@@ -161,7 +164,8 @@
      "caller_past": {
       "pct": 0.3954,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": "team",
      "caller_seasons": 4,
@@ -199,7 +203,8 @@
      "caller_past": {
       "pct": 0.6834,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": "caller",
      "caller_seasons": 4,
@@ -237,7 +242,8 @@
      "caller_past": {
       "pct": 0.1647,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,
@@ -275,7 +281,8 @@
      "caller_past": {
       "pct": 0.9844,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,
@@ -313,7 +320,8 @@
      "caller_past": {
       "pct": 0.8449,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,
@@ -351,7 +359,8 @@
      "caller_past": {
       "pct": 0.4406,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,
@@ -389,7 +398,8 @@
      "caller_past": {
       "pct": 0.8201,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,
@@ -427,7 +437,8 @@
      "caller_past": {
       "pct": 0.3166,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,
@@ -467,7 +478,8 @@
      "caller_past": {
       "pct": 0.07,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": "caller",
      "caller_seasons": 4,
@@ -499,7 +511,8 @@
      "caller_past": {
       "pct": 0.1836,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,
@@ -531,7 +544,8 @@
      "caller_past": {
       "pct": 0.8993,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": "caller",
      "caller_seasons": 4,
@@ -563,7 +577,8 @@
      "caller_past": {
       "pct": 0.0911,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,
@@ -595,7 +610,8 @@
      "caller_past": {
       "pct": 0.2992,
       "seasons": 4,
-      "first": 2022
+      "first": 2022,
+      "last": 2025
      },
      "lean": null,
      "caller_seasons": 4,

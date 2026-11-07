@@ -19,6 +19,8 @@ export function extremes(file: TeamsFile, code: string): Extremes {
   const all: Extreme[] = []
   for (const feature of file.features) {
     if (feature.better == null) continue
+    // a play-caller's history (`scheme.*_prior`) describes his past units, not this team's season
+    if (feature.id.startsWith('scheme.')) continue
     const rank = row.rank[feature.id]
     if (rank == null || !Number.isFinite(rank) || rank < 1) continue
     const of = Math.max(feature.n, rank, 1)

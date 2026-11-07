@@ -109,7 +109,7 @@ export function Odds({ file }: { file: LeagueFile }) {
                 {anySpark && (hasSpark(sparkSeries(file, team.team, view)) ? <Spark points={sparkSeries(file, team.team, view)} /> : <span aria-hidden className="w-16 shrink-0" />)}
               </span>
               <span className="order-2 flex items-baseline gap-2 md:order-1" title={teamInfo(team.team).name}>
-                <TeamLink team={team.team} className="font-medium">{team.team}</TeamLink>
+                <span onClick={(e) => e.stopPropagation()}><TeamLink team={team.team} className="font-medium">{team.team}</TeamLink></span>
                 <span className="tabular whitespace-nowrap text-ink-3">{recordOf(team)}</span>
               </span>
               <span className="tabular order-3 text-right text-ink-2 md:order-2 md:text-left">

@@ -30,7 +30,7 @@
  "season": 2026,
  "week": 9,
  "through_week": 8,
- "generated_at": "2026-11-07T17:24:57.209505+00:00",
+ "generated_at": "2026-11-07T17:58:38.597768+00:00",
  "staff": {
   "current": [
    {
@@ -643,11 +643,7 @@
       "weight_on_caller": 0.9,
       "strength": "weak"
      },
-     "caller_past": {
-      "pct": 0.5045,
-      "seasons": 3,
-      "first": 2018
-     },
+     "caller_past": null,
      "lean": null,
      "caller_seasons": 3,
      "caller_teams": [
@@ -675,12 +671,8 @@
       "weight_on_caller": 0.5,
       "strength": "fair"
      },
-     "caller_past": {
-      "pct": 0.2341,
-      "seasons": 3,
-      "first": 2018
-     },
-     "lean": "both",
+     "caller_past": null,
+     "lean": null,
      "caller_seasons": 3,
      "caller_teams": [
       "JAX"
@@ -707,11 +699,7 @@
       "weight_on_caller": 0.3,
       "strength": "weak"
      },
-     "caller_past": {
-      "pct": 0.5154,
-      "seasons": 5,
-      "first": 2016
-     },
+     "caller_past": null,
      "lean": null,
      "caller_seasons": 5,
      "caller_teams": [

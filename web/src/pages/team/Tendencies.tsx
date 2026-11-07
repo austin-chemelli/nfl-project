@@ -7,7 +7,7 @@ import { ordinal } from '../league/helpers'
 import { Block } from './Block'
 import { READ_TEXT, callerChange, changeLine, fmtRate, leanText, placeOf, read, sortRows, starterLines, unitLine } from './tendencies'
 
-const span = (first: number, last: number) => (first === last ? `${first}` : `${first}–${String(last).slice(-2)}`)
+const span = (first: number, last: number | undefined) => (last == null || first === last ? `${first}` : `${first}–${String(last).slice(-2)}`)
 
 function toRow(m: TeamMetric, file: TeamFile, unit: TeamUnit): TendencyRowData {
   const r = read(m)
@@ -35,7 +35,7 @@ function toRow(m: TeamMetric, file: TeamFile, unit: TeamUnit): TendencyRowData {
       <>
         <TipTitle>{m.label}</TipTitle>
         {o && <TipRow value={`${fmtRate(o.rate, m.unit)}, ${ordinal(o.rank)}`} label={`${file.team} this season`} />}
-        {past && <TipRow value={`about ${ordinal(placeOf(past.pct))}`} label={`${caller}'s past, ${span(past.first, file.season - 1)}`} />}
+        {past && <TipRow value={`about ${ordinal(placeOf(past.pct))}`} label={`${caller}'s confirmed past, ${span(past.first, past.last)}`} />}
         {last && <TipRow value={`${fmtRate(last.rate, m.unit)}, ${ordinal(last.rank)}`} label={`${file.team} in ${last.season}`} />}
         <TipNote>{m.help}</TipNote>
       </>
@@ -43,16 +43,16 @@ function toRow(m: TeamMetric, file: TeamFile, unit: TeamUnit): TendencyRowData {
   }
 }
 
-function Legend({ color, caller }: { color: string; caller: string | null }) {
+function Legend({ color, caller, now }: { color: string; caller: string | null; now: boolean }) {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
-      <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} /> This season</span>
+      {now && <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} /> This season</span>}
       {caller && <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 rotate-45 border-2 border-[var(--text-secondary)]" /> {caller}'s past</span>}
       <span className="inline-flex items-center gap-1">
         <svg aria-hidden width="13" height="11" viewBox="0 0 13 11"><path d="M6.5 0.5 L12.5 10.5 H0.5 Z" fill="var(--text-secondary)" /></svg> Last season
       </span>
       <span className="inline-flex items-center gap-1">
-        <svg aria-hidden width="4" height="12" viewBox="0 0 4 12"><line x1="2" x2="2" y1="0" y2="12" stroke="var(--text-muted)" strokeDasharray="2 3" /></svg> League average
+        <svg aria-hidden width="4" height="12" viewBox="0 0 4 12"><line x1="2" x2="2" y1="0" y2="12" stroke="var(--text-muted)" strokeDasharray="2 3" /></svg> League middle
       </span>
       <span className="text-ink-3">Further right: more of it</span>
     </div>
@@ -97,13 +97,12 @@ export function Tendencies({ file }: { file: TeamFile }) {
       {SIDES.map(([side, name]) => {
         const unit = file.units[side]
         const change = callerChange(file, side)
-        const hasPast = unit.live.some((m) => m.caller_past != null)
-        const caller = hasPast ? (unit.caller?.confirmed ? unit.caller.name : 'The caller') : null
+        const caller = unit.live.some((m) => m.caller_past) && unit.caller?.confirmed ? unit.caller.name : null
         const rows = sortRows(unit.live)
         return (
           <Block key={side} title={`${name} this season`} line={change ? changeLine(change, file.through_week) : unitLine(unit, file.team)}>
             {side === 'off' && starters.map((s) => <p key={s} className="m-0 text-[13px] text-ink-3">{s}</p>)}
-            <Legend color={color} caller={caller} />
+            <Legend color={color} caller={caller} now />
             <TendencyRow rows={rows.map((m) => toRow(m, file, unit))} color={color} />
             <Numbers rows={rows} file={file} />
           </Block>
@@ -113,8 +112,11 @@ export function Tendencies({ file }: { file: TeamFile }) {
         const unit = file.units[side]
         const rows = [...unit.charted].sort((a, b) => a.label.localeCompare(b.label))
         const waiting = rows.some((m) => !m.observed)
+        const caller = rows.some((m) => m.caller_past) && unit.caller?.confirmed ? unit.caller.name : null
+        const line = !waiting || side !== 'off' ? undefined : caller ? `Charted once a year, so ${file.season} isn't in yet. Here are the caller's past and last season to compare with.` : `Charted once a year, so ${file.season} isn't in yet. Last season shows for comparison.`
         return (
-          <Block key={side} title={`${name}: what to watch for`} line={side === 'off' && waiting ? `Charted once a year, so ${file.season} isn't in yet. Here's the caller's past and last season to compare with.` : undefined}>
+          <Block key={side} title={`${name}: what to watch for`} line={line}>
+            <Legend color={color} caller={caller} now={rows.some((m) => m.observed)} />
             <TendencyRow rows={rows.map((m) => toRow(m, file, unit))} color={color} />
             <Numbers rows={rows} file={file} />
           </Block>
@@ -122,10 +124,10 @@ export function Tendencies({ file }: { file: TeamFile }) {
       })}
       <FinePrint label="How to read this">
         <ul className="list-disc space-y-1.5 pl-5">
-          <li>Every mark is a place in the league that season: the dashed line is the league average, further right is more of it. More isn't better: these describe what a team does.</li>
-          <li>The diamond is the play-caller's own past, averaged over his earlier seasons with recent ones counting most, wherever he called plays. None means no past as a play-caller in our data.</li>
+          <li>Every mark is a place among the 32 teams that season: the dashed line is the league's middle team, further right is more of it. More isn't better: these describe what a team does.</li>
+          <li>The diamond is the play-caller's own past: his seasons calling plays that a source confirms, averaged with recent ones counting most. None means no confirmed past in our data.</li>
           <li>"Matches" means this season is within about five places of that mark.</li>
-          <li>"Watch the caller" or "watch last year" says which mark has predicted better when a caller moved before, from 2017 to 2025. No tag means neither did much better than a guess.</li>
+          <li>"Watch the caller" or "watch last year" says which mark predicted better in past cases like this one, from 2017 to 2025. "Between the two" means they did about as well. No tag means no confirmed past, too few past cases like this one, or neither did much better than a guess.</li>
           <li>Personnel, coverage, time to throw and pressure come from charting published each spring, so this season's dot appears then.</li>
         </ul>
       </FinePrint>

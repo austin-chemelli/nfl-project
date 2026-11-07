@@ -17,6 +17,14 @@ function SourceLink({ url, evidence }: { url: string | null | undefined; evidenc
   )
 }
 
+const host = (u: string) => {
+  try {
+    return new URL(u).hostname.replace(/^www\./, '')
+  } catch {
+    return 'source'
+  }
+}
+
 /** What a coach is known for and the coaching tree, from reporting, with the pages that say so. */
 function Profile({ profile }: { profile: CoachProfile | undefined }) {
   if (!profile) return null
@@ -27,7 +35,7 @@ function Profile({ profile }: { profile: CoachProfile | undefined }) {
       <p className="m-0 text-[12px] text-ink-3">
         From reporting:{' '}
         {profile.sources.map((u, i) => (
-          <span key={u}>{i > 0 && ', '}<a href={u} target="_blank" rel="noopener noreferrer">{i + 1}</a></span>
+          <span key={u}>{i > 0 && ', '}<a href={u} target="_blank" rel="noopener noreferrer" aria-label={`Source ${i + 1}: ${host(u)} (opens in a new tab)`}>{i + 1}</a></span>
         ))}
       </p>
     </div>
@@ -111,7 +119,7 @@ export function Staff({ file }: { file: TeamFile }) {
         <p>Team site: the team's own coaches page or announcement. News: a news report. 32-team list: a league-wide roundup of play-callers.</p>
         <p>When no source names a unit's play-caller, the card shows the coordinator and says so.</p>
         <p>Career lines list seasons a source confirms, from 2016, so a gap doesn't mean time off. First year means first in our table of NFL staffs.</p>
-        <p>Known for and coaching tree come from reporting, and each links the pages that say so. In the numbers comes from our data: a habit shows only if the caller's units sat on the same side of the league average every season.</p>
+        <p>Known for and coaching tree come from reporting, and each links the pages that say so. In the numbers comes from our data, over seasons a source confirms the coach called plays: a habit shows only if every one of them sat on the same side of the league's middle team.</p>
       </FinePrint>
     </div>
   )

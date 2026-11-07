@@ -2,6 +2,8 @@ import polars as pl
 
 from nfl import staff_context as ctx
 
+from .conftest import requires_data
+
 
 def unit(season, team, person, side="off", source="play_caller", changed=False):
     return {"season": season, "team": team, "side": side, "person": person, "source": source,
@@ -226,7 +228,7 @@ def test_replaced_is_the_spell_right_before_and_never_the_same_person():
 
 def test_traits_need_every_season_on_one_side():
     row = {"metric": "m", "kind": "live", "prior": 0.9, "prior_min": 0.7, "prior_max": 0.99,
-           "prior_seasons": 4, "prior_first": 2022}  # fmt: skip
+           "prior_seasons": 4, "prior_first": 2022, "prior_last": 2025}  # fmt: skip
     assert [t["metric"] for t in ctx.traits([row])] == ["m"]
     assert ctx.traits([{**row, "prior_min": 0.4}]) == []  # one season below the middle
     assert ctx.traits([{**row, "prior_seasons": 1}]) == []
@@ -238,16 +240,22 @@ def test_traits_need_every_season_on_one_side():
 def test_lean_follows_the_study_and_drops_weak_cells():
     assert ctx.lean({"strength": "fair", "weight_on_caller": 0.8}) == "caller"
     assert ctx.lean({"strength": "fair", "weight_on_caller": 0.3}) == "team"
+    assert ctx.lean({"strength": "fair", "weight_on_caller": 0.4}) == "both"  # about a tie
     assert ctx.lean({"strength": "fair", "weight_on_caller": 0.5}) == "both"
     assert ctx.lean({"strength": "weak", "weight_on_caller": 0.9}) is None
     assert ctx.lean(None) is None
 
 
 def test_profiles_need_a_source_and_a_claim():
-    for person, p in ctx.load_profiles().items():
-        assert p["sources"], person
-        assert p["tree"] or p["known_for"], person
-        assert all(u.startswith("http") for u in p["sources"]), person
+    """On the raw file: the loader drops a row without a source, so it can't catch one."""
+    import csv
+    from importlib import resources
+
+    text = resources.files("nfl.data").joinpath("coach_profiles.csv").read_text()
+    for r in csv.DictReader(text.splitlines()):
+        urls = [u.strip() for u in r["sources"].split(" ; ") if u.strip()]
+        assert urls and all(u.startswith("http") for u in urls), r["person"]
+        assert r["tree"] or r["known_for"], r["person"]
 
 
 def test_profiles_never_say_who_calls_plays():
@@ -255,8 +263,35 @@ def test_profiles_never_say_who_calls_plays():
     import re
 
     calling = re.compile(
-        r"play-?call|calls? (the )?plays|calling (the )?plays|call plays", re.IGNORECASE
+        r"play[- ]?call|\bcall(s|ed|ing)?\b[^.]{0,40}\b(plays?|offen[sc]e|defen[sc]e)\b",
+        re.IGNORECASE,
     )
     for person, p in ctx.load_profiles().items():
         assert not calling.search(p["known_for"] or ""), person
         assert not calling.search(p["tree"] or ""), person
+
+
+def test_profiles_carry_no_percentages():
+    """Our data owns the numbers; a source's share is often measured another way."""
+    for person, p in ctx.load_profiles().items():
+        assert "%" not in (p["known_for"] or "") + (p["tree"] or ""), person
+
+
+@requires_data
+def test_the_page_draws_only_confirmed_calling_seasons():
+    """Todd Wash's JAX 2016-2020 seasons are unconfirmed, so CAR's defense shows no past for him."""
+    import polars as pl
+
+    from nfl.config import get_paths
+    from nfl.features import store
+
+    paths = get_paths()
+    games = store.games_frame(paths).filter(pl.col("season") == 2026)
+
+    def label(m):
+        return {"label": m, "help": "", "unit": "pct", "lo": "less", "hi": "more"}
+
+    car = ctx.team_files(paths, 2026, 9, games, label)["CAR"]["units"]["def"]
+    assert car["caller"]["name"] == "Todd Wash"
+    assert all(m["caller_past"] is None for m in car["live"] + car["charted"])
+    assert car["caller"]["traits"] == []

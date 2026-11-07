@@ -41,9 +41,14 @@ describe('words', () => {
   it('counts both comparisons, naming a confirmed caller only', () => {
     const caller = { name: 'Ann', confirmed: true, is_head_coach: false, evidence: 'news', source_url: null, situation: null, situation_text: null, career: [], traits: [] }
     const live = [row(0.9, 0.95, 0.3), row(0.3, 0.95, 0.35), row(0.5, 0.55, 0.45)]
-    expect(unitLine({ caller, live, charted: [] }, 'AAA')).toBe("Looks like Ann's past on 2 of 3 measures, and like last year's AAA on 2.")
+    expect(unitLine({ caller, live, charted: [] }, 'AAA')).toBe("Looks like Ann's past on 2 of 3 measures, and like last year's AAA on 2 of 3.")
     expect(unitLine({ caller: { ...caller, confirmed: false }, live, charted: [] }, 'AAA')).not.toContain('Ann')
-    expect(unitLine({ caller, live: [row(0.4, null, 0.45)], charted: [] }, 'AAA')).toBe("Ann has no past as a play-caller in our data, so the comparison is last year's AAA: 1 of 1 measures look the same.")
+    expect(unitLine({ caller, live: [row(0.4, null, 0.45)], charted: [] }, 'AAA')).toBe("Ann has no confirmed past as a play-caller in our data, so the comparison is last year's AAA: the same on 1 of 1 measures.")
+  })
+  it('counts the past only over measures that have one', () => {
+    const caller = { name: 'Ann', confirmed: true, is_head_coach: false, evidence: 'news', source_url: null, situation: null, situation_text: null, career: [], traits: [] }
+    const live = [row(0.9, 0.95, 0.3), row(0.5, null, 0.45), row(0.2, null, 0.6)]
+    expect(unitLine({ caller, live, charted: [] }, 'AAA')).toBe("Looks like Ann's past on 1 of 1 measures, and like last year's AAA on 1 of 3.")
   })
   it('explains a mid-season change', () => {
     const c = { role: 'OFF_PC', name: 'Payton', start_week: 5, end_week: null, evidence: 'news', confirmed: true, source_url: null, replaced: 'Webb' }

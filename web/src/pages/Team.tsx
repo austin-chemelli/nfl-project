@@ -8,6 +8,7 @@ import { Card, Loaded, Page, PageSkeleton } from '../components/ui'
 import { isNotFound, useLeague, useSimilar, useTeam, useTeams } from '../data/api'
 import { TEAM_CODES, canonicalTeam, isTeam, teamInfo } from '../lib/teams'
 import { recordText } from './league/helpers'
+import { recordOf } from './league/playoffs'
 import NotFoundPage from './NotFound'
 import { Games } from './team/Games'
 import { Overview } from './team/Overview'
@@ -45,7 +46,12 @@ function Body({ code }: { code: string }) {
 
   const settled = !teams.isPending && !league.isPending && !file.isPending
   const noNumbers = <Card className="text-ink-2">Team numbers appear after the next data update.</Card>
-  const line = row && [row.division, recordText(row), row.through_week != null ? `through Week ${row.through_week}` : null].filter(Boolean).join(' · ')
+  // The standings are rebuilt every site run; teams.json's records come from the last feature build and
+  // can be a game behind, so the record shown everywhere on this page is the standings' when they load.
+  const standing = league.data?.teams.find((t) => t.team === code)
+  const line = standing
+    ? [standing.div, recordOf(standing)].join(' · ')
+    : row && [row.division, recordText(row), row.through_week != null ? `through Week ${row.through_week}` : null].filter(Boolean).join(' · ')
 
   return (
     <Page

@@ -33,6 +33,7 @@ export const READ_TEXT: Record<Read, string> = {
 
 /** For a measure with no season yet: which mark past cases say to watch. */
 export function leanText(row: TeamMetric): string | null {
+  if (!row.caller_past) return null
   if (row.lean === 'caller') return 'Watch the caller'
   if (row.lean === 'team') return 'Watch last year'
   if (row.lean === 'both') return 'Between the two'
@@ -52,17 +53,19 @@ export function sortRows(rows: TeamMetric[]): TeamMetric[] {
 
 /** One line per unit: how much of this season looks like the caller's past and how much like last year. */
 export function unitLine(unit: TeamUnit, team: string): string | null {
-  const reads = unit.live.map(read).filter((r): r is Read => r != null)
-  if (reads.length === 0) return null
-  const n = reads.length
-  const last = reads.filter((r) => r === 'last' || r === 'both' || r === 'steady').length
+  const seen = unit.live.filter((m) => m.observed)
+  if (seen.length === 0) return null
+  const withPast = seen.filter((m) => m.caller_past)
+  const withLast = seen.filter((m) => m.team_last)
+  const pastN = withPast.filter((m) => read(m) === 'past' || read(m) === 'both').length
+  const lastN = withLast.filter((m) => ['last', 'both', 'steady'].includes(read(m) ?? '')).length
   const name = unit.caller?.confirmed ? unit.caller.name : null
-  const hasPast = unit.live.some((m) => m.caller_past != null)
-  if (name && hasPast) {
-    const past = reads.filter((r) => r === 'past' || r === 'both').length
-    return `Looks like ${name}'s past on ${past} of ${n} measures, and like last year's ${team} on ${last}.`
+  if (name && withPast.length > 0) {
+    return `Looks like ${name}'s past on ${pastN} of ${withPast.length} measures, and like last year's ${team} on ${lastN} of ${withLast.length}.`
   }
-  return `${name ? `${name} has no past as a play-caller in our data, so the` : 'The'} comparison is last year's ${team}: ${last} of ${n} measures look the same.`
+  const anyPast = unit.charted.some((m) => m.caller_past)
+  const why = !name ? 'No confirmed play-caller here' : anyPast ? `${name}'s confirmed past doesn't cover these measures` : `${name} has no confirmed past as a play-caller in our data`
+  return `${why}, so the comparison is last year's ${team}: the same on ${lastN} of ${withLast.length} measures.`
 }
 
 /** The latest play-calling change on a side this season, if there was one. */

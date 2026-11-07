@@ -54,11 +54,11 @@ describe('otherStaff', () => {
 })
 
 describe('traitLine', () => {
-  it('reads a habit in plain words with its place and first season', () => {
-    const t = { metric: 'motion_rate', label: 'Pre-snap motion', pct: 0.98, seasons: 4, first: 2022, lo: 'less', hi: 'more' }
-    expect(traitLine(t)).toBe('More pre-snap motion than most: about 1st on average, every season since 2022.')
-    expect(traitLine({ ...t, label: '11 personnel (3 WR)', pct: 0.07 })).toBe('Less 11 personnel (3 WR) than most: about 30th on average, every season since 2022.')
-    expect(traitLine({ ...t, label: 'Time to throw', pct: 0.09, lo: 'shorter', hi: 'longer' })).toContain('Shorter time to throw')
+  it('reads a habit in plain words with its place and its real span', () => {
+    const t = { metric: 'motion_rate', label: 'Pre-snap motion', pct: 0.98, seasons: 4, first: 2022, last: 2025, lo: 'less', hi: 'more' }
+    expect(traitLine(t)).toBe('More pre-snap motion than most: about the highest on average, in each of 4 seasons calling plays (2022–25).')
+    expect(traitLine({ ...t, label: '11 personnel (3 WR)', pct: 0.07 })).toBe('Less 11 personnel (3 WR) than most: about 3rd-lowest on average, in each of 4 seasons calling plays (2022–25).')
+    expect(traitLine({ ...t, label: 'Time to throw', pct: 0.09, lo: 'shorter', hi: 'longer', first: 2017, last: 2019, seasons: 3 })).toContain('Shorter time to throw than most')
+    expect(traitLine({ ...t, first: 2017, last: 2019, seasons: 3 })).toContain('(2017–19)')
   })
 })
-

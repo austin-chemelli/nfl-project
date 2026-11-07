@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { TeamFeature, TeamsFile } from '../../data/contract'
+import fs from 'node:fs'
+import path from 'node:path'
+import { TeamsFile, type TeamFeature } from '../../data/contract'
 import { extremes, pctOf } from './overview'
 
 const feat = (id: string, better: 'higher' | 'lower' | null = 'higher'): TeamFeature =>
@@ -59,3 +61,15 @@ describe('pctOf', () => {
     expect(pctOf(3, 0)).toBe(0)
   })
 })
+
+describe('extremes leaves out play-caller history', () => {
+  it('never lists a scheme prior as the team\'s best or worst', () => {
+    const file = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../../test/fixtures/site/teams.json'), 'utf8'))
+    const t = TeamsFile.parse(file)
+    for (const code of Object.keys(t.teams)) {
+      const ex = extremes(t, code)
+      for (const r of [...ex.best, ...ex.worst]) expect(r.feature.id.startsWith('scheme.')).toBe(false)
+    }
+  })
+})
+
