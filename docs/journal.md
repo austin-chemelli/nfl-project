@@ -570,7 +570,7 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** ADR 0015 said contract changes stay additive, and I broke it in the same week I wrote rules about honesty in the data: a rule nothing checks is a hope. The check runs where the failure happens, in the deploy, not in review.
 
-## 2026-11-07: Planning the predictions against the market (M20, ADR 0023)
+## 2026-11-07: Planning the predictions against the market (M20, ADR 0024)
 
 **Why.** Austin wants the prediction to read like a line (spread and total next to the chance), the market's movement over the week and why, the things that swing a game with what-ifs, and the approaches' disagreements with the market explained and tracked.
 
@@ -580,3 +580,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** The measurements changed the order of the plan: the data that exists but isn't recorded (movement, calls with reasons) comes before the new model, whatever is more fun to build.
 
+
+## 2026-11-07: Building the predictions against the market (M20, ADR 0024)
+
+**What was built.** All three streams on `market-swings`. Movement: the Wed/Fri/Sat daily pass, the pre-kickoff consensus path per game, what changed in each window (QB1 changes, injury status changes, results, cited notes, locks) and "The line" tab. What-ifs and strong calls: append-only preview scores between locks (never graded, with a test), the quarterback what-if rescored with the locked artifacts, the swing list, the strong-calls ledger written after each lock and graded with the scorecard, "Where we differ from the market" on the game page and a Strong calls tab on the tracker. Spread check, weather and the total: the Student's spread beside every pick, an Open-Meteo kickoff forecast for open-air games, a new `weather` feature family, weather in the swing list, and `student_total` with an expected score tile and a "Totals, new" block.
+
+**Findings.** The mapped spread trails the closing spread by 0.27 points of mean miss (10.40 vs 10.12, 4,630 games), under the one-point bar, so no margin model. The total misses by 10.63 points against the closing total's 10.44 and a flat average's 11.02 (2016–2025, 2,761 games); its over/under side is a coin flip (50.7%), which is what context looks like. JAX @ BAL in Week 9 moved 12 points toward JAX in the window of BAL's 36–10 loss at BUF, before any depth-chart change, so recent results belong on the timeline. `qb.compute` builds careers from the games it's given, so the what-if has to pass every team-game or every quarterback reads as replacement level.
+
+**Changes to the plan.** Weather became its own family instead of filling `environment.temp_c` and `wind_kph`: those are registered in the Venue & weather group, and filling them would have moved every public line mid-season. The total's rows live in `marts/totals.parquet` and in each lock file, not in `predictions.parquet`, so nothing that reads predictions can score it by accident. This ADR was numbered 0023 on the branch while main took 0023 for the deploy guard; it's 0024 now.
+
+**AI tooling note.** A scratch data root built from symlinks pointed its feature store at another worktree's production mirror, so one scratch feature build wrote 28 new weather files there. They were new files, removed the same minute, and nothing read them; scratch roots now get real directories for anything a command writes.

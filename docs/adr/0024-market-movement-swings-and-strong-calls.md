@@ -1,4 +1,4 @@
-# ADR 0023: Spreads and totals, market movement, swing factors, strong calls
+# ADR 0024: Spreads and totals, market movement, swing factors, strong calls
 
 Status: accepted 2026-11-07 (Austin; hub decisions D18–D21). Brainstorm and measurements: `.notes/plans/market-and-swings.md`. Tasks: M20. Builds on ADR 0013 (the market is the reference, never an input), ADR 0017 (one answer first), ADR 0018 (wave 2, the Student as the headline).
 
@@ -29,7 +29,17 @@ What exists: about 10 pre-kickoff odds snapshots per game per week across 9 book
 
 ## Consequences
 - About 33 Odds API credits a week; the guard and the soft cap stay. The daily pass runs the current-season ingest every evening (minutes, no credits).
-- New append-only marts: `previews.parquet`, `strong_calls.parquet`; new model rows `student_total` in `predictions.parquet` (p_home null, total set). New site fields are additive (ADR 0015).
+- New append-only marts: `previews.parquet`, `strong_calls.parquet`, `totals.parquet` (the total's rows live in their own file, not `predictions.parquet`; see Measured). New site fields are additive (ADR 0015).
 - Honesty: movement and strong-call records are live only, "weeks tracked" from 2026-10-26 and from the first lock that writes them; the what-if is our model's sensitivity, not the market's; the total is context and says so; the preview is not the record.
 - Lock code changes (strong calls, the total line) mean a new image and the usual rule: never merge within 10 minutes of a lock.
 - Risks: a questionable starter's status changes after the Saturday lock (the what-if is the answer, already on the page); a sparse consensus early in the week (a minimum of 3 books per point); the explanation sentence overclaiming (it names groups and an assumption, nothing causal).
+
+## Measured (2026-11-07)
+- **Spread check (M20.9, `scripts/spread_check.py`, 4,630 backfill games 2009–2025):** the closing spread misses the final margin by 10.12 points on average; the mapped spreads miss by 10.36 (Global) to 10.52 (Traditionalist), the Student by 10.40, a gap of 0.27. Under the one-point bar, so the mapped spread is shown and no margin model is planned.
+- **Strong-call reasons** leave out home field: the market prices it too, so it explains nothing about a disagreement.
+- **Coaching changes** have a week but no time, so they are listed among the swing factors, not placed on the line's timeline. Recent results are on the timeline: a line often moves most while a team plays the week before (JAX @ BAL, Week 9: 12 points in the window of BAL's 36–10 loss at BUF).
+- **The retro's strong-calls line** is drawn by the game page from the game file's graded calls, so the retro schema doesn't change.
+
+- **Weather at lock (M20.10)** is its own family, `weather.temp_f`, `weather.wind_mph`, `weather.precip_pct`, not the `environment.temp_c`/`wind_kph`/`precip_mm` named above: those two are registered members of the weighted Venue & weather group, and filling them would move every public line mid-season. Nothing reads the new family except the total and the swing list. Completed open-air games carry nflverse's kickoff temperature and wind (no precipitation is recorded); upcoming ones carry every Open-Meteo forecast we fetched (`raw/open_meteo/snapshot_ts=`), each stamped at its fetch time. Roofed games are null. The daily pass and the lock refresh fetch it; a failed fetch never blocks either. Swing list thresholds: wind 15 mph, a 50% chance of rain or snow, 32°F.
+- **The total (M20.11, `nfl.approaches.totals`):** ridge on standardized inputs (λ 25), both sides' offense and defense EPA, pass EPA, success rate, quarterback EPA, special teams, explosive rate, pass rate over expected and QB1 out, summed home + away, plus dome and the excess of wind over 10 mph and cold under 40°F. Trained on the ten seasons before, features as of kickoff − 1h. Walk-forward 2016–2025, 2,761 games with a closing total: the total misses by 10.63 points on average, the closing market total by 10.44, the training average by 11.02; its side of the closing total was right 50.7% (51.3% of the 391 games 4+ points from the market). Context, as planned. The largest weights: quarterback EPA, offense EPA, dome, explosive rate, defense EPA, then wind (−0.9 points per standard deviation) and cold.
+- **Where the total lives:** each lock file gains a per-game `student_total` (total, sd), so the total is in the public record; `marts/totals.parquet` holds the rows (append-only), not `predictions.parquet`, so no scorecard, ledger or README reader can pick it up by accident. The artifact refits when it's missing or its config changed (deterministic from data through the season before). A failure costs the total, never the lock. The site grades it on the fly (`tracker.json.totals` on the Strong calls tab, the game's `expected_score` tile).

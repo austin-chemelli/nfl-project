@@ -94,7 +94,7 @@ Git holds code, prompts, approach configs, `public/predictions/` lock artifacts,
 | `plays` | play | POC 37-column pbp subset + FTN flags, `has_ftn`; from M15.2 also `vegas_home_wp`, `vegas_home_wpa` and the `fixed_drive*` / `drive_*` columns (ADR 0020) |
 | `injuries`, `depth_charts` | report row | as POC |
 | `lines` (new) | game × book × market × snapshot | `game_id, snapshot_ts, book, market ('h2h','spreads','totals'), side, price_american, point` |
-| `weather` (new) | game | `game_id, fetched_at, temp_c, wind_kph, precip_mm, is_forecast` |
+| `weather` (not curated; ADR 0024) | game | forecasts stay raw: `raw/open_meteo/snapshot_ts=<ts>/forecasts.json` (`game_id, kickoff_utc, temp_f, wind_mph, gusts_mph, precip_pct`), read by `nfl.weather.load_snapshots` |
 | `stadiums` (new, from CSV in repo) | stadium | `stadium, team, lat, lon, tz, altitude_m, roof` incl. international venues |
 
 ### 3.3 Feature store
@@ -121,6 +121,7 @@ Families and first features (builders in `nfl/features/<family>.py`):
 |---|---|---|
 | `strength` | `elo_pre` (team), `epa_off`, `epa_def`, `success_off`, `success_def`, `point_diff_pg` (team, season-to-date, shrunk toward prior season / league) | elo, pbp |
 | `environment` | `rest_days`, `travel_km`, `tz_shift` (team); `is_dome`, `is_turf`, `div_game`, `primetime`, `neutral_site`, `temp_c`, `wind_kph` (game) | schedules, stadiums, weather |
+| `weather` (ADR 0024) | `temp_f`, `wind_mph`, `precip_pct` (game; open-air only; played games from nflverse, upcoming from each forecast at its fetch time). Read by the total and the swing list only, never an approach | schedules, Open-Meteo |
 | `form` | `last3_win_pct`, `last3_margin`, `streak` (team) | games |
 | `decisions` | `fourth_go_rate_oe`, `pass_rate_oe`, `early_down_pass_rate`, `explosive_rate`, `turnover_margin_pg` (team) | pbp (`xpass`/`pass_oe` precomputed), tendencies |
 | `front` | `blitz_rate`, `box_8plus_rate`, `motion_rate`, `play_action_rate` (team; 2022+) | ftn via tendencies |
@@ -168,7 +169,9 @@ Fit artifacts: `marts/fits/<model_id>/<trained_through>.json` with scaler, weigh
 
 `marts/bets.parquet` (append-only, immutable): `bet_id, model_id, game_id, lock_ts, market ('h2h'|'spreads'), side, price_american, point, model_p, market_p_vigfree, edge, stake_units (1.0), book, closing_price, closing_point, clv, result ('win'|'loss'|'push'|null), units_net`. A bet exists when `|model_p − market_p_vigfree| > 0.05` at lock.
 
-`marts/previews.parquet` (append-only, ADR 0023): `game_id, model_id, scored_at, p_home, spread_home` from the daily pass with the locked artifacts; never graded. `marts/strong_calls.parquet` (append-only, ADR 0023): per approach-game 10+ points from the market at lock: `game_id, model_id, lock_ts, side, p_home, market_p, spread_home, market_spread, top_groups (json), assumption (json), what_if_p, sentence`, filled at grade with `result, log_loss, market_log_loss, closing_toward_us`.
+`marts/previews.parquet` (append-only, ADR 0024): `game_id, model_id, scored_at, p_home, spread_home` from the daily pass with the locked artifacts; never graded. `marts/strong_calls.parquet` (append-only, ADR 0024): per approach-game 10+ points from the market at lock: `game_id, model_id, lock_ts, side, p_home, market_p, spread_home, market_spread, top_groups (json), assumption (json), what_if_p, sentence`, filled at grade with `result, log_loss, market_log_loss, closing_toward_us`.
+
+`marts/totals.parquet` (append-only, ADR 0024): `game_id, season, week, model_id ('student_total'), model_version, lock_ts, slot, total, sd_total, market_total`, one row per game per lock; graded on the fly by the site, never in the scorecard. Artifacts under `marts/fits/student_total/<trained_through>.json`, refitted by the lock when missing or stale.
 
 `marts/graded.parquet`, `marts/scorecard.parquet` (per model × season × week + cumulative: n, log_loss, brier, spread_mae, ece, ats_pct, units, clv_avg), `marts/divergence.parquet` (per model × bucket of |model_p − market_p|: n, hit_rate, log_loss).
 
@@ -224,7 +227,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | `site/audit.json` | null rates, freshness |
 | `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet; `wp_series` and `drives` from M15 (ADR 0020), nullable |
 | `site/teams.json`, `site/league.json`, `site/similar.json` | per-team feature table; standings, playoff odds, leverage; similar seasons and flag cards (ADR 0019, §3.6d) |
-| game and slate files, additive (ADR 0023) | `market_history[]` (pre-kickoff consensus path), `market_moves`, `events[]` (what changed in each window), `swings[]` (what could move the game, with what-ifs), `strong_calls[]`, `today` (the preview score), `expected_score`; `tracker.json.strong_calls`, `tracker.json.totals` |
+| game and slate files, additive (ADR 0024) | `market_history[]` (pre-kickoff consensus path), `market_moves`, `events[]` (what changed in each window), `swings[]` (what could move the game, with what-ifs), `strong_calls[]`, `today` (the preview score), `expected_score`; `tracker.json.strong_calls`, `tracker.json.totals` |
 | `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, best call and costliest miss, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.
@@ -254,13 +257,13 @@ Until P2 these are commands Austin runs (`nfl weekly refresh`, `nfl lock --slot 
 
 Daily at 07:00 ET (`nfl-retro`, ADR 0016): ingest this season's pbp and schedules, curate this season's games and plays, build retrospectives for finished games without one (or with a newer pbp snapshot), publish. Thursday, Sunday and Monday games get theirs the next morning.
 
-### 4.1a Daily pass (ADR 0023)
+### 4.1a Daily pass (ADR 0024)
 
 Wed, Fri and Sat 20:05 ET (`nfl daily`, the odds job): current-season ingest, one odds snapshot, curate, features, the Open-Meteo forecast, preview scores of upcoming games with the locked artifacts, site JSON (line history, window events, swing factors, what-ifs), publish. Thursday, Sunday and Monday keep their snapshot times; Sunday and Monday snapshots are in-play lines for games under way and never count as movement.
 
 ### 4.2 Lock
 
-`nfl lock --slot thu|sat` (implemented in `src/nfl/lock.py`; slots by Eastern weekday: thu = Wed–Fri, sat = Sat–Tue; artifact name `week_<ww>_<slot>_<lock ts>.json`): refresh current-season data, take an odds snapshot; build features as-of now for the slot's games; load the frozen fits (trained through `S−1`); score every approach and flavor; append prediction rows with `lock_ts = now`; open bets where the edge exceeds the threshold; write the public JSON and its SHA-256; commit with message `lock: S W<W> <slot>`. Re-running a lock appends new rows; grading uses the last lock before kickoff.
+`nfl lock --slot thu|sat` (implemented in `src/nfl/lock.py`; slots by Eastern weekday: thu = Wed–Fri, sat = Sat–Tue; artifact name `week_<ww>_<slot>_<lock ts>.json`): refresh current-season data, take an odds snapshot; build features as-of now for the slot's games; load the frozen fits (trained through `S−1`); score every approach and flavor; append prediction rows with `lock_ts = now`; open bets where the edge exceeds the threshold; write the public JSON and its SHA-256; commit with message `lock: S W<W> <slot>`. Re-running a lock appends new rows; grading uses the last lock before kickoff. Since ADR 0024 the lock also takes an Open-Meteo forecast in its refresh, puts each game's `student_total` (total, sd) in the public JSON, and after the commit records strong calls and appends the totals rows; none of those can block the lock.
 
 ### 4.3 Backtest and fit
 
