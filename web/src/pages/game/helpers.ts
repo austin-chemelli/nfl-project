@@ -101,6 +101,38 @@ export function lineMoveChip(g: Game): string | null {
   return `Followed ${article} ${n}-point line move toward ${v > 0 ? g.home : g.away}`
 }
 
+export type LiveReading = { feature: string; label: string; help: string; game: string | null; away: string | null; home: string | null }
+export type LiveGroup = { id: string; name: string; help: string; readings: LiveReading[] }
+
+/**
+ * The groups history can't price (Market behavior, Buzz: live only, so the all-history fit has no
+ * bar for them), as their raw readings for this game. Any group an approach weighs that the fit
+ * left out lands here, so a new live-only group shows up with no change. A reading nobody took is
+ * null; a group with no readings at all still appears, saying so.
+ */
+export function liveOnlyGroups(g: Game, meta: Meta): LiveGroup[] {
+  const base = g.contributions.global
+  if (!base) return []
+  const out: LiveGroup[] = []
+  for (const grp of meta.groups.groups) {
+    if (isContextOnly(meta, grp.id) || base.groups[grp.id]?.pp != null) continue
+    const readings = grp.members.map((m) => {
+      const v = g.features[m.feature]
+      const val = (x: number | null | undefined) => (x == null ? null : fmtUnit(x, m.unit).replace(/^-/, '−'))
+      let game: string | null = null
+      if (v?.game != null) {
+        // game-level readings lean toward a side: a line move in points, a share of bets on the home team
+        if (m.unit === 'points') game = Math.abs(v.game) < 0.05 ? 'no move' : `${Math.abs(v.game).toFixed(1)} pts toward ${v.game > 0 ? g.home : g.away}`
+        else if (m.unit === 'pct' && m.feature.endsWith('_home')) game = `${pct(v.game)} on ${g.home}`
+        else game = val(v.game)
+      }
+      return { feature: m.feature, label: m.label, help: helpFor(meta, m.feature), game, away: val(v?.away), home: val(v?.home) }
+    })
+    out.push({ id: grp.id, name: grp.name, help: helpFor(meta, grp.id), readings })
+  }
+  return out
+}
+
 // -------------------------------------------------------------------------------------- retro
 
 export type SwingRow = { key: string; label: string; value: number; teams: { team: string; swing: number; sentence: string }[] }

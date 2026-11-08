@@ -3,7 +3,7 @@ import metaJson from '../../test/fixtures/site/meta.json'
 import retroJson from '../../test/fixtures/site/retro/2026_08_CAR_GB.json'
 import gameJson from '../../test/fixtures/site/game/2026_08_CAR_GB.json'
 import { Game, Meta, RetroGame } from '../../data/contract'
-import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText, driveText, driveLede } from './helpers'
+import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, liveOnlyGroups, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText, driveText, driveLede } from './helpers'
 
 const meta = Meta.parse(metaJson)
 const game = Game.parse(gameJson)
@@ -116,6 +116,35 @@ describe('previewRows', () => {
   })
   it('has no rows without the fit', () => {
     expect(previewRows(g({ contributions: {} }), meta, null)).toEqual([])
+  })
+})
+
+describe('liveOnlyGroups', () => {
+  const withFeatures = (f: Record<string, unknown>) => ({ ...game, features: { ...game.features, ...f } }) as Game
+  it('lists the groups the history fit has no bar for, never context-only ones, in registry order', () => {
+    expect(liveOnlyGroups(game, meta).map((x) => x.id)).toEqual(['market', 'buzz'])
+  })
+  it('signs a negative index with a minus, as the rest of the site does', () => {
+    const buzz = liveOnlyGroups(withFeatures({ 'narrative.sentiment': { group: 'buzz', away: -0.5, home: 0.2 } }), meta).find((x) => x.id === 'buzz')!
+    const s = buzz.readings.find((r) => r.feature === 'narrative.sentiment')!
+    expect([s.away, s.home]).toEqual(['−0.50', '0.20'])
+  })
+  it('reads a line move and a public share toward a side, and team readings per team', () => {
+    const [market, buzz] = liveOnlyGroups(withFeatures({
+      'market.line_move_pts': { group: 'market', game: -2.5 },
+      'narrative.public_bet_pct_home': { group: 'market', game: 0.94 },
+    }), meta)
+    expect(market.readings.map((r) => r.game)).toEqual([`2.5 pts toward ${game.away}`, `94% on ${game.home}`])
+    const hype = buzz.readings.find((r) => r.feature === 'narrative.hype')!
+    expect([hype.away, hype.home, hype.game]).toEqual(['0.40', '0.50', null])
+  })
+  it('keeps a group with no readings, each reading null', () => {
+    const none = { ...game, features: {} } as Game
+    const market = liveOnlyGroups(none, meta).find((x) => x.id === 'market')!
+    expect(market.readings.every((r) => r.game == null && r.away == null && r.home == null)).toBe(true)
+  })
+  it('is empty without the history fit', () => {
+    expect(liveOnlyGroups({ ...game, contributions: {} } as Game, meta)).toEqual([])
   })
 })
 
