@@ -50,6 +50,8 @@ export function summaryTiles(g: Game, meta: Meta, retro: RetroGame | null): Tile
 // ------------------------------------------------------------------------------------- shared
 
 const marketP = (g: Game) => g.market?.p_home ?? g.models.market_baseline?.p_home ?? null
+/** Which market line marketP read: the last one before kickoff, or (with no line file) the one locked with the approaches. */
+const marketWhen = (g: Game) => (g.market?.p_home != null ? 'before kickoff' : 'at lock')
 
 /** Upset or not, from the market's pregame view. */
 function resultTile(g: Game, tab: TabId): TileSpec {
@@ -60,8 +62,8 @@ function resultTile(g: Game, tab: TabId): TileSpec {
   const pW = w === g.home ? mk : 1 - mk
   if (Math.abs(pW - 0.5) < TOSS_UP) return { id: 'result', label: 'Result', value: 'Toss-up', sub: `${w} won; the market had it ${pct(pW)}`, tab }
   return pW < 0.5
-    ? { id: 'result', label: 'Result', value: 'Upset', sub: `${w} won as a ${pct(pW)} underdog`, tab, team: w }
-    : { id: 'result', label: 'Result', value: 'Favorite won', sub: `${w} was ${pct(pW)} in the market`, tab, team: w }
+    ? { id: 'result', label: 'Result', value: 'Upset', sub: `${w} won as a ${pct(pW)} underdog ${marketWhen(g)}`, tab, team: w }
+    : { id: 'result', label: 'Result', value: 'Favorite won', sub: `${w} was ${pct(pW)} in the market ${marketWhen(g)}`, tab, team: w }
 }
 
 /** How many approaches picked the winner, from the game file's picks. */
@@ -192,16 +194,19 @@ function finishedTiles(g: Game, r: RetroGame): TileSpec[] {
   return tiles
 }
 
-/** Which way the swing plays went, split into the two parts that add up to it. */
+/**
+ * Which way the swing plays went: the net between the teams as the value, and each team's own pure luck
+ * underneath, the same per-team figures the headline sentence and the weekly recap quote (a net there read
+ * as a contradiction in two site walks).
+ */
 function swingTile(r: RetroGame): TileSpec {
   const net = r.teams.home.luck_net - r.teams.away.luck_net
-  const pure = pureLuck(r.teams.home) - pureLuck(r.teams.away)
   const side = (x: number) => (x >= 0 ? r.home : r.away)
-  const part = (x: number) => (Math.abs(x) < 1 ? 'even' : `${side(x)} +${one(x)}`)
+  const signed = (x: number) => `${x < 0 ? '−' : '+'}${one(x)}`
   return {
     id: 'swing', label: 'Swing plays', tab: 'retro', team: Math.abs(net) < 1 ? undefined : side(net),
-    value: Math.abs(net) < 1 ? 'Even' : `${side(net)} +${one(net)} pts`,
-    sub: `variance ${part(net - pure)} · pure luck ${part(pure)}`,
+    value: Math.abs(net) < 1 ? 'Even' : `${side(net)} +${one(net)} pts net`,
+    sub: `pure luck ${r.away} ${signed(pureLuck(r.teams.away))}, ${r.home} ${signed(pureLuck(r.teams.home))}`,
   }
 }
 

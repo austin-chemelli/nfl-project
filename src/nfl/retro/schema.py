@@ -268,7 +268,7 @@ class RecapGame(_Model):
     game_id: str
     away: str
     home: str
-    value: float  # upsets: the winner's market win %; misread: the ensemble's log loss
+    value: float  # upsets: the winner's market win %; misread: the Student's log loss (wrong picks only)
     sentence: str
 
 

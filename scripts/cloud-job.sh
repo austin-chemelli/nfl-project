@@ -5,7 +5,8 @@
 #   odds             nfl odds snapshot, rebuild site JSON, publish
 #   site             rebuild site JSON and publish (after the desktop uploads narrative records)
 #   narrative-check  fail (and so alert) if an upcoming game has no record from the last desktop pass
-#   retro            nfl retro daily (current-season ingest, curate, game retros + recaps), publish
+#   retro            nfl retro daily (current-season ingest, curate, game retros + recaps), then grade
+#                    and rebuild the site JSON so the tracker counts last night's games, publish
 # Environment: NFL_DATA_ROOT (bucket mount), NFL_SITE_BUCKET (public bucket name, optional),
 #   ODDS_API_KEY, GITHUB_DEPLOY_KEY_FILE (lock only), NFL_IMAGE_SHA (set at image build), NFL_REPO.
 set -euo pipefail
@@ -77,6 +78,11 @@ case "$job" in
     ;;
   retro)
     nfl retro daily "$@"
+    # grade only reads predictions and final scores and rewrites its own marts, so it is safe daily;
+    # without it the tracker waited for Tuesday's refresh while the slate already scored the week
+    # (site walk 2026-11-07). Paper bets still settle on Tuesday (ledger).
+    nfl grade
+    nfl site
     publish
     ;;
   *)

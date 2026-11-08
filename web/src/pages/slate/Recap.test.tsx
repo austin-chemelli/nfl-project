@@ -51,6 +51,16 @@ describe('recapTiles', () => {
     // three slightly ahead and one far behind: worse on average, whatever the count says
     expect(recapTiles(m([-0.001, -0.002, -0.001, 0.1]))[1]).toMatchObject({ value: 'Scored worse', sub: '3 of 4 ahead; 0.024 worse on average. Confidence counts, not just picks' })
   })
+  it('says how few games the approach tiles rest on while the week is being played', () => {
+    const one = recap({ games: ['2026_09_JAX_BAL'], upsets: [] })
+    const t = recapTiles(one, 14)
+    for (const id of ['best', 'market', 'right']) expect(t.find((x) => x.id === id)?.sub).toMatch(/^after 1 of 14 games: /)
+    expect(t.find((x) => x.id === 'upset')).toMatchObject({ value: 'None', sub: 'every favorite won' })
+    // a finished week, or no count, reads as before
+    expect(recapTiles(one, 1).find((x) => x.id === 'best')?.sub).not.toMatch(/^after/)
+    expect(recapTiles(one).find((x) => x.id === 'best')?.sub).not.toMatch(/^after/)
+  })
+
   it('does not call a near-even winner an upset', () => {
     const t = recapTiles(recap({ upsets: [{ game_id: 'g', away: 'A', home: 'B', value: 0.47, sentence: '' }] }))
     expect(t.find((x) => x.id === 'upset')).toMatchObject({ value: 'None', sub: 'lowest winner was 47% in the market' })

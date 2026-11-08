@@ -63,6 +63,7 @@ function Unfolded({ r }: { r: RetroGame }) {
       <Card>
         <WpChart series={ws} home={r.home} away={r.away} homeScore={r.result.home_score} awayScore={r.result.away_score} describe={describe} />
         {r.drives && r.drives.length > 0 && <PossessionStrip drives={r.drives} endT={ws.end_t} home={r.home} describe={driveText} />}
+        <p className="mt-2 text-[12px] text-ink-3">Win chance from nflfastR's in-game model, which starts from the pregame spread. It is not one of this site's forecasts, so its kickoff number differs from theirs.</p>
         {plays.length > 0 && (
           <details className="mt-3 border-t border-line pt-2 text-[13px] text-ink-2">
             <summary className="cursor-pointer text-ink-3 hover:text-ink">Turning points</summary>
@@ -106,7 +107,7 @@ function Forecasts({ r }: { r: RetroGame }) {
   return (
     <Section
       title="How the forecasts did"
-      help="Each model's pregame pick for this game, scored after the fact. The market and the simple reference lines are shown for comparison but cannot be 'best'."
+      help="Each model's pregame pick for this game, scored after the fact. The market row is the line at the moment the approaches locked, the same line they are scored against everywhere on the site; the market figure at the top of the page is the last line before kickoff. The market and the simple reference lines are shown for comparison but cannot be 'best'."
     >
       <TableScroll>
         <table className="w-full border-collapse text-[14px]">
@@ -141,7 +142,7 @@ function PickRow({ p }: { p: GradedPick }) {
     <tr className={p.best ? 'bg-surface-2' : undefined} data-best={p.best || undefined}>
       <td className={`${td} ${cls}`}>
         <span className={p.best ? 'font-semibold' : ''}>
-          {ref ? p.label : <ModelBadge modelId={p.model_id} label={p.label} />}
+          {ref ? (p.model_id === 'market_baseline' ? `${p.label} at lock` : p.label) : <ModelBadge modelId={p.model_id} label={p.label} />}
         </span>
         {p.best && (
           <span className="ml-2 rounded border border-[var(--good)] px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-[var(--good)]">Best</span>
@@ -394,11 +395,11 @@ function SwingSection({ r }: { r: RetroGame }) {
       help="Events that swing games, each compared with what was expected (league rates in the same situations; for 3rd and 4th downs, adjusted for both teams' form this season) and priced in points by what such events are worth on average. One team's missed kick is the other's gain, so each bar shows the net between the two."
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        Efficiency says how well each team played; this says how the swings fell. The two overlap on purpose: a third down counts in both, asked a different way.
+        Efficiency says how well each team played; this says how the swings fell. The two overlap on purpose: a third down counts in both, asked a different way. Each bar is the net between the teams (one team's swing minus the other's); each team's own figures are under “What each swing was”.
       </p>
       <Card>
         <p className="mb-3 text-[15px] font-semibold">
-          {Math.abs(net) < 0.05 ? 'The swing plays came out even' : <>Swing plays: <span className="tabular">{ptsSide(net, r.home, r.away)}</span></>}
+          {Math.abs(net) < 0.05 ? 'The swing plays came out even' : <>Swing plays, net: <span className="tabular">{ptsSide(net, r.home, r.away)}</span></>}
         </p>
         <SwingChart r={r} title="Variance" note="Conversions, interceptions and penalties: they went a team's way, but how it played had a hand in it." rows={variance} domain={domain} />
         <SwingChart r={r} title="Pure luck" note="Fumble bounces, kicks and return plays." rows={pure} domain={domain} />

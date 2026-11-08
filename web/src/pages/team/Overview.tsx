@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
+import { Help } from '../../components/Help'
 import { teamDotVars } from '../../lib/teamColors'
 import type { LeagueFile, SimilarFile, TeamsFile } from '../../data/contract'
 import { ordinal, fmtValue } from '../league/helpers'
@@ -88,7 +89,7 @@ function ExtremeRow({ e, team }: { e: Extreme; team: TeamsFile['teams'][string] 
   return (
     <li className="min-w-0 py-1.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-        <span className="min-w-0 text-ink">{e.feature.label}</span>
+        <span className="min-w-0 text-ink">{e.feature.description ? <Help text={e.feature.description}>{e.feature.label}</Help> : e.feature.label}</span>
         <span className="tabular text-ink-2">
           {fmtValue(team.values[e.feature.id], e.feature)} · <strong className="font-medium text-ink">{ordinal(e.rank)} of {e.of}</strong>
         </span>
@@ -126,7 +127,7 @@ export function Overview({ code, teams, league, similar }: { code: string; teams
         </Section>
       )}
       {team && ex && (ex.best.length > 0 || ex.worst.length > 0) && (
-        <Section title="Best and worst" lede="Where they rank in the league, among measures where more or less is clearly better.">
+        <Section title="Best and worst" lede={`Where they rank going into Week ${teams?.week}, on the measures the approaches use where more or less is clearly better. These are model inputs: early in the season they lean on last season, so they can differ from the results so far.`}>
           <div className="grid gap-4 md:grid-cols-2">
             <Group title="Best" rows={ex.best} team={team} />
             <Group title="Worst" rows={ex.worst} team={team} />

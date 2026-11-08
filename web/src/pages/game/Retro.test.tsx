@@ -18,7 +18,7 @@ describe('Retro', () => {
     expect(best).toHaveLength(1)
     expect(within(best[0] as HTMLElement).getByText('The Traditionalist')).toBeInTheDocument()
     expect(within(best[0] as HTMLElement).getByText('Best')).toBeInTheDocument()
-    const market = screen.getByText('Market').closest('tr') as HTMLElement
+    const market = screen.getByText('Market at lock').closest('tr') as HTMLElement
     expect(within(market).getByText('reference')).toBeInTheDocument()
   })
 
