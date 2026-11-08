@@ -9,6 +9,10 @@ import type { Game, Meta, RetroGame } from '../data/contract'
 import { Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './game/Sections'
 import { GameHeader, GameTitle, PinnedResult } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
+import { Differ, StrongCallsOutcome } from './game/Differ'
+import { TheLine, hasLine } from './game/TheLine'
+import { Books } from './game/Books'
+import { disagrees, hasBooks } from './game/books'
 import { Preview } from './game/Preview'
 import { Retro } from './game/Retro'
 import { summaryTiles } from './game/summary'
@@ -69,7 +73,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
 
   const tabs: TabDef[] = []
   if (retro || retroError)
-    tabs.push({ id: 'retro', label: 'What happened', content: retro ? <Retro r={retro} /> : <ErrorBox error={retroError} /> })
+    tabs.push({ id: 'retro', label: 'What happened', content: retro ? <TabBody><Retro r={retro} /><StrongCallsOutcome g={g} /></TabBody> : <ErrorBox error={retroError} /> })
   tabs.push(
     {
       id: 'preview',
@@ -84,11 +88,40 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
         </TabBody>
       ),
     },
+  )
+  // the line waits for data: two snapshots for a path, three books for the book-by-book (Austin, 2026-11-07)
+  if (hasLine(g) || hasBooks(g))
+    tabs.push({
+      id: 'line',
+      label: (
+        <>
+          The line
+          {disagrees(g.books) && (
+            <>
+              <span aria-hidden className="ml-1.5 inline-block h-1.5 w-1.5 -translate-y-[2px] rounded-full bg-[var(--warning)]" />
+              <span className="sr-only">: books disagree</span>
+            </>
+          )}
+        </>
+      ),
+      content: (
+        <TabBody>
+          <TheLine g={g} />
+          <Books g={g} />
+          <FinePrint>
+            {hasLine(g) && <p>How the line moved: each point is the median across sportsbooks at one of our snapshots before kickoff, with at least three books quoting it. "First seen" is our first snapshot of the game, not when books opened it; our snapshots start 2026-10-26. The events are what our data shows changed between two snapshots (the depth chart's quarterback, a starter's status on the injury report, timed when we pulled it, a result, the lock), listed beside the move, not as its cause.</p>}
+            <p>What each sportsbook says: the US books our odds feed lists, at our latest snapshot before kickoff. They're flagged as disagreeing when they're 1.5 points or more apart on the spread or the total, or when the spread sits on both sides of 3, 7 or pick'em (3 and 7 are the most common winning margins, so a half point across one matters more than one anywhere else). The price beside a spread is what that side pays: a book can hold the same number and charge more for it. Not betting advice.</p>
+          </FinePrint>
+        </TabBody>
+      ),
+    })
+  tabs.push(
     {
       id: 'approaches',
       label: 'Approaches',
       content: (
         <TabBody>
+          <Differ g={g} meta={meta} />
           <ApproachesVsMarket g={g} meta={meta} />
           <Why g={g} meta={meta} />
           <FinePrint>

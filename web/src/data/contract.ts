@@ -123,6 +123,77 @@ export const CardData = z.looseObject({
     .default(null),
 })
 
+// The market line's path before kickoff (ADR 0024). Spread + = home favored; a move > 0 is toward home.
+const LineWindow = z.looseObject({ spread_home: nnum.default(null), total: nnum.default(null), p_home: nnum.default(null), hours: nnum.default(null) })
+export const LineMove = z.looseObject({
+  first_seen: z.string(), // our first snapshot of the game, not the opener
+  latest: z.string(),
+  n_points: num,
+  lock_ts: nstr.default(null),
+  since_first: LineWindow.nullable().default(null),
+  since_lock: LineWindow.nullable().default(null),
+  last_day: LineWindow.nullable().default(null),
+})
+export const LinePoint = z.looseObject({ ts: z.string(), spread_home: nnum.default(null), total: nnum.default(null), p_home: nnum.default(null), n_books: num })
+export const MarketEvent = z.looseObject({
+  ts: z.string(),
+  kind: z.string(), // qb, injury, coaching, lock
+  team: nstr.default(null),
+  text: z.string(),
+  source_url: nstr.default(null),
+  after: num, // index of the last line point before it: the event sits in the move from `after` to `after + 1`
+})
+// Each sportsbook's line at the latest snapshot before kickoff, and where they disagree (ADR 0024, M20.13).
+export const BookLine = z.looseObject({
+  book: z.string(), // the Odds API key: draftkings, fanduel, ...
+  spread_home: nnum.default(null), // + = home favored
+  home_price: nnum.default(null),
+  away_price: nnum.default(null),
+  total: nnum.default(null),
+  over_price: nnum.default(null),
+  under_price: nnum.default(null),
+  p_home: nnum.default(null), // the moneyline without the vig
+})
+const BookRange = z.looseObject({ lo: num, hi: num, median: num, gap: num })
+export const Books = z.looseObject({
+  snapshot_ts: z.string(),
+  books: z.array(BookLine),
+  spread: BookRange.nullable().default(null),
+  total: BookRange.nullable().default(null),
+  key: nnum.default(null), // the key spread (0, ±3, ±7) the books straddle
+  flags: z.array(z.string()).default([]), // spread_gap, spread_key, total_gap
+  n_stale: num.default(0),
+})
+// What could swing a game, and the quarterback what-if (ADR 0024): the model's sensitivity, not the market's.
+const QbScenario = z.looseObject({ qb: nstr.default(null), name: nstr.default(null), status: nstr.default(null), p_home: z.record(z.string(), nnum) })
+export const Swing = z.looseObject({
+  kind: z.string(), // qb, injury, coaching, rest, weather
+  team: nstr.default(null),
+  text: nstr.default(null),
+  why: nstr.default(null), // qb only: status, chart, usual
+  assumed: QbScenario.nullable().default(null),
+  alternative: QbScenario.nullable().default(null),
+})
+// One approach 10+ points of win chance from the market at lock (ADR 0024), graded after the game.
+export const StrongCall = z.looseObject({
+  game_id: z.string(), week: num, model_id: z.string(), lock_ts: nstr.default(null), side: z.string(), team: z.string(),
+  p_home: num, market_p: num, spread_home: nnum.default(null), market_spread: nnum.default(null),
+  top_groups: z.array(z.looseObject({ group: z.string(), name: z.string(), logit: num })).default([]),
+  assumption: z.looseObject({ team: nstr.default(null), assumed: nstr.default(null), alternative: nstr.default(null) }).nullable().default(null),
+  what_if_p_home: nnum.default(null), sentence: z.string(),
+  result: nstr.default(null), log_loss: nnum.default(null), market_log_loss: nnum.default(null), closing_toward: z.boolean().nullable().default(null),
+})
+export const ExpectedScore = z.looseObject({ total: num, sd: nnum.default(null), market_total: nnum.default(null), lock_ts: nstr.default(null), home: nnum.default(null), away: nnum.default(null) })
+export type ExpectedScore = z.infer<typeof ExpectedScore>
+export const Today = z.looseObject({ scored_at: z.string(), models: z.record(z.string(), z.looseObject({ p_home: nnum, spread_home: nnum.default(null) })) })
+export type Swing = z.infer<typeof Swing>
+export type StrongCall = z.infer<typeof StrongCall>
+export type LineMove = z.infer<typeof LineMove>
+export type LinePoint = z.infer<typeof LinePoint>
+export type Books = z.infer<typeof Books>
+export type BookLine = z.infer<typeof BookLine>
+export type MarketEvent = z.infer<typeof MarketEvent>
+
 export const GameRow = z.looseObject({
   game_id: z.string(),
   season: num,
@@ -143,6 +214,7 @@ export const GameRow = z.looseObject({
     console.warn('slate card dropped', ctx.error.issues.slice(0, 3))
     return null
   }),
+  line_move: LineMove.nullable().default(null),
 })
 
 export const Slate = z.looseObject({
@@ -240,6 +312,13 @@ export const Game = GameRow.extend({
   tendencies: z.array(Tendency),
   injuries: z.array(Injury),
   narrative: Narrative.nullable(),
+  market_history: z.array(LinePoint).default([]),
+  market_events: z.array(MarketEvent).default([]),
+  books: Books.nullable().default(null),
+  swings: z.array(Swing).default([]),
+  strong_calls: z.array(StrongCall).default([]),
+  today: Today.nullable().default(null), // the latest preview score: not a lock, never graded
+  expected_score: ExpectedScore.nullable().default(null), // the locked total split by the headline spread: context (ADR 0024)
 })
 
 // --------------------------------------------------------------------------- retrospective
@@ -442,6 +521,20 @@ export const Tracker = z.looseObject({
   ledger_seasons: z.array(
     z.looseObject({ model_id: z.string(), season: num, bets: num, live_bets: num, units: num, no_edge_units: num }),
   ).optional(),
+  strong_calls: z
+    .looseObject({
+      gap: num,
+      first_lock: nstr.default(null),
+      record: z.array(z.looseObject({ model_id: z.string(), n: num, decided: num, right: num, log_loss: nnum, market_log_loss: nnum, moved_toward: num, with_close: num })),
+      calls: z.array(StrongCall).default([]),
+    })
+    .nullable()
+    .default(null),
+  // student_total at live locks (ADR 0024): context, never in the headline scorecard
+  totals: z
+    .looseObject({ first_lock: nstr.default(null), weeks: num, n: num, mae: nnum.default(null), market_mae: nnum.default(null), side_right: num, side_n: num })
+    .nullable()
+    .default(null),
 })
 
 // --------------------------------------------------------------------------------- hypotheses

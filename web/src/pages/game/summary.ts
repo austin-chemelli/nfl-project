@@ -9,7 +9,7 @@
  * way the swing plays went, and the biggest surprise against a team's season.
  */
 import type { Efficiency, Game, Meta, RetroGame, TeamRetro } from '../../data/contract'
-import { pct } from '../../lib/format'
+import { pct, spreadLabel } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf } from '../../lib/meta'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { injuryRank, sortInjuries } from './helpers'
@@ -80,13 +80,29 @@ function pregameTiles(g: Game, meta: Meta): TileSpec[] {
   const tiles: TileSpec[] = [pickTile(g), marketTile(g, meta.generated_at), factorTile(g, meta)]
   const absence = absenceTile(g)
   tiles.push(absence ?? edgeTile(g, meta) ?? { id: 'absence', label: 'Key absence', value: 'None listed', sub: g.injuries.length ? 'no one out or doubtful' : 'no official report yet', tab: 'news' })
+  const score = scoreTile(g)
+  if (score) tiles.push(score)
   return tiles
+}
+
+/** The locked total split by the headline spread (ADR 0024): context beside the pick, not a pick. */
+export function scoreTile(g: Game): TileSpec | null {
+  const e = g.expected_score
+  if (e == null) return null
+  const mk = e.market_total == null ? 'no market total' : `market ${e.market_total.toFixed(1)}`
+  const sub = `total ${e.total.toFixed(1)}, ${mk}`
+  if (e.home == null || e.away == null) return { id: 'score', label: 'Expected score', value: `Total ${Math.round(e.total)}`, sub, tab: 'approaches' }
+  const [hi, lo] = e.home >= e.away ? [g.home, g.away] : [g.away, g.home]
+  const [a, b] = [Math.round(Math.max(e.home, e.away)), Math.round(Math.min(e.home, e.away))]
+  return { id: 'score', label: 'Expected score', value: `${hi} ${a}–${b} ${lo}`, sub, tab: 'approaches', team: hi }
 }
 
 function pickTile(g: Game): TileSpec {
   const p = g.models[HEADLINE]?.p_home
   if (p == null) return { id: 'pick', label: 'The pick', value: '–', sub: 'not scored yet', tab: 'approaches' }
-  return { id: 'pick', label: 'The pick', value: `${fav(p, g.home, g.away)} ${favPct(p)}`, sub: `the ${SHORT[HEADLINE]}'s line`, tab: 'approaches', modelId: HEADLINE, team: fav(p, g.home, g.away) }
+  const sp = g.models[HEADLINE]?.spread_home
+  const spread = sp == null ? '' : `, ${spreadLabel(sp, g.home, g.away)}`
+  return { id: 'pick', label: 'The pick', value: `${fav(p, g.home, g.away)} ${favPct(p)}`, sub: `the ${SHORT[HEADLINE]}'s line${spread}`, tab: 'approaches', modelId: HEADLINE, team: fav(p, g.home, g.away) }
 }
 
 /** The line's date when it is more than 3 days older than the site data (lines for later weeks lag). */

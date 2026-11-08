@@ -24,11 +24,12 @@ About 24 credits a week, ~105 a month. Closing snapshots only feed closing-line 
 ## What a lock does
 
 `nfl lock --slot thu|sat` (see `src/nfl/lock.py`):
-1. Ingests current-season nflverse data (only changed files are written), takes an odds snapshot, rebuilds curated tables and every feature family stamped with the current time.
+1. Ingests current-season nflverse data (only changed files are written), takes an odds snapshot, rebuilds curated tables, fetches the kickoff forecast for open-air games (Open-Meteo; skipped with a warning if it fails) and rebuilds every feature family stamped with the current time.
 2. Scores the slot's games that haven't kicked off with the frozen fits trained through last season: every approach in both flavors, the global fit, the ensemble, and the market, Elo and naive reference lines.
 3. Appends the prediction rows (never edits) and opens paper bets at the lock's odds.
-4. Writes `public/predictions/<season>/week_<ww>_<slot>_<lock time>.json` and its `.sha256`.
+4. Writes `public/predictions/<season>/week_<ww>_<slot>_<lock time>.json` and its `.sha256`. Each game carries the Student's total (`student_total`, ADR 0024); if the total fails, the warning says `total skipped` and the lock goes on without it.
 5. With `--commit`, commits only those two files (refuses if anything else is staged). With `--push`, pushes only if every unpushed commit is a lock commit. Lock-only pushes are pre-approved; anything else waits for Austin.
+6. After the record: strong calls go to `marts/strong_calls.parquet` and the totals to `marts/totals.parquet` (both append-only; a failure warns and never undoes the lock), then the site rebuilds.
 
 Takes about 30 seconds.
 

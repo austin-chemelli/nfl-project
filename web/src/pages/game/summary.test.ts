@@ -16,9 +16,18 @@ describe('summaryTiles', () => {
     const t = summaryTiles(game, meta, null)
     expect(t.map((x) => x.id)).toEqual(['pick', 'market', 'factor', 'edge'])
     expect(t.map((x) => x.tab)).toEqual(['approaches', 'approaches', 'preview', 'preview'])
-    expect(t[0]).toMatchObject({ value: expect.stringMatching(/^GB \d+%$/), sub: "the Student's line", modelId: 'student' })
+    expect(t[0]).toMatchObject({ value: expect.stringMatching(/^GB \d+%$/), sub: expect.stringMatching(/^the Student's line, (GB|CAR) −[\d.]+$|^the Student's line, pick'em$/), modelId: 'student' })
     // every approach leans further toward GB than the market (divergence +5 to +8 pts)
     expect(t[1].value).toMatch(/pts more on GB|In line/)
+  })
+
+  it('pregame: a locked total adds the expected score, favorite first', () => {
+    const g = { ...game, expected_score: { total: 44.6, sd: 13.4, market_total: 41.5, lock_ts: null, home: 24.4, away: 20.2 } }
+    const t = summaryTiles(g, meta, null)
+    expect(t.map((x) => x.id)).toEqual(['pick', 'market', 'factor', 'edge', 'score'])
+    expect(t[4]).toMatchObject({ label: 'Expected score', value: 'GB 24–20 CAR', sub: 'total 44.6, market 41.5', team: 'GB' })
+    const noSpread = { ...g, expected_score: { ...g.expected_score, home: null, away: null, market_total: null } }
+    expect(summaryTiles(noSpread, meta, null)[4]).toMatchObject({ value: 'Total 45', sub: 'total 44.6, no market total' })
   })
 
   it('pregame: the factor tile names the Student and says pts of win chance', () => {

@@ -41,7 +41,7 @@ flowchart LR
     JOBS --> MON
 ```
 
-Five kinds of scheduled job, all the same image with different commands:
+Six kinds of scheduled job, all the same image with different commands:
 
 | Job | Schedule (ET) | Command | Notes |
 |---|---|---|---|
@@ -49,6 +49,7 @@ Five kinds of scheduled job, all the same image with different commands:
 | lock thu | Thu 09:00 | `nfl lock --slot thu --commit --push` | commits the public artifact with the deploy key |
 | lock sat | Sat 12:00 | `nfl lock --slot sat --commit --push` | |
 | odds snapshot | Thu 20:05; Sun 09:20, 12:50, 16:00, 20:10; Mon 20:05 | `nfl odds snapshot` + publish site | closing lines; ~8 schedules on one job |
+| daily | Wed, Fri, Sat 20:05 | `nfl daily` + publish site | ADR 0024: this season's ingest, an odds snapshot, curate, the kickoff forecast, tendencies, features, preview scores, site; the forecast and previews never stop the pass; no deploy key |
 | retro | daily 07:00 | `nfl retro daily`, `nfl grade`, `nfl site` + publish site | ADR 0016: ingest the current season's pbp and schedules, curate that season's games and plays only, build missing or stale game retros and the week recaps, write `site/retro/` and `site/recap_*`; then grade and rebuild the site JSON so the tracker includes last night's games (since 2026-11-07; before that only Tuesday's refresh graded). About 10 minutes; 30-minute timeout |
 
 The desktop runs, on a Windows scheduled task: Wed and Sat early morning `nfl narrative run <season> <week> --upload` (research for every game, uploaded to the bucket), later `nfl preview run`.

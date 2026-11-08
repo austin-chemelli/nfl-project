@@ -10,7 +10,8 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useChartTip } from './ChartTip'
 import { useWidth } from './useWidth'
 
-export type DivRow = { key: string; label: ReactNode; value: number | null; overlay?: number | null; color?: string; title?: string; tip?: ReactNode }
+/** `text` replaces the formatted value as the row's label, for rows on their own scale. */
+export type DivRow = { key: string; label: ReactNode; value: number | null; overlay?: number | null; color?: string; title?: string; tip?: ReactNode; text?: string }
 
 export function DivergingBars({ rows, leftLabel, rightLabel, format, rowHeight = 26, labelWidth = 150, domain, leftColor = 'var(--div-neg)', rightColor = 'var(--div-pos)', overlayName, ariaLabel }: {
   rows: DivRow[]
@@ -77,7 +78,7 @@ export function DivergingBars({ rows, leftLabel, rightLabel, format, rowHeight =
                   <rect data-testid="overlay" x={Math.min(x(0), x(o))} y={y + barY - 4} width={Math.max(1, Math.abs(x(o) - x(0)))} height={barH + 8} rx={3} fill="none" stroke="var(--text-primary)" strokeWidth={1.5} {...grow(o)} />
                 )}
                 {r.value == null && o == null && <text x={x(0) + 6} y={y + rowHeight / 2 + 4} className="fill-[var(--text-muted)]">no data</text>}
-                {r.value != null && !together && label(v, y, format(v))}
+                {r.value != null && !together && label(v, y, r.text ?? format(v))}
                 {o != null && !together && label(o, y, quiet(overlayText(o)))}
                 {together && label(Math.abs(o) > Math.abs(v) ? o : v, y, <>{format(v)}{quiet(` · ${overlayText(o)}`)}</>)}
               </g>

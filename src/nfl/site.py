@@ -39,6 +39,7 @@ from pathlib import Path
 
 import polars as pl
 
+from nfl import market_books
 from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
 from nfl.features.groups import FEATURE_GROUP, GROUPS, HEADINGS, REGISTRY_VERSION
@@ -417,6 +418,349 @@ def _market_by_game(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.Data
     )
 
 
+# ------------------------------------------------------------------------------- market movement
+
+
+def _season_lines(paths: Paths, season: int, now: datetime) -> pl.DataFrame:
+    """Every book's quotes for the season, only snapshots taken before `now`."""
+    from nfl.odds import read_lines
+
+    lines = read_lines(paths, (season, season))
+    if lines.is_empty():
+        return lines
+    return lines.filter(pl.col("snapshot_ts") <= pl.lit(now, dtype=pl.Datetime("us")))
+
+
+def _line_paths(lines: pl.DataFrame) -> dict[str, list[dict]]:
+    """Per game, the pre-kickoff consensus path (ADR 0024)."""
+    from nfl import market_history
+
+    if lines.is_empty():
+        return {}
+    out: dict[str, list[dict]] = {}
+    for r in market_history.paths(lines).iter_rows(named=True):
+        out.setdefault(r["game_id"], []).append(r)
+    return out
+
+
+def _lock_times(paths: Paths, season: int) -> dict[str, datetime]:
+    """The live lock of each game's headline line, if it has one."""
+    pred = _read(paths, "predictions")
+    if pred.is_empty():
+        return {}
+    live = pred.filter(
+        (pl.col("season") == season) & ~pl.col("is_backfill") & (pl.col("model_id") == HEADLINE_ID)
+    )
+    return {r["game_id"]: r["lock_ts"] for r in live.group_by("game_id").agg(pl.col("lock_ts").max()).iter_rows(named=True)}  # fmt: skip
+
+
+def _window_sources(paths: Paths, games: pl.DataFrame, season: int, now: datetime) -> dict:
+    """QB1 changes and injury-status changes for the season, as seen up to `now` (ADR 0024, M20.3)."""
+    from nfl import market_events
+
+    try:
+        depth = pl.concat(
+            [
+                pl.read_parquet(f)
+                for f in (paths.curated_table("depth_charts") / f"season={season}").glob(
+                    "*.parquet"
+                )
+            ],
+            how="diagonal_relaxed",
+        )
+    except ValueError:  # no files
+        depth = pl.DataFrame()
+    qbs = [q for q in market_events.qb_changes(depth) if q["ts"] <= now]
+    snaps = [(ts, df) for ts, df in market_events.load_injury_snapshots(paths, season) if ts <= now]
+    done = games.filter(
+        pl.col("kickoff_utc") + market_events.GAME_LENGTH <= pl.lit(now, dtype=pl.Datetime("us"))
+    )
+    return {
+        "qbs": qbs,
+        "injuries": market_events.injury_transitions(snaps),
+        "results": market_events.results(done),
+    }
+
+
+def _game_events(g, points, window, starters, lock_ts) -> list[dict]:
+    from nfl import market_events
+
+    ev = market_events.game_events(
+        g, points, window["qbs"], window["injuries"],
+        starters.get((g["game_id"], g["home_team"]), set()) | starters.get((g["game_id"], g["away_team"]), set()),
+        lock_ts, window.get("results", []),
+    )  # fmt: skip
+    return [{**e, "ts": _ts(e["ts"])} for e in ev]
+
+
+def _strong_calls(paths: Paths, season: int) -> tuple[dict[str, list[dict]], dict]:
+    """Per game, its strong calls with outcomes; and the tracker block: record per approach, newest first list."""
+    import json
+
+    from nfl import strong_calls
+
+    calls = strong_calls.grade_all(paths)  # the append-only record, graded now: never a stale file
+    first = None
+    if not calls.is_empty():
+        first = calls["lock_ts"].min()
+        calls = strong_calls.last_lock(calls.filter(pl.col("season") == season))
+    by_game: dict[str, list[dict]] = {}
+    items = []
+    for r in (
+        calls.sort("lock_ts", descending=True).iter_rows(named=True) if not calls.is_empty() else []
+    ):
+        x = {
+            "game_id": r["game_id"], "week": r["week"], "model_id": r["model_id"], "lock_ts": _ts(r["lock_ts"]),
+            "side": r["side"], "team": r["team"], "p_home": _r(r["p_home"]), "market_p": _r(r["market_p"]),
+            "spread_home": _r(r["spread_home"], 1), "market_spread": _r(r["market_spread"], 1),
+            "top_groups": json.loads(r["top_groups"] or "[]"),
+            "assumption": json.loads(r["assumption"]) if r["assumption"] else None,
+            "what_if_p_home": _r(r["what_if_p_home"]), "sentence": r["sentence"],
+            "result": r.get("result"), "log_loss": _r(r.get("log_loss")),
+            "market_log_loss": _r(r.get("market_log_loss")), "closing_toward": r.get("closing_toward"),
+        }  # fmt: skip
+        by_game.setdefault(r["game_id"], []).append(x)
+        items.append(x)
+    record = {"gap": strong_calls.STRONG_GAP, "first_lock": _ts(first), "record": strong_calls.record(calls),
+              "calls": items}  # fmt: skip
+    return by_game, record
+
+
+def _today(paths: Paths, now: datetime) -> dict[str, dict]:
+    """Per upcoming game, the latest preview score of each approach (ADR 0024): not a lock, never graded."""
+    from nfl import previews
+
+    p = previews.latest(paths)
+    out: dict[str, dict] = {}
+    for r in p.filter(pl.col("scored_at") <= pl.lit(now, dtype=pl.Datetime("us"))).iter_rows(
+        named=True
+    ):
+        d = out.setdefault(r["game_id"], {"scored_at": _ts(r["scored_at"]), "models": {}})
+        d["models"][r["model_id"]] = {
+            "p_home": _r(r["p_home"]),
+            "spread_home": _r(r["spread_home"], 1),
+        }
+        d["scored_at"] = max(d["scored_at"], _ts(r["scored_at"]))
+    return out
+
+
+def _safe(fn, default, *args):
+    """fn(*args), or `default` with a printed warning: for page data that must never stop a build."""
+    try:
+        return fn(*args)
+    except Exception as e:  # noqa: BLE001
+        print(f"site: {getattr(fn, '__name__', 'step')} failed, continuing: {e!r}")
+        return default
+
+
+def _swings(paths: Paths, games: pl.DataFrame, season: int, now: datetime, feats: pl.DataFrame,
+            injuries: list[dict]) -> dict[str, list[dict]]:  # fmt: skip
+    """Per upcoming game, what could swing it (ADR 0024, M20.6): the quarterback what-if, rescored with
+    the locked artifacts, plus listed factors. A failure costs the what-ifs, never the site build."""
+    try:
+        return _swings_unsafe(paths, games, season, now, feats, injuries)
+    except Exception as e:  # noqa: BLE001
+        print(f"site: swings failed, continuing: {e!r}")
+        return {}
+
+
+def _swings_unsafe(paths, games, season, now, feats, injuries) -> dict[str, list[dict]]:
+    from nfl import coaches, lock, swings
+    from nfl.features.strength import load_plays_all, team_games
+    from nfl.models.elo import TEAM_ALIASES
+    from nfl.previews import HORIZON
+
+    k = pl.col("kickoff_utc")
+    up = games.filter(
+        (k > pl.lit(now, dtype=pl.Datetime("us")))
+        & (k <= pl.lit(now + HORIZON, dtype=pl.Datetime("us")))
+    )
+    if up.is_empty() or feats.is_empty():
+        return {}
+    try:
+        models, _ = lock.load_models(paths, season - 1)
+    except RuntimeError:
+        models = []
+    allg = store.games_frame(paths)
+    plays = load_plays_all(paths, int(allg["season"].min()))
+    tg = (
+        team_games(allg)
+        .with_columns(pl.col("team").replace(TEAM_ALIASES).alias("ckey"))
+        .select("game_id", "team", "ckey", "season", "kickoff_utc")
+    )
+    d = paths.curated_table("depth_charts") / f"season={season}"
+    files = list(d.glob("*.parquet")) if d.exists() else []
+    depth = (
+        pl.concat([pl.read_parquet(f) for f in files], how="diagonal_relaxed")
+        if files
+        else pl.DataFrame()
+    )
+    chart = swings.depth_qbs(depth, now)
+    starts = swings.recent_starters(plays, allg.filter(pl.col("season") == season), now)
+    full = swings.full_names(depth)
+    for st in starts.values():  # charted full names over play-by-play's "L.Jackson"
+        st["names"] = {q: full.get(q, n) for q, n in st["names"].items()}
+    asof = store.as_of(feats.filter(pl.col("game_id").is_in(up["game_id"].to_list())), now)
+    spells = coaches.load_spells()
+
+    # every candidate quarterback, computed in as few passes as there are candidates per team
+    cand = {}
+    for g in up.iter_rows(named=True):
+        for team in (g["home_team"], g["away_team"]):
+            c = swings.candidates(
+                chart.get(TEAM_ALIASES.get(team, team), []),
+                starts.get(TEAM_ALIASES.get(team, team), {}),
+            )
+            cand[(g["game_id"], team)] = c
+    values: dict[tuple[str, str], dict[str, dict]] = {}
+    for i in range(max((len(c) for c in cand.values()), default=0)):
+        rows = [(gid, team, list(c)[i]) for (gid, team), c in cand.items() if len(c) > i]
+        named = pl.DataFrame(
+            rows, schema={"game_id": pl.Utf8, "team": pl.Utf8, "qb1": pl.Utf8}, orient="row"
+        )
+        for (gid, team), v in swings.qb_values(tg, plays, named).items():
+            q = named.filter((pl.col("game_id") == gid) & (pl.col("team") == team))["qb1"][0]
+            values.setdefault((gid, team), {})[q] = v
+
+    out: dict[str, list[dict]] = {}
+    for g in up.iter_rows(named=True):
+        gid, items = g["game_id"], []
+        rows = asof.filter(pl.col("game_id") == gid)
+        report = {
+            i["gsis_id"]: i["status"]
+            for i in injuries
+            if i["week"] == g["week"] and i["team"] in (g["home_team"], g["away_team"])
+        }
+        for side, team in (("home", g["home_team"]), ("away", g["away_team"])):
+            key = TEAM_ALIASES.get(team, team)
+            c, v = cand.get((gid, team), {}), values.get((gid, team), {})
+            stored = rows.filter(
+                (pl.col("side") == side) & (pl.col("feature") == "strength.qb_epa")
+            )["value"]
+            assumed = swings.assumed_qb(stored[0] if stored.len() else None, v)
+            alt = swings.alternative(chart.get(key, []), starts.get(key, {}), report, assumed)
+            if alt is None or not models or alt[0] not in v:
+                continue
+            q, why = alt
+            qb1 = (chart.get(key) or [(None, None)])[0][0]
+            mod = swings.apply(rows, side, {**v[q], "availability.qb1_out": 0.0 if q == qb1 else 1.0,
+                                            "availability.qb_change": 0.0 if q == starts.get(key, {}).get("last") else 1.0})  # fmt: skip
+            base = swings.rescore(models, rows, gid, now)
+            what = swings.rescore(models, mod, gid, now)
+            items.append({
+                "kind": "qb", "team": team, "why": why,
+                "assumed": {"qb": assumed, "name": c.get(assumed, assumed), "status": report.get(assumed),
+                            "p_home": {m: _r(p) for m, p in base.items()}},
+                "alternative": {"qb": q, "name": c.get(q, q), "status": report.get(q),
+                                "p_home": {m: _r(p) for m, p in what.items()}},
+            })  # fmt: skip
+        # listed factors: key starters in doubt, staff changes this week, a short week
+        for i in injuries:
+            # the positions the availability family weights at 2 (the quarterback has the what-if above)
+            if i["week"] == g["week"] and i["team"] in (g["home_team"], g["away_team"]) \
+                    and i["status"] in swings.DOUBT and i["pos"] in ("T", "DE", "OLB"):  # fmt: skip
+                items.append(
+                    {
+                        "kind": "injury",
+                        "team": i["team"],
+                        "text": f"{i['player']} ({i['pos']}) {i['status'].lower()}",
+                    }
+                )
+        for r in spells.filter((pl.col("season") == season) & (pl.col("start_week") == g["week"])
+                               & pl.col("team").replace(TEAM_ALIASES).is_in([TEAM_ALIASES.get(t, t) for t in (g["home_team"], g["away_team"])])).iter_rows(named=True):  # fmt: skip
+            if r["role"] in ("HC", "OFF_PC", "DEF_PC") and r["evidence"] in coaches.CONFIRMED:
+                what = {
+                    "HC": "head coach",
+                    "OFF_PC": "offensive play-caller",
+                    "DEF_PC": "defensive play-caller",
+                }[r["role"]]
+                items.append(
+                    {
+                        "kind": "coaching",
+                        "team": r["team"],
+                        "text": f"{r['person']}'s first game as {what}",
+                    }
+                )
+        for side, team in (("home", g["home_team"]), ("away", g["away_team"])):
+            rd = rows.filter(
+                (pl.col("side") == side) & (pl.col("feature") == "environment.rest_days")
+            )["value"]
+            if rd.len() and rd[0] is not None and rd[0] < swings.SHORT_REST:
+                items.append(
+                    {
+                        "kind": "rest",
+                        "team": team,
+                        "text": f"{team} on a short week ({int(rd[0])} days' rest)",
+                    }
+                )
+        wx = {
+            f: v
+            for f, v in rows.filter(pl.col("feature").str.starts_with("weather."))
+            .select("feature", "value")
+            .iter_rows()
+        }
+        text = swings.weather_text(
+            wx.get("weather.temp_f"), wx.get("weather.wind_mph"), wx.get("weather.precip_pct")
+        )
+        if text:
+            items.append({"kind": "weather", "team": None, "text": text})
+        if items:
+            out[gid] = items
+    return out
+
+
+def _totals(paths: Paths, games: pl.DataFrame) -> tuple[dict[str, dict], dict | None]:
+    """(game_id -> last locked total, the tracker block). A failure costs the totals, not the site."""
+    from nfl.approaches import totals
+
+    try:
+        rows = totals.load(paths)
+        last = rows.sort("lock_ts").group_by("game_id", maintain_order=True).last()
+        by_game = {r["game_id"]: r for r in last.iter_rows(named=True)}
+        return by_game, totals.summary(totals.grade(paths, games), rows)
+    except Exception as e:  # noqa: BLE001
+        print(f"site: totals failed, continuing: {e!r}")
+        return {}, None
+
+
+def _expected_score(t: dict | None, detail: dict) -> dict | None:
+    """The locked total split by the headline line's spread at that lock (ADR 0024): context."""
+    if t is None or t["total"] is None:
+        return None
+    sp = (detail.get("models") or {}).get(HEADLINE_ID, {}).get("spread_home")
+    out = {"total": _r(t["total"], 1), "sd": _r(t["sd_total"], 1), "market_total": _r(t["market_total"], 1),
+           "lock_ts": _ts(t["lock_ts"]), "home": None, "away": None}  # fmt: skip
+    if sp is not None:
+        out["home"], out["away"] = _r((t["total"] + sp) / 2, 1), _r((t["total"] - sp) / 2, 1)
+    return out
+
+
+def _line_point(p: dict) -> dict:
+    return {"ts": _ts(p["snapshot_ts"]), "spread_home": _r(p["spread_home"], 2),
+            "total": _r(p["total"], 2), "p_home": _r(p["p_home"]), "n_books": p["n_books"]}  # fmt: skip
+
+
+def _books_out(b: dict | None) -> dict | None:
+    """Each book's line at the latest pre-kickoff snapshot and where they disagree (M20.13)."""
+    if b is None:
+        return None
+    rows = [{k: (_r(v, 4) if k == "p_home" else v) for k, v in r.items()} for r in b["books"]]
+    return {**b, "snapshot_ts": _ts(b["snapshot_ts"]), "books": rows}
+
+
+def _line_move(points: list[dict], lock_ts: datetime | None) -> dict | None:
+    from nfl import market_history
+
+    s = market_history.summary(points, lock_ts)
+    if s is None:
+        return None
+    return {
+        "first_seen": _ts(s["first_seen"]), "latest": _ts(s["latest"]), "n_points": s["n_points"],
+        "lock_ts": _ts(lock_ts) if lock_ts else None,
+        "since_first": s["since_first"], "since_lock": s["since_lock"], "last_day": s["last_day"],
+    }  # fmt: skip
+
+
 # ------------------------------------------------------------------------------------------ build
 
 
@@ -472,10 +816,20 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
 
     allrows = display_rows(paths, games, now)
     market = _market_by_game(paths, games, now)
+    # the market pieces (ADR 0024) are additive page data: a failure costs that piece, never the build
+    season_lines = _safe(_season_lines, pl.DataFrame(), paths, season, now)
+    lines = _safe(_line_paths, {}, season_lines)
+    books = _safe(market_books.by_game, {}, season_lines)
+    locks = _safe(_lock_times, {}, paths, season)
+    window = _safe(_window_sources, {}, paths, games, season, now)
 
     feats = store.read_features(paths, seasons=(season, season))
     tend = _read(paths, "tendencies")
     injuries = _injuries(paths, season)
+    swing = _swings(paths, games, season, now, feats, injuries)
+    calls_by_game, calls_record = _safe(_strong_calls, ({}, None), paths, season)
+    today = _safe(_today, {}, paths, now)
+    totals_by_game, totals_record = _totals(paths, games)
     from nfl.llm.narrative import load_records
 
     narr = {r.game_id: r for r in load_records(paths, (season, season))}
@@ -498,8 +852,27 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
         for g in wk.iter_rows(named=True):
             row = _game_row(g, allrows, market, reg)
             row["card"] = _card(g, edges, injuries, now, **card_ctx)
+            points = lines.get(g["game_id"], [])
+            row["line_move"] = _safe(_line_move, None, points, locks.get(g["game_id"]))
             slate_games.append(row)
             detail = row | _game_detail(g, allrows, feats, tend, injuries, narr, now, edges)
+            detail["market_history"] = _safe(lambda pts: [_line_point(p) for p in pts], [], points)
+            detail["books"] = _safe(_books_out, None, books.get(g["game_id"]))
+            detail["swings"] = swing.get(g["game_id"], [])
+            detail["strong_calls"] = calls_by_game.get(g["game_id"], [])
+            detail["today"] = today.get(g["game_id"])
+            detail["expected_score"] = _safe(
+                _expected_score, None, totals_by_game.get(g["game_id"]), detail
+            )
+            detail["market_events"] = _safe(
+                _game_events,
+                [],
+                g,
+                points,
+                window,
+                card_ctx["starters"],
+                locks.get(g["game_id"]),
+            )
             _write(site / "game" / f"{g['game_id']}.json", detail)
         _write(
             site / f"slate_{season}_{int(week):02d}.json",
@@ -531,7 +904,10 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             "last_lock": _last_lock(paths),
         },
     )
-    _write(site / "tracker.json", tracker(paths, season, reg))
+    _write(
+        site / "tracker.json",
+        tracker(paths, season, reg) | {"strong_calls": calls_record, "totals": totals_record},
+    )
     _write(site / "audit.json", audit(paths))
     try:  # additive page data (ADR 0019): a failure must never stop the site build
         teams = teams_file(feats, games, now, current_week)
@@ -681,6 +1057,7 @@ CONTRASTS = [
 CONTRAST_TOP = 5  # both sides must rank this high among the league's teams
 CONTRAST_MIN_TEAMS = 24
 WEATHER_FEATURE = "narrative.weather_concern"
+HEADLINE_ID = "student"  # the headline line (D5); the web's HEADLINE in lib/models.ts
 USUAL_QB_MIN_STARTS = 3  # fewer, or a tie, and "usually" would name whoever filled in
 
 

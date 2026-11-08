@@ -1,4 +1,5 @@
 /** One matchup on the slate (ADR 0017), game first: teams, kickoff or score, the line, why this game, a stark tendencies contrast, then the approaches. */
+import { cardMove } from '../game/line'
 import { useId } from 'react'
 import { Link } from 'react-router'
 import { ProbStrip } from '../../charts'
@@ -50,6 +51,7 @@ export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Me
   const why = whyLine(g, meta)
   const contrast = contrastLine(g)
   const stakes = g.result == null ? stakesLine(g, league) : null
+  const move = pregame ? cardMove(g.line_move, g.home, g.away) : null
   return (
     <Link
       to={`/game/${g.game_id}`}
@@ -76,7 +78,13 @@ export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Me
         {g.market?.total != null && <span className="text-ink-3"> · total {g.market.total}</span>}
         {fav && <span className="text-ink-3"> · market {fav}</span>}
       </div>
-      {pk && <div className="text-[14px] font-medium text-ink">{SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}</div>}
+      {move && <div className="text-[13px] text-ink-2">{move}</div>}
+      {pk && (
+        <div className="text-[14px] font-medium text-ink">
+          {SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}
+          {g.models[HEADLINE]?.spread_home != null && <span className="font-normal text-ink-2"> ({spreadLabel(g.models[HEADLINE].spread_home, g.home, g.away)})</span>}
+        </div>
+      )}
       {why && <div id={`${id}-why`} className="text-[14px] text-ink">{why}</div>}
       {contrast && <div className="text-[13px] text-ink-2">{contrast}</div>}
       {stakes && <div className="tabular text-[13px] text-ink-2">{stakes}</div>}

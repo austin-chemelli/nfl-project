@@ -2,9 +2,9 @@
 
 Where the project is right now. Chats keep it current as they work ([state-maintenance.md](state-maintenance.md)); `scripts/state_check.py` checks the mechanical parts at every session start, before every PR and in CI. How we got here: [journal.md](journal.md). What's next: [tasks.md](tasks.md). Why: [adr/](adr/). How we work: [../CLAUDE.md](../CLAUDE.md).
 
-## Bottom line (as of 2026-11-06)
+## Bottom line (as of 2026-11-07)
 
-The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). The League page is finished and live (M14, #20, #23, #24): playoff odds on two variants, standings, leverage, team charts, similar seasons and slate stakes lines. The retro's win-probability chart, motion, drives and pinned result are live too (M15, #19, #21, #22). Coaches and Build are hidden from the live site until they're better (M16): nothing removed, both still in `npm run dev`. Team pages are live (M18, #27): staff with sources, coach profiles, and tendencies against the caller's confirmed past and last season. Next: the narrative's previews and evals (M6.3, M6.4).
+The pipeline, the public site and the desktop narrative passes run on schedules; the first public lock landed Thursday 2026-11-05 at 09:07 ET (`c8d8103`), on model wave 2 (ADR 0018). Wave 2 is football features only, line moves capped at 4.5 points, special teams as a group, the Student as the headline line and the ensemble retired. UI round 2 finished 2026-11-05 (#17), and the site walk fixes followed (#18). The League page is finished and live (M14, #20, #23, #24): playoff odds on two variants, standings, leverage, team charts, similar seasons and slate stakes lines. The retro's win-probability chart, motion, drives and pinned result are live too (M15, #19, #21, #22). Coaches and Build are hidden from the live site until they're better (M16): nothing removed, both still in `npm run dev`. Team pages are live (M18, #27): staff with sources, coach profiles, and tendencies against the caller's confirmed past and last season. M20, the predictions against the market (ADR 0024: spreads and totals, line movement, swing factors with what-ifs, a strong-calls ledger), is built on `market-swings` and in review. Then the narrative's previews and evals (M6.3, M6.4).
 
 ## What runs where
 
@@ -17,7 +17,7 @@ flowchart LR
     end
     subgraph GCP[GCP nfl-project-prod, us-central1]
         SCHED[Cloud Scheduler]
-        JOBS[Cloud Run Jobs<br/>refresh · lock-thu · lock-sat · odds<br/>retro · site · narrative-check]
+        JOBS[Cloud Run Jobs<br/>refresh · lock-thu · lock-sat · odds<br/>daily · retro · site · narrative-check]
         DATA[(nfl-project-prod-data<br/>private: raw · curated · marts)]
         PUB[(nfl-project-prod-site<br/>public: site/*.json · predictions/)]
         SM[Secret Manager<br/>Odds key · deploy key]
@@ -60,6 +60,7 @@ The cloud rows are checked against `infra/jobs.tf` by `scripts/state_check.py`; 
 | Thu 08:30 | `nfl-narrative-check`: fails (emails) if an upcoming game has no `local` record since the last pass | cloud | `30 8 * * 4` | nothing | executions list |
 | Thu 09:00 | `nfl-lock-thu`: lock the Thursday games, commit + push the artifact | cloud | `0 9 * * 4` | predictions, bets, `public/predictions/` on `main`, site | `git log origin/main -1`; executions list |
 | Thu 20:05 | `nfl-odds-snapshot`: closing lines for CLV, publish | cloud | `5 20 * * 4` | `curated/lines`, site | executions list |
+| Wed, Fri, Sat 20:05 | `nfl-daily`: this season's ingest, an odds snapshot, curate, tendencies, features, site, publish (ADR 0024) | cloud | `5 20 * * 3`, `5 20 * * 5`, `5 20 * * 6` | lines, features, site | executions list |
 | Sat 07:00 | desktop narrative pass, Sunday and Monday games (after Friday's designations) | desktop | `sat 07:00` | `marts/narrative/` | desktop log |
 | Sat 11:30 | `nfl-narrative-check` | cloud | `30 11 * * 6` | nothing | executions list |
 | Sat 12:00 | `nfl-lock-sat`: lock every Saturday to Monday game | cloud | `0 12 * * 6` | as Thursday | as Thursday |
@@ -69,7 +70,7 @@ The cloud rows are checked against `infra/jobs.tf` by `scripts/state_check.py`; 
 | On demand | `nfl-site`: rebuild and publish the site JSON (started by the desktop after an upload) | cloud | none | site JSON | executions list |
 | Push to `main` | `ci` (ruff, pytest, web typecheck/lint/test/build), then `image` when job code changed and `site` when `web/` changed; `infra` plans on PRs and applies on `main` | GitHub | none | Artifact Registry, Firebase, GCP | [Actions](https://github.com/austin-chemelli/nfl-project/actions) |
 
-About 24 Odds API credits a week. A failed cloud execution and a failed desktop pass each email Austin; nothing retries by itself. The lock job refuses to run if `main` has job-code commits newer than its image. An image builds in 3 to 4 minutes, so job code can merge anytime except the last 10 minutes before Thu 09:00 and Sat 12:00; a refused lock emails and can be rerun by hand (`docs/runbook.md`, Merging job code).
+About 33 Odds API credits a week (daily snapshots from M20, ADR 0024). A failed cloud execution and a failed desktop pass each email Austin; nothing retries by itself. The lock job refuses to run if `main` has job-code commits newer than its image. An image builds in 3 to 4 minutes, so job code can merge anytime except the last 10 minutes before Thu 09:00 and Sat 12:00; a refused lock emails and can be rerun by hand (`docs/runbook.md`, Merging job code).
 
 ### Links
 
@@ -89,6 +90,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | league | `league-teams`, `league-playoffs`, `league-context` | removed | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | merged 2026-11-06, all three phases live and checked in production. The first real snapshot lands with Saturday's lock: check the job log for `SNAPSHOT NOT SAVED` | #20, #23, #24 |
 | pop | `retro-wp`, `retro-drives`, `retro-story` | removed | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; pinned result | merged 2026-11-05, all three phases live; `nfl-retro` run by hand on d969ab3, retros on schema 6; worktree and branches removed. M15.10 route crossfades optional, not built | #19, #21, #22 |
 | ui | `ui-next` | `~/dev/nfl-project-ui` | Site walk 2026-11-07-2 fixes (market at lock vs before kickoff, tracker graded daily, misread, team ranks as model inputs, luck per team, week tiles, nav History) and an approach-free Preview with live-only readings; earlier: Coaches and Build hidden (#25), M13 (#18), round 2 | merged 2026-11-07, deploying; `walk-fixes` deleted, worktree on a fresh `ui-next` | #30 |
+| market | `market-swings` | `~/dev/nfl-project-market` | M20: line history, daily pass, previews, what-ifs, strong calls, weather, the total | built 2026-11-07, PR open; follow-ups from Austin's look; main merged in after #30; books disagree (M20.13) 2026-11-08 | #29 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
@@ -114,6 +116,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M16 Coaches and Build back on the site | Coaches picked up 2026-11-06 as M17 (ADR 0021): staff table, study and team data files merged (#26), 2026 verified; team page next (M18); both pages still hidden. Build: with the custom-approach work |
 | M18 Team page | done 2026-11-07 (#27, ADR 0022): `/team` in the nav, staff with sources, coach profiles, tendencies vs the caller's confirmed past |
 | M19 site name and custom domain | parked 2026-11-07: researched, waiting on Austin's calls (domain, display name, repo rename). Plan: `.notes/plans/rename-and-domain.md` |
+| M20 spreads and totals, market movement, swing factors, strong calls | built 2026-11-07 on `market-swings` (ADR 0024): movement, previews, what-ifs, strong calls, spread beside the pick, weather, the total; review and PR next |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -132,6 +135,10 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D15 | Coaches refinement (ADR 0021): where the per-team view lives | **decided 2026-11-06: a team page `/team/:code`, linked from game previews and wherever a team is named** | Austin | 2026-11-06 |
 | D16 | Staff verification depth | **decided 2026-11-06: 2016–2026 (where scheme data exists), full bar 2022+, light bar before; five research agents launched 2026-11-06** | Austin | 2026-11-06 |
 | D17 | Team page (ADR 0022): nav and slate cards | **decided 2026-11-06: in the top nav as Teams, with `/team` listing all 32; no links on slate cards, links on the game page** | Austin | 2026-11-06 |
+| D18 | Daily odds snapshots (ADR 0024): add Wed, Fri, Sat 20:05, about 33 credits a week? | **decided 2026-11-07: yes** | Austin | 2026-11-07 |
+| D19 | A totals line (ADR 0024): scored from its first lock in its own block, labelled context, or unscored? | **decided 2026-11-07: scored, as context and for fun; never the headline** | Austin | 2026-11-07 |
+| D20 | A daily preview score of upcoming games between locks, labelled and never graded? | **decided 2026-11-07: yes, with the label** | Austin | 2026-11-07 |
+| D21 | Explanations of disagreements: templates now, LLM later? | **decided 2026-11-07: no LLM in this flight** | Austin | 2026-11-07 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
@@ -172,13 +179,13 @@ Current docs, what each is for, and when it was last verified against the code o
 
 | Doc | Read it when | Verified |
 |---|---|---|
-| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-06 |
+| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-08 |
 | [adr/](adr/) | before re-opening a decision; ADR 0020 is the newest (0019 league page, 0020 retro win probability and motion) | 2026-11-05 |
-| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-07 |
-| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-07 |
+| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-08 |
+| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-08 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-07 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-07 |
-| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-07 |
+| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-08 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |

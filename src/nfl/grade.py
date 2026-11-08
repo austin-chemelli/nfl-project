@@ -258,6 +258,7 @@ def grade(paths: Paths, console: Console) -> None:
     summ = summary(g)
     summ.write_parquet(paths.marts / "summary.parquet")
     divergence(g).write_parquet(paths.marts / "divergence.parquet")
+    grade_strong_calls(paths)
 
     t = Table(title="season scorecard (REG+POST, graded games)")
     for c in ("season", "model", "games", "log loss", "brier", "spread MAE", "ATS%", "n ATS"):
@@ -308,3 +309,21 @@ def grade(paths: Paths, console: Console) -> None:
         console.print(
             f"[bold]grade:[/bold] slate for {season} week {week}: {slate.height} games -> site/"
         )
+
+
+def grade_strong_calls(paths: Paths) -> int:
+    """Derived each run (ADR 0024): results, log loss vs the market, and the line's move after the
+    lock. Context: a failure warns and never stops the grade."""
+    import warnings
+
+    from nfl import strong_calls
+
+    try:
+        out = strong_calls.grade_all(paths)
+        if out.is_empty():
+            return 0
+        out.write_parquet(paths.marts / strong_calls.GRADED)
+        return out.height
+    except Exception as e:  # noqa: BLE001
+        warnings.warn(f"strong calls not graded: {e!r}", stacklevel=2)
+        return 0

@@ -1,4 +1,4 @@
-# Phase 2: the scheduled jobs (docs/hosting.md §1). One image, seven jobs, one scheduler identity.
+# Phase 2: the scheduled jobs (docs/hosting.md §1). One image, eight jobs, one scheduler identity.
 # The image tag is managed by the image workflow (gcloud run jobs update), so Terraform ignores it.
 
 locals {
@@ -8,7 +8,9 @@ locals {
     lock-thu       = { args = ["lock", "thu"], timeout = "3600s", secrets_key = true }
     lock-sat       = { args = ["lock", "sat"], timeout = "3600s", secrets_key = true }
     odds-snapshot  = { args = ["odds"], timeout = "1800s", secrets_key = false }
-    retro          = { args = ["retro"], timeout = "1800s", secrets_key = false }
+    # Wed/Fri/Sat evenings between the refresh and the locks (ADR 0024): ingest, odds, features, site
+    daily = { args = ["daily"], timeout = "3600s", secrets_key = false }
+    retro = { args = ["retro"], timeout = "1800s", secrets_key = false }
     # site: started by the desktop after it uploads narrative records (scripts/desktop-narrative.sh)
     site            = { args = ["site"], timeout = "1800s", secrets_key = false }
     narrative-check = { args = ["narrative-check"], timeout = "600s", secrets_key = false }
@@ -31,6 +33,7 @@ locals {
       "sun-2010" = "10 20 * * 0"
       "mon-2005" = "5 20 * * 1"
     }
+    daily = { "wed-2005" = "5 20 * * 3", "fri-2005" = "5 20 * * 5", "sat-2005" = "5 20 * * 6" }
   }
   schedule_pairs = merge([
     for job, crons in local.schedules : { for name, cron in crons : "${job}-${name}" => { job = job, cron = cron } }

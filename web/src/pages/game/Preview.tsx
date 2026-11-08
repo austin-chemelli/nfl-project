@@ -5,18 +5,18 @@
  * Approaches tab. The bars come from the Global fit, a diagnostic, so the name never appears here.
  */
 import { DivergingBars, TipNote, TipRow, TipTitle } from '../../charts'
-import { Help } from '../../components/Help'
-import { DataTable, Section, TableScroll, td, th } from '../../components/ui'
+import { DataTable, Section, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
 import { ptsFor, ptsToward } from '../../lib/format'
 import { edgePct } from '../../lib/meta'
-import { liveOnlyGroups, previewRows, type LiveGroup } from './helpers'
+import { liveBars, liveOnlyGroups, liveReady, previewRows, type LiveBar } from './helpers'
 import { Edges } from './Sections'
 
 export function Preview({ g, meta }: { g: Game; meta: Meta }) {
   if (!g.contributions.global) return <Edges g={g} meta={meta} />
   const rows = previewRows(g, meta, null)
   const live = liveOnlyGroups(g, meta)
+  const bars = liveBars(g, meta).filter((b) => b.lean != null) // a reading the week hasn't produced isn't a row
   const domain = Math.max(1, ...rows.map((r) => Math.abs(r.pp ?? 0))) * 1.25
   const side = (v: number) => (v >= 0 ? 'var(--team-home)' : 'var(--team-away)')
   return (
@@ -74,52 +74,70 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
           </tbody>
         </table>
       </DataTable>
-      {live.length > 0 && <LiveOnly g={g} groups={live} />}
+      {liveReady(live) && <LiveBars bars={bars} />}
     </Section>
   )
 }
 
-/** Market behavior and Buzz: no history to price them, so the readings themselves, per team or for the game. */
-function LiveOnly({ g, groups }: { g: Game; groups: LiveGroup[] }) {
+/** Market behavior and Buzz (Austin, 2026-11-07): this week's readings as bars beside the ones
+ * history prices, set apart under a "Live" heading. History can't price them, so each bar is on its
+ * own scale and labelled in its own units; lighter team colors say they aren't the same measure. */
+function LiveBars({ bars }: { bars: LiveBar[] }) {
+  const light = (c: string) => `color-mix(in srgb, ${c} 55%, transparent)`
   return (
-    <div className="mt-5" data-testid="live-only">
-      <h3 className="mb-1 text-[15px] font-semibold">Live only: no history to price these</h3>
-      <p className="mb-2 max-w-3xl text-[13px] text-ink-2">
-        These readings exist only for live games, so past seasons can't say what they are worth and there is no bar. Some approaches weigh them anyway; the Approaches tab shows how much.
+    <div className="mt-6 border-t border-dashed border-line pt-4" data-testid="live-only">
+      <div className="flex items-baseline gap-2">
+        <span className="rounded border border-[var(--text-muted)] px-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-2">Live</span>
+        <h3 className="m-0 text-[15px] font-semibold">This week only</h3>
+      </div>
+      <p className="mb-2 mt-1 max-w-3xl text-[13px] text-ink-2">
+        Readings from this week&apos;s lines and news. Past seasons can&apos;t say what they&apos;re worth, so each bar is on its own scale: read which way it leans, not its length next to the bars above.
       </p>
-      <TableScroll>
+      <DivergingBars
+        domain={1.6} // the longest bar stops short of the edge, so its label always fits
+        format={() => ''}
+        rowHeight={42}
+        leftColor={light('var(--team-away)')}
+        rightColor={light('var(--team-home)')}
+        ariaLabel={bars.map((b) => `${b.label}: ${b.text ?? 'no reading yet'}${b.toward ? `, toward ${b.toward}` : ''}`).join('; ')}
+        rows={bars.map((b) => ({
+          key: b.feature,
+          label: (
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className="truncate text-ink">{b.label}</span>
+              <span className="truncate text-[11px] text-ink-3">{b.group}</span>
+            </span>
+          ),
+          value: b.lean,
+          text: b.text ?? undefined,
+          tip: (
+            <>
+              <TipTitle note={b.help}>{b.label}</TipTitle>
+              <TipNote>{b.text == null ? 'No reading yet.' : `${b.both ?? b.text}${b.toward ? `: leans toward ${b.toward}` : ': no lean'}.`}</TipNote>
+            </>
+          ),
+        }))}
+      />
+      <DataTable>
         <table className="w-full border-collapse text-[14px]">
           <thead>
             <tr>
+              <th className={th}>Live reading</th>
               <th className={th}>Reading</th>
-              <th className={th}>{g.away}</th>
-              <th className={th}>{g.home}</th>
+              <th className={th}>Leans toward</th>
             </tr>
           </thead>
           <tbody>
-            {groups.flatMap((grp) => [
-              <tr key={grp.id}>
-                <td colSpan={3} className={`${td} pt-3 text-[12px] font-medium uppercase tracking-wide text-ink-3`}>
-                  <Help text={grp.help}>{grp.name}</Help>
-                </td>
-              </tr>,
-              ...grp.readings.map((r) => (
-                <tr key={r.feature}>
-                  <td className={td}><Help text={r.help}>{r.label}</Help></td>
-                  {r.game != null || (r.away == null && r.home == null) ? (
-                    <td colSpan={2} className={`${td} tabular`}>{r.game ?? 'no reading yet'}</td>
-                  ) : (
-                    <>
-                      <td className={`${td} tabular`}>{r.away ?? '–'}</td>
-                      <td className={`${td} tabular`}>{r.home ?? '–'}</td>
-                    </>
-                  )}
-                </tr>
-              )),
-            ])}
+            {bars.map((b) => (
+              <tr key={b.feature}>
+                <td className={td}>{b.label}</td>
+                <td className={`${td} tabular`}>{b.both ?? b.text ?? 'no reading yet'}</td>
+                <td className={td}>{b.toward ?? '–'}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
-      </TableScroll>
+      </DataTable>
     </div>
   )
 }

@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event'
 import { renderRoute } from '../../test/render'
 import type { Meta, Tracker } from '../../data/contract'
 import { Ledger } from './Ledger'
+import { Totals } from './Totals'
 
 describe('Tracker page', () => {
   it('shows the five-tile strip and the season tab by default', async () => {
@@ -19,10 +20,28 @@ describe('Tracker page', () => {
     expect(screen.queryByRole('heading', { name: /Backtest: how far/ })).not.toBeInTheDocument()
   })
 
-  it('has exactly four tabs', async () => {
+  it('has exactly five tabs, strong calls before the paper bets', async () => {
     renderRoute('/tracker')
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((x) => x.textContent)).toEqual(['This season', 'Backtest', 'Calibration', 'Paper bets'])
+    expect(tabs.map((x) => x.textContent)).toEqual(['This season', 'Backtest', 'Calibration', 'Strong calls', 'Paper bets'])
+  })
+
+  it('strong calls tab: says none are recorded yet and still shows the backtest context', async () => {
+    renderRoute('/tracker?tab=strong')
+    expect(await screen.findByText(/No strong calls recorded yet/)).toBeInTheDocument()
+    expect(screen.getByText('The same gap in the backtest')).toBeInTheDocument()
+  })
+
+  it('totals block: hidden before the first locked total, then weeks tracked and the market beside it', () => {
+    const none = { totals: null } as unknown as Tracker
+    expect(render(<Totals t={none} />).container).toBeEmptyDOMElement()
+    const t = { totals: { first_lock: '2026-11-12T14:00:00Z', weeks: 1, n: 0, mae: null, market_mae: null, side_right: 0, side_n: 0 } } as unknown as Tracker
+    const { unmount } = render(<Totals t={t} />)
+    expect(screen.getByText(/Tracked since Nov 12, 2026, 1 week\. No locked game has finished yet\./)).toBeInTheDocument()
+    unmount()
+    const later = { totals: { first_lock: '2026-11-12T14:00:00Z', weeks: 2, n: 14, mae: 9.84, market_mae: 9.21, side_right: 8, side_n: 13 } } as unknown as Tracker
+    render(<Totals t={later} />)
+    expect(screen.getByText(/14 games finished: the total missed by 9\.8 points on average, the market's total at the lock by 9\.2\. Its side of the market total was right 8 of 13\./)).toBeInTheDocument()
   })
 
   it('season tab: the gap chart says which way is good and draws the noise band', async () => {
