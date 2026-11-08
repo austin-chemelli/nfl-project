@@ -10,13 +10,19 @@ const UPSET_BELOW = 0.45
 /** Below this a week's tile says even. It describes one week and isn't a ranking, so it's tighter than the tracker's GAP_BAND. */
 const NOISE = 0.005
 
-/** The strip's tiles, from the recap alone. */
-export function recapTiles(r: WeekRecap): RecapTile[] {
+/**
+ * The strip's tiles, from the recap. `total` is the week's game count: while the week is still being
+ * played, the tiles that judge the approaches say how few games they rest on, so one Thursday game
+ * doesn't read like a verdict next to the tracker's full season.
+ */
+export function recapTiles(r: WeekRecap, total?: number): RecapTile[] {
   const tiles: RecapTile[] = []
+  const done = r.games.length
+  const sofar = total != null && done < total ? `after ${done} of ${total} games: ` : ''
   const best = r.models.find((m) => m.model_id === r.best_model)
   tiles.push(
     best
-      ? { id: 'best', label: 'Best approach', value: SHORT[best.model_id] ?? best.label, sub: `${best.right} of ${best.n} right, score ${best.log_loss.toFixed(3)} (lower is better)`, modelId: best.model_id }
+      ? { id: 'best', label: 'Best approach', value: SHORT[best.model_id] ?? best.label, sub: `${sofar}${best.right} of ${best.n} right, score ${best.log_loss.toFixed(3)} (lower is better)`, modelId: best.model_id }
       : { id: 'best', label: 'Best approach', value: dash, sub: 'no finished games' },
   )
   const ap = r.models.filter((m) => (APPROACHES as readonly string[]).includes(m.model_id) && m.vs_market != null)
@@ -26,17 +32,17 @@ export function recapTiles(r: WeekRecap): RecapTile[] {
     // decided by the average gap (negative = better)
     const value = Math.abs(gap) < NOISE ? 'Even with the market' : gap < 0 ? 'Scored better' : 'Scored worse'
     const avg = Math.abs(gap) < NOISE ? 'about even on average' : `${Math.abs(gap).toFixed(3)} ${gap < 0 ? 'better' : 'worse'} on average`
-    tiles.push({ id: 'market', label: 'Forecast score vs market', value, sub: `${ahead} of ${ap.length} ahead; ${avg}. Confidence counts, not just picks` })
+    tiles.push({ id: 'market', label: 'Forecast score vs market', value, sub: `${sofar}${ahead} of ${ap.length} ahead; ${avg}. Confidence counts, not just picks` })
   }
   const line = r.models.find((m) => m.model_id === HEADLINE)
   const mk = r.models.find((m) => m.model_id === 'market_baseline')
   const name = SHORT[HEADLINE]
-  if (line) tiles.push({ id: 'right', label: 'Picks right', value: `${line.right} of ${line.n}`, sub: mk ? `${name}; market ${mk.right} of ${mk.n}` : name, modelId: HEADLINE })
+  if (line) tiles.push({ id: 'right', label: 'Picks right', value: `${line.right} of ${line.n}`, sub: `${sofar}${mk ? `${name}; market ${mk.right} of ${mk.n}` : name}`, modelId: HEADLINE })
   const up = r.upsets[0]
   tiles.push(
     up && up.value < UPSET_BELOW
       ? { id: 'upset', label: 'Biggest upset', value: `${up.away} @ ${up.home}`, sub: `winner was ${pct(up.value)} in the market` }
-      : { id: 'upset', label: 'Biggest upset', value: 'None', sub: up ? `lowest winner was ${pct(up.value)} in the market` : 'no finished games' },
+      : { id: 'upset', label: 'Biggest upset', value: 'None', sub: up ? `lowest winner was ${pct(up.value)} in the market` : done > 0 ? 'every favorite won' : 'no finished games' },
   )
   const lucky = r.luckiest[0]
   if (lucky) tiles.push({ id: 'luck', label: 'Luckiest team', value: lucky.team, sub: `${lucky.luck_net >= 0 ? '+' : '−'}${Math.abs(lucky.luck_net).toFixed(1)} pts of pure luck` })

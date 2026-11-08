@@ -570,3 +570,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** ADR 0015 said contract changes stay additive, and I broke it in the same week I wrote rules about honesty in the data: a rule nothing checks is a hope. The check runs where the failure happens, in the deploy, not in review.
 
+
+## 2026-11-07: Site walk after #18–#28, and the fixes
+
+**Why.** Eleven PRs had merged since the last walk (League, team pages, the retro's chart and drives, hidden pages, the contract guard). Austin asked for a walk in their context and a clear list to fix.
+
+**What happened.** Four personas on production. Nothing broken, Coaches and Build still hidden. What they found was numbers that are each right and disagree between places. Verified against the live files: the market was 77% on the game page and 81% in the retro for the same game (the last line before kickoff vs the line locked with the approaches, neither labelled); the tracker said no live games were graded while the slate scored Week 9's Thursday game (`nfl grade` ran only in Tuesday's refresh); the recap called a right pick "most misread" (no filter on right); a team's "point differential" was the model's blended pre-week input. Three personas also hit the luck tile again (a net gap on the tile, per-team figures in the sentence) and the Week 9 tiles resting on one game. Eight claims were dropped on checking.
+
+**What changed.** Labels where two moments are both right ("at lock", "before kickoff", nflfastR named under the chart); the swing tile shows each team's pure luck; the week's tiles say "after 1 of 15 games"; the daily 07:00 job now runs `nfl grade` and `nfl site` after the retros, so the tracker counts last night's games (paper bets still settle Tuesday); `_misread` keeps wrong picks only; team ranks say they are model inputs going into the week, with each measure's description on hover; the nav's Evidence is History, matching its page.
+
+**Lesson.** The pipeline's schedule was designed when a week ended Monday night and nothing was live; live locks changed what "current" means for every page, and only a reader comparing two pages noticed. When a schedule assumption changes, list every file that depended on it.

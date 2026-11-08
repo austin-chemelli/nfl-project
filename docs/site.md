@@ -45,7 +45,7 @@ flowchart LR
 
 Hidden pages: `lib/hiddenPages.ts` lists pages kept off the live site. `isHidden` is false in `npm run dev`, so they can be worked on; in a build they leave the nav, their routes render `NotFound`, and any link to them checks it too. Nothing else changes: the code and the data files stay. A new link to a listed page has to check `isHidden`.
 
-Global: page titles per route (`Page`'s `docTitle`; tabs and bookmarks only, link previews read `index.html`), `/hypotheses` is labeled Evidence in the nav, Help tips open by tap, hover or keyboard and stay on screen (fixed position), header nav, "last updated" from `meta.generated_at` and the last lock, footer with credits and the "fan-made, not affiliated with the NFL" line, light/dark theme from the dataviz palette tokens, hover help on every feature/group/metric (descriptions from `meta.groups`), mobile-friendly layouts (tables scroll horizontally, charts reflow).
+Global: page titles per route (`Page`'s `docTitle`; tabs and bookmarks only, link previews read `index.html`), `/hypotheses` is labeled History in the nav, matching its title "What history says" (it was Evidence until 2026-11-07, when two site-walk personas expected the evaluation there), Help tips open by tap, hover or keyboard and stay on screen (fixed position), header nav, "last updated" from `meta.generated_at` and the last lock, footer with credits and the "fan-made, not affiliated with the NFL" line, light/dark theme from the dataviz palette tokens, hover help on every feature/group/metric (descriptions from `meta.groups`), mobile-friendly layouts (tables scroll horizontally, charts reflow).
 
 ## Work order
 

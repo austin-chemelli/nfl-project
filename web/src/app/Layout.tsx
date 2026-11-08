@@ -10,7 +10,7 @@ const NAV = [
   { to: '/league', label: 'League' },
   { to: '/team', label: 'Teams' },
   { to: '/tracker', label: 'Tracker' },
-  { to: '/hypotheses', label: 'Evidence' },
+  { to: '/hypotheses', label: 'History' },
   { to: '/coaches', label: 'Coaches' },
   { to: '/build', label: 'Build' },
   { to: '/method', label: 'How it works' },

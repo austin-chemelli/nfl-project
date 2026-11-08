@@ -80,10 +80,12 @@ def _upsets(games: list[RetroGame], names: dict[str, str]) -> list[RecapGame]:
 
 
 def _misread(games: list[RetroGame], names: dict[str, str]) -> list[RecapGame]:
+    """The Student's worst wrong picks, by log loss. A right pick is never "misread", even when it
+    is the only game of the week (site walk 2026-11-07)."""
     rows = []
     for g in games:
         e = next((p for p in g.predictions if p.model_id == "student"), None)
-        if e is not None:
+        if e is not None and e.right is False:
             rows.append((e.log_loss, e, g))
     out = []
     for ll, e, g in sorted(rows, key=lambda t: (-t[0], t[2].game_id))[:N_TOP]:
@@ -240,8 +242,8 @@ def build_recap(paths: Paths, season: int, week: int) -> WeekRecap:
         misread=_misread(games, names),
         luckiest=[_recap_team(v, t, g, names) for v, t, g in lucky[:N_TOP] if v > 0],
         unluckiest=[_recap_team(v, t, g, names) for v, t, g in unlucky[:N_TOP] if v < 0],
-        note=f"One week is {len(games)} games; a model's rank here says almost nothing about "
-        f"its skill.",
+        note=f"One week is {len(games)} game{'' if len(games) == 1 else 's'}; a model's rank here "
+        f"says almost nothing about its skill.",
         best_call=best_call,
         costliest_call=costliest_call,
     )

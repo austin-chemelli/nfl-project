@@ -21,9 +21,11 @@ def planted(gid, margin=-3, student_ll=1.0, luck=None, week=8):
     for t in d["teams"].values():
         for f in t["luck"]:
             f["partly_skill"] = f["factor"] in SKILL
+    winner = d["home"] if margin > 0 else d["away"] if margin < 0 else None
     for p in d["predictions"]:
         if p["model_id"] == "student":
             p["log_loss"] = student_ll
+            p["right"] = None if winner is None else p["pick"] == winner
     for side, vals in (luck or {}).items():
         for f in d["teams"][side]["luck"]:
             f["swing_pts"] = vals.get(f["factor"], 0.0)
@@ -70,8 +72,17 @@ def test_upsets_and_misread(tmp_path):
     assert [u.game_id for u in rec.upsets] == ["up"]
     assert rec.upsets[0].value == pytest.approx(0.362, abs=1e-3)
     assert "36%" in rec.upsets[0].sentence
-    assert [m.game_id for m in rec.misread] == ["up", "tie", "fav"]
-    assert "ended 20-20" in rec.misread[1].sentence
+    # only wrong picks: the favorite's win was called right and a tie has no right or wrong
+    assert [m.game_id for m in rec.misread] == ["up"]
+
+
+def test_misread_never_names_a_right_pick(tmp_path):
+    # a week with one game the Student called right (Week 9's Thursday game, site walk 2026-11-07)
+    paths = Paths(tmp_path)
+    write(paths, planted("fav", margin=4, student_ll=0.24))
+    rec = build_recap(paths, 2026, 8)
+    assert rec.misread == []
+    assert rec.note.startswith("One week is 1 game;")
 
 
 def test_pure_luck_ranking(tmp_path):
