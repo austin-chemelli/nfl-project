@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { Help } from '../components/Help'
 import { Card, DataTable, Loaded, Page, Section, StatTile, td, th } from '../components/ui'
 import { useDiyMatrix, useMeta, useSeasonFile } from '../data/api'
 import type { DiyMatrix, Meta, SeasonFile } from '../data/contract'
@@ -16,6 +17,9 @@ const SET_NAMES: Record<SetId, string> = {
   sharp: 'The Sharp',
   student: 'The Student',
 }
+
+// One definition, hovered from both the summary line and the table header.
+const EDGE_HELP = "Edge is the market's log loss minus yours, so positive means you were closer to what happened."
 
 export default function SeasonPage() {
   const { year } = useParams()
@@ -103,7 +107,7 @@ function SeasonResults({ doc, meta, matrix, setId, yours, team: asked, onTeam }:
   const best = wk.length ? wk.reduce((a, b) => (b.edge > a.edge ? b : a)) : null
   const worst = wk.length ? wk.reduce((a, b) => (b.edge < a.edge ? b : a)) : null
   const capped = setId === 'yours' && capMarket(yours)[1]
-  const scope = team ? `${team}, ${doc.season}` : `all ${games.length} games of ${doc.season}`
+  const scope = team ? `${team}, ${doc.season}` : `All ${games.length} games of ${doc.season}`
   const signedEdge = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(3)}`
 
   return (
@@ -144,12 +148,12 @@ function SeasonResults({ doc, meta, matrix, setId, yours, team: asked, onTeam }:
                 label="Best week"
                 help="Average improvement over the market's log loss per game that week."
                 value={best ? `Week ${best.week}` : '–'}
-                sub={best ? `${signedEdge(best.edge)} per game over ${best.games} games` : undefined}
+                sub={best ? `${signedEdge(best.edge)} a game, ${best.games} ${best.games === 1 ? 'game' : 'games'}` : undefined}
               />
             </div>
             {worst && best && (
               <p className="mt-2 text-[13px] text-ink-3">
-                Worst week: Week {worst.week} ({signedEdge(worst.edge)} per game over {worst.games} games). Scope: {scope}. Edge = the market's log loss minus yours, so positive means you were closer to what happened.
+                <Help text={EDGE_HELP}>{scope} · worst week: Week {worst.week}, {signedEdge(worst.edge)} a game</Help>
               </p>
             )}
             {wk.length > 0 && (
@@ -157,7 +161,7 @@ function SeasonResults({ doc, meta, matrix, setId, yours, team: asked, onTeam }:
                 <WeekChart rows={wk} />
                 <DataTable>
                   <table className="w-full border-collapse text-[13px]">
-                    <thead><tr><th className={th}>Week</th><th className={th}>Games</th><th className={th}>Edge per game</th><th className={th}>Picks right</th></tr></thead>
+                    <thead><tr><th className={th}>Week</th><th className={th}>Games</th><th className={th}><Help text={EDGE_HELP}>Edge per game</Help></th><th className={th}>Picks right</th></tr></thead>
                     <tbody>{wk.map((w) => <tr key={w.week}><td className={td}>{w.week}</td><td className={td}>{w.games}</td><td className={`${td} tabular`}>{signedEdge(w.edge)}</td><td className={td}>{w.right}</td></tr>)}</tbody>
                   </table>
                 </DataTable>

@@ -42,7 +42,8 @@ function vsMarketTile(rows: CurrentRow[]): TileSpec {
   const value = Math.abs(line.delta) < GAP_BAND ? 'Same as market' : line.delta > 0 ? 'Trails the market' : 'Beats the market'
   return {
     id: 'season', label: `${NAME} vs the market`, value, tab: 'season', modelId: HEADLINE,
-    sub: `Scored ${line.logLoss.toFixed(3)} (lower is better), ${gapWords(line.delta)}, over ${plural(line.games, 'game')}`,
+    // log loss never alone (format.ts): the gap to the market, and the sample
+    sub: Math.abs(line.delta) < GAP_BAND ? `within ${GAP_BAND} over ${plural(line.games, 'game')}` : `${line.delta.toFixed(3).replace('-', '')} ${line.delta > 0 ? 'behind' : 'ahead'}, ${plural(line.games, 'game')}`,
   }
 }
 
@@ -59,7 +60,7 @@ function bestTile(rows: CurrentRow[]): TileSpec {
   const best = sorted[0]
   const next = sorted[1]
   if (next && next.logLoss - best.logLoss < GAP_BAND)
-    return { id: 'best', label: 'Best approach so far', value: 'Too close to call', sub: `${label(best.model_id)} is lowest at ${best.logLoss.toFixed(3)}, inside the noise`, tab: 'season' }
+    return { id: 'best', label: 'Best approach so far', value: 'Too close to call', sub: `${label(best.model_id)} lowest, within noise`, tab: 'season' }
   return {
     id: 'best', label: 'Best approach so far', value: label(best.model_id), tab: 'season', modelId: best.model_id,
     sub: best.delta == null ? `${best.logLoss.toFixed(3)} log loss` : `${best.logLoss.toFixed(3)}, ${gapWords(best.delta)}`,
@@ -71,11 +72,12 @@ function calibrationTile(t: Tracker): TileSpec {
   const since = firsts.length ? `, since ${Math.min(...firsts)}` : ', all seasons'
   const base = { id: 'calibration', label: `${NAME} calibration${since}`, tab: 'calibration' as const, modelId: HEADLINE }
   const v = calibrationVerdict(t.reliability.filter((r) => r.model_id === HEADLINE), NAME)
-  const calls = `its calls of 60-80% averaged ${Math.round(100 * v.said)}% and won ${Math.round(100 * v.won)}%`
+  // what it said and the gap are in the Calibration tab's table
+  const calls = `60–80% calls won ${Math.round(100 * v.won)}%`
   switch (v.kind) {
     case 'well': return { ...base, value: 'Well calibrated', sub: calls }
-    case 'over': return { ...base, value: 'Overconfident', sub: `${calls}, ${v.gapPts} points short` }
-    case 'under': return { ...base, value: 'Underconfident', sub: `${calls}, ${v.gapPts} points over` }
+    case 'over': return { ...base, value: 'Overconfident', sub: calls }
+    case 'under': return { ...base, value: 'Underconfident', sub: calls }
     default: return { ...base, value: 'Too few to judge', sub: 'not enough 60-80% calls' }
   }
 }
@@ -91,9 +93,12 @@ function betsTile(t: Tracker): TileSpec {
     return { id: 'bets', label: 'Paper bets', tab: 'bets', value: `${u >= 0 ? '+' : '−'}${Math.abs(u).toFixed(1)} units`, sub: `${record} on ${plural(row.bets, 'live bet')}` }
   // The backfill row spans every season since 2005: return per bet says more than a huge unit total.
   const roi = row.roi ?? (row.bets > 0 ? u / row.bets : 0)
+  const firsts = (t.ledger_seasons ?? []).filter((r) => r.model_id === HEADLINE).map((r) => r.season)
+  const since = firsts.length ? Math.min(...firsts) : null
   return {
     id: 'bets', label: 'Paper bets, backtest', tab: 'bets',
     value: `${roi >= 0 ? '+' : '−'}${(100 * Math.abs(roi)).toFixed(1)}% a bet`,
-    sub: `Pretend money: ${row.bets.toLocaleString('en-US')} ${NAME} bets (${record}); live bets start with the locks`,
+    modelId: HEADLINE,
+    sub: `${NAME}: ${row.bets.toLocaleString('en-US')} bets${since ? ` since ${since}` : ''}`, // the record and "live bets start with the locks" are in the tab
   }
 }

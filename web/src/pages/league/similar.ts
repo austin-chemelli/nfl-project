@@ -149,11 +149,14 @@ function trait(f: Pick<SimilarFlag, 'measure' | 'label' | 'quarter'>): string {
   }
 }
 
-const VERB = { made: 'made the playoffs', conf: 'reached a conference game' } as const
+const VERB = { made: 'made the playoffs', conf: 'reached the conference championship game' } as const
 
-export type FlagCard = { key: string; kind: SimilarFlag['kind']; title: string; lead: string | null; body: string; verdict: string; note: string | null; flagged: [number, number]; others: [number, number] }
+/** Under this many past teams on either side, a card gets a "small sample" note. */
+export const SMALL = 20
 
-/** How the flagged share compares with the rest, from the counts alone, so it can't contradict them. No percentages. */
+export type FlagCard = { key: string; kind: SimilarFlag['kind']; title: string; lead: string | null; body: string; /** What the counts count, said on the card: "Made the playoffs, teams at 6-2". */ counts: string; verdict: string; note: string | null; flagged: [number, number]; others: [number, number]; /** Either count's denominator is under SMALL: the share could be noise. */ small: boolean }
+
+/** How the flagged share compares with the rest, from the counts alone, so it can't contradict them. */
 export function shareVerdict(f: Pick<SimilarFlag, 'flagged' | 'others'>): string {
   const a = f.flagged[1] > 0 ? f.flagged[0] / f.flagged[1] : 0
   const b = f.others[1] > 0 ? f.others[0] / f.others[1] : 0
@@ -165,7 +168,7 @@ export function shareVerdict(f: Pick<SimilarFlag, 'flagged' | 'others'>): string
 /** Measures with few possible values: many teams tie, so a printed rank wouldn't match its quarter. */
 const TIES = new Set(['last3_win_pct', 'streak'])
 
-/** The sentence for one flag. Always teams on exactly this record: nothing here says a measure matters, or doesn't, on its own. */
+/** The sentence for one flag; the card shows it as a hover and prints the counts. Always teams on exactly this record: nothing here says a measure matters, or doesn't, on its own. */
 export function flagCard(f: SimilarFlag, i = 0): FlagCard {
   const id = suffix(f.measure)
   const luck = id === 'luck'
@@ -176,10 +179,12 @@ export function flagCard(f: SimilarFlag, i = 0): FlagCard {
     title: luck ? 'Record undersells them.' : TIES.has(id) ? `${f.label}.` : `${f.label}: ${ordinal(f.rank)}.`,
     lead: luck ? 'Their scoring margin is better than their record.' : null,
     body,
+    counts: `${VERB[f.outcome].charAt(0).toUpperCase()}${VERB[f.outcome].slice(1)}, teams at ${f.peers}`,
     verdict: shareVerdict(f),
     note: f.kind === 'fine' && !luck ? "This compares teams on the same record. It doesn't say the measure stops mattering." : null,
     flagged: f.flagged,
     others: f.others,
+    small: f.flagged[1] < SMALL || f.others[1] < SMALL,
   }
 }
 

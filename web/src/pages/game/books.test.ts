@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BookLine, Books } from '../../data/contract'
-import { bookName, booksSentence, disagrees, names, price } from './books'
+import { bookName, booksRange, booksSentence, disagrees, names, price } from './books'
 
 const line = (book: string, spread_home: number, total = 45): BookLine => ({ book, spread_home, total, home_price: -110, away_price: -110, over_price: -110, under_price: -110, p_home: 0.5 })
 const books = (rows: BookLine[], extra: Partial<Books>): Books => {
@@ -29,6 +29,11 @@ describe('books', () => {
     expect(disagrees(b)).toBe(false)
     expect(booksSentence(b, 'GB', 'CAR')).toMatch(/agree on the spread within 0.5 of a point/)
     expect(booksSentence(books([line('a', 3), line('b', 3), line('c', 3)], {}), 'GB', 'CAR')).toMatch(/^Every book has GB −3\. Every book has the total at 45\./)
+  })
+  it('gives the range compactly, dropping the repeated team', () => {
+    expect(booksRange(books([line('a', 9.5, 40), line('b', 9, 40.5), line('c', 8.5, 40)], {}), 'JAX', 'BAL')).toBe('Spread JAX −9.5 to −8.5 · total 40 to 40.5')
+    expect(booksRange(books([line('a', 3, 45), line('b', 3, 45), line('c', 3, 45)], {}), 'GB', 'CAR')).toBe('Spread GB −3 · total 45')
+    expect(booksRange(books([line('a', -1.5), line('b', 0), line('c', 1.5)], {}), 'DEN', 'KC')).toBe('Spread KC −1.5 to DEN −1.5 · total 45')
   })
   it('prints American odds with a real minus', () => {
     expect(price(-110)).toBe('−110')

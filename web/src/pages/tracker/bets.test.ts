@@ -55,7 +55,7 @@ describe('noEdgeReturn', () => {
 describe('betsVerdict', () => {
   it('says when every approach lost, and that beating no edge was within the noise', () => {
     const text = betsVerdict([line('sharp', -0.012, -0.045, 0.02), line('student', -0.034, -0.067, 0)], name)
-    expect(text).toBe('In the backtest, every approach has lost money. The best, the sharp, is at −1.2% a bet. Betting with no edge at all costs 3.0% a bet. One of the two did better than that, none by more than the noise.')
+    expect(text).toBe('Every approach lost money in the backtest; the sharp lost least, 1.2% a bet. Betting with no edge loses 3.0% a bet; one of the two beat that, none by more than the noise.')
   })
 
   it('does not call a profit an edge while its range reaches below break-even', () => {
@@ -65,15 +65,15 @@ describe('betsVerdict', () => {
   it('says so when a range clears break-even and no edge', () => {
     const text = betsVerdict([line('sharp', 0.05, 0.01, 0.09)], name)
     expect(text).toContain('its whole range clears break-even')
-    expect(text).toContain('One of the one did better than that, one clearly.')
+    expect(text).toContain('one of the one beat that, one clearly.')
   })
 
   it('handles no approach beating no edge', () => {
-    expect(betsVerdict([line('sharp', -0.05, -0.08, -0.02)], name)).toContain('None of the one did better than that.')
+    expect(betsVerdict([line('sharp', -0.05, -0.08, -0.02)], name)).toContain('none of the one beat that.')
   })
 
   it('leaves the references out of the verdict', () => {
-    expect(betsVerdict([line('elo_v0', 0.2, 0.1, 0.3), line('student', -0.03, -0.06, 0)], name)).toContain('The best, the student')
+    expect(betsVerdict([line('elo_v0', 0.2, 0.1, 0.3), line('student', -0.03, -0.06, 0)], name)).toContain('the student lost least')
   })
 
   it('is empty before any bets have a range', () => {

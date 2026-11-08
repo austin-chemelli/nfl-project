@@ -12,10 +12,11 @@ describe('Hypotheses page', () => {
     expect(screen.getAllByRole('tab')[0]).toHaveAccessibleName('Over time')
   })
 
-  it('renders each feature sentence and the verdict', async () => {
+  it('renders each feature as a compact numbers line, with the sentence as hover text, and the verdict', async () => {
     renderRoute('/hypotheses?tab=effects')
     const first = fixture.features[0]
-    expect(await screen.findByText(first.sentence)).toBeInTheDocument()
+    expect(await screen.findByText(/\+1\.9 pts per SD edge \(90%: \+1\.7 to \+2\.2\) · alone \+5\.9/)).toBeInTheDocument()
+    expect(screen.getAllByText(first.sentence, { ignore: 'script' }).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/matters/i).length).toBeGreaterThan(0)
     expect(screen.queryByText(/logit|log-odds/i)).toBeNull()
   })
@@ -24,7 +25,8 @@ describe('Hypotheses page', () => {
     const key = 'availability.qb1_out'
     const it = fixture.by_season.items[key as keyof typeof fixture.by_season.items]
     renderRoute(`/hypotheses?item=${key}`)
-    expect(await screen.findByText(it.sentence)).toBeInTheDocument()
+    // the pipeline sentence is the hover on the item name
+    expect(await screen.findByText(it.sentence, { exact: false })).toBeInTheDocument()
     const select = screen.getByLabelText('Feature or group') as HTMLSelectElement
     expect(select.value).toBe(key)
   })
@@ -34,7 +36,7 @@ describe('Hypotheses page', () => {
     const select = (await screen.findByLabelText('Feature or group')) as HTMLSelectElement
     const other = fixture.by_season.items['availability.injury_impact' as keyof typeof fixture.by_season.items]
     await userEvent.selectOptions(select, 'availability.injury_impact')
-    await waitFor(() => expect(screen.getByText(other.sentence)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(other.sentence, { exact: false })).toBeInTheDocument())
     expect(within(select).getAllByRole('option').length).toBeGreaterThan(1)
   })
 })

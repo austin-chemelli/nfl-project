@@ -32,7 +32,7 @@ describe('summaryTiles', () => {
 
   it('pregame: the factor tile names the Student and says pts of win chance', () => {
     const f = summaryTiles(game, meta, null).find((x) => x.id === 'factor')
-    expect(f?.sub).toMatch(/^Student: \d+\.\d pts of win chance toward (GB|CAR)$/)
+    expect(f?.sub).toMatch(/^\d+\.\d pts toward (GB|CAR), Student$/)
   })
 
   it('pregame: the biggest edge is never a context-only group', () => {

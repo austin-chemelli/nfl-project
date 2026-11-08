@@ -26,7 +26,7 @@ export default function MethodPage() {
   return (
     <Page
       title="Method and data"
-      lede="How the numbers are made, what they cannot tell you, and the mistakes we found along the way."
+      lede="How the numbers are made, what they can't tell you, and our mistakes."
     >
       <Loaded q={meta} what="method">
         {(m) => (
@@ -63,16 +63,22 @@ function HowItWorks({ meta }: { meta: Meta }) {
     <Section title="How it works">
       <div className="max-w-3xl space-y-3 text-[15px] leading-relaxed">
         <p>
-          Several <strong>approaches</strong> ({meta.approaches.map((a) => a.name.replace(/^The /, '')).join(', ')}) weigh the same shared evidence differently, like different kinds of fans. Each approach is <strong>one public line</strong>: the persona&apos;s own weights, lightly fitted to history and then calibrated, so the persona&apos;s biases survive. Models produce every number; an LLM, where used, only explains and is never allowed to introduce a statistic.
+          Several <strong>approaches</strong> ({meta.approaches.map((a) => a.name.replace(/^The /, '')).join(', ')}) weigh the same shared evidence differently, like different kinds of fans. Each is <strong>one public line</strong>: the persona&apos;s own weights, lightly fitted to history and calibrated, so its biases survive. Models produce every number; an LLM only explains and never introduces a statistic.
         </p>
         <p>
-          <strong>The market is the reference, never an input</strong> (ADR 0013). The betting market&apos;s forecast (the spread and moneyline probability) is the line every approach is compared against, and no approach is allowed to read it. Approaches may read market <em>behavior</em> (line moves, public betting share, disagreement between books) as a capped supplement, the Sharp most of all, never the forecast itself. Feeding the market to a model and then crediting the model for matching the market was the mistake that made an early Sharp look as good as the market.
+          <strong>The market is the reference, never an input.</strong> Its forecast (the spread and moneyline probability) is the line every approach is compared against, and no approach may read it.
         </p>
         <p>
-          <strong>How it is scored.</strong> Every line is scored in public against the market and a naive baseline on forecast quality (log loss, calibration), on odds-weighted paper bets, and on how often it was right when it disagreed with the market. Forecast quality comes first; betting is a lens.
+          Approaches may read market <em>behavior</em> (line moves, public betting share, disagreement between books) as a capped supplement, the Sharp most of all. Feeding the market to a model and crediting it for matching the market made an early Sharp look as good as the market.
         </p>
         <p>
-          <strong>How numbers are shown.</strong> Probabilities and rates are percentages, differences are points of win probability, weights are shares of a 100-point attention budget, and team gaps are percentile ranks. Log loss is the scoring rule (lower is better, 0.693 is a coin flip), so it always appears next to the market&apos;s score. At about 120 games, gaps under about 0.025 can&apos;t be told from noise. Home field under each approach and swing plays are in football points; other &quot;pts&quot; are win chance.
+          <strong>How it is scored.</strong> Every line is scored in public against the market and a naive baseline on forecast quality (log loss, calibration), odds-weighted paper bets, and how often it was right when it disagreed with the market. Forecast quality comes first; betting is a lens.
+        </p>
+        <p>
+          <strong>How numbers are shown.</strong> Probabilities and rates are percentages, differences are points of win probability, weights are shares of a 100-point attention budget, team gaps are percentile ranks. Home field under each approach and swing plays are in football points; other &quot;pts&quot; are win chance.
+        </p>
+        <p>
+          Log loss is the scoring rule: lower is better, 0.693 is a coin flip, and it always appears next to the market&apos;s score. At about 120 games, gaps under about 0.025 can&apos;t be told from noise.
         </p>
       </div>
     </Section>
@@ -125,7 +131,7 @@ function Approaches({ meta }: { meta: Meta }) {
         })}
       </div>
       <ul className="mt-4 max-w-3xl list-disc space-y-1 pl-5 text-[14px] text-ink-2">
-        <li><strong>The Student</strong> is built from results rather than a persona&apos;s beliefs. It is the line every headline number uses. Its one declared input is the line move, which has no history to learn from.</li>
+        <li><strong>The Student</strong> is built from results, not a persona&apos;s beliefs, and is the line every headline number uses. Its one declared input is the line move, which has no history to learn from.</li>
         <li><strong>The market, Elo and the home-team baseline</strong> are references, marked with a dashed ring in tables: scored alongside the approaches, never entrants.</li>
         <li><strong>Global fit</strong> is a diagnostic, the source of the bars in the game page&apos;s Preview. It is not scored.</li>
       </ul>
@@ -140,10 +146,10 @@ function Locks() {
       <div className="max-w-3xl space-y-3 text-[15px] leading-relaxed">
         <p>A <em>lock</em> freezes predictions before kickoff, twice a week (Thursday and Saturday). It:</p>
         <ol className="list-decimal space-y-1 pl-5">
-          <li>Downloads the latest public data and an odds snapshot, then rebuilds every feature, each row stamped with the time it became known.</li>
+          <li>Downloads the latest public data and an odds snapshot, then rebuilds every feature, each row stamped with when it became known.</li>
           <li>Scores the games that have not kicked off, using models fitted only through last season: every approach, and the market, Elo and naive reference lines.</li>
           <li>Appends the predictions (they are never edited) and opens paper bets at the current odds.</li>
-          <li>Writes a file with a checksum and commits it to git before kickoff, so the record cannot be quietly rewritten. A lock refuses games that have already kicked off, so the live record cannot be backfilled.</li>
+          <li>Writes a file with a checksum and commits it to git before kickoff, so the record can&apos;t be quietly rewritten. A lock refuses games already kicked off, so the live record can&apos;t be backfilled.</li>
         </ol>
         <p>
           The committed locks are public: <a className="text-accent underline" href={LOCKS} target="_blank" rel="noreferrer">browse the lock files on GitHub</a>.
@@ -164,8 +170,9 @@ function Retrospective() {
   return (
     <Section title="Retrospective" help="The after-the-game page: how the forecasts did and how much of the result was luck.">
       <ul className="max-w-3xl list-disc space-y-1 pl-5 text-[15px] leading-relaxed">
-        <li><strong>What &quot;expected&quot; means.</strong> Expected values come from league rates in the same situations (for example, the same down and distance, or the same field-goal distance) across the 2015 to 2025 regular seasons. Third- and fourth-down rates are also shifted by both teams&apos; form this season, so a good offense converting a lot is not counted as luck.</li>
-        <li><strong>Luck in points.</strong> Each swing, such as fumbles lost, field goals missed or fourth-down tries, is the gap between what happened and what usually happens, priced in points with the EPA value of the event. Positive helped that team, negative hurt it. Only fumble recoveries, kicking and return plays are close to pure luck; conversions, interceptions and penalties are marked &quot;partly skill&quot;, so the net is called a swing, not luck.</li>
+        <li><strong>What &quot;expected&quot; means.</strong> Expected values are league rates in the same situation (down and distance, field-goal distance) across the 2015 to 2025 regular seasons. Third- and fourth-down rates also shift with both teams&apos; form this season, so a good offense converting a lot isn&apos;t luck.</li>
+        <li><strong>Luck in points.</strong> Each swing (fumbles lost, missed field goals, fourth-down tries) is what happened minus what usually happens, priced in points with the event&apos;s EPA value. Positive helped that team, negative hurt it.</li>
+        <li><strong>Swing, not luck.</strong> Only fumble recoveries, kicking and return plays are close to pure luck. Conversions, interceptions and penalties are marked &quot;partly skill&quot;, so the net is called a swing.</li>
         <li><strong>Played like.</strong> The &quot;played like&quot; chance is a logistic model of how often teams win when they are this efficient, with turnovers left out, fitted on the same history.</li>
         <li><strong>Which groups mattered.</strong> A group&apos;s value is the drop-one change in log loss: how much worse the forecast would have scored on this game with that group left out. Values overlap, so they do not add up.</li>
         <li><strong>Read it as description.</strong> It is descriptive, not causal, and one game is noise. A forecast that looked bad here can still be a good forecast.</li>
@@ -180,7 +187,8 @@ function TeamPages() {
       <ul className="max-w-3xl list-disc space-y-1 pl-5 text-[15px] leading-relaxed">
         <li><strong>Who calls the plays.</strong> A coach shows as the play-caller only when a team site, a news report or a 32-team play-caller list says so, linked on the page. Otherwise the coordinator shows, marked not confirmed. Changes during the season are dated to the week.</li>
         <li><strong>Tendencies.</strong> Each measure shows this season, the play-caller&apos;s own past (his earlier seasons calling plays that a source confirms, recent ones counting most) and the team&apos;s last season, all as places among the 32 teams, with the league&apos;s middle team marked. A row says which of the two this season looks like.</li>
-        <li><strong>What to watch for.</strong> Personnel, coverage, time to throw and pressure are charted once a year, so in season the page shows only the past. A short tag says which past predicted better in past cases like this one, from a study of 2017 to 2025. No tag means no confirmed past, too few cases like it, or neither did much better than a guess.</li>
+        <li><strong>What to watch for.</strong> Personnel, coverage, time to throw and pressure are charted once a year, so in season the page shows only the past.</li>
+        <li><strong>Tags.</strong> A short tag says which past predicted better in past cases like this one (a study of 2017 to 2025). No tag means no confirmed past, too few similar cases, or neither did much better than a guess.</li>
         <li><strong>Coach profiles.</strong> Known for and coaching tree come from reporting, each checked against the page it cites and linked. In the numbers comes from our data, over seasons a source confirms the coach called plays: a habit shows only if every one sat on the same side of the league&apos;s middle team.</li>
       </ul>
     </Section>
@@ -196,7 +204,8 @@ function Limits() {
         <li>Persona weights are opinions. History-fitted weights describe the past, not the future.</li>
         <li>The Sharp&apos;s market-behavior inputs (line moves, public betting share) exist only for live games. Its backtest covers the same games as the others but mostly tests its football weights.</li>
         <li>Narrative (news) features exist only for live games; there is no history to fit.</li>
-        <li>Playoff odds are simulations of the Student&apos;s and the market&apos;s game probabilities, so they carry each one&apos;s errors. Betting lines reach only about a week ahead, so for most of the season the market view is largely estimated from this season&apos;s lines. Tested on lines it hadn&apos;t seen, that estimate was no closer to the market than the Student was.</li>
+        <li>Playoff odds are simulations of the Student&apos;s and the market&apos;s game probabilities, so they carry each one&apos;s errors.</li>
+        <li>Betting lines reach only about a week ahead, so most of the season the market view is largely estimated from this season&apos;s lines. Tested on lines it hadn&apos;t seen, that estimate was no closer to the market than the Student was.</li>
       </ul>
     </Section>
   )

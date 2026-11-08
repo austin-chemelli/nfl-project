@@ -136,7 +136,7 @@ function factorTile(g: Game, meta: Meta): TileSpec {
     ...Object.entries(c.groups).map(([id, x]) => ({ name: groupOf(meta, id)?.name ?? id, pp: x.pp ?? 0 })),
   ]
   const top = items.reduce((a, b) => (Math.abs(b.pp) > Math.abs(a.pp) ? b : a))
-  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${SHORT[HEADLINE]}: ${Math.abs(top.pp).toFixed(1)} pts of win chance toward ${top.pp >= 0 ? g.home : g.away}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
+  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${Math.abs(top.pp).toFixed(1)} pts toward ${top.pp >= 0 ? g.home : g.away}, ${SHORT[HEADLINE]}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
 }
 
 /** Position weight for "key": the injury file has no importance field, so the position stands in for it. */

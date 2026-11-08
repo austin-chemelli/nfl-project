@@ -26,13 +26,14 @@ function FeatureCard({ f, group }: { f: Feature; group: string }) {
         </div>
         <VerdictBadge verdict={f.verdict} />
       </div>
-      <p className="text-ink-2">{f.sentence}</p>
-      <div className="tabular text-[13px] text-ink-2">
-        After the others {pp(f.effect_pp)} pts (90% range {pp(f.effect_lo_pp)} to {pp(f.effect_hi_pp)}); on its own {pp(f.marginal_pp)} pts.
+      {/* The pipeline sentence repeats these numbers in words, so it is the hover. */}
+      <div className="tabular text-ink-2">
+        <Help text={f.sentence}>
+          {pp(f.effect_pp, 1)} pts per SD edge (90%: {pp(f.effect_lo_pp, 1)} to {pp(f.effect_hi_pp, 1)}) · alone {pp(f.marginal_pp, 1)}
+        </Help>
       </div>
-      <div className="text-[13px] text-ink-3">{f.coverage}</div>
       <div className="text-[13px] text-ink-3">
-        Personas that lean on it: {f.personas.length ? f.personas.map((p) => p.name).join(', ') : '–'}
+        {f.coverage} · Leaned on by {f.personas.length ? f.personas.map((p) => p.name).join(', ') : 'no persona'}
       </div>
     </Card>
   )
@@ -51,6 +52,7 @@ export function Effects({ h, groupName }: { h: Hypotheses; groupName: (id: strin
       title="Effect of each feature"
       help="Change in the home team's win probability, in points, when the feature is one standard deviation better for the home side than the away side, at a pick'em game."
     >
+      <p className="mb-3 max-w-3xl text-ink-2">Win-chance points per one-SD edge, with the 90% range.</p>
       <div className="mb-3 flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-[13px] text-ink-3">
           Group
@@ -92,9 +94,15 @@ export function Effects({ h, groupName }: { h: Hypotheses; groupName: (id: strin
               rightLabel="favors the home side"
               labelWidth={250}
             />
-            <p className="mt-2 text-[13px] text-ink-3">
-              Points of win probability per +1 SD edge, with the 90% range. Rows are grouped by feature group, largest effect first. Blue = matters, gray = weak, pale = no evidence; the verdict is written out in the list below.
-            </p>
+            <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-ink-3" aria-label="Verdict colors">
+              {VERDICTS.map((v) => (
+                <li key={v} className="inline-flex items-center gap-1.5">
+                  <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: VERDICT_COLOR[v] }} />
+                  {v}
+                </li>
+              ))}
+              <li>Grouped, largest effect first</li>
+            </ul>
           </Card>
           <ul className="mt-4 grid gap-3 md:grid-cols-2">
             {shown.map((f) => (

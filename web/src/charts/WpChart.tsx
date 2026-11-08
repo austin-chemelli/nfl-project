@@ -57,7 +57,7 @@ export function WpChart({ series, home, away, homeScore, awayScore, describe }: 
   const lo = Math.min(homeScore, awayScore)
   const finalText = `${margin === 0 ? 'Tied' : `${winner} won`} ${hi}–${lo}${ot ? ' (OT)' : ''}`
   const p0 = first?.[1] ?? 0.5
-  const kickoff = `${p0 >= 0.5 ? home : away} ${pc(Math.max(p0, 1 - p0))} at kickoff`
+  const kickoff = `${p0 >= 0.5 ? home : away} ${pc(Math.max(p0, 1 - p0))} at kickoff (nflfastR)`
   const wl = series.winner_low
   const winnerLow = wl && wl[0] > 0 && wl[1] < 0.25 ? wl : null
   const lowSpot = winnerLow ? { cx: x(winnerLow[0]), cy: y(margin > 0 ? winnerLow[1] : 1 - winnerLow[1]) } : null

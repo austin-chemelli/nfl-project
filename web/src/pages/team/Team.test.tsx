@@ -49,7 +49,7 @@ describe('team page', () => {
     expect(screen.getByRole('heading', { name: 'Offense: what to watch for' })).toBeInTheDocument()
     expect(screen.getAllByTestId('this-season').length).toBeGreaterThan(0)
     expect(screen.getAllByTestId('caller-past').length).toBeGreaterThan(0)
-    expect(screen.getByText(/isn't in yet/)).toBeInTheDocument()
+    expect(screen.getByText(/until .* is in/)).toBeInTheDocument()
   })
 
   it('sets the team color wherever a tab uses it', async () => {

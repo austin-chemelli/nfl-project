@@ -11,7 +11,7 @@ const MAX_LANE = 2
 
 type Pt = { x: number; y: number }
 
-/** One neighbour's mark: hollow circle if it missed, filled circle if it made the playoffs, diamond if it reached a conference game or beyond. */
+/** One neighbour's mark: hollow circle if it missed, filled circle if it made the playoffs, diamond if it reached the conference championship game or beyond. */
 function Mark({ n, x, y, r }: { n: SimilarNeighbour; x: number; y: number; r: number }) {
   const lvl = finishLevel(n)
   if (lvl >= 3) {
@@ -155,6 +155,7 @@ export function OverlapKey({ code, name, active, near }: { code: string; name: s
           <svg width="16" height="16" aria-hidden><circle cx="8" cy="8" r="6.5" fill="var(--team-home)" stroke="var(--team-away)" strokeWidth="2" /></svg>
           {name}
         </span>
+        <span className="text-ink-3">{near.length} nearest seasons:</span>
         <span className="inline-flex items-center gap-1.5">
           <svg width="14" height="14" aria-hidden><circle cx="7" cy="7" r="3" fill="var(--surface-1)" stroke="var(--text-muted)" strokeWidth="1.5" /></svg>
           missed
@@ -165,11 +166,15 @@ export function OverlapKey({ code, name, active, near }: { code: string; name: s
         </span>
         <span className="inline-flex items-center gap-1.5">
           <svg width="14" height="14" aria-hidden><path d="M7 1.5 L12.5 7 L7 12.5 L1.5 7 Z" fill="var(--finish-5)" /></svg>
-          reached a conference game or beyond
+          reached the conference championship game or beyond
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <svg width="16" height="12" aria-hidden><rect x="1" y="1" width="14" height="10" rx="3" fill="var(--band-strong)" opacity="0.4" /></svg>
+          middle half of them
         </span>
       </p>
       <p aria-live="polite" className="mb-0 mt-1.5 min-h-[2.4em] text-ink-3">
-        {n ? <span className="text-ink">{seasonLabel(n)}</span> : 'Hover or focus a season in the grid or the list to trace it across the seven rows.'}
+        {n ? <span className="text-ink">{seasonLabel(n)}</span> : 'Hover a season to trace it.'}
       </p>
     </div>
   )

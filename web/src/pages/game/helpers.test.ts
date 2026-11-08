@@ -3,7 +3,7 @@ import metaJson from '../../test/fixtures/site/meta.json'
 import retroJson from '../../test/fixtures/site/retro/2026_08_CAR_GB.json'
 import gameJson from '../../test/fixtures/site/game/2026_08_CAR_GB.json'
 import { Game, Meta, RetroGame } from '../../data/contract'
-import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, liveOnlyGroups, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText, driveText, driveLede, liveReady, liveBars } from './helpers'
+import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, liveOnlyGroups, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, dayOf, trendStatus, wpLede, markText, driveText, driveLede, liveReady, liveBars } from './helpers'
 
 const meta = Meta.parse(metaJson)
 const game = Game.parse(gameJson)
@@ -219,8 +219,8 @@ describe('playedLikeSteps', () => {
 
 describe('phaseSummary', () => {
   const r = (...leaders: ('home' | 'away' | null)[]) => ({ home: 'GB', away: 'CAR', phases: leaders.map((leader) => ({ leader })) }) as unknown as RetroGame
-  it('counts every phase, even ones nobody won', () => {
-    expect(phaseSummary(r('home', 'home', 'away', null))).toBe('GB won 2 of 4 phases')
+  it('counts only the contested phases, when one had no leader', () => {
+    expect(phaseSummary(r('home', 'home', 'away', null))).toBe('GB won 2 of 3 contested phases')
     expect(phaseSummary(r('away', 'away', 'away'))).toBe('CAR won 3 of 3 phases')
   })
   it('says when the teams split them', () => {
@@ -273,14 +273,19 @@ describe('home field on a neutral site', () => {
 describe('marketSource and trendStatus', () => {
   it('names the market source and snapshot time', () => {
     const at = { p_home: 0.6, as_of: '2026-10-27T22:46:59Z' }
-    expect(marketSource({ ...at, source: 'odds_api' })).toBe('Market line: The Odds API, Tue, Oct 27, 6:46 PM ET.')
+    expect(marketSource({ ...at, source: 'odds_api' })).toEqual({ text: 'Market as of Tue, Oct 27, 6:46 PM ET', source: 'Market line from The Odds API.' })
     // a schedule line's as_of is synthetic, so it never prints as a time
-    expect(marketSource({ ...at, source: 'schedules' })).toBe('Market line: the nflverse schedule (no time recorded).')
-    expect(marketSource({ ...at, source: 'other' })).toMatch(/^Market line: other, /)
+    expect(marketSource({ ...at, source: 'schedules' })).toEqual({ text: 'Market line', source: 'From the nflverse schedule; no time recorded.' })
+    expect(marketSource({ ...at, source: 'other' })?.source).toBe('Market line from other.')
     expect(marketSource({ ...at, source: null })).toBeNull()
-    expect(marketSource({ ...at, source: 'odds_api', as_of: null })).toBe('Market line: The Odds API.')
+    expect(marketSource({ ...at, source: 'odds_api', as_of: null })).toEqual({ text: 'Market line', source: 'From The Odds API.' })
     expect(marketSource({ ...at, source: 'schedules', p_home: null })).toBeNull()
     expect(marketSource(null)).toBeNull()
+  })
+  it('dayOf reads the date as written', () => {
+    expect(dayOf('2026-11-04T23:59:01')).toBe('Wed, Nov 4')
+    expect(dayOf('2026-11-04')).toBe('Wed, Nov 4')
+    expect(dayOf('2026-11-04T23:59:01Z')).toBe('Wed, Nov 4')
   })
   it('trend status wording', () => {
     expect([true, false, null].map(trendStatus)).toEqual(['producing results', 'not producing results', 'results unclear'])

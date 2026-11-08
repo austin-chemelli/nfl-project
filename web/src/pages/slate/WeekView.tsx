@@ -20,8 +20,7 @@ export function WeekView({ meta, season, week }: { meta: Meta; season: number; w
     <>
       <WeekPicker meta={meta} season={season} week={week} />
       <p className="-mt-4 text-[13px] text-ink-3">
-        Site data updated {ago(meta.generated_at)}.{' '}
-        {lock ? `Last lock: week ${lock.week}, ${kickoffEt(lock.lock_ts)}.` : 'No live lock yet.'}
+        Updated {ago(meta.generated_at)} · {lock ? `last lock ${kickoffEt(lock.lock_ts)}` : 'no live lock yet'}
       </p>
       {season === meta.season && week === meta.current_week && week > 1 && <LastWeek meta={meta} season={season} week={week - 1} />}
       <Recap season={season} week={week} enabled={q.data?.games.some((g) => g.result != null) ?? false} total={q.data?.games.length} />

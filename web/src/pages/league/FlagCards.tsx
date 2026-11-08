@@ -1,3 +1,4 @@
+import { Help } from '../../components/Help'
 import type { SimilarFlag } from '../../data/contract'
 import { flagGroups, noCards, type FlagCard } from './similar'
 
@@ -9,15 +10,27 @@ const EDGE: Record<SimilarFlag['kind'], string> = {
 /** A mark that is not color: the shape says which group a card is in. */
 const MARK: Record<SimilarFlag['kind'], string> = { red: '▲', fine: '◆', strength: '●' }
 
-/** Two thin bars: the share of past teams with the trait that got there, and the share of the rest. Counts are printed too. */
+/** The one lede for both "history says" sections; the help says what a count counts. */
+export function HistoryLede() {
+  return (
+    <>
+      Past teams on the same record, with and without this trait.{' '}
+      <Help text="Each count is past teams that made the playoffs, or reached the conference championship game where the card says so." />
+    </>
+  )
+}
+
+const pct = (hits: number, n: number) => (n > 0 ? Math.round((100 * hits) / n) : 0)
+
+/** Two thin bars: the share of past teams with the trait that got there, and the share of the rest. Counts and percentages are printed too. */
 function Bars({ card }: { card: FlagCard }) {
   const row = (label: string, [hits, n]: [number, number], strong: boolean) => (
     <div className="flex items-center gap-2">
-      <span className="w-20 shrink-0 text-[12px] text-ink-3">{label}</span>
+      <span className="w-16 shrink-0 text-[12px] text-ink-3">{label}</span>
       <span aria-hidden className="h-1.5 min-w-0 flex-1 rounded-full bg-[var(--band)]">
         <span className="block h-full rounded-full" style={{ width: `${n > 0 ? (100 * hits) / n : 0}%`, background: strong ? 'var(--text-secondary)' : 'var(--band-strong)' }} />
       </span>
-      <span className="tabular w-[4.25rem] shrink-0 whitespace-nowrap text-right text-[12px] text-ink-2">{hits} of {n}</span>
+      <span className="tabular w-[7rem] shrink-0 whitespace-nowrap text-right text-[12px] text-ink-2">{hits} of {n} ({pct(hits, n)}%)</span>
     </div>
   )
   return (
@@ -44,11 +57,15 @@ export function FlagCards({ flags, gamesPlayed, record, peers }: { flags: Simila
             {g.cards.map((c) => (
               <li key={c.key} className={`min-w-0 rounded-lg border border-line border-l-4 bg-surface-1 p-3 text-[13px] ${EDGE[c.kind]}`}>
                 <p className="m-0 text-ink-2">
-                  <strong className="font-semibold text-ink">{c.title}</strong> {c.lead ? `${c.lead} ` : ''}
-                  {c.body}
+                  {/* the full sentence is the hover: the card shows the heading and the counts */}
+                  <Help text={c.body}>
+                    <strong className="font-semibold text-ink">{c.title}</strong>
+                  </Help>
+                  {c.lead ? ` ${c.lead}` : ''}
                 </p>
+                <p className="mb-0 mt-1 text-[12px] text-ink-3">{c.counts}</p>
                 <Bars card={c} />
-                <p className="mb-0 mt-1.5 text-[12px] text-ink-3">{c.verdict}.{c.note ? ` ${c.note}` : ''}</p>
+                <p className="mb-0 mt-1.5 text-[12px] text-ink-3">{c.verdict}{c.small ? ' · small sample' : ''}.{c.note ? ` ${c.note}` : ''}</p>
               </li>
             ))}
           </ul>

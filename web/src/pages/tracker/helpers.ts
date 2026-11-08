@@ -59,6 +59,13 @@ export function calibrationVerdict(rows: Reliability[], name: string): Verdict {
   return { kind: 'well', gapPts, said, won, n, text: `${name}: well calibrated, ${calls}.` }
 }
 
+/** A verdict as table words: "Overconfident by 9 pts". The full sentence stays in `text` for a hover. */
+export function verdictWords(v: Verdict): string {
+  if (v.kind === 'few') return 'Too few to judge'
+  if (v.kind === 'well') return 'Well calibrated'
+  return `${v.kind === 'over' ? 'Overconfident' : 'Underconfident'} by ${v.gapPts} pts`
+}
+
 /** 'In 1,158 games where the Traditionalist disagreed with the market by 10+ points, its side won 40% ...' */
 export function divergenceSentence(row: Pick<Divergence, 'bucket' | 'n' | 'lean_win_rate' | 'market_expected_rate'>, name: string): string {
   const words = BUCKET_WORDS[row.bucket] ?? `by ${row.bucket} points`
@@ -98,9 +105,9 @@ export function personaHistoryHeadline(a: Approach, groupLabel: (id: string) => 
 
 export function calibrationScaleSentence(scale: number | null | undefined): string {
   if (!scale) return ''
-  if (scale < 0.98) return `Its raw probabilities were about ${(100 * (1 / scale - 1)).toFixed(0)}% more confident than history supports, so they are shrunk before scoring.`
-  if (scale > 1.02) return `Its raw probabilities were about ${(100 * (1 - 1 / scale)).toFixed(0)}% less confident than history supports, so they are stretched before scoring.`
-  return 'Its confidence already matches history, so no rescaling was needed.'
+  if (scale < 0.98) return `Raw chances ran ${(100 * (1 / scale - 1)).toFixed(0)}% overconfident, so they're shrunk before scoring.`
+  if (scale > 1.02) return `Raw chances ran ${(100 * (1 - 1 / scale)).toFixed(0)}% underconfident, so they're stretched before scoring.`
+  return 'Confidence already matches history, so no rescaling.'
 }
 
 export type CurrentRow = { model_id: string; games: number; logLoss: number; liveWeeks: number; vsMarket: string | null; delta: number | null }
@@ -131,14 +138,6 @@ export function currentSummary(cur: Tracker['current_season']): { rows: CurrentR
     liveGames: anyLive.filter((r) => r.model_id === ref).reduce((s, r) => s + (r.n_live ?? r.n), 0),
     liveWeeks: new Set(anyLive.map((r) => r.week)).size,
   }
-}
-
-/** "After 112 games, the Analyst is 0.012 worse than the market (log loss; lower is better)." */
-export function headlineSentence(row: CurrentRow, name: string): string {
-  const base = `After ${row.games.toLocaleString('en-US')} games, ${name} is `
-  if (row.delta == null) return `${base}the reference.`
-  if (Math.abs(row.delta) < GAP_BAND) return `${base}about the same as the market (within ${GAP_BAND} log loss, too close to call at this sample size).`
-  return `${base}${Math.abs(row.delta).toFixed(3)} ${row.delta > 0 ? 'worse' : 'better'} than the market (log loss; lower is better).`
 }
 
 export type GapRow = { week: number } & Record<string, number>

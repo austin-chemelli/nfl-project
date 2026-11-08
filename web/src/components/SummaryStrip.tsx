@@ -6,6 +6,7 @@ const valueSize = (value: unknown) => {
   return longest >= 11 ? 'text-sm' : value.length > 16 ? 'text-base' : 'text-xl'
 }
 import { Children, useEffect, useState, type ReactNode, type Ref } from 'react'
+import { Help } from './Help'
 import { colorVar } from '../lib/models'
 import { Swatch } from './ui'
 import { useSetTab } from './Tabs'
@@ -36,13 +37,15 @@ export function showPanel(tab: HTMLElement, tries = 45) {
 }
 
 /** `tab` makes the tile a button that sets `?tab=` (no page navigation); without it the tile is static. `accent` colors its top edge, by default the approach's. */
-export function Tile({ label, value, sub, tab, modelId, accent }: {
+export function Tile({ label, value, sub, tab, modelId, accent, help }: {
   label: string
   value: ReactNode
   sub?: ReactNode
   tab?: string
   modelId?: string
   accent?: string
+  /** Hover text for the label. Sits beside the tile, not inside it, so a button tile never nests a button. */
+  help?: string
 }) {
   const setTab = useSetTab()
   const open = (id: string) => {
@@ -57,22 +60,32 @@ export function Tile({ label, value, sub, tab, modelId, accent }: {
     <>
       <span className="flex items-center gap-1.5 text-[13px] text-ink-3">
         {modelId && <Swatch modelId={modelId} />}
-        <span>{label}</span>
+        <span className={help ? 'pr-5' : undefined}>{label}</span>
       </span>
       <span className={`tabular mt-1 block font-semibold leading-tight [overflow-wrap:anywhere] ${valueSize(value)}`}>{value}</span>
       {sub && <span className="mt-1 block text-[13px] text-ink-2">{sub}</span>}
     </>
   )
-  const base = 'block min-w-0 rounded-lg border border-t-2 border-line bg-surface-1 p-3 text-left'
+  // with help, the tile fills its wrapper (so a row's tiles stay one height) and its label clears the "?"
+  const base = `block min-w-0 rounded-lg border border-t-2 border-line bg-surface-1 p-3 text-left${help ? ' h-full' : ''}`
   const edge = accent ?? (modelId ? colorVar(modelId) : undefined)
   const style = edge ? { borderTopColor: edge } : undefined
-  if (tab)
-    return (
-      <button type="button" onClick={() => open(tab)} style={style} className={`${base} hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]`}>
-        {body}
-      </button>
-    )
-  return <div className={base} style={style}>{body}</div>
+  const tile = tab ? (
+    <button type="button" onClick={() => open(tab)} style={style} className={`${base} w-full hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]`}>
+      {body}
+    </button>
+  ) : (
+    <div className={base} style={style}>{body}</div>
+  )
+  if (!help) return tile
+  return (
+    <div className="relative min-w-0">
+      {tile}
+      <span className="absolute right-2 top-2.5">
+        <Help text={help} />
+      </span>
+    </div>
+  )
 }
 
 export function SummaryStrip({ children, label = 'Summary', ref }: { children: ReactNode; label?: string; ref?: Ref<HTMLDivElement> }) {

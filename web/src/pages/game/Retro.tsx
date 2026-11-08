@@ -8,6 +8,7 @@ import { Help } from '../../components/Help'
 import { Card, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Efficiency, GradedPick, RetroGame, TeamRetro, WpPlay } from '../../data/contract'
 import { DivergingBars, DriveField, PossessionStrip, RangeRow, TipNote, TipRow, TipTitle, WpChart, type RangeRowData } from '../../charts'
+import { withCodes } from '../../lib/teams'
 import { dash, fmtEff, pct, pts, ptsFor, ptsSide } from '../../lib/format'
 import { driveLede, driveText, factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
 
@@ -25,10 +26,10 @@ export function Retro({ r }: { r: RetroGame }) {
       <Groups key={r.game_id} r={r} />
       <FinePrint>
         <p>The retrospective describes the game; it does not prove why it went that way. Every number is computed from play-by-play, and every sentence is filled in from those numbers.</p>
-        <p>"Expected" comes from league rates in the same situations (2015–2025), and swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played, so they are variance rather than luck.</p>
+        <p>"Expected" comes from league rates in the same situations (2015–2025; for 3rd and 4th downs, adjusted for both teams' form this season). Efficiency compares each unit with its season before this game, the band being the middle 80% of teams. Swing plays and efficiency overlap on purpose: a third down counts in both, asked a different way. Swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played, so they are variance rather than luck.</p>
         <p>In the forecast table, dimmed rows are references (the market and simple baselines), not entrants, and cannot be "best". One game is a very noisy score for any model.</p>
         <p>Phases are a count, not a score: they aren't worth the same as each other, and none of them feeds the played-like verdict. Some overlap with the swing plays below.</p>
-        <p>The win probability curve is nflfastR's model with the pregame spread, not one of this site's approaches. Its quirks, such as the step at the end of a tied regulation and blowouts flattening at 99.9%, are the model's. Play text is from nflverse.</p>
+        <p>The win probability curve is nflfastR's model with the pregame spread, not one of this site's approaches. Its quirks, such as the step at the end of a tied regulation and blowouts flattening at 99.9%, are the model's. The band under the chart shows who had the ball, with a line at each score. Its kickoff number differs from this site's forecasts. Play text is from nflverse.</p>
         <p>Group values overlap and do not add up to anything: read their order, not their size.</p>
       </FinePrint>
     </div>
@@ -43,7 +44,7 @@ function Headlines({ r }: { r: RetroGame }) {
     <Section title="What happened" help="A few plain-language takeaways, each computed from the numbers below. They describe the game; they do not prove why it went that way.">
       <ul className="list-disc space-y-1.5 pl-5 text-[15px]">
         {r.headlines.map((h) => (
-          <li key={h}>{h}</li>
+          <li key={h}>{withCodes(h, [r.away, r.home])}</li>
         ))}
       </ul>
     </Section>
@@ -58,12 +59,11 @@ function Unfolded({ r }: { r: RetroGame }) {
   const describe = (p: WpPlay) => markText(p, r.home, r.away, p.factor ? factorLabel(r, p.factor) : null)
   const plays = orderedPlays(ws)
   return (
-    <Section title="How it unfolded" help="Home win probability after every play, from nflfastR's model with the pregame spread. The numbered dots are the biggest single-play swings; hover, focus or tap one for the play. The band underneath shows who had the ball, with a line at each score.">
+    <Section title="How it unfolded" help="Home win chance after every play, from nflfastR's in-game model. It starts from the spread, so it isn't one of our forecasts. Numbered dots are the biggest plays; tap one.">
       <p className="mb-3 text-[15px]">{wpLede(r)}</p>
       <Card>
         <WpChart series={ws} home={r.home} away={r.away} homeScore={r.result.home_score} awayScore={r.result.away_score} describe={describe} />
         {r.drives && r.drives.length > 0 && <PossessionStrip drives={r.drives} endT={ws.end_t} home={r.home} describe={driveText} />}
-        <p className="mt-2 text-[12px] text-ink-3">Win chance from nflfastR's in-game model, which starts from the pregame spread. It is not one of this site's forecasts, so its kickoff number differs from theirs.</p>
         {plays.length > 0 && (
           <details className="mt-3 border-t border-line pt-2 text-[13px] text-ink-2">
             <summary className="cursor-pointer text-ink-3 hover:text-ink">Turning points</summary>
@@ -88,7 +88,7 @@ function Unfolded({ r }: { r: RetroGame }) {
 function DriveByDrive({ r }: { r: RetroGame }) {
   if (!r.drives?.length) return null
   return (
-    <Section title="Drive by drive" help="Each row is one drive, in order: where it started, where it ended and how. The away team drives left to right, the home team right to left, so the field isn't how the teams switched ends in the game.">
+    <Section title="Drive by drive" help="One row per drive, in order. Away drives run left to right, home right to left.">
       <p className="mb-3 text-[15px]">{driveLede(r)}</p>
       <Card>
         <DriveField drives={r.drives} home={r.home} away={r.away} describe={driveText} />
@@ -107,7 +107,7 @@ function Forecasts({ r }: { r: RetroGame }) {
   return (
     <Section
       title="How the forecasts did"
-      help="Each model's pregame pick for this game, scored after the fact. The market row is the line at the moment the approaches locked, the same line they are scored against everywhere on the site; the market figure at the top of the page is the last line before kickoff. The market and the simple reference lines are shown for comparison but cannot be 'best'."
+      help="Each forecast's pregame pick, scored after the game. Market at lock is the line the approaches are scored against; the header shows the last line before kickoff."
     >
       <TableScroll>
         <table className="w-full border-collapse text-[14px]">
@@ -178,7 +178,7 @@ function PlayedLike({ r }: { r: RetroGame }) {
   return (
     <Section
       title="Played like"
-      help="How often a team wins when it plays as efficiently as each side did here, turnovers aside, according to league history. It asks whether the result matched the play."
+      help="How often a team wins when it plays as efficiently as each side did here, turnovers aside, by league history. It asks whether the result matched the play."
     >
       <Card>
         <div className="flex items-start justify-between gap-3">
@@ -193,7 +193,6 @@ function PlayedLike({ r }: { r: RetroGame }) {
           <div style={{ width: `${100 - homeW}%`, background: 'var(--team-away)' }} />
           <div style={{ width: `${homeW}%`, background: 'var(--team-home)' }} />
         </div>
-        <p className="mt-3 text-[14px] text-ink-2">{pl.sentence}</p>
         <PlayedLikeInputs r={r} />
       </Card>
     </Section>
@@ -203,10 +202,14 @@ function PlayedLike({ r }: { r: RetroGame }) {
 /** What went into the verdict. Absent on retros built before schema 3. */
 function PlayedLikeInputs({ r }: { r: RetroGame }) {
   const steps = playedLikeSteps(r)
+  // the headline says the verdict; the sentence only stands in where the steps are missing (old retros)
+  // old retros: the headline already says the verdict, so nothing to add
   if (!steps) return null
   return (
     <div className="mt-3 border-t border-line pt-3">
-      <h3 className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-3">What goes into it</h3>
+      <h3 className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-3">
+        <Help text={steps.sentence}>What goes into it</Help>
+      </h3>
       <TableScroll>
         <table className="w-full border-collapse text-[14px]">
           <thead>
@@ -228,7 +231,6 @@ function PlayedLikeInputs({ r }: { r: RetroGame }) {
           </tbody>
         </table>
       </TableScroll>
-      <p className="mt-2 text-[13px] text-ink-2">{steps.sentence}</p>
     </div>
   )
 }
@@ -253,7 +255,7 @@ function Phases({ r }: { r: RetroGame }) {
     )
   }
   return (
-    <Section title="Phase by phase" help="Who won each part of the game. It's a description of how the game went, not a score: phases aren't worth the same, and none of them feeds the played-like verdict.">
+    <Section title="Phase by phase" help="Who won each part of the game. Phases aren't worth the same, so this describes the game; it doesn't score it.">
       <Card>
         <p className="mb-2 text-[15px] font-semibold">{phaseSummary(r)}</p>
         <TableScroll>
@@ -296,7 +298,7 @@ function EfficiencySection({ r }: { r: RetroGame }) {
   return (
     <Section
       title="Efficiency"
-      help="How each unit played in this game next to its season to date (before this game). The band is the league's typical range (the middle 80% of teams this season), the tick the league average. The game dot is green when it beat the team's season level and red when it fell short."
+      help="Each unit in this game (dot) against its season so far. The band is the league's middle 80%, the tick its average. Green beat its season, red fell short."
     >
       <div className="mb-3">
         <Segmented
@@ -392,22 +394,19 @@ function SwingSection({ r }: { r: RetroGame }) {
   return (
     <Section
       title="Swing plays"
-      help="Events that swing games, each compared with what was expected (league rates in the same situations; for 3rd and 4th downs, adjusted for both teams' form this season) and priced in points by what such events are worth on average. One team's missed kick is the other's gain, so each bar shows the net between the two."
+      help="Swing events against what usually happens in that spot, priced in points. One team's missed kick is the other's gain, so each bar is the net; each team's own numbers are under 'What each swing was'."
     >
-      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        Efficiency says how well each team played; this says how the swings fell. The two overlap on purpose: a third down counts in both, asked a different way. Each bar is the net between the teams (one team's swing minus the other's); each team's own figures are under “What each swing was”.
-      </p>
       <Card>
         <p className="mb-3 text-[15px] font-semibold">
           {Math.abs(net) < 0.05 ? 'The swing plays came out even' : <>Swing plays, net: <span className="tabular">{ptsSide(net, r.home, r.away)}</span></>}
         </p>
-        <SwingChart r={r} title="Variance" note="Conversions, interceptions and penalties: they went a team's way, but how it played had a hand in it." rows={variance} domain={domain} />
+        <SwingChart r={r} title="Variance" note="Conversions, interceptions, penalties: partly skill." rows={variance} domain={domain} />
         <SwingChart r={r} title="Pure luck" note="Fumble bounces, kicks and return plays." rows={pure} domain={domain} />
         <details className="mt-3 border-t border-line pt-2 text-[13px] text-ink-2">
           <summary className="cursor-pointer text-ink-3 hover:text-ink">What each swing was</summary>
           <ul className="mt-2 space-y-1.5">
             {[...variance, ...pure].flatMap((x) => x.teams.filter((t) => t.swing !== 0).map((t) => (
-              <li key={`${x.key}-${t.team}`}><span className="font-medium text-ink">{t.team}, {x.label}</span>: {t.sentence}</li>
+              <li key={`${x.key}-${t.team}`}><span className="font-medium text-ink">{t.team}, {x.label}</span>: {withCodes(t.sentence, [r.away, r.home])}</li>
             )))}
           </ul>
         </details>
@@ -436,7 +435,7 @@ function SwingChart({ r, title, note, rows, domain }: { r: RetroGame; title: str
             <>
               <TipTitle>{x.label}</TipTitle>
               {x.teams.map((t) => <TipRow key={t.team} color={t.team === r.home ? 'var(--team-home)' : 'var(--team-away)'} value={pts(t.swing)} label={t.team} />)}
-              <TipNote>{x.teams.find((t) => t.swing !== 0)?.sentence}</TipNote>
+              <TipNote>{withCodes(x.teams.find((t) => t.swing !== 0)?.sentence ?? '', [r.away, r.home])}</TipNote>
             </>
           ),
         }))}
@@ -465,7 +464,7 @@ function Groups({ r }: { r: RetroGame }) {
   return (
     <Section
       title="Which groups mattered"
-      help="For each group of evidence: how much worse (or better) this forecast would have scored had that group been left out. Positive means the group helped the forecast on this game."
+      help="How much worse this forecast would have scored without each group. Positive means the group helped."
     >
       <div className="mb-3 overflow-x-auto">
         <Segmented

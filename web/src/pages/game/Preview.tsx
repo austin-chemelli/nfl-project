@@ -4,6 +4,8 @@
  * (Market behavior, Buzz) as their raw readings. How each approach reads the same parts is on the
  * Approaches tab. The bars come from the Global fit, a diagnostic, so the name never appears here.
  */
+import { Help } from '../../components/Help'
+import { useSetTab } from '../../components/Tabs'
 import { DivergingBars, TipNote, TipRow, TipTitle } from '../../charts'
 import { DataTable, Section, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
@@ -13,6 +15,7 @@ import { liveBars, liveOnlyGroups, liveReady, previewRows, type LiveBar } from '
 import { Edges } from './Sections'
 
 export function Preview({ g, meta }: { g: Game; meta: Meta }) {
+  const setTab = useSetTab() // before the early return: hooks keep their order
   if (!g.contributions.global) return <Edges g={g} meta={meta} />
   const rows = previewRows(g, meta, null)
   const live = liveOnlyGroups(g, meta)
@@ -22,10 +25,11 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
   return (
     <Section
       title="Who has the edge"
-      help="Each bar is what that edge has been worth in past games, in points of win chance, before any approach weighs in. The label under each name says how lopsided this matchup is next to every game since 2005."
+      help="Each bar is what that edge was worth in past games, in points (percentage points of win chance). The label under each name compares this matchup with every game since 2005."
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        The matchup before any approach weighs in: how far each part of the game pushes toward {g.away} or {g.home}, as history would price it. Pts are percentage points of win chance. How each approach reads the same parts is on the Approaches tab.
+        How much each part of the game favors {g.away} or {g.home}, priced by history.{' '}
+        <button type="button" onClick={() => setTab('approaches')} className="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-accent hover:underline">By approach →</button>
       </p>
       <DivergingBars
         leftLabel={`toward ${g.away}`}
@@ -88,11 +92,11 @@ function LiveBars({ bars }: { bars: LiveBar[] }) {
     <div className="mt-6 border-t border-dashed border-line pt-4" data-testid="live-only">
       <div className="flex items-baseline gap-2">
         <span className="rounded border border-[var(--text-muted)] px-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-2">Live</span>
-        <h3 className="m-0 text-[15px] font-semibold">This week only</h3>
+        <h3 className="m-0 text-[15px] font-semibold">
+          <Help text="Readings from this week's lines and news. Read which way a bar leans, not its length next to the bars above.">This week only</Help>
+        </h3>
       </div>
-      <p className="mb-2 mt-1 max-w-3xl text-[13px] text-ink-2">
-        Readings from this week&apos;s lines and news. Past seasons can&apos;t say what they&apos;re worth, so each bar is on its own scale: read which way it leans, not its length next to the bars above.
-      </p>
+      <p className="mb-2 mt-1 max-w-3xl text-[13px] text-ink-2">No history to price these, so each bar has its own scale.</p>
       <DivergingBars
         domain={1.6} // the longest bar stops short of the edge, so its label always fits
         format={() => ''}

@@ -2,7 +2,7 @@ import { isPublicLine } from '../../lib/models'
 import { describe, expect, it } from 'vitest'
 import {
   calibrationScaleSentence, calibrationVerdict, currentSummary, divergenceSentence, foldReliability, GAP_BAND, gapLimit, gapRows,
-  headlineSentence, marketWinsWhenApart, personaHistoryHeadline, shortName, signedGap,
+  marketWinsWhenApart, personaHistoryHeadline, shortName, signedGap, verdictWords,
 } from './helpers'
 
 const rel = (mean_p: number, hit_rate: number, n: number) => ({ model_id: 'x', bin: 0, mean_p, hit_rate, n })
@@ -34,6 +34,14 @@ describe('calibrationVerdict', () => {
   })
 })
 
+describe('verdictWords', () => {
+  it('puts a verdict in a table cell', () => {
+    expect(verdictWords(calibrationVerdict([rel(0.7, 0.62, 400)], 'X'))).toBe('Overconfident by 8 pts')
+    expect(verdictWords(calibrationVerdict([rel(0.7, 0.71, 400)], 'X'))).toBe('Well calibrated')
+    expect(verdictWords(calibrationVerdict([rel(0.7, 0.9, 10)], 'X'))).toBe('Too few to judge')
+  })
+})
+
 describe('divergenceSentence', () => {
   it('matches the copy in the feedback doc', () => {
     expect(divergenceSentence({ bucket: '10+', n: 1158, lean_win_rate: 0.4, market_expected_rate: 0.42 }, 'the Traditionalist')).toBe(
@@ -53,27 +61,25 @@ describe('persona helpers', () => {
   })
   it('shortens names and describes the scale', () => {
     expect(shortName('The Analyst')).toBe('the Analyst')
-    expect(calibrationScaleSentence(0.8)).toContain('25% more confident')
+    expect(calibrationScaleSentence(0.8)).toContain('ran 25% overconfident')
     expect(calibrationScaleSentence(1)).toContain('no rescaling')
   })
 })
 
-describe('headline', () => {
+describe('currentSummary', () => {
   const cur = [
     { model_id: 'analyst', week: 1, n: 16, cum_log_loss: 0.65, live: false },
     { model_id: 'analyst', week: 2, n: 14, cum_log_loss: 0.64, live: false },
     { model_id: 'market_baseline', week: 1, n: 16, cum_log_loss: 0.62, live: false },
     { model_id: 'market_baseline', week: 2, n: 14, cum_log_loss: 0.6, live: false },
   ]
-  it('compares to the market after N games', () => {
+  it('counts games and the gap to the market', () => {
     const s = currentSummary(cur)
     expect(s.liveGames).toBe(0)
     const row = s.rows.find((r) => r.model_id === 'analyst')!
-    expect(headlineSentence(row, 'the Analyst')).toBe('After 30 games, the Analyst is 0.040 worse than the market (log loss; lower is better).')
-  })
-  it('calls gaps inside GAP_BAND too close to call', () => {
-    const row = { model_id: 'analyst', games: 30, logLoss: 0.62, liveWeeks: 0, vsMarket: null, delta: 0.02 }
-    expect(headlineSentence(row, 'the Analyst')).toBe('After 30 games, the Analyst is about the same as the market (within 0.025 log loss, too close to call at this sample size).')
+    expect(row.games).toBe(30)
+    expect(row.vsMarket).toBe('0.640 (0.040 worse than the market)')
+    expect(row.delta).toBeCloseTo(0.04)
   })
 })
 

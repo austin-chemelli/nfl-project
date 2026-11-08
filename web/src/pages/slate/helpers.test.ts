@@ -215,27 +215,27 @@ describe('whyLine', () => {
   describe('neutral sites', () => {
     const neutral = { neutral_site: true, stadium: 'Bernabeu' }
     it('names the stadium, before any edge', () => {
-      expect(whyLine(withCard({ edges: edge(92) }, neutral), meta)).toBe('Neutral site: Bernabeu · JAX Form edge, bigger than 92% of matchups')
+      expect(whyLine(withCard({ edges: edge(92) }, neutral), meta)).toBe('Neutral site: Bernabeu · JAX form edge, 92nd pct')
       expect(whyLine(withCard({}, { ...neutral, stadium: null }), meta)).toBe('Neutral site')
     })
     it('never calls venue an edge, or rest and travel on a neutral site', () => {
       expect(whyLine(withCard({ edges: edge(98, 'venue_weather') }), meta)).toBeNull()
       expect(whyLine(withCard({ edges: edge(93, 'rest_travel') }, neutral), meta)).toBe('Neutral site: Bernabeu')
-      expect(whyLine(withCard({ edges: edge(93, 'rest_travel') }), meta)).toBe('JAX Rest & travel edge, bigger than 93% of matchups')
+      expect(whyLine(withCard({ edges: edge(93, 'rest_travel') }), meta)).toBe('JAX rest & travel edge, 93rd pct')
     })
   })
 
   describe('edges', () => {
     it('takes the strongest, wherever it sits in the file', () => {
-      expect(whyLine(withCard({ edges: { ...edge(80, 'offense'), ...edge(92) } }), meta)).toContain('Form edge')
-      expect(whyLine(withCard({ edges: { ...edge(92), ...edge(80, 'offense') } }), meta)).toContain('Form edge')
+      expect(whyLine(withCard({ edges: { ...edge(80, 'offense'), ...edge(92) } }), meta)).toContain('form edge')
+      expect(whyLine(withCard({ edges: { ...edge(92), ...edge(80, 'offense') } }), meta)).toContain('form edge')
     })
     it('uses edges at 75 and above; below that it is no standout edge', () => {
-      expect(whyLine(withCard({ edges: edge(75) }), meta)).toContain('edge, bigger than 75%')
+      expect(whyLine(withCard({ edges: edge(75) }), meta)).toContain('edge, 75th pct')
       expect(whyLine(withCard({ edges: edge(74.9) }), meta)).toBe('No standout edge')
     })
     it('never says bigger than 100%', () => {
-      expect(whyLine(withCard({ edges: edge(99.8) }), meta)).toBe('JAX Form edge, bigger than 99% of matchups')
+      expect(whyLine(withCard({ edges: edge(99.8) }), meta)).toBe('JAX form edge, 99th pct')
     })
     it('skips context-only groups', () => {
       expect(whyLine(withCard({ edges: edge(99, 'coaching') }), meta)).toBeNull()
@@ -253,8 +253,8 @@ describe('whyLine', () => {
   it('keeps two pieces, in order', () => {
     const c = { ...usual, charted_qb: { home: 'Backup Bob', away: null }, injuries: [out], edges: edge(92), weather_concern: 0.8 }
     expect(whyLine(withCard(c, { home_qb: 'Backup Bob' }), meta)).toBe('Backup Bob listed to start for GB (usually Jordan Love) · BAL without A Name (WR)')
-    expect(whyLine(withCard({ ...c, injuries: [] }, { home_qb: 'Backup Bob' }), meta)).toBe('Backup Bob listed to start for GB (usually Jordan Love) · JAX Form edge, bigger than 92% of matchups')
-    expect(whyLine(withCard({ edges: edge(92), weather_concern: 0.8 }), meta)).toBe('JAX Form edge, bigger than 92% of matchups · Weather could be a factor')
+    expect(whyLine(withCard({ ...c, injuries: [] }, { home_qb: 'Backup Bob' }), meta)).toBe('Backup Bob listed to start for GB (usually Jordan Love) · JAX form edge, 92nd pct')
+    expect(whyLine(withCard({ edges: edge(92), weather_concern: 0.8 }), meta)).toBe('JAX form edge, 92nd pct · Weather could be a factor')
   })
 })
 

@@ -7,13 +7,13 @@ import { bestWorst, chartRows, itemName, itemOptions, searchOptions, skillText, 
 
 const INPUT = 'rounded-md border border-line bg-surface-1 px-2 py-1 text-[13px] text-ink'
 
-function SeasonChart({ rows, field, title, refValue, avg, label }: {
-  rows: ChartRow[]; field: 'edge' | 'skill'; title: string; refValue: number; avg: number | null; label: string
+function SeasonChart({ rows, field, title, help, refValue, avg, label }: {
+  rows: ChartRow[]; field: 'edge' | 'skill'; title: string; help: string; refValue: number; avg: number | null; label: string
 }) {
   const fmt = (v: number) => (field === 'edge' ? `${v.toFixed(0)}%` : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(0)}%`)
   return (
     <div>
-      <h3 className="mb-1 text-[14px] font-medium">{title}</h3>
+      <h3 className="mb-1 text-[14px] font-medium"><Help text={help}>{title}</Help></h3>
       <div className="h-56 w-full" role="img" aria-label={`${label}: ${title} by season. The numbers are in the table below the charts.`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
@@ -54,10 +54,10 @@ export function OverTime({ h, itemKey, onPick }: { h: Hypotheses; itemKey: strin
   return (
     <Section
       title="Look at one thing over time"
-      help="Pick a single feature or a whole group and see how well it predicts on its own, season by season. Each season is scored by a model trained only on the seasons before it, so nothing peeks ahead."
+      help="Groups are the beliefs approaches weight; features are single measurements inside them. Each season is scored by a model trained only on earlier seasons, so nothing peeks ahead."
     >
       <p className="mb-3 max-w-3xl text-ink-2">
-        Some years a signal does more than others. Groups are the high-level beliefs the personas weight; features are the single measurements inside them.
+        How well one belief predicted, season by season.
       </p>
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <label htmlFor={searchId} className="flex flex-col gap-1 text-[13px] text-ink-3">
@@ -91,21 +91,19 @@ function OverTimeBody({ h, it }: { h: Hypotheses; it: Hypotheses['by_season']['i
   const name = itemName(it)
   return (
     <div className="flex flex-col gap-4">
-      <p className="max-w-3xl">
-        <span className="font-medium"><Help text={it.description}>{name}</Help>:</span> <span className="text-ink-2">{it.sentence}</span>
+      {/* the tiles below carry the numbers; the pipeline's long sentence is the hover on the name */}
+      <p className="max-w-3xl font-medium">
+        <Help text={[it.description, it.sentence].filter(Boolean).join(' ')}>{name}</Help>
       </p>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="Edge team won" value={pooledEdge == null ? '–' : `${pooledEdge.toFixed(1)}%`} sub={`across all seasons; 50% is a coin flip`} help="Of the games where this favored one side, how often that side won." />
-        <StatTile label="Better than baseline" value={skillText(pooledSkill)} sub="vs always giving the home team its usual rate" help="How much better the one-feature model's probabilities are than the home-rate baseline. Above 0 is better." />
+        <StatTile label="Edge team won" value={pooledEdge == null ? '–' : `${pooledEdge.toFixed(1)}%`} sub="all seasons; 50% is a coin flip" help="Of the games where this favored one side, how often that side won." />
+        <StatTile label="Better than baseline" value={skillText(pooledSkill)} sub="vs the home-rate baseline" help="How much better the one-feature model's probabilities are than the home-rate baseline. Above 0 is better." />
         <StatTile label="Best season" value={best ?? '–'} sub={best != null ? skillText(bySeason.get(best)?.skill_pct) : undefined} />
         <StatTile label="Worst season" value={worst ?? '–'} sub={worst != null ? skillText(bySeason.get(worst)?.skill_pct) : undefined} />
       </div>
       <Card className="flex flex-col gap-5">
-        <SeasonChart rows={rows} field="edge" title="How often the team with the edge won" refValue={50} avg={pooledEdge} label={name} />
-        <SeasonChart rows={rows} field="skill" title="Better than picking the home team at its usual rate" refValue={0} avg={pooledSkill} label={name} />
-        <p className="text-[13px] text-ink-3">
-          Top: of the games where the feature favored one side, how often that side won (50% = no better than a coin flip). Bottom: how much better the one-feature model's probabilities are than always giving the home team its historical win rate; above zero is better. Dotted line is the all-season average. Gaps are seasons without enough data (for example, charting data that starts in 2022).
-        </p>
+        <SeasonChart rows={rows} field="edge" title="How often the team with the edge won" help="Of games where the feature favored a side, how often that side won; 50% is a coin flip. The dashed line is the all-season average; gaps are seasons without enough data." refValue={50} avg={pooledEdge} label={name} />
+        <SeasonChart rows={rows} field="skill" title="Better than picking the home team at its usual rate" help="How much better the one-feature model's probabilities are than always giving the home team its usual win rate. Above zero is better. Gaps are seasons without data." refValue={0} avg={pooledSkill} label={name} />
         <DataTable>
           <table className="w-full text-[13px]">
             <thead>

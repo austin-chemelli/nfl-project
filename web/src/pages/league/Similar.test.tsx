@@ -49,7 +49,7 @@ describe('Similar seasons tab', () => {
     expect(screen.getByLabelText('Team')).toHaveValue(code)
     expect(within(list).getAllByRole('listitem')).toHaveLength(10)
     const entry = sim.teams[code]
-    expect(screen.getByText(new RegExp(`after ${entry.games_played} games finished like this`))).toBeInTheDocument()
+    expect(screen.getByText(new RegExp(`after ${entry.games_played} games, and how they finished`))).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /nearest seasons finished/ })).toBeInTheDocument()
     expect(screen.getByRole('img', { name: /Where the .* and their 25 nearest seasons sit/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'playoff odds' })).toHaveAttribute('href', expect.stringContaining('tab=odds'))
@@ -70,9 +70,13 @@ describe('Similar seasons tab', () => {
     await open('/league?tab=similar&team=CHI')
     const groups = screen.getAllByRole('region').filter((r) => ['Red flags', "Looks bad, wasn't", 'Real strengths'].includes(r.getAttribute('aria-label') ?? ''))
     expect(groups.map((g) => g.getAttribute('aria-label'))).toEqual(['Red flags', "Looks bad, wasn't", 'Real strengths'])
-    expect(groups[0]).toHaveTextContent('Offense: 27th. Among past teams at 5-2, those with a bottom-quarter offense made the playoffs 11 of 28 times, against 58 of 80 for the rest.')
+    // the heading and counts show; the sentence is the hover
+    expect(groups[0]).toHaveTextContent('Offense: 27th.')
+    expect(groups[0]).toHaveTextContent('11 of 28 (39%)')
+    expect(groups[0]).toHaveTextContent('58 of 80 (73%)')
+    expect(groups[0]).toHaveTextContent('Among past teams at 5-2, those with a bottom-quarter offense made the playoffs 11 of 28 times, against 58 of 80 for the rest.')
     expect(groups[1]).toHaveTextContent('Record undersells them.')
-    expect(groups[2]).toHaveTextContent('reached a conference game 16 of 40 times')
+    expect(groups[2]).toHaveTextContent('reached the conference championship game 16 of 40 times')
   })
 
   it('hides an empty group, and says so when a team has no flags at all', async () => {
@@ -125,7 +129,7 @@ describe('Similar seasons tab', () => {
     await userEvent.selectOptions(screen.getByLabelText('Team'), 'BUF')
     expect(screen.getByLabelText('Team')).toHaveValue('BUF')
     expect(screen.getByRole('tab', { name: 'Similar seasons' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText(/looked like the Buffalo Bills after/)).toBeInTheDocument()
+    expect(screen.getByText(/looked like BUF after/)).toBeInTheDocument()
   })
 
   it('ignores an unknown ?team=', async () => {
@@ -141,7 +145,7 @@ describe('Similar seasons tab', () => {
     expect(screen.queryByRole('list', { name: /^Seasons most like/ })).toBeNull()
     expect(screen.getByLabelText('Team')).toHaveValue('NO')
     expect(document.body.textContent).not.toMatch(/Teams that looked like/)
-    expect(document.body.textContent).toMatch(/isn't a forecast/)
+    expect(document.body.textContent).toMatch(/not a forecast/)
   })
 
   it('marks the teams without an entry in the picker', async () => {
@@ -152,7 +156,7 @@ describe('Similar seasons tab', () => {
   it('never says "will" or "clinched": it is descriptive, and points to the playoff odds as the forecast', async () => {
     for (const team of ['CHI', 'KC', 'DET', 'SF', 'NO']) {
       renderRoute(`/league?tab=similar&team=${team}`)
-      await screen.findByText(/isn't a forecast/)
+      await screen.findByText(/not a forecast/)
       await screen.findByLabelText('Team')
       // open the fine print too: its text is in the DOM either way
       const text = document.body.textContent ?? ''

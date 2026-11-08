@@ -2,7 +2,7 @@ import { BookStrip, type StripDot } from '../../charts'
 import { Section, TableScroll, td, th } from '../../components/ui'
 import type { BookLine, Game } from '../../data/contract'
 import { pct, spreadLabel } from '../../lib/format'
-import { bookName, booksSentence, disagrees, hasBooks, price } from './books'
+import { bookName, booksRange, booksSentence, disagrees, hasBooks, price } from './books'
 import { etStamp, fmtPts } from './line'
 
 /** Each sportsbook's line at our latest snapshot before kickoff, and where they disagree (ADR 0024, M20.13). */
@@ -18,11 +18,12 @@ export function Books({ g }: { g: Game }) {
   return (
     <Section
       title="What each sportsbook says"
-      help="Each book's own line at our latest snapshot before kickoff. The consensus line is their median. Books move at different times and some shade a number to balance their own bets, so a gap is a sign the market hasn't settled, not a mistake to exploit."
+      help="Each book's line at our last snapshot before kickoff; the consensus is their median. A gap means the market hasn't settled, not a mistake to exploit."
     >
       <p className={`m-0 ${flag ? 'border-l-[3px] border-[var(--warning)] pl-2 text-ink' : 'text-ink-2'}`} data-testid="books-read">
-        {flag && <strong className="font-semibold">Books disagree. </strong>}
-        {booksSentence(b, g.home, g.away)}
+        <strong className="font-semibold">{!flag ? 'Books agree:' : b.key != null || b.flags.includes('spread_gap') ? 'Books split on the spread:' : 'Books split on the total:'}</strong>{' '}
+        {/* a split names who sits where; an agreement is just the range */}
+        {flag ? booksSentence(b, g.home, g.away).replace(/\.$/, '') : booksRange(b, g.home, g.away)} · {b.books.length} books, {etStamp(b.snapshot_ts)}
       </p>
       <div className="mt-3 flex flex-col gap-3">
         {b.spread && <BookStrip label="Spread" dots={dots('spread_home', spreadPrice)} median={b.spread.median} format={(v) => spreadLabel(v, g.home, g.away)} sides={sides} />}
@@ -52,10 +53,7 @@ export function Books({ g }: { g: Game }) {
           </tbody>
         </table>
       </TableScroll>
-      <p className="mt-2 mb-0 text-[12px] text-ink-3">
-        {b.books.length} books as of {etStamp(b.snapshot_ts)}.
-        {b.n_stale > 0 && <> {b.n_stale} more left out: their quote was over six hours old.</>}
-      </p>
+      {b.n_stale > 0 && <p className="mt-2 mb-0 text-[12px] text-ink-3">{b.n_stale} more left out: their quote was over six hours old.</p>}
     </Section>
   )
 }

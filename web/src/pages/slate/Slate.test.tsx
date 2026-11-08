@@ -93,15 +93,15 @@ describe('Slate page', () => {
     const root = fixturesWithResults([7])
     fs.copyFileSync(path.join(root, 'site/recap_2026_08.json'), path.join(root, 'site/recap_2026_07.json'))
     renderRoute('/', root)
-    const link = await screen.findByRole('link', { name: /^Last week(, scored after the fact)?: the Student got \d+ of \d+ right, the market \d+ of \d+\.$/ })
+    const link = await screen.findByRole('link', { name: /^Last week( \(backfill\))?: Student \d+ of \d+ right, market \d+ of \d+\.$/ })
     expect(link).toHaveAttribute('href', '/week/2026/7')
     fs.rmSync(root, { recursive: true, force: true })
   })
 
   it.each([
-    ['backfill', /^Last week, scored after the fact: /],
-    ['locked', /^Last week: /],
-  ])('says when last week was %s', async (status, name) => {
+    ['backfill', /scored after the fact\./],
+    ['locked', /^Picks come from the locks/],
+  ])('says in a hover when last week was %s', async (status, tip) => {
     const root = fixturesWithResults([7])
     fs.copyFileSync(path.join(root, 'site/recap_2026_08.json'), path.join(root, 'site/recap_2026_07.json'))
     const file = path.join(root, 'site/slate_2026_07.json')
@@ -109,7 +109,8 @@ describe('Slate page', () => {
     for (const g of slate.games) for (const m of Object.values<{ status: string }>(g.models)) m.status = status
     fs.writeFileSync(file, JSON.stringify(slate))
     renderRoute('/', root)
-    expect(await screen.findByRole('link', { name })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: status === 'locked' ? /^Last week: / : /^Last week \(backfill\): / })).toBeInTheDocument()
+    expect(screen.getByText(tip)).toBeInTheDocument()
     fs.rmSync(root, { recursive: true, force: true })
   })
 
@@ -140,7 +141,7 @@ describe('Slate page', () => {
   it('shows the why line, and the tendencies contrast when stark, on a pregame card', async () => {
     renderRoute('/')
     const card = await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
-    expect(within(card).getByText('GB Quality edge, bigger than 92% of matchups')).toBeInTheDocument()
+    expect(within(card).getByText('GB quality edge, 92nd pct')).toBeInTheDocument()
     expect(within(card).getByText("The league's 3rd-most pass-heavy offense (GB) faces its most blitz-heavy defense (CAR)")).toBeInTheDocument()
     expect(within(card).getByText(/total 47.5/)).toBeInTheDocument()
     const bal = screen.getByRole('link', { name: /^BAL\s*@\s*BUF\s*\S/ })
@@ -175,7 +176,7 @@ describe('Slate page', () => {
     const card = await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
     expect(within(card).getByText(/Final/)).toBeInTheDocument()
     expect(within(card).getByText(/picked|called it|missed it|Upset|Approaches/)).toBeInTheDocument()
-    expect(within(card).queryByText(/edge, bigger than/)).toBeNull()
+    expect(within(card).queryByText(/edge, \d+\w+ pct/)).toBeNull()
     expect(within(card).queryByText(/most blitz-heavy/)).toBeNull()
     fs.rmSync(root, { recursive: true, force: true })
   })
