@@ -3,7 +3,7 @@ import metaJson from '../../test/fixtures/site/meta.json'
 import retroJson from '../../test/fixtures/site/retro/2026_08_CAR_GB.json'
 import gameJson from '../../test/fixtures/site/game/2026_08_CAR_GB.json'
 import { Game, Meta, RetroGame } from '../../data/contract'
-import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, liveOnlyGroups, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText, driveText, driveLede, liveReady } from './helpers'
+import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, liveOnlyGroups, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText, driveText, driveLede, liveReady, liveBars } from './helpers'
 
 const meta = Meta.parse(metaJson)
 const game = Game.parse(gameJson)
@@ -352,5 +352,23 @@ describe('liveReady', () => {
   it('waits for the narrative pass: a line-move reading alone is not enough', () => {
     expect(liveReady([grp([{ feature: 'market.line_move_pts', game: 'no move' }, { feature: 'narrative.public_bet_pct_home' }])])).toBe(false)
     expect(liveReady([grp([{ feature: 'narrative.sentiment', away: '0.2' }])])).toBe(true)
+  })
+})
+
+describe('liveBars', () => {
+  const g = Game.parse(gameJson)
+  const meta = Meta.parse(metaJson)
+  it('puts each live reading on its own scale, toward its side, in its own units', () => {
+    const bars = liveBars(g, meta)
+    const by = Object.fromEntries(bars.map((b) => [b.feature, b]))
+    expect(by['market.line_move_pts']).toMatchObject({ text: '0.0 pts', lean: 0, toward: null })
+    expect(by['narrative.public_bet_pct_home'].text).toBe('51% on GB')
+    for (const b of bars) if (b.lean != null) expect(Math.abs(b.lean)).toBeLessThanOrEqual(1)
+  })
+  it('a public-betting share under half reads on the away side', () => {
+    const away = { ...g, features: { ...g.features, 'narrative.public_bet_pct_home': { group: 'market', game: 0.35 } } } as typeof g
+    const b = liveBars(away, meta).find((x) => x.feature === 'narrative.public_bet_pct_home')
+    expect(b).toMatchObject({ text: `65% on ${g.away}`, toward: g.away })
+    expect(b!.lean).toBeLessThan(0)
   })
 })

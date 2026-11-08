@@ -49,16 +49,17 @@ describe('Game page', () => {
     expect(await screen.findByText(/Not locked: no lock was recorded/)).toBeInTheDocument()
   })
 
-  it('the Preview is approach-free: no picker, no outline, the fit unnamed, and the live-only parts as readings', async () => {
+  it('the Preview is approach-free: no picker, no outline, the fit unnamed, and the live-only parts as bars of their own', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB')
     await screen.findByRole('heading', { name: /^Who has the edge/ })
     expect(screen.queryByRole('radiogroup', { name: 'Overlay an approach' })).toBeNull()
     expect(container.querySelector('[data-testid="overlay"]')).toBeNull()
     expect(container.textContent).not.toMatch(/Global/)
     const live = screen.getByTestId('live-only')
-    for (const name of ['Market behavior', 'Buzz', 'Line movement', 'Public betting on the home team', 'Media sentiment', 'Hype']) expect(within(live).getByText(name)).toBeInTheDocument()
-    expect(within(live).getByText('51% on GB')).toBeInTheDocument()
-    expect(within(live).getByText('no move')).toBeInTheDocument()
+    expect(within(live).getByText('This week only')).toBeInTheDocument()
+    for (const name of ['Market behavior', 'Buzz', 'Line movement', 'Public betting on the home team', 'Media sentiment', 'Hype']) expect(within(live).getAllByText(name).length).toBeGreaterThan(0) // the fixture has every reading
+    expect(within(live).getAllByText('51% on GB').length).toBeGreaterThan(0)
+    expect(within(live).getAllByText('0.0 pts').length).toBeGreaterThan(0) // no line move is a zero bar, not words
   })
 
   it('the Approaches tab outlines what history says on each approach\'s bars', async () => {

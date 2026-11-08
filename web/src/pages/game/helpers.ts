@@ -133,6 +133,58 @@ export function liveOnlyGroups(g: Game, meta: Meta): LiveGroup[] {
   return out
 }
 
+/** One live reading as a bar: `lean` in -1..1 on the reading's own scale (positive toward home),
+ * `text` the reading in its own units (for a per-team reading, the gap toward the higher team; `both`
+ * has the two values). */
+export type LiveBar = { feature: string; label: string; group: string; help: string; lean: number | null; text: string | null; toward: string | null; both: string | null }
+
+/** How far a reading has to go to fill its bar: a 3-point line move, 25 points of public betting
+ * past even, the whole -1..1 or 0..1 range of a narrative reading. */
+const LIVE_RANGE: Record<string, number> = { points: 3, pct: 0.25 }
+
+/**
+ * The live readings as bars beside the history-priced ones (Austin, 2026-11-07): each on its own
+ * scale, toward the side it leans, labelled in its own units. No line move is a 0.0 pts bar.
+ */
+export function liveBars(g: Game, meta: Meta): LiveBar[] {
+  const base = g.contributions.global
+  if (!base) return []
+  const out: LiveBar[] = []
+  const clamp = (v: number) => Math.max(-1, Math.min(1, v))
+  for (const grp of meta.groups.groups) {
+    if (isContextOnly(meta, grp.id) || base.groups[grp.id]?.pp != null) continue
+    for (const m of grp.members) {
+      const v = g.features[m.feature]
+      const val = (x: number) => fmtUnit(x, m.unit).replace(/^-/, '−')
+      let lean: number | null = null
+      let text: string | null = null
+      let both: string | null = null
+      if (v?.game != null) {
+        if (m.unit === 'points') {
+          lean = Math.abs(v.game) < 0.05 ? 0 : clamp(v.game / LIVE_RANGE.points)
+          text = `${Math.abs(v.game) < 0.05 ? '0.0' : Math.abs(v.game).toFixed(1)} pts`
+        } else if (m.unit === 'pct' && m.feature.endsWith('_home')) {
+          lean = clamp((v.game - 0.5) / LIVE_RANGE.pct)
+          text = v.game >= 0.5 ? `${pct(v.game)} on ${g.home}` : `${pct(1 - v.game)} on ${g.away}`
+        } else {
+          lean = clamp(v.game)
+          text = val(v.game)
+        }
+      } else if (v?.home != null && v?.away != null) {
+        // one reading per team: the bar and its label are the gap, toward the higher team
+        const d = v.home - v.away
+        lean = clamp(d / (LIVE_RANGE[m.unit ?? ''] ?? 1))
+        const gap = m.unit === 'pct' ? val(Math.abs(d)) : Math.abs(d).toFixed(1)
+        text = Math.abs(d) < 0.05 ? 'even' : `${d > 0 ? g.home : g.away} +${gap}`
+        both = `${g.away} ${val(v.away)}, ${g.home} ${val(v.home)}`
+      }
+      out.push({ feature: m.feature, label: m.label, group: grp.name, help: helpFor(meta, m.feature),
+                 lean, text, both, toward: lean == null || lean === 0 ? null : lean > 0 ? g.home : g.away })
+    }
+  }
+  return out
+}
+
 /** Show the live-only readings once the week's narrative pass has filled at least one (Austin,
  * 2026-11-07): before that the table is a column of "no reading yet" beside a line-move reading the
  * line section already covers. */
