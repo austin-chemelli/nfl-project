@@ -1,6 +1,6 @@
 # Hosting plan (step 5)
 
-Status: current, verified 2026-11-07 (the jobs table; the rest as of 2026-11-04). Everything in §1–§2 is built and running (locks live from 2026 Week 9); §3 is the by-hand setup record, §4 the order it was built in. The live schedule, links and known issues are in [state.md](state.md).
+Status: current, verified 2026-11-07. Everything in §1–§2 is built and running (locks live from 2026 Week 9); §3 is the by-hand setup record, §4 the order it was built in. The live schedule, links and known issues are in [state.md](state.md).
 
 How the project runs once it leaves the laptop, what Austin sets up by hand, and in what order. Decisions: ADR 0008 (cloud-first, Terraform, Firebase), ADR 0009 (static React site), ADR 0014 (LLM on the desktop), ADR 0015 (two runners, one bucket). Written before the build (2026-10-28); the status line above says what is live.
 
@@ -50,7 +50,7 @@ Six kinds of scheduled job, all the same image with different commands:
 | lock sat | Sat 12:00 | `nfl lock --slot sat --commit --push` | |
 | odds snapshot | Thu 20:05; Sun 09:20, 12:50, 16:00, 20:10; Mon 20:05 | `nfl odds snapshot` + publish site | closing lines; ~8 schedules on one job |
 | daily | Wed, Fri, Sat 20:05 | `nfl daily` + publish site | ADR 0024: this season's ingest, an odds snapshot, curate, the kickoff forecast, tendencies, features, preview scores, site; the forecast and previews never stop the pass; no deploy key |
-| retro | daily 07:00 | `nfl retro daily` + publish site | ADR 0016: ingest the current season's pbp and schedules, curate that season's games and plays only, build missing or stale game retros and the week recaps, write `site/retro/` and `site/recap_*`; 30-minute timeout |
+| retro | daily 07:00 | `nfl retro daily`, `nfl grade`, `nfl site` + publish site | ADR 0016: ingest the current season's pbp and schedules, curate that season's games and plays only, build missing or stale game retros and the week recaps, write `site/retro/` and `site/recap_*`; then grade and rebuild the site JSON so the tracker includes last night's games (since 2026-11-07; before that only Tuesday's refresh graded). About 10 minutes; 30-minute timeout |
 
 The desktop runs, on a Windows scheduled task: Wed and Sat early morning `nfl narrative run <season> <week> --upload` (research for every game, uploaded to the bucket), later `nfl preview run`.
 

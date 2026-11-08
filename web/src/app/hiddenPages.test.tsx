@@ -12,7 +12,7 @@ describe('hidden pages on the live site', () => {
     const nav = within(await screen.findByRole('navigation', { name: 'Main' }))
     expect(nav.queryByRole('link', { name: 'Coaches' })).toBeNull()
     expect(nav.queryByRole('link', { name: 'Build' })).toBeNull()
-    for (const name of ['This week', 'League', 'Tracker', 'Evidence', 'How it works']) expect(nav.getByRole('link', { name })).toBeInTheDocument()
+    for (const name of ['This week', 'League', 'Tracker', 'History', 'How it works']) expect(nav.getByRole('link', { name })).toBeInTheDocument()
   })
 
   it('answers their URLs like pages that do not exist', async () => {

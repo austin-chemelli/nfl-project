@@ -10,7 +10,7 @@ export default function SlatePage() {
     <Page
       title="Slate"
       docTitle={params.season && params.week ? `Week ${params.week}, ${params.season}` : 'This week'}
-      lede="Four forecasting approaches predict every NFL game, lock in before kickoff, and get scored in public against the betting market. The Student, built from results instead of a persona, is the headline pick."
+      lede="Four forecasting approaches predict every NFL game, lock in before kickoff, and get scored in public against the betting market. The Student, built from results instead of a persona, is the headline pick, chosen before the season; the tracker shows which approach leads so far."
     >
       <Loaded q={meta} what="slate" shape="slate">
         {(m) => {

@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { Game, Meta, RetroGame } from '../../data/contract'
-import { summaryTiles } from './summary'
+import { pureLuck, summaryTiles } from './summary'
 
 const FIX = path.resolve(import.meta.dirname, '../../test/fixtures/site')
 const load = (p: string) => JSON.parse(fs.readFileSync(path.join(FIX, p), 'utf8'))
@@ -79,11 +79,13 @@ describe('summaryTiles', () => {
     const t = summaryTiles(final, meta, retro)
     expect(t.map((x) => x.id)).toEqual(['result', 'played', 'swing', 'surprise', 'right'])
     expect(t.every((x) => x.tab === 'retro')).toBe(true)
-    expect(t[0]).toMatchObject({ value: 'Upset', sub: expect.stringMatching(/^CAR won as a \d+% underdog$/) })
+    expect(t[0]).toMatchObject({ value: 'Upset', sub: expect.stringMatching(/^CAR won as a \d+% underdog (before kickoff|at lock)$/) })
     expect(t[1]).toMatchObject({ value: 'GB 61%', sub: 'the better side, but lost' })
-    // GB net −9.6, CAR +5.3: the swing plays went to CAR by 14.9, and the two parts add up to it
-    expect(t[2].value).toBe('CAR +14.9 pts')
-    expect(t[2].sub).toMatch(/^variance (even|[A-Z]+ \+\d+\.\d) · pure luck (even|[A-Z]+ \+\d+\.\d)$/)
+    // GB net −9.6, CAR +5.3: the swing plays went to CAR by 14.9 net; underneath, each team's own pure luck
+    expect(t[2].value).toBe('CAR +14.9 pts net')
+    // each team's own pure luck, signed like the headline sentence and the recap, not the gap between them
+    const signed = (x: number) => `${x < 0 ? '−' : '+'}${Math.abs(x).toFixed(1)}`
+    expect(t[2].sub).toBe(`pure luck CAR ${signed(pureLuck(retro.teams.away))}, GB ${signed(pureLuck(retro.teams.home))}`)
     expect(t[3].sub).toMatch(/^(better|worse) than its season by \d\.\d\d EPA a (play|dropback|rush)$/)
     expect(t[4]).toMatchObject({ value: '0 of 4', sub: 'best read: Traditionalist', modelId: 'traditionalist' })
   })

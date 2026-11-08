@@ -8,7 +8,7 @@ import { fmtUnit, pct, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from '../.
 import { approachOf, groupOf } from '../../lib/meta'
 import { isReference, SHORT } from '../../lib/models'
 import {
-  byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, injuryRank, marketSource, sortInjuries, tape, tendencyBlocks,
+  byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, injuryRank, lineMoveChip, marketSource, previewRows, sortInjuries, tape, tendencyBlocks,
 } from './helpers'
 
 // ----------------------------------------------------------------------- approaches vs market
@@ -79,21 +79,31 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
   if (opts.length === 0) {
     return <Section title="Why they lean the way they do"><p className="text-ink-2">No contribution breakdown for this game.</p></Section>
   }
-  const cm = contrib[sel] ?? contrib[opts[0]]
+  const cur = contrib[sel] ? sel : opts[0]
+  const cm = contrib[cur]
   const items = contributionItems(cm, meta)
+  // What history says each part is worth (the Preview's bars), outlined on the same rows; none for
+  // the live-only groups, which history can't price.
+  const history = new Map(previewRows(g, meta, null).map((r) => [r.id, r.pp]))
+  // on a neutral site the Preview moves the neutral-site discount from Venue & weather onto Home
+  // field; read the approach the same way so its bars line up with the outline
+  const moved = g.neutral_site ? new Map(previewRows(g, meta, cur).map((r) => [r.id, r.overlay])) : null
+  const value = (id: string, pp: number) => (moved && (id === 'home_field' || id === 'venue_weather') ? moved.get(id) ?? pp : pp)
+  const chip = cur === 'sharp' ? lineMoveChip(g) : null
   // One scale for every approach so switching tabs doesn't rescale the bars.
-  const domain = Math.max(1, ...opts.flatMap((o) => contributionItems(contrib[o], meta).map((i) => Math.abs(i.pp)))) * 1.25
+  const domain = Math.max(1, ...opts.flatMap((o) => contributionItems(contrib[o], meta).map((i) => Math.abs(i.pp))), ...[...history.values()].map((v) => Math.abs(v ?? 0))) * 1.25
   const groups = Object.keys(cm.groups).sort((a, b) => Math.abs(cm.groups[b].pp ?? 0) - Math.abs(cm.groups[a].pp ?? 0))
   return (
     <Section title="Why they lean the way they do" help="How much each piece of the picture moves the pick, in points of the home team's win chance.">
-      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">How far each piece of the picture pushes the pick, in points of {g.home}'s win chance: right toward {g.home}, left toward {g.away}.</p>
+      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">How far each piece of the picture pushes the pick, in points of {g.home}'s win chance: right toward {g.home}, left toward {g.away}. The outline is what history says the same part is worth (the Preview's bars); live-only parts have none.</p>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <Segmented label="Approach" value={sel} onChange={setSel} options={opts.map((o) => ({ value: o, label: SHORT[o] ?? o }))} />
+        <Segmented label="Approach" value={cur} onChange={setSel} options={opts.map((o) => ({ value: o, label: SHORT[o] ?? o }))} />
         <span className="text-[13px] text-ink-2">
-          {SHORT[sel]} says: {g.home} win chance {pct(cm.p_home, 1)}.
+          {SHORT[cur]} says: {g.home} win chance {pct(cm.p_home, 1)}.
         </span>
       </div>
-      {approachOf(meta, sel)?.blurb && <p className="mb-2 max-w-3xl text-[13px] text-ink-3">{approachOf(meta, sel)?.blurb}</p>}
+      {approachOf(meta, cur)?.blurb && <p className="mb-2 max-w-3xl text-[13px] text-ink-3">{approachOf(meta, cur)?.blurb}</p>}
+      {chip && <p className="mb-2 inline-block rounded border border-line bg-surface-2 px-2 py-0.5 text-[13px]">{chip}</p>}
       <DivergingBars
         leftLabel={`toward ${g.away}`}
         rightLabel={`toward ${g.home}`}
@@ -101,10 +111,14 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
         format={ptsFor}
         leftColor="var(--team-away)"
         rightColor="var(--team-home)"
-        rows={items.map((i) => ({
-          key: i.id, label: i.name, value: i.pp,
-          title: `${i.name}: ${ptsToward(i.pp, g.home, g.away)}${i.help ? `. ${i.help}` : ''}`,
-        }))}
+        overlayName="history"
+        rows={items.map((i) => {
+          const h = history.get(i.id) ?? null
+          return {
+            key: i.id, label: i.name, value: value(i.id, i.pp), overlay: h,
+            title: `${i.name}: ${ptsToward(value(i.id, i.pp), g.home, g.away)}${h != null ? `; history says ${ptsToward(h, g.home, g.away)}` : ''}${i.help ? `. ${i.help}` : ''}`,
+          }
+        })}
       />
       <h3 className="mt-4 mb-1 text-[15px] font-semibold">Inside each group</h3>
       <div className="flex flex-col gap-1">

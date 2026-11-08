@@ -49,21 +49,32 @@ describe('Game page', () => {
     expect(await screen.findByText(/Not locked: no lock was recorded/)).toBeInTheDocument()
   })
 
-  it('overlays an approach on the Preview bars and keeps the fit unnamed', async () => {
+  it('the Preview is approach-free: no picker, no outline, the fit unnamed, and the live-only parts as readings', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB')
     await screen.findByRole('heading', { name: /^Who has the edge/ })
+    expect(screen.queryByRole('radiogroup', { name: 'Overlay an approach' })).toBeNull()
     expect(container.querySelector('[data-testid="overlay"]')).toBeNull()
-    await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Overlay an approach' })).getByRole('radio', { name: 'Analyst' }))
-    expect(screen.getByText(/how the Analyst reads each part/)).toBeInTheDocument()
+    expect(container.textContent).not.toMatch(/Global/)
+    const live = screen.getByTestId('live-only')
+    for (const name of ['Market behavior', 'Buzz', 'Line movement', 'Public betting on the home team', 'Media sentiment', 'Hype']) expect(within(live).getByText(name)).toBeInTheDocument()
+    expect(within(live).getByText('51% on GB')).toBeInTheDocument()
+    expect(within(live).getByText('no move')).toBeInTheDocument()
+  })
+
+  it('the Approaches tab outlines what history says on each approach\'s bars', async () => {
+    const { container } = renderRoute('/game/2026_08_CAR_GB?tab=approaches')
+    await screen.findByRole('heading', { name: /^Why they lean/ })
+    expect(container.querySelectorAll('[data-testid="overlay"]').length).toBeGreaterThan(0)
+    await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Approach' })).getByRole('radio', { name: 'Sharp' }))
     expect(container.querySelectorAll('[data-testid="overlay"]').length).toBeGreaterThan(0)
     expect(container.textContent).not.toMatch(/Global/)
   })
 
   it('never shows a push toward a team as a negative number', async () => {
-    const { container } = renderRoute('/game/2026_08_CAR_GB')
-    await screen.findByRole('heading', { name: /^Who has the edge/ })
-    await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Overlay an approach' })).getByRole('radio', { name: 'Sharp' }))
-    const chart = container.querySelector('section svg[role="img"]')!
+    const { container } = renderRoute('/game/2026_08_CAR_GB?tab=approaches')
+    await screen.findByRole('heading', { name: /^Why they lean/ })
+    await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Approach' })).getByRole('radio', { name: 'Sharp' }))
+    const chart = [...container.querySelectorAll('section svg[role="img"]')].find((x) => /toward/.test(x.textContent ?? ''))!
     expect(chart.textContent).toMatch(/\+\d+\.\d pts/)
     expect(chart.textContent).not.toMatch(/[−-]\d/)
   })

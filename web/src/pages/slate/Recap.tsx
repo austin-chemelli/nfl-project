@@ -8,11 +8,11 @@ import type { WeekRecap } from '../../data/contract'
 import { dash } from '../../lib/format'
 import { recapTiles } from './recapTiles'
 
-export function Recap({ season, week, enabled = true }: { season: number; week: number; enabled?: boolean }) {
+export function Recap({ season, week, enabled = true, total }: { season: number; week: number; enabled?: boolean; total?: number }) {
   const q = useRecap(season, week, enabled)
   if (!enabled || q.isPending) return null
   if (q.isError) return isNotFound(q.error) ? null : <ErrorBox error={q.error} />
-  return <RecapBlock r={q.data} />
+  return <RecapBlock r={q.data} total={total} />
 }
 
 /** Log loss against the market: negative is better. */
@@ -22,12 +22,12 @@ function vsMarket(v: number | null | undefined): string {
   return `${Math.abs(v).toFixed(3)} ${v < 0 ? 'better' : 'worse'}`
 }
 
-function RecapBlock({ r }: { r: WeekRecap }) {
+function RecapBlock({ r, total }: { r: WeekRecap; total?: number }) {
   const models = r.models.filter((m) => m.kind !== 'global').sort((a, b) => (a.rank || 99) - (b.rank || 99))
   return (
     <div role="region" aria-label={`Week ${r.week} recap`} className="flex flex-col gap-3">
       <SummaryStrip label={`Week ${r.week} summary`}>
-        {recapTiles(r).map((t) => <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} modelId={t.modelId} />)}
+        {recapTiles(r, total).map((t) => <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} modelId={t.modelId} />)}
       </SummaryStrip>
       <details className="text-[14px]">
         <summary className="cursor-pointer text-[13px] text-ink-3 hover:text-ink">Full recap</summary>

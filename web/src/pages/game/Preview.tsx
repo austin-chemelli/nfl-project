@@ -1,30 +1,23 @@
 /**
  * The game page's default tab before kickoff: the matchup itself, approach-free. One bar per part of
- * the game, as long as history says that edge is worth; pick an approach to outline its own reading
- * on the same rows. The bars come from the Global fit, a diagnostic, so the name never appears here.
+ * the game, as long as history says that edge is worth, then the live-only parts history can't price
+ * (Market behavior, Buzz) as their raw readings. How each approach reads the same parts is on the
+ * Approaches tab. The bars come from the Global fit, a diagnostic, so the name never appears here.
  */
-import { useState } from 'react'
 import { DivergingBars, TipNote, TipRow, TipTitle } from '../../charts'
-import { DataTable, Section, Segmented, td, th } from '../../components/ui'
+import { Help } from '../../components/Help'
+import { DataTable, Section, TableScroll, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
-import { pct, ptsFor, ptsToward } from '../../lib/format'
-import { approachOf, edgePct } from '../../lib/meta'
-import { SHORT } from '../../lib/models'
-import { contribOrder, lineMoveChip, previewRows } from './helpers'
+import { ptsFor, ptsToward } from '../../lib/format'
+import { edgePct } from '../../lib/meta'
+import { liveOnlyGroups, previewRows, type LiveGroup } from './helpers'
 import { Edges } from './Sections'
 
-const NONE = 'none'
-
 export function Preview({ g, meta }: { g: Game; meta: Meta }) {
-  const [sel, setSel] = useState(NONE)
   if (!g.contributions.global) return <Edges g={g} meta={meta} />
-  const approaches = contribOrder(g.contributions)
-  const overlay = sel !== NONE && approaches.some((a) => a === sel) ? sel : null
-  const rows = previewRows(g, meta, overlay)
-  // sized to what's on screen: one approach's outlier (the Sharp on a big line move) mustn't flatten the matchup for the rest
-  const domain = Math.max(1, ...rows.flatMap((r) => [Math.abs(r.pp ?? 0), Math.abs(r.overlay ?? 0)])) * 1.25
-  const chip = overlay === 'sharp' ? lineMoveChip(g) : null
-  const name = overlay ? SHORT[overlay] : null
+  const rows = previewRows(g, meta, null)
+  const live = liveOnlyGroups(g, meta)
+  const domain = Math.max(1, ...rows.map((r) => Math.abs(r.pp ?? 0))) * 1.25
   const side = (v: number) => (v >= 0 ? 'var(--team-home)' : 'var(--team-away)')
   return (
     <Section
@@ -32,25 +25,8 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
       help="Each bar is what that edge has been worth in past games, in points of win chance, before any approach weighs in. The label under each name says how lopsided this matchup is next to every game since 2005."
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        The matchup before any approach weighs in: how far each part of the game pushes toward {g.away} or {g.home}, as history would price it. Pts are percentage points of win chance. These bars are the all-history fit, so they can differ from the Student's own numbers.
+        The matchup before any approach weighs in: how far each part of the game pushes toward {g.away} or {g.home}, as history would price it. Pts are percentage points of win chance. How each approach reads the same parts is on the Approaches tab.
       </p>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <div className="max-w-full overflow-x-auto">
-          <Segmented
-            label="Overlay an approach"
-            value={overlay ?? NONE}
-            onChange={setSel}
-            options={[{ value: NONE, label: 'No approach' }, ...approaches.map((a) => ({ value: a as string, label: SHORT[a] }))]}
-          />
-        </div>
-        {overlay && (
-          <span className="text-[13px] text-ink-2">
-            Outlined: how the {name} reads each part. {name} says {g.home} {pct(g.contributions[overlay].p_home, 1)}.
-          </span>
-        )}
-      </div>
-      {overlay && approachOf(meta, overlay)?.blurb && <p className="mb-2 max-w-3xl text-[13px] text-ink-3">{approachOf(meta, overlay)?.blurb}</p>}
-      {chip && <p className="mb-2 inline-block rounded border border-line bg-surface-2 px-2 py-0.5 text-[13px]">{chip}</p>}
       <DivergingBars
         leftLabel={`toward ${g.away}`}
         rightLabel={`toward ${g.home}`}
@@ -59,7 +35,6 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
         rowHeight={42}
         leftColor="var(--team-away)"
         rightColor="var(--team-home)"
-        overlayName={name ?? undefined}
         ariaLabel={rows.map((r) => `${r.name}: ${r.pp == null ? 'no bar' : ptsToward(r.pp, g.home, g.away)}${r.edge ? `, ${r.edge}` : ''}`).join('; ')}
         rows={rows.map((r) => ({
           key: r.id,
@@ -70,12 +45,10 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
             </span>
           ),
           value: r.pp,
-          overlay: r.overlay,
           tip: (
             <>
               <TipTitle note={r.help}>{r.name}</TipTitle>
               {r.pp != null && <TipRow color={side(r.pp)} value={ptsFor(r.pp)} label={`toward ${r.pp >= 0 ? g.home : g.away}, by history`} />}
-              {r.overlay != null && <TipRow color="var(--text-primary)" value={ptsFor(r.overlay)} label={`toward ${r.overlay >= 0 ? g.home : g.away}, the ${name}`} />}
               {r.pct != null && r.edge !== 'about even' && <TipNote>Bigger than {edgePct(r.pct)}% of matchups since 2005.</TipNote>}
             </>
           ),
@@ -88,7 +61,6 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
               <th className={th}>Part of the game</th>
               <th className={th}>Edge</th>
               <th className={th}>Worth</th>
-              {overlay && <th className={th}>{name}</th>}
             </tr>
           </thead>
           <tbody>
@@ -97,12 +69,57 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
                 <td className={td}>{r.name}</td>
                 <td className={td}>{r.edge || '–'}</td>
                 <td className={`${td} tabular`}>{r.pp == null ? '–' : ptsToward(r.pp, g.home, g.away)}</td>
-                {overlay && <td className={`${td} tabular`}>{r.overlay == null ? '–' : ptsToward(r.overlay, g.home, g.away)}</td>}
               </tr>
             ))}
           </tbody>
         </table>
       </DataTable>
+      {live.length > 0 && <LiveOnly g={g} groups={live} />}
     </Section>
+  )
+}
+
+/** Market behavior and Buzz: no history to price them, so the readings themselves, per team or for the game. */
+function LiveOnly({ g, groups }: { g: Game; groups: LiveGroup[] }) {
+  return (
+    <div className="mt-5" data-testid="live-only">
+      <h3 className="mb-1 text-[15px] font-semibold">Live only: no history to price these</h3>
+      <p className="mb-2 max-w-3xl text-[13px] text-ink-2">
+        These readings exist only for live games, so past seasons can't say what they are worth and there is no bar. Some approaches weigh them anyway; the Approaches tab shows how much.
+      </p>
+      <TableScroll>
+        <table className="w-full border-collapse text-[14px]">
+          <thead>
+            <tr>
+              <th className={th}>Reading</th>
+              <th className={th}>{g.away}</th>
+              <th className={th}>{g.home}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.flatMap((grp) => [
+              <tr key={grp.id}>
+                <td colSpan={3} className={`${td} pt-3 text-[12px] font-medium uppercase tracking-wide text-ink-3`}>
+                  <Help text={grp.help}>{grp.name}</Help>
+                </td>
+              </tr>,
+              ...grp.readings.map((r) => (
+                <tr key={r.feature}>
+                  <td className={td}><Help text={r.help}>{r.label}</Help></td>
+                  {r.game != null || (r.away == null && r.home == null) ? (
+                    <td colSpan={2} className={`${td} tabular`}>{r.game ?? 'no reading yet'}</td>
+                  ) : (
+                    <>
+                      <td className={`${td} tabular`}>{r.away ?? '–'}</td>
+                      <td className={`${td} tabular`}>{r.home ?? '–'}</td>
+                    </>
+                  )}
+                </tr>
+              )),
+            ])}
+          </tbody>
+        </table>
+      </TableScroll>
+    </div>
   )
 }
