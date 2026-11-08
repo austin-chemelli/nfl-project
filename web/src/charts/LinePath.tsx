@@ -2,8 +2,10 @@
  * One market measure over the week before kickoff (ADR 0024): a step line through each pre-kickoff
  * snapshot (a line holds until the next one), dashed verticals at the locks, numbered event marks on
  * the time axis that match the list under the chart, and an optional dashed reference line (our own
- * number). With `sides`, the scale always includes zero: the pick'em line splits the plot into two
- * bands tinted with each team's color and labelled with who is favored there (Austin, 2026-11-07).
+ * number). The scale zooms to the data and the reference so a quarter-point move shows (Austin,
+ * 2026-11-07), with labelled gridlines. With `sides`, the plot is tinted with the favored team's color
+ * and the gridline labels say who is favored ("DET −7"); pick'em is drawn when the line comes within
+ * `NEAR_ZERO` points of it, and then each side of it gets its own team's tint.
  * The first and latest values print at the ends, so nothing needs hover; hovering a point shows its
  * time and books.
  */
@@ -15,7 +17,7 @@ import { useWidth } from './useWidth'
 export type PathPoint = { t: number; v: number | null; note: string }
 export type PathMark = { t: number; label: string }
 export type PathEvent = { t: number; n: number }
-/** Above zero is `above` (the home team, spread > 0); below is `below`. Colors are CSS values. */
+/** Above zero is the home team (spread > 0), below the away team. Colors are CSS values. */
 export type PathSides = { above: string; below: string; aboveColor: string; belowColor: string }
 export type PathRef = { v: number; label: string }
 
@@ -37,25 +39,46 @@ export function stagger(xs: number[]): number[] {
 }
 const PAD = { top: 16, right: 64, bottom: 24, left: 76 }
 
-/** The value range to draw: the data, the reference, zero when sides are shown, padded so each side
- * of zero keeps a band tall enough for its label. */
+/** Pick'em joins the scale only when the line comes this close to it; otherwise it would flatten
+ * every move into a straight line. */
+export const NEAR_ZERO = 3
+/** The smallest span drawn, in points, so a half-point move is a visible step. */
+const MIN_SPAN = 2
+
+/** The value range to draw: the data and the reference, zero too when sides are shown and the line
+ * comes near it, padded to at least MIN_SPAN. */
 // oxlint-disable-next-line react/only-export-components
-export function valueDomain(vals: number[], ref: number | null, zero: boolean): [number, number] {
-  const all = [...vals, ...(ref == null ? [] : [ref]), ...(zero ? [0] : [])]
-  const lo = Math.min(...all)
-  const hi = Math.max(...all)
-  const pad = Math.max(zero ? 1.5 : 0.5, (hi - lo) * 0.12)
-  return [lo - pad, hi + pad]
+export function valueDomain(vals: number[], ref: number | null, sides: boolean): [number, number] {
+  const near = sides && Math.min(...vals.map(Math.abs)) <= NEAR_ZERO
+  const all = [...vals, ...(ref == null ? [] : [ref]), ...(near ? [0] : [])]
+  let lo = Math.min(...all)
+  let hi = Math.max(...all)
+  const pad = Math.max(0.25, (hi - lo) * 0.12)
+  lo -= pad
+  hi += pad
+  if (hi - lo < MIN_SPAN) {
+    const mid = (hi + lo) / 2
+    lo = mid - MIN_SPAN / 2
+    hi = mid + MIN_SPAN / 2
+  }
+  return [lo, hi]
 }
 
-export function LinePath({ points, marks = [], events = [], format, up, down, label, domain, sides, reference }: {
+/** Gridline values: a round step giving three to six lines across the range. */
+// oxlint-disable-next-line react/only-export-components
+export function gridTicks([lo, hi]: [number, number]): number[] {
+  const span = hi - lo
+  const step = span <= 2.5 ? 0.5 : span <= 6 ? 1 : span <= 12 ? 2 : span <= 30 ? 5 : 10
+  const out: number[] = []
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(Math.round(v * 100) / 100)
+  return out
+}
+
+export function LinePath({ points, marks = [], events = [], format, label, domain, sides, reference }: {
   points: PathPoint[]
   marks?: PathMark[]
   events?: PathEvent[]
   format: (v: number) => string
-  /** Words for the top and bottom of the scale when there are no sides, e.g. "higher" and "lower". */
-  up?: string
-  down?: string
   label: string
   /** The shared time span, so stacked charts line up. */
   domain: [number, number]
@@ -67,7 +90,10 @@ export function LinePath({ points, marks = [], events = [], format, up, down, la
   const vals = points.flatMap((p) => (p.v == null ? [] : [p.v]))
   if (vals.length === 0) return null
   const x = scaleLinear().domain(domain).range([PAD.left, Math.max(PAD.left + 40, width - PAD.right)])
-  const y = scaleLinear().domain(valueDomain(vals, reference?.v ?? null, !!sides)).range([H - PAD.bottom, PAD.top])
+  const vd = valueDomain(vals, reference?.v ?? null, !!sides)
+  const y = scaleLinear().domain(vd).range([H - PAD.bottom, PAD.top])
+  const ticks = gridTicks(vd)
+  const zeroIn = !!sides && vd[0] < 0 && vd[1] > 0
   const seen = points.filter((p) => p.v != null) as (PathPoint & { v: number })[]
   let d = ''
   seen.forEach((p, i) => {
@@ -92,21 +118,22 @@ export function LinePath({ points, marks = [], events = [], format, up, down, la
       <div ref={box} className="relative">
         <svg width={width} height={H} role="img" aria-label={`${label}: ${format(first.v)} at first, ${format(last.v)} latest${reference ? `; ${reference.label}` : ''}`} className="block text-[11px]">
           <text x={4} y={top - 4} fontWeight={600} className="fill-[var(--text-secondary)]">{label}</text>
-          {sides ? (
-            <>
-              <rect x={x0} y={top} width={Math.max(0, x1 - x0)} height={Math.max(0, zy - top)} fill={`color-mix(in srgb, ${sides.aboveColor} 12%, transparent)`} />
-              <rect x={x0} y={zy} width={Math.max(0, x1 - x0)} height={Math.max(0, bottom - zy)} fill={`color-mix(in srgb, ${sides.belowColor} 12%, transparent)`} />
-              <line x1={x0} x2={x1} y1={zy} y2={zy} stroke="var(--text-muted)" />
-              {Math.abs(zy - (y(last.v) - 8)) > 12 && <text x={x1 + 4} y={zy + 3.5} className="fill-[var(--text-muted)]">pick&apos;em</text>}
-              <text x={4} y={Math.min((top + zy) / 2 + 4, zy - 3)} className="fill-[var(--text-secondary)]">{sides.above} favored</text>
-              <text x={4} y={Math.max((zy + bottom) / 2 + 4, zy + 12)} className="fill-[var(--text-secondary)]">{sides.below} favored</text>
-            </>
-          ) : (
-            <>
-              {up && <text x={4} y={top + 10} className="fill-[var(--text-muted)]">{up}</text>}
-              {down && <text x={4} y={bottom} className="fill-[var(--text-muted)]">{down}</text>}
-            </>
+          {sides && (
+            zeroIn ? (
+              <>
+                <rect x={x0} y={top} width={Math.max(0, x1 - x0)} height={Math.max(0, zy - top)} fill={`color-mix(in srgb, ${sides.aboveColor} 12%, transparent)`} />
+                <rect x={x0} y={zy} width={Math.max(0, x1 - x0)} height={Math.max(0, bottom - zy)} fill={`color-mix(in srgb, ${sides.belowColor} 12%, transparent)`} />
+              </>
+            ) : (
+              <rect x={x0} y={top} width={Math.max(0, x1 - x0)} height={bottom - top} fill={`color-mix(in srgb, ${vd[0] >= 0 ? sides.aboveColor : sides.belowColor} 12%, transparent)`} />
+            )
           )}
+          {ticks.map((v) => (
+            <g key={v}>
+              <line x1={x0} x2={x1} y1={y(v)} y2={y(v)} stroke={sides && v === 0 ? 'var(--text-muted)' : 'var(--border)'} strokeWidth={sides && v === 0 ? 1.25 : 1} />
+              <text x={x0 - 6} y={y(v) + 3.5} textAnchor="end" className="tabular fill-[var(--text-muted)]">{format(v)}</text>
+            </g>
+          ))}
           <line x1={x0} x2={x1} y1={bottom + 8} y2={bottom + 8} stroke="var(--border)" />
           {marks.map((m) => (
             <g key={`${m.label}-${m.t}`}>

@@ -79,8 +79,10 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       content: (
         <TabBody>
           <Preview g={g} meta={meta} />
+          <TheLine g={g} />
           <FinePrint>
             <p>The bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
+            <p>How the line moved: each point is the median across sportsbooks at one of our snapshots before kickoff, with at least three books quoting it. "First seen" is our first snapshot of the game, not when books opened it; our snapshots start 2026-10-26. The events are what our data shows changed between two snapshots (the depth chart's quarterback, a starter's status on the injury report, timed when we pulled it, a result, the lock), listed beside the move, not as its cause.</p>
             <p>Probabilities are the models' estimates, not advice.</p>
           </FinePrint>
         </TabBody>
@@ -98,19 +100,6 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
             <p>{STATUS_TEXT[status] ?? status}</p>
             <p>Probabilities are the models' estimates, not advice. The market is the reference every approach is compared with, never an input.</p>
             <p>The pieces in "why they lean" add up only approximately to the total: the effects overlap and the final probability is also calibrated.</p>
-          </FinePrint>
-        </TabBody>
-      ),
-    },
-    {
-      id: 'line',
-      label: 'The line',
-      content: (
-        <TabBody>
-          <TheLine g={g} />
-          <FinePrint>
-            <p>Each point is the median across sportsbooks at one of our snapshots before kickoff, with at least three books quoting it. "First seen" is our first snapshot of the game, not when books opened it; our snapshots start 2026-10-26.</p>
-            <p>The events are what our data shows changed between two snapshots: the depth chart's quarterback, a starter's status on the injury report (timed when we pulled the report), a cited news note, the lock. They are listed beside the move, not as its cause.</p>
           </FinePrint>
         </TabBody>
       ),

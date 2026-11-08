@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Game } from '../../data/contract'
-import { valueDomain } from '../../charts/LinePath'
+import { gridTicks, valueDomain } from '../../charts/LinePath'
 import { eventGroups } from './TheLine'
 
 type Ev = Game['market_events'][number]
@@ -14,13 +14,19 @@ describe('The line', () => {
     expect(g.after.map((e) => e.text)).toEqual(['after the latest'])
   })
 
-  it('the spread scale always includes pick\'em with room on both sides, and our number', () => {
+  it('the scale zooms to the line and our number, and takes in pick\'em only when the line is near it', () => {
     const [lo, hi] = valueDomain([-7, -7.25], -8.8, true)
     expect(lo).toBeLessThan(-8.8)
-    expect(hi).toBeGreaterThanOrEqual(1.5)
-    const [tlo, thi] = valueDomain([48.75, 50.5], 47.5, false)
-    expect(tlo).toBeLessThan(47.5)
-    expect(thi).toBeGreaterThan(50.5)
-    expect(tlo).toBeGreaterThan(0)
+    expect(hi).toBeLessThan(-6.5) // DET −7: pick'em stays off, so a quarter-point step is visible
+    const [nlo, nhi] = valueDomain([-2.75, -3], null, true)
+    expect(nhi).toBeGreaterThan(0) // CIN −3: within 3 points, pick'em is drawn
+    expect(nlo).toBeLessThan(-3)
+    const [flo, fhi] = valueDomain([48.5, 48.5], null, false)
+    expect(fhi - flo).toBeGreaterThanOrEqual(2) // a flat line still gets a readable span
+  })
+
+  it('gridlines land on round values', () => {
+    expect(gridTicks([-9.1, -6.6])).toEqual([-9, -8.5, -8, -7.5, -7])
+    expect(gridTicks([44, 53])).toEqual([44, 46, 48, 50, 52])
   })
 })

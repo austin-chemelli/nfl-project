@@ -61,7 +61,7 @@ export function TheLine({ g }: { g: Game }) {
           format={(v) => spreadLabel(v, g.home, g.away)}
           sides={{ above: g.home, below: g.away, aboveColor: 'var(--team-home)', belowColor: 'var(--team-away)' }}
           reference={ours == null ? null : { v: ours, label: `${who}: ${spreadLabel(ours, g.home, g.away)}` }} />
-        <LinePath points={series('total')} marks={marks} events={evMarks} domain={domain} label="Total" format={fmtPts} up="more points" down="fewer"
+        <LinePath points={series('total')} marks={marks} events={evMarks} domain={domain} label="Total" format={fmtPts}
           reference={ourTotal == null ? null : { v: ourTotal, label: `${who}: ${fmtPts(Math.round(ourTotal * 2) / 2)}` }} />
       </div>
       {between.length > 0 && (
