@@ -133,6 +133,13 @@ export function liveOnlyGroups(g: Game, meta: Meta): LiveGroup[] {
   return out
 }
 
+/** Show the live-only readings once the week's narrative pass has filled at least one (Austin,
+ * 2026-11-07): before that the table is a column of "no reading yet" beside a line-move reading the
+ * line section already covers. */
+export function liveReady(groups: LiveGroup[]): boolean {
+  return groups.some((grp) => grp.readings.some((r) => r.feature.startsWith('narrative.') && (r.game != null || r.away != null || r.home != null)))
+}
+
 // -------------------------------------------------------------------------------------- retro
 
 export type SwingRow = { key: string; label: string; value: number; teams: { team: string; swing: number; sentence: string }[] }

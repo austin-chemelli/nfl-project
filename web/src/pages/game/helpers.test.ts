@@ -3,7 +3,7 @@ import metaJson from '../../test/fixtures/site/meta.json'
 import retroJson from '../../test/fixtures/site/retro/2026_08_CAR_GB.json'
 import gameJson from '../../test/fixtures/site/game/2026_08_CAR_GB.json'
 import { Game, Meta, RetroGame } from '../../data/contract'
-import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, liveOnlyGroups, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText, driveText, driveLede } from './helpers'
+import { byUnit, contributionItems, dotModels, edgeRows, featureContribRows, impactMarker, injuryRank, lineMoveChip, liveOnlyGroups, ordinal, phaseSummary, playedLikeSteps, previewRows, sortInjuries, sortMatchupNotes, swingRows, tape, tendencyBlocks, marketSource, trendStatus, wpLede, markText, driveText, driveLede, liveReady } from './helpers'
 
 const meta = Meta.parse(metaJson)
 const game = Game.parse(gameJson)
@@ -342,5 +342,15 @@ describe('driveText and driveLede', () => {
     const r = { away: 'ARI', home: 'DAL', drives: [dr, { ...dr, result: 'Touchdown' }, { ...dr, team: 'DAL', result: 'Field goal' }] } as unknown as RetroGame
     expect(driveLede(r)).toBe('ARI scored on 1 of 2 drives, DAL on 1 of 1.')
     expect(driveLede({ ...r, drives: null })).toBeNull()
+  })
+})
+
+describe('liveReady', () => {
+  const grp = (readings: { feature: string; game?: string | null; away?: string | null; home?: string | null }[]) => ({
+    id: 'g', name: 'G', help: '', readings: readings.map((r) => ({ label: r.feature, help: '', game: null, away: null, home: null, ...r })),
+  })
+  it('waits for the narrative pass: a line-move reading alone is not enough', () => {
+    expect(liveReady([grp([{ feature: 'market.line_move_pts', game: 'no move' }, { feature: 'narrative.public_bet_pct_home' }])])).toBe(false)
+    expect(liveReady([grp([{ feature: 'narrative.sentiment', away: '0.2' }])])).toBe(true)
   })
 })

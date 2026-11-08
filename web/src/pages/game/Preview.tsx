@@ -10,7 +10,7 @@ import { DataTable, Section, TableScroll, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
 import { ptsFor, ptsToward } from '../../lib/format'
 import { edgePct } from '../../lib/meta'
-import { liveOnlyGroups, previewRows, type LiveGroup } from './helpers'
+import { liveOnlyGroups, liveReady, previewRows, type LiveGroup } from './helpers'
 import { Edges } from './Sections'
 
 export function Preview({ g, meta }: { g: Game; meta: Meta }) {
@@ -74,7 +74,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
           </tbody>
         </table>
       </DataTable>
-      {live.length > 0 && <LiveOnly g={g} groups={live} />}
+      {liveReady(live) && <LiveOnly g={g} groups={live} />}
     </Section>
   )
 }

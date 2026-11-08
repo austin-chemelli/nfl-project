@@ -9,6 +9,10 @@ const ms = (iso: string) => new Date(iso).getTime()
 
 type Ev = Game['market_events'][number]
 
+/** A line section needs two snapshots: one point has no movement to show. */
+// oxlint-disable-next-line react/only-export-components
+export const hasLine = (g: Game) => g.market_history.length >= 2 && g.line_move != null
+
 /** Events split by where they fall against our snapshots: between two (numbered on the chart),
  * before the first, or after the latest (not in any line we have yet). */
 // oxlint-disable-next-line react/only-export-components
@@ -25,13 +29,7 @@ export function eventGroups(events: Ev[], nPoints: number): { between: Ev[]; bef
 export function TheLine({ g }: { g: Game }) {
   const pts = g.market_history
   const m = g.line_move
-  if (pts.length < 2 || !m) {
-    return (
-      <Section title="How the line moved">
-        <p className="text-ink-2">{pts.length === 1 ? 'We have one snapshot of this game so far; movement shows from the second.' : 'No market line for this game in our snapshots yet.'}</p>
-      </Section>
-    )
-  }
+  if (!hasLine(g) || !m) return null // nothing to show until the week's snapshots arrive (Austin, 2026-11-07)
   const events = g.market_events.filter((e) => e.kind !== 'lock')
   const { between, before, after } = eventGroups(events, pts.length)
   const lastSnap = pts[pts.length - 1].ts

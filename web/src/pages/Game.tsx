@@ -10,7 +10,7 @@ import { Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './
 import { GameHeader, GameTitle, PinnedResult } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
 import { Differ, StrongCallsOutcome } from './game/Differ'
-import { TheLine } from './game/TheLine'
+import { TheLine, hasLine } from './game/TheLine'
 import { Preview } from './game/Preview'
 import { Retro } from './game/Retro'
 import { summaryTiles } from './game/summary'
@@ -82,7 +82,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
           <TheLine g={g} />
           <FinePrint>
             <p>The bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
-            <p>How the line moved: each point is the median across sportsbooks at one of our snapshots before kickoff, with at least three books quoting it. "First seen" is our first snapshot of the game, not when books opened it; our snapshots start 2026-10-26. The events are what our data shows changed between two snapshots (the depth chart's quarterback, a starter's status on the injury report, timed when we pulled it, a result, the lock), listed beside the move, not as its cause.</p>
+{hasLine(g) &&             <p>How the line moved: each point is the median across sportsbooks at one of our snapshots before kickoff, with at least three books quoting it. "First seen" is our first snapshot of the game, not when books opened it; our snapshots start 2026-10-26. The events are what our data shows changed between two snapshots (the depth chart's quarterback, a starter's status on the injury report, timed when we pulled it, a result, the lock), listed beside the move, not as its cause.</p>}
             <p>Probabilities are the models' estimates, not advice.</p>
           </FinePrint>
         </TabBody>
