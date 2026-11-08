@@ -474,14 +474,13 @@ def _window_sources(paths: Paths, games: pl.DataFrame, season: int, now: datetim
     }
 
 
-def _game_events(g, points, window, starters, record, lock_ts) -> list[dict]:
+def _game_events(g, points, window, starters, lock_ts) -> list[dict]:
     from nfl import market_events
 
-    notes = market_events.narrative_notes(record) if record is not None else []
     ev = market_events.game_events(
         g, points, window["qbs"], window["injuries"],
         starters.get((g["game_id"], g["home_team"]), set()) | starters.get((g["game_id"], g["away_team"]), set()),
-        notes, lock_ts, window.get("results", []),
+        lock_ts, window.get("results", []),
     )  # fmt: skip
     return [{**e, "ts": _ts(e["ts"])} for e in ev]
 
@@ -853,7 +852,6 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
                 points,
                 window,
                 card_ctx["starters"],
-                narr.get(g["game_id"]),
                 locks.get(g["game_id"]),
             )
             _write(site / "game" / f"{g['game_id']}.json", detail)

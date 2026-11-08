@@ -9,14 +9,14 @@ Sources, all already in the pipeline:
 - **Injury report** (raw nflverse snapshots): a starter's game status changing between two of our
   ingests (None -> Questionable -> Out, or off the report). The time is our ingest, so it is as late
   as our last ingest, never earlier than the report was published.
-- **Narrative notes** (the desktop passes): injury and coaching notes the pass rated at the strongest
-  impact (|impact| = 2), with their cited source, at the record's `known_as_of`; at most
-  `MAX_NOTES` a game, since one record lands as one burst.
 - **Recent results**: each team's games in the window, at their end (kickoff + `GAME_LENGTH`), with the
   score. A line often moves most while a team is playing the week before.
 - **The lock** of the headline line.
 
 A coaching change has a week but no time, so it is listed among the swing factors (M20.6), not here.
+The desktop model's news notes were on this timeline at first and came off (Austin, 2026-11-07): its
+impact rating has no check on whether the player matters (a backup running back read as top impact),
+and the injury report already carries the starters.
 """
 
 from __future__ import annotations
@@ -30,7 +30,6 @@ from nfl.models.elo import TEAM_ALIASES
 
 GAME_STATUSES = ("Out", "Doubtful", "Questionable")
 WINDOW_BEFORE = timedelta(days=2)  # events this long before the first line still explain it
-MAX_NOTES = 3
 GAME_LENGTH = timedelta(hours=3, minutes=30)
 
 
@@ -121,14 +120,14 @@ def game_events(
     qbs: list[dict],
     injuries: list[dict],
     starters: set[str],
-    notes: list[dict],
     lock_ts: datetime | None,
     finished: list[dict] | None = None,
 ) -> list[dict]:
     """Events for one game between its first line (less `WINDOW_BEFORE`) and kickoff, oldest first.
 
-    `after` is the index of the last line point before the event (-1: before the first), so an
-    event belongs to the move from point `after` to `after + 1` and to no other."""
+    `after` is the index of the last line point before the event (-1: before the first; the last
+    index: after our latest snapshot, not priced in any line we have yet), so an event belongs to
+    the move from point `after` to `after + 1` and to no other."""
     if not points:
         return []
     teams = {_canon(game["home_team"]), _canon(game["away_team"])}
@@ -146,9 +145,6 @@ def game_events(
         ):
             ev.append({"ts": i["ts"], "kind": "injury", "team": i["team"], "source_url": None,
                        "text": _status_text(i)})  # fmt: skip
-    for n in notes:
-        ev.append({"ts": n["ts"], "kind": n["kind"], "team": n["team"], "source_url": n.get("source_url"),
-                   "text": f"{n['team']} news: {n['text']}"})  # fmt: skip
     for r in finished or []:
         if r["team"] in teams:
             ev.append(
@@ -168,18 +164,6 @@ def game_events(
     for e in ev:
         e["after"] = bisect.bisect_left(stamps, e["ts"]) - 1
     return sorted(ev, key=lambda e: (e["ts"], e["kind"]))
-
-
-def narrative_notes(record) -> list[dict]:
-    """A narrative record's strongest injury and coaching notes (|impact| = 2), at its `known_as_of`."""
-    out = []
-    for side in (record.home, record.away):
-        for n in side.notes:
-            if n.kind in ("injury", "coaching") and abs(n.impact) >= 2 and len(out) < MAX_NOTES:
-                out.append({"ts": record.known_as_of.replace(tzinfo=None), "kind": n.kind,
-                            "team": _canon(side.team), "text": n.text,
-                            "source_url": str(n.source_url) if n.source_url else None})  # fmt: skip
-    return out
 
 
 def load_injury_snapshots(paths, season: int) -> list[tuple[datetime, pl.DataFrame]]:

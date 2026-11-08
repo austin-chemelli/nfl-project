@@ -91,7 +91,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Approaches',
       content: (
         <TabBody>
-          <Differ g={g} />
+          <Differ g={g} meta={meta} />
           <ApproachesVsMarket g={g} meta={meta} />
           <Why g={g} meta={meta} />
           <FinePrint>

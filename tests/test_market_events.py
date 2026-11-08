@@ -43,7 +43,7 @@ def test_an_event_belongs_to_the_window_it_falls_in_and_no_other():
     qb = [
         {"team": "BAL", "ts": T + timedelta(hours=1), "qb": "Tyler Huntley", "was": "Lamar Jackson"}
     ]
-    ev = me.game_events(GAME, POINTS, qb, inj, set(), [], None)
+    ev = me.game_events(GAME, POINTS, qb, inj, set(), None)
     assert [(e["kind"], e["after"]) for e in ev] == [("qb", 0), ("injury", 1)]
     assert all("because" not in e["text"] for e in ev)
 
@@ -56,8 +56,8 @@ def test_other_teams_other_weeks_and_after_kickoff_are_left_out():
          "status": "Out", "was": None},
         {"team": "BAL", "week": 9, "gsis_id": "d", "ts": T, "player": "D", "pos": "WR", "status": "Out", "was": None},
     ]  # fmt: skip
-    assert me.game_events(GAME, POINTS, [], inj, set(), [], None) == []
-    assert len(me.game_events(GAME, POINTS, [], inj, {"d"}, [], None)) == 1  # a starter counts
+    assert me.game_events(GAME, POINTS, [], inj, set(), None) == []
+    assert len(me.game_events(GAME, POINTS, [], inj, {"d"}, None)) == 1  # a starter counts
 
 
 def test_qb_changes_from_chart_snapshots():
@@ -78,7 +78,7 @@ def test_qb_changes_from_chart_snapshots():
 
 
 def test_no_events_without_a_line():
-    assert me.game_events(GAME, [], [], [], set(), [], None) == []
+    assert me.game_events(GAME, [], [], [], set(), None) == []
 
 
 def test_last_weeks_game_is_an_event_with_its_score():
@@ -86,6 +86,6 @@ def test_last_weeks_game_is_an_event_with_its_score():
         "home_team": ["BAL", "KC"], "away_team": ["MIA", "DEN"], "home_score": [17, 30], "away_score": [24, 10],
         "kickoff_utc": [T - timedelta(days=1), T - timedelta(days=1)],
     })  # fmt: skip
-    ev = me.game_events(GAME, POINTS, [], [], set(), [], None, me.results(done))
+    ev = me.game_events(GAME, POINTS, [], [], set(), None, me.results(done))
     assert [e["text"] for e in ev] == ["Result: BAL lost to MIA 17–24 (vs MIA)"]
     assert ev[0]["kind"] == "game"
