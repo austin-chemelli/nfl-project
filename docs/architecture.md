@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-07 (sections 3.6c and 8 updated with the retrospective); the live state is [state.md](state.md).
+Status: current, verified 2026-11-08 (the market data row gains `books`, M20.13); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
@@ -227,7 +227,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | `site/audit.json` | null rates, freshness |
 | `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet; `wp_series` and `drives` from M15 (ADR 0020), nullable |
 | `site/teams.json`, `site/league.json`, `site/similar.json` | per-team feature table; standings, playoff odds, leverage; similar seasons and flag cards (ADR 0019, §3.6d) |
-| game and slate files, additive (ADR 0024) | `market_history[]` (pre-kickoff consensus path), `market_moves`, `events[]` (what changed in each window), `swings[]` (what could move the game, with what-ifs), `strong_calls[]`, `today` (the preview score), `expected_score`; `tracker.json.strong_calls`, `tracker.json.totals` |
+| game and slate files, additive (ADR 0024) | `market_history[]` (pre-kickoff consensus path), `market_moves`, `events[]` (what changed in each window), `swings[]` (what could move the game, with what-ifs), `strong_calls[]`, `today` (the preview score), `expected_score`, `books` (each book at the latest pre-kickoff snapshot, with disagreement flags); `tracker.json.strong_calls`, `tracker.json.totals` |
 | `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, best call and costliest miss, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.

@@ -39,6 +39,7 @@ from pathlib import Path
 
 import polars as pl
 
+from nfl import market_books
 from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
 from nfl.features.groups import FEATURE_GROUP, GROUPS, HEADINGS, REGISTRY_VERSION
@@ -420,15 +421,22 @@ def _market_by_game(paths: Paths, games: pl.DataFrame, now: datetime) -> pl.Data
 # ------------------------------------------------------------------------------- market movement
 
 
-def _line_paths(paths: Paths, season: int, now: datetime) -> dict[str, list[dict]]:
-    """Per game, the pre-kickoff consensus path (ADR 0024), only snapshots taken before `now`."""
-    from nfl import market_history
+def _season_lines(paths: Paths, season: int, now: datetime) -> pl.DataFrame:
+    """Every book's quotes for the season, only snapshots taken before `now`."""
     from nfl.odds import read_lines
 
     lines = read_lines(paths, (season, season))
     if lines.is_empty():
+        return lines
+    return lines.filter(pl.col("snapshot_ts") <= pl.lit(now, dtype=pl.Datetime("us")))
+
+
+def _line_paths(lines: pl.DataFrame) -> dict[str, list[dict]]:
+    """Per game, the pre-kickoff consensus path (ADR 0024)."""
+    from nfl import market_history
+
+    if lines.is_empty():
         return {}
-    lines = lines.filter(pl.col("snapshot_ts") <= pl.lit(now, dtype=pl.Datetime("us")))
     out: dict[str, list[dict]] = {}
     for r in market_history.paths(lines).iter_rows(named=True):
         out.setdefault(r["game_id"], []).append(r)
@@ -732,6 +740,14 @@ def _line_point(p: dict) -> dict:
             "total": _r(p["total"], 2), "p_home": _r(p["p_home"]), "n_books": p["n_books"]}  # fmt: skip
 
 
+def _books_out(b: dict | None) -> dict | None:
+    """Each book's line at the latest pre-kickoff snapshot and where they disagree (M20.13)."""
+    if b is None:
+        return None
+    rows = [{k: (_r(v, 4) if k == "p_home" else v) for k, v in r.items()} for r in b["books"]]
+    return {**b, "snapshot_ts": _ts(b["snapshot_ts"]), "books": rows}
+
+
 def _line_move(points: list[dict], lock_ts: datetime | None) -> dict | None:
     from nfl import market_history
 
@@ -801,7 +817,9 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     allrows = display_rows(paths, games, now)
     market = _market_by_game(paths, games, now)
     # the market pieces (ADR 0024) are additive page data: a failure costs that piece, never the build
-    lines = _safe(_line_paths, {}, paths, season, now)
+    season_lines = _safe(_season_lines, pl.DataFrame(), paths, season, now)
+    lines = _safe(_line_paths, {}, season_lines)
+    books = _safe(market_books.by_game, {}, season_lines)
     locks = _safe(_lock_times, {}, paths, season)
     window = _safe(_window_sources, {}, paths, games, season, now)
 
@@ -839,6 +857,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             slate_games.append(row)
             detail = row | _game_detail(g, allrows, feats, tend, injuries, narr, now, edges)
             detail["market_history"] = _safe(lambda pts: [_line_point(p) for p in pts], [], points)
+            detail["books"] = _safe(_books_out, None, books.get(g["game_id"]))
             detail["swings"] = swing.get(g["game_id"], [])
             detail["strong_calls"] = calls_by_game.get(g["game_id"], [])
             detail["today"] = today.get(g["game_id"])

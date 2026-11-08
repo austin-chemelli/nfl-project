@@ -143,6 +143,27 @@ export const MarketEvent = z.looseObject({
   source_url: nstr.default(null),
   after: num, // index of the last line point before it: the event sits in the move from `after` to `after + 1`
 })
+// Each sportsbook's line at the latest snapshot before kickoff, and where they disagree (ADR 0024, M20.13).
+export const BookLine = z.looseObject({
+  book: z.string(), // the Odds API key: draftkings, fanduel, ...
+  spread_home: nnum.default(null), // + = home favored
+  home_price: nnum.default(null),
+  away_price: nnum.default(null),
+  total: nnum.default(null),
+  over_price: nnum.default(null),
+  under_price: nnum.default(null),
+  p_home: nnum.default(null), // the moneyline without the vig
+})
+const BookRange = z.looseObject({ lo: num, hi: num, median: num, gap: num })
+export const Books = z.looseObject({
+  snapshot_ts: z.string(),
+  books: z.array(BookLine),
+  spread: BookRange.nullable().default(null),
+  total: BookRange.nullable().default(null),
+  key: nnum.default(null), // the key spread (0, ±3, ±7) the books straddle
+  flags: z.array(z.string()).default([]), // spread_gap, spread_key, total_gap
+  n_stale: num.default(0),
+})
 // What could swing a game, and the quarterback what-if (ADR 0024): the model's sensitivity, not the market's.
 const QbScenario = z.looseObject({ qb: nstr.default(null), name: nstr.default(null), status: nstr.default(null), p_home: z.record(z.string(), nnum) })
 export const Swing = z.looseObject({
@@ -169,6 +190,8 @@ export type Swing = z.infer<typeof Swing>
 export type StrongCall = z.infer<typeof StrongCall>
 export type LineMove = z.infer<typeof LineMove>
 export type LinePoint = z.infer<typeof LinePoint>
+export type Books = z.infer<typeof Books>
+export type BookLine = z.infer<typeof BookLine>
 export type MarketEvent = z.infer<typeof MarketEvent>
 
 export const GameRow = z.looseObject({
@@ -291,6 +314,7 @@ export const Game = GameRow.extend({
   narrative: Narrative.nullable(),
   market_history: z.array(LinePoint).default([]),
   market_events: z.array(MarketEvent).default([]),
+  books: Books.nullable().default(null),
   swings: z.array(Swing).default([]),
   strong_calls: z.array(StrongCall).default([]),
   today: Today.nullable().default(null), // the latest preview score: not a lock, never graded

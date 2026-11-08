@@ -90,7 +90,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | league | `league-teams`, `league-playoffs`, `league-context` | removed | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | merged 2026-11-06, all three phases live and checked in production. The first real snapshot lands with Saturday's lock: check the job log for `SNAPSHOT NOT SAVED` | #20, #23, #24 |
 | pop | `retro-wp`, `retro-drives`, `retro-story` | removed | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; pinned result | merged 2026-11-05, all three phases live; `nfl-retro` run by hand on d969ab3, retros on schema 6; worktree and branches removed. M15.10 route crossfades optional, not built | #19, #21, #22 |
 | ui | `ui-next` | `~/dev/nfl-project-ui` | Site walk 2026-11-07-2 fixes (market at lock vs before kickoff, tracker graded daily, misread, team ranks as model inputs, luck per team, week tiles, nav History) and an approach-free Preview with live-only readings; earlier: Coaches and Build hidden (#25), M13 (#18), round 2 | merged 2026-11-07, deploying; `walk-fixes` deleted, worktree on a fresh `ui-next` | #30 |
-| market | `market-swings` | `~/dev/nfl-project-market` | M20: line history, daily pass, previews, what-ifs, strong calls, weather, the total | built 2026-11-07, PR open; follow-ups from Austin's look; main merged in after #30 | #29 |
+| market | `market-swings` | `~/dev/nfl-project-market` | M20: line history, daily pass, previews, what-ifs, strong calls, weather, the total | built 2026-11-07, PR open; follow-ups from Austin's look; main merged in after #30; books disagree (M20.13) 2026-11-08 | #29 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
@@ -179,13 +179,13 @@ Current docs, what each is for, and when it was last verified against the code o
 
 | Doc | Read it when | Verified |
 |---|---|---|
-| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-07 |
+| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-08 |
 | [adr/](adr/) | before re-opening a decision; ADR 0020 is the newest (0019 league page, 0020 retro win probability and motion) | 2026-11-05 |
-| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-07 |
-| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-07 |
+| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-08 |
+| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-08 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-07 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-07 |
-| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-07 |
+| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-08 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |

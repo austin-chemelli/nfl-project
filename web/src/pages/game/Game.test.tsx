@@ -62,6 +62,31 @@ describe('Game page', () => {
     expect(within(live).getAllByText('0.0 pts').length).toBeGreaterThan(0) // no line move is a zero bar, not words
   })
 
+  it('the line has its own tab, with each book and a flag when they disagree', async () => {
+    renderRoute('/game/2026_08_CAR_GB')
+    await screen.findByRole('heading', { name: /^Who has the edge/ })
+    expect(screen.queryByRole('heading', { name: /^How the line moved/ })).toBeNull() // not on the Preview
+    const tab = screen.getByRole('tab', { name: /^The line: books disagree$/ })
+    await userEvent.click(tab)
+    expect(screen.getByRole('heading', { name: /^How the line moved/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^What each sportsbook says/ })).toBeInTheDocument()
+    expect(screen.getByTestId('books-read')).toHaveTextContent(/Books disagree\. The books sit on both sides of 3, a key number: GB −3 at DraftKings, GB −4 at FanDuel/)
+    expect(screen.getByRole('cell', { name: 'BetMGM' })).toBeInTheDocument()
+  })
+
+  it('has no line tab until there is a line or three books', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nfl-noline-'))
+    fs.cpSync(path.resolve(import.meta.dirname, '../../test/fixtures'), root, { recursive: true })
+    const gp = path.join(root, 'site/game/2026_08_CAR_GB.json')
+    const game = JSON.parse(fs.readFileSync(gp, 'utf8'))
+    Object.assign(game, { market_history: [], line_move: null, books: null })
+    fs.writeFileSync(gp, JSON.stringify(game))
+    renderRoute('/game/2026_08_CAR_GB', root)
+    await screen.findByRole('tab', { name: 'Preview' })
+    expect(screen.queryByRole('tab', { name: /^The line/ })).toBeNull()
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+
   it('the Approaches tab outlines what history says on each approach\'s bars', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB?tab=approaches')
     await screen.findByRole('heading', { name: /^Why they lean/ })
