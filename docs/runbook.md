@@ -60,7 +60,7 @@ Job code is `src/`, `scripts/`, `pyproject.toml`, `uv.lock` and `Dockerfile`. Me
 - **Odds API fails or is out of credits:** `--no-odds`; the market features then come from the latest snapshot on disk, or nflverse's line.
 - **Missing fit artifacts:** `uv run nfl fit` (only between seasons, or after an announced persona change).
 - **Push refused:** read the listed commits; push code commits yourself, then `git push` the lock.
-- **A job waited for the data lock and failed** ("joblock: ... has held the data lock"): another job was still running after 20 minutes. Check it in the Cloud Run console; if nothing is running, the lock is left from a job killed without its exit trap: `gcloud storage rm gs://nfl-project-prod-data/locks/jobs.lock`, then rerun. A lock older than 2 h 15 min is taken over automatically; the lock jobs never wait more than 20 minutes and then run without it (ADR 0025).
+- **A job waited for the data lock and failed** ("joblock: ... has held the data lock"): another job was still running after 20 minutes. Check it in the Cloud Run console; if nothing is running, the lock is left from a job killed without its exit trap: `gcloud storage rm gs://nfl-project-prod-data/locks/jobs.lock`, then rerun. A lock expires at its job's Cloud Run timeout plus 5 minutes and is then taken over automatically; the lock jobs never wait more than 20 minutes and then run without it (ADR 0025).
 
 ## In the cloud (step 5, from 2026-10-28)
 

@@ -1,3 +1,5 @@
+import json
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -64,23 +66,33 @@ def test_write_features_leaves_an_unchanged_file_alone(tmp_path):
 
 
 class FakeStore:
-    def __init__(self):
-        self.obj = None  # (generation, owner, created)
+    """GCS semantics for one object: create only if absent, delete by generation. `lose_response`
+    makes the next create succeed but report a conflict, as a retried upload does."""
+
+    def __init__(self, clock):
+        self.clock = clock
+        self.obj = None
         self.gen = 0
+        self.lose_response = False
+        self.delete_errors = 0
 
     def create(self, name, body):
         if self.obj:
             return None
         self.gen += 1
-        import json
-
-        self.obj = joblock.Held(self.gen, json.loads(body)["owner"], self.clock())
+        self.obj = joblock.Held(self.gen, self.clock(), json.loads(body))
+        if self.lose_response:
+            self.lose_response = False
+            return None
         return self.gen
 
     def get(self, name):
         return self.obj
 
     def delete(self, name, generation):
+        if self.delete_errors:
+            self.delete_errors -= 1
+            raise ConnectionError("503")
         if not self.obj or self.obj.generation != generation:
             return False
         self.obj = None
@@ -100,14 +112,16 @@ class Clock:
 
 def setup():
     clock = Clock()
-    st = FakeStore()
-    st.clock = clock
-    return st, clock
+    return FakeStore(clock), clock
+
+
+def take(owner, st, clock, **k):
+    return joblock.acquire(owner, st, now=clock, sleep=clock.sleep, log=lambda m: None, **k)
 
 
 def test_one_holder_at_a_time_and_only_the_holder_releases():
     st, clock = setup()
-    gen = joblock.acquire("site", st, now=clock, sleep=clock.sleep, log=lambda m: None)
+    gen = take("site", st, clock)
     assert gen == 1 and st.obj.owner == "site"
     joblock.release(99, st, log=lambda m: None)  # someone else's generation
     assert st.obj is not None
@@ -117,17 +131,18 @@ def test_one_holder_at_a_time_and_only_the_holder_releases():
 
 def test_a_waiting_job_fails_after_the_wait_but_a_lock_job_proceeds():
     st, clock = setup()
-    joblock.acquire("site", st, now=clock, sleep=clock.sleep, log=lambda m: None)
+    take("site", st, clock)
     with pytest.raises(TimeoutError):
-        joblock.acquire("daily", st, now=clock, sleep=clock.sleep, log=lambda m: None)
+        take("daily", st, clock)
     assert clock.t - datetime(2026, 11, 7, 17, 0, tzinfo=UTC) >= joblock.WAIT
-    assert joblock.acquire("lock-sat", st, proceed=True, now=clock, sleep=clock.sleep, log=lambda m: None) == 0  # fmt: skip
-    assert st.obj.owner == "site"  # proceeding never steals a live lock
+    # still inside site's 35 minutes: proceeding runs without the lock and never steals it
+    assert take("lock-sat", st, clock, proceed=True, wait=timedelta(minutes=5)) == 0
+    assert st.obj.owner == "site"
 
 
 def test_a_waiting_job_gets_the_lock_once_it_is_released():
     st, clock = setup()
-    first = joblock.acquire("site", st, now=clock, sleep=clock.sleep, log=lambda m: None)
+    first = take("site", st, clock)
 
     def sleep_then_release(s):
         clock.sleep(s)
@@ -137,14 +152,57 @@ def test_a_waiting_job_gets_the_lock_once_it_is_released():
     assert gen == 2 and st.obj.owner == "lock-sat"
 
 
-def test_an_abandoned_lock_is_taken_over():
+def test_a_lock_expires_with_its_jobs_timeout_and_is_taken_over():
     st, clock = setup()
-    joblock.acquire("refresh", st, now=clock, sleep=clock.sleep, log=lambda m: None)
-    clock.t += joblock.STALE + timedelta(minutes=1)
+    take("retro", st, clock)  # a 30-minute job, killed by Cloud Run without its exit trap
+    clock.t += timedelta(minutes=34)
+    with pytest.raises(TimeoutError):  # not expired yet: 30 + 5 minutes
+        take("site", st, clock, wait=timedelta(seconds=1))
+    clock.t += timedelta(minutes=2)
     msgs = []
-    gen = joblock.acquire("retro", st, now=clock, sleep=clock.sleep, log=msgs.append)
-    assert gen == 2 and st.obj.owner == "retro"
-    assert "abandoned" in msgs[0]
+    gen = joblock.acquire("lock-thu", st, now=clock, sleep=clock.sleep, log=msgs.append)
+    assert st.obj.owner == "lock-thu" and gen == st.obj.generation
+    assert "expired" in msgs[0]
+
+
+def test_a_create_whose_response_was_lost_is_recognized_as_our_own():
+    st, clock = setup()
+    st.lose_response = True
+    gen = take("lock-thu", st, clock)
+    assert gen == 1 and st.obj.owner == "lock-thu"
+    assert clock.t == datetime(2026, 11, 7, 17, 0, tzinfo=UTC)  # no waiting on itself
+
+
+def test_a_lock_that_keeps_vanishing_still_respects_the_wait():
+    class Flaky(FakeStore):
+        def create(self, name, body):
+            return None  # 412 every time ...
+
+        def get(self, name):
+            return None  # ... but never there to read
+
+    clock = Clock()
+    with pytest.raises(TimeoutError):
+        take("daily", Flaky(clock), clock)
+    assert take("lock-sat", Flaky(clock), clock, proceed=True) == 0
+
+
+def test_release_retries_errors():
+    st, clock = setup()
+    gen = take("site", st, clock)
+    st.delete_errors = 2
+    joblock.release(gen, st, log=lambda m: None, sleep=lambda s: None)
+    assert st.obj is None
+
+
+def test_the_lock_timeouts_match_the_cloud_run_jobs():
+    tf = (Path(__file__).resolve().parents[1] / "infra" / "jobs.tf").read_text()
+    jobs = dict(re.findall(r'args = \["([a-z-]+)"[^}]*timeout = "(\d+)s"', tf))
+    assert jobs, "no jobs parsed from infra/jobs.tf"
+    for job, secs in jobs.items():
+        if job == "narrative-check":
+            continue  # read-only: takes no lock
+        assert joblock.TIMEOUTS[job] == timedelta(seconds=int(secs)), job
 
 
 def test_without_a_bucket_everything_is_a_no_op(monkeypatch):
