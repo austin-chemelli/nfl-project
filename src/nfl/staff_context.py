@@ -291,7 +291,9 @@ def traits(rows: list[dict]) -> list[dict]:
         out.append({"metric": r["metric"], "kind": r["kind"], "pct": round(p, 4),
                     "seasons": r["prior_seasons"], "first": r["prior_first"],
                     "last": r["prior_last"]})  # fmt: skip
-    out.sort(key=lambda t: -abs(t["pct"] - 0.5))
+    # metric breaks ties: complementary measures (shotgun / under center) sit exactly as far from the
+    # middle, and the priors come out of an unordered group_by
+    out.sort(key=lambda t: (-abs(t["pct"] - 0.5), t["metric"]))
     return out[:MAX_TRAITS]
 
 
