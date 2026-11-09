@@ -42,6 +42,15 @@ TABLES: tuple[Table, ...] = (
     Table("injuries", "curated", "weekly injury reports"),
     Table("depth_charts", "curated", "depth charts (timestamped from 2025)"),
     Table("participation", "curated", "per-play personnel and coverage (past seasons only)"),
+    Table("player_weeks", "curated", "per player and week: passing, rushing, receiving, defense (player_id is the gsis id)"),
+    Table("snap_counts", "curated", "snaps and share per player and game, 2012+ (keyed by pfr_player_id)"),
+    Table("pfr_pass", "curated", "PFR advanced passing by week, 2018+: drops, bad throws, pressure"),
+    Table("pfr_rush", "curated", "PFR advanced rushing by week, 2018+: yards before and after contact"),
+    Table("pfr_rec", "curated", "PFR advanced receiving by week, 2018+: drops, broken tackles"),
+    Table("pfr_def", "curated", "PFR advanced defense by week, 2018+: coverage targets, pressures"),
+    Table("players", "curated", "every player: gsis, pfr, espn ids, position, draft, birth date"),
+    Table("contracts", "curated", "contracts from Over The Cap: value, APY, cap share (gsis_id)"),
+    Table("draft_picks", "curated", "every draft pick with career summary (gsis_id, pfr_player_id)"),
     Table("features", "features", "the feature store, long and as-of stamped: use features_asof(ts)"),
     Table("predictions", "mart", "every forecast, live and backfill (append-only)"),
     Table("bets", "mart", "paper bets at each lock (append-only)"),
@@ -91,8 +100,9 @@ create or replace macro game_vectors(ts) as table
 
 def files(paths: Paths, t: Table) -> list[Path]:
     """The parquet files behind a table, sorted (empty when it doesn't exist yet)."""
-    if t.layer == "curated":
-        return sorted(paths.curated_table(t.name).glob("season=*/*.parquet"))
+    if t.layer == "curated":  # by season, or one file for the tables that have no seasons
+        d = paths.curated_table(t.name)
+        return sorted(d.glob("season=*/*.parquet")) or sorted(d.glob("*.parquet"))
     if t.layer == "features":
         return sorted((paths.marts / "features").glob("season=*/*.parquet"))
     single = paths.marts / f"{t.name}.parquet"

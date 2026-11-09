@@ -19,6 +19,8 @@ from nfl.config import (
     DATASETS,
     DEFAULT_SEASONS,
     NFLVERSE_BASE,
+    OPTIONAL_DATASETS,
+    SINGLE_FILE_DATASETS,
     Paths,
     current_season,
     now_utc,
@@ -124,6 +126,13 @@ def fetch_one(
     return "written", manifest
 
 
+def _failed(e: httpx.HTTPError) -> str:
+    """A status for an optional dataset that couldn't be fetched: the class only, never the URL."""
+    if isinstance(e, httpx.HTTPStatusError):
+        return f"http-{e.response.status_code}"
+    return f"failed-{type(e).__name__}"
+
+
 def ingest(
     paths: Paths,
     datasets: list[str] | None = None,
@@ -131,14 +140,20 @@ def ingest(
     force: bool = False,
 ) -> list[tuple[str, int | None, str]]:
     """Fetch all requested datasets into one snapshot folder per dataset. Returns per-file statuses."""
-    datasets = datasets or ["schedules", *DEFAULT_SEASONS.keys()]
+    datasets = datasets or [*SINGLE_FILE_DATASETS, *DEFAULT_SEASONS.keys()]
     seasons = {**DEFAULT_SEASONS, **(seasons or {})}
     ts = snapshot_ts()
     results: list[tuple[str, int | None, str]] = []
     with httpx.Client(headers={"User-Agent": USER_AGENT}) as client:
         for ds in datasets:
+            optional = ds in OPTIONAL_DATASETS
             if DATASETS[ds][2] is None:
-                status, _ = fetch_one(client, paths, ds, None, ts, force)
+                try:
+                    status, _ = fetch_one(client, paths, ds, None, ts, force)
+                except httpx.HTTPError as e:
+                    if not optional:
+                        raise
+                    status = _failed(e)
                 results.append((ds, None, status))
                 continue
             lo, hi = seasons[ds]
@@ -147,5 +162,9 @@ def ingest(
                     status, _ = fetch_one(client, paths, ds, season, ts, force)
                 except httpx.HTTPStatusError as e:
                     status = f"http-{e.response.status_code}"
+                except httpx.HTTPError as e:
+                    if not optional:
+                        raise
+                    status = _failed(e)
                 results.append((ds, season, status))
     return results

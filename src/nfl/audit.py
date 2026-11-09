@@ -64,6 +64,9 @@ WATCH: dict[str, list[str]] = {
         "two_high",
     ],
     "injuries": ["report_status", "practice_status", "report_primary_injury", "gsis_id"],
+    # player tables (ADR 0027, M24)
+    "player_weeks": ["player_id", "position", "targets", "receiving_epa", "def_sacks"],
+    "snap_counts": ["pfr_player_id", "offense_pct", "defense_pct", "_joined_to_players"],
 }
 
 
@@ -126,6 +129,26 @@ def _participation_rows(con: duckdb.DuckDBPyConnection, paths: Paths) -> list[tu
     return rows
 
 
+def _snap_rows(con: duckdb.DuckDBPyConnection, paths: Paths) -> list[tuple]:
+    """Snap-count null rates, and `_joined_to_players`: the share of rows whose PFR id finds a gsis
+    id through `players` (n_null = unmatched), the crosswalk every player feature depends on."""
+    path = f"{paths.curated_table('snap_counts').as_posix()}/*/*.parquet"
+    rows = _null_rates(con, path, "snap_counts", ["pfr_player_id", "offense_pct", "defense_pct"])
+    players = paths.curated_table("players") / "players.parquet"
+    if players.exists():
+        joined = con.execute(
+            f"select s.season, count(*), count(*) filter (where p.gsis_id is null) "
+            f"from read_parquet('{path}', hive_partitioning=true) s "
+            f"left join read_parquet('{players.as_posix()}') p on p.pfr_id = s.pfr_player_id "
+            f"group by 1 order by 1"
+        ).fetchall()
+        rows += [
+            ("snap_counts", int(sn), "_joined_to_players", int(n), int(nu), nu / n if n else None)
+            for sn, n, nu in joined
+        ]
+    return rows
+
+
 def _provider_levels(con: duckdb.DuckDBPyConnection, paths: Paths) -> list[tuple]:
     """League-wide levels per season, to eyeball the NGS (<= 2022) -> FTN (>= 2023) jump."""
     path = f"{paths.curated_table('participation').as_posix()}/*/*.parquet"
@@ -164,6 +187,13 @@ def audit(paths: Paths, console: Console, season: int | None = None) -> None:
         rows += _participation_rows(con, paths)
     if paths.curated_table("injuries").exists():
         rows += _null_rates(con, inj, "injuries", WATCH["injuries"])
+    pw = paths.curated_table("player_weeks")
+    if pw.exists():
+        rows += _null_rates(
+            con, f"{pw.as_posix()}/*/*.parquet", "player_weeks", WATCH["player_weeks"]
+        )
+    if paths.curated_table("snap_counts").exists():
+        rows += _snap_rows(con, paths)
 
     paths.marts.mkdir(parents=True, exist_ok=True)
     con.execute(
