@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 
 import polars as pl
 
+from nfl import io
 from nfl.config import Paths, current_season, now_utc
 
 FILE = "previews.parquet"
@@ -46,10 +47,7 @@ def append(paths: Paths, frame: pl.DataFrame) -> int:
     """Append-only, like the predictions: rows are never edited."""
     if frame.is_empty():
         return 0
-    f = paths.marts / FILE
-    old = pl.read_parquet(f) if f.exists() else pl.DataFrame(schema=SCHEMA)
-    pl.concat([old.cast(SCHEMA), frame.cast(SCHEMA)]).write_parquet(f)
-    return frame.height
+    return io.append(paths.marts / FILE, frame, SCHEMA)
 
 
 def latest(paths: Paths) -> pl.DataFrame:

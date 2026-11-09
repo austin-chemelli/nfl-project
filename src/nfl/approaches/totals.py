@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 import polars as pl
 
+from nfl import io
 from nfl.config import Paths
 from nfl.features import store
 
@@ -235,9 +236,7 @@ def append(paths: Paths, rows: pl.DataFrame) -> int:
     new = rows.join(old.select("game_id", "lock_ts"), on=["game_id", "lock_ts"], how="anti")
     if new.is_empty():
         return 0
-    f = ledger_path(paths)
-    f.parent.mkdir(parents=True, exist_ok=True)
-    pl.concat([old, new]).write_parquet(f)
+    io.write_parquet(pl.concat([old, new]), ledger_path(paths))
     return new.height
 
 

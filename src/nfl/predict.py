@@ -13,6 +13,7 @@ from datetime import timedelta
 import duckdb
 import polars as pl
 
+from nfl import io
 from nfl.config import FIRST_SEASON, Paths
 from nfl.models import elo as elo_model
 from nfl.models import market, naive
@@ -68,8 +69,7 @@ def append_rows(
             ~(pl.col("is_backfill") & pl.col("model_id").is_in(sorted(replace_backfill_for)))
         )
     out = pl.concat([prev, new.select(list(PRED_SCHEMA)).cast(PRED_SCHEMA)])
-    paths.marts.mkdir(parents=True, exist_ok=True)
-    out.write_parquet(paths.marts / "predictions.parquet")
+    io.write_parquet(out, paths.marts / "predictions.parquet")
     return new.height
 
 

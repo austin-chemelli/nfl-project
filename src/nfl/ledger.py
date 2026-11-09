@@ -24,7 +24,7 @@ from datetime import timedelta
 
 import polars as pl
 
-from nfl import odds
+from nfl import io, odds
 from nfl.config import Paths
 from nfl.features.market import _implied_expr
 from nfl.features.store import games_frame
@@ -205,8 +205,7 @@ def open_bets(paths: Paths) -> tuple[int, int]:
     live_new = new.filter(~pl.col("is_backfill")).join(have, on=["model_id", "game_id"], how="anti")
     backfill = new.filter(pl.col("is_backfill"))
     out = pl.concat([live_prev, live_new, backfill]).sort("lock_ts", "model_id", "game_id")
-    paths.marts.mkdir(parents=True, exist_ok=True)
-    out.write_parquet(paths.marts / "bets.parquet")
+    io.write_parquet(out, paths.marts / "bets.parquet")
     return live_new.height, backfill.height
 
 
@@ -243,7 +242,7 @@ def settle(paths: Paths) -> pl.DataFrame:
         close, on="game_id", how="left"
     )
     out = settle_frame(df)
-    out.write_parquet(paths.marts / "bets_settled.parquet")
+    io.write_parquet(out, paths.marts / "bets_settled.parquet")
     return out
 
 

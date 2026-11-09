@@ -509,6 +509,41 @@ def sql_cmd(
     console.print(f"{df.height:,} rows" + (f", first {limit} shown" if df.height > limit else ""))
 
 
+joblock_app = typer.Typer(no_args_is_help=True, help="One job at a time on the data (ADR 0025).")
+app.add_typer(joblock_app, name="joblock")
+
+
+@joblock_app.command("acquire")
+def joblock_acquire(
+    owner: str,
+    proceed: bool = typer.Option(
+        False, help="After waiting, run without the lock instead of failing."
+    ),
+) -> None:
+    """Take the data lock (no-op without NFL_DATA_BUCKET); prints its generation for `release`."""
+    import sys
+
+    from nfl import joblock
+
+    try:
+        gen = joblock.acquire(owner, joblock.store_from_env(), proceed=proceed)
+    except TimeoutError as e:
+        print(e, file=sys.stderr)
+        raise typer.Exit(1) from e
+    except Exception as e:  # noqa: BLE001 - a broken lock must never stop the jobs: run without it
+        print(f"joblock: could not take the lock ({e!r}); running without it", file=sys.stderr)
+        gen = 0
+    print(gen)
+
+
+@joblock_app.command("release")
+def joblock_release(generation: int) -> None:
+    """Release the lock taken with `acquire` (its printed generation)."""
+    from nfl import joblock
+
+    joblock.release(generation, joblock.store_from_env())
+
+
 @app.command("site")
 def site_cmd(season: int = typer.Option(None, help="Default: current season.")) -> None:
     """Write the UI JSON contract (marts/site/): meta, slates, games, tracker, audit."""

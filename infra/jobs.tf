@@ -64,6 +64,10 @@ resource "google_cloud_run_v2_job" "jobs" {
           value = "/mnt/data"
         }
         env {
+          name  = "NFL_DATA_BUCKET" # the job lock (ADR 0025)
+          value = google_storage_bucket.data.name
+        }
+        env {
           name  = "NFL_SITE_BUCKET"
           value = google_storage_bucket.site.name
         }
