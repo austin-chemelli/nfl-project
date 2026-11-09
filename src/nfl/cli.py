@@ -509,6 +509,73 @@ def sql_cmd(
     console.print(f"{df.height:,} rows" + (f", first {limit} shown" if df.height > limit else ""))
 
 
+models_app = typer.Typer(no_args_is_help=True, help="SQL models (ADR 0025, M23.3).")
+app.add_typer(models_app, name="models")
+
+
+@models_app.command("build")
+def models_build(
+    name: Annotated[str | None, typer.Argument(help="One model; default every model.")] = None,
+) -> None:
+    """Run src/nfl/sql/models/*.sql -> marts/derived/<name>.parquet (unchanged output not rewritten)."""
+    from nfl.sql import runner
+
+    try:
+        results = runner.build(get_paths(), name)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    for r in results:
+        console.print(f"{r.name}: {r.rows:,} rows, {r.status}")
+
+
+candidates_app = typer.Typer(no_args_is_help=True, help="The candidates ledger (ADR 0026, M23.2).")
+app.add_typer(candidates_app, name="candidates")
+
+
+@candidates_app.command("run")
+def candidates_run(
+    only: Annotated[str | None, typer.Option("--only", help="One candidate id.")] = None,
+    season_from: Annotated[int, typer.Option(help="First season of the residual tests.")] = 2006,
+) -> None:
+    """Screen every candidate through the gates; append changed results to marts/candidates.parquet."""
+    from nfl import candidate_screen
+
+    try:
+        n = candidate_screen.run(get_paths(), only=only, season_from=season_from)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+    console.print(f"candidates: {n} new row(s) appended")
+
+
+@candidates_app.command("list")
+def candidates_list(
+    interesting: Annotated[bool, typer.Option("--interesting", help="Only flagged ones.")] = False,
+) -> None:
+    """The latest ledger row per candidate."""
+    import polars as pl
+
+    from nfl import candidate_screen
+
+    df = candidate_screen.latest(get_paths())
+    if interesting:
+        df = df.filter(pl.col("interesting"))
+    f = lambda v: "" if v is None else f"{v:+.2f}"
+    ci = lambda r, k: "" if r[k] is None else f"{f(r[k])} [{f(r[k + '_lo'])},{f(r[k + '_hi'])}]"
+    t = Table(
+        "candidate", "kind", "verdict", "split", "future partial r", "vs Student", "vs market", "n"
+    )
+    for c in t.columns:
+        c.no_wrap = True
+    for r in df.sort(["interesting", "candidate"], descending=[True, False]).iter_rows(named=True):
+        t.add_row(
+            ("* " if r["interesting"] else "") + r["candidate"], r["kind"], r["verdict"],
+            "" if r["split_half"] is None else f"{r['split_half']:.2f}",
+            ci(r, "future_partial"), ci(r, "resid_st"), ci(r, "resid_mk"), str(r["resid_n"] or ""),
+        )  # fmt: skip
+    console.print(t)
+    console.print("* = interesting. residual slopes are points per SD, positive = candidate helps.")
+
+
 joblock_app = typer.Typer(no_args_is_help=True, help="One job at a time on the data (ADR 0025).")
 app.add_typer(joblock_app, name="joblock")
 

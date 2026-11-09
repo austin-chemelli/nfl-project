@@ -644,6 +644,8 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** Measure the model's own calibration before shopping for features: the screen's first table looked like "EPA is over-weighted" and was really "home field is over-stated". And a research agent's secondary claims (the +14%) are hypotheses to retest on our data, not findings.
 
+**M23.3 and M23.2 (same evening, an `implementer` agent in `~/dev/nfl-project-candidates`, then a review).** The first SQL model, `team_week` (one row per team, game and side; `nfl models build`), and the candidates ledger (`nfl candidates run|list`, append-only, an unchanged rerun appends nothing; both run in under ten seconds). The agent's own check against the throwaway screen found a bug in the screen, not the code: the screen joined games on printed team codes and dropped every STL, SD and OAK game. Review added two flags: `pregame`, because observed wind looked like a `use` (−0.73 points against the market total at 15+ mph) while it's measured after kickoff, and `in_model`, so `net_epa` and `success_off` read as baselines, not finds. The first run's clearest new signal is the defense discount: net EPA with the defense at half weight predicts the second half beyond plain EPA (+0.13) and the market under-weights it, which is M23.6's question (shrink defense harder) with a number on it.
+
 ## 2026-11-08: Player value planned (ADR 0027, M24)
 
 **Why.** Austin wants a player's impact quantified beyond the quarterback. Today everyone but the quarterback enters through a hand-set weight per position.
