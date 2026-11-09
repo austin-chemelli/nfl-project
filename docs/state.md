@@ -121,6 +121,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M21 copy pass | built 2026-11-08, PR open: web only; pipeline sentences (M21.8) wait on Austin |
 | M22 data catalog and safe writes | phases 0-2 live 2026-11-08 (#32, ADR 0025): fixtures collapsed in diffs, `nfl sql` over every table, safe writes and a job lock; M22.3 SQL models moved to M23.3 |
 | M23 second-level features | planned 2026-11-08 (ADR 0026): calibration study first (the Student carries a home shift from pooling 2002+: favorites at 0.55-0.75 win 3-5 points less than it says), a candidates ledger that keeps every tested feature on the History page, EPA without turnovers / takeaways / fumble luck into the existing groups via a shadow `student_v2`, `DecompBar` and `ReliabilityBadge`, the context splits; player-level data is another chat's flight |
+| M24 Player value and scored impact claims | planned 2026-11-08 on Fable (ADR 0027); ingests can start now, screening waits on M23 phase 0 |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -134,7 +135,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D10 | Betting integration (§5): which venue is lawful where Austin lives; then read-only prices only, or execution with a fixed small stake? | legal check first; read-only / execute | Austin | 2026-11-05 |
 | D11 | GPU for the desktop (§6): a 24 GB card to run 27–32B models, or stay on the 1070 with prompts and evals only? | buy / stay | Austin's money | 2026-11-05 |
 | D12 | Learned Student (§3.1): a fifth line in shadow (recommended) or a replacement for the Student? | shadow / replace | Austin | 2026-11-05 |
-| D13 | Player-level data (§2.2): injury weighting plus four position groups, or wider? | narrow / wide | Austin | 2026-11-05 |
+| D13 | Player-level data (§2.2) | **decided 2026-11-08: scored impact (ADR 0027, M24); context-only until a shadow line earns it; props parked; QB, WR/TE, RB, OL, EDGE, CB/S in v1** | Austin | 2026-11-08 |
 | D14 | A backup lock run 30 minutes after each lock that acts only if the first didn't, so a badly timed merge fixes itself? | (a) build it, about an hour, plus an "already locked?" check; (b) leave reruns manual | Austin, after the first public lock | 2026-11-04 |
 | D15 | Coaches refinement (ADR 0021): where the per-team view lives | **decided 2026-11-06: a team page `/team/:code`, linked from game previews and wherever a team is named** | Austin | 2026-11-06 |
 | D16 | Staff verification depth | **decided 2026-11-06: 2016–2026 (where scheme data exists), full bar 2022+, light bar before; five research agents launched 2026-11-06** | Austin | 2026-11-06 |

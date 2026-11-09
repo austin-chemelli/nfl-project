@@ -348,3 +348,20 @@ flowchart LR
     TF --> GM
 ```
 
+## Players (ADR 0027, M24)
+
+Free nflverse player tables (weekly stats, snap counts, PFR advanced stats, contracts, draft picks, the id crosswalk) are curated beside the team tables and queried through the catalog. A SQL model, `derived/player_value`, gives every listed starter a value in points of spread per (season, week), point-in-time by week; `availability.value_lost` sums the value of who's missing, weighted by our own status-to-play rates, and enters the ledger as a candidate (ADR 0026) before any approach may use it. Claims about a player's value are recorded daily and graded against the market's move when he's ruled out.
+
+```mermaid
+%%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%
+flowchart LR
+    PS[(player weeks, snaps,\nPFR adv, contracts, draft)] --> PV[derived/player_value\npoints per player-week]
+    INJ[(injuries, daily snapshots)] --> STP[status_to_play rates]
+    PV --> VL[availability.value_lost\ncandidate, context only]
+    STP --> VL
+    PV --> CL[player_claims\ngraded by market moves]
+    STP --> CL
+    VL --> LEDGER[candidates ledger]
+    CL --> TRK[tracker, Injuries tab,\nteam availability panel]
+```
+

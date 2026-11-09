@@ -644,3 +644,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** Measure the model's own calibration before shopping for features: the screen's first table looked like "EPA is over-weighted" and was really "home field is over-stated". And a research agent's secondary claims (the +14%) are hypotheses to retest on our data, not findings.
 
+## 2026-11-08: Player value planned (ADR 0027, M24)
+
+**Why.** Austin wants a player's impact quantified beyond the quarterback. Today everyone but the quarterback enters through a hand-set weight per position.
+
+**What changed.** Three research notes (sources, methods, product angles) and a proposal in `.notes/plans/player-impact.md`; ADR 0027 and M24 in the tasks. Decided: scored impact (a value table, a context-only feature screened through M23's ledger, and a value in points per key absence graded against the market's move), props parked, six position groups. Its own milestone, since M23 excluded player data by design; it reuses M23's ledger, SQL runner and reliability badge.
+
+**Findings.** A star non-quarterback is worth 0.5 to 1.5 points of spread and books price absences within minutes, so the model gain will be small and the honest product is the graded claim. We already hold 43 player-id columns per play and who-was-on-the-field data that `curate` drops. nflverse moved weekly player stats to a `stats_player` release (`stats_player_week_{season}.parquet`); the old `player_stats` release stops at 2024, and Next Gen Stats ships no parquet.
+
+**Lesson.** Checking the asset names against the releases before writing the ingest task caught two that no longer exist.
+
