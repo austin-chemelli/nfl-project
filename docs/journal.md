@@ -654,3 +654,11 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** Checking the asset names against the releases before writing the ingest task caught two that no longer exist.
 
+## 2026-11-08: Player sources and how often a listed player plays (M24.0, M24.1)
+
+**What changed.** Nine nflverse player sources in the registry, optional (a failed download or curate is logged and never stops a job, so a lock never depends on them), curated into catalog tables; the plays table keeps 16 player-id columns; `nfl players status` writes `marts/derived/status_to_play.parquet`.
+
+**Findings.** The snap-count to gsis crosswalk through `players` joins 99.8% or better every season. Snap counts start in 2013 (the 2012 file is empty). A Questionable player plays 70% of the time (2016–2025), a Questionable quarterback only 50%, Doubtful under 1%. The first cut counted every listed player and said healthy quarterbacks play 82% of the time: backups are on the report and never take a snap, so the rate now counts only players who already had a role.
+
+**Lesson.** A rate is only as good as its denominator: "listed and didn't play" mixed availability with role, and the quarterback row showed it first.
+

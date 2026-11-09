@@ -683,6 +683,34 @@ def lock_cmd(
         )
 
 
+players_app = typer.Typer(no_args_is_help=True, help="Player-level data (ADR 0027).")
+app.add_typer(players_app, name="players")
+
+
+@players_app.command("status")
+def players_status(
+    season_from: int = typer.Option(2013, help="First season (snap counts start in 2013)"),
+    season_to: int = typer.Option(2025, help="Last season"),
+) -> None:
+    """How often a player on the final injury report plays, by status and position group."""
+    import polars as pl
+    from rich.table import Table
+
+    from nfl.players.status import CURRENT_ERA_FROM, build
+
+    r = build(get_paths(), (season_from, season_to))
+    t = Table(title=f"Played at least one snap, {CURRENT_ERA_FROM}+ (final report)")
+    for h in ("status", "group", "n", "played", "90% interval"):
+        t.add_column(h, justify="right" if h != "status" else "left")
+    for row in r.filter(pl.col("era") == f"{CURRENT_ERA_FROM}+").iter_rows(named=True):
+        t.add_row(row["status"], row["pos_group"], f"{row['n']:,}", f"{row['rate']:.1%}",
+                  f"{row['lo']:.1%} to {row['hi']:.1%}")  # fmt: skip
+    console.print(t)
+    console.print(
+        f"[bold]status-to-play:[/bold] {r.height} rows -> marts/derived/status_to_play.parquet"
+    )
+
+
 weekly_app = typer.Typer(no_args_is_help=True, help="The weekly jobs (see docs/runbook.md).")
 app.add_typer(weekly_app, name="weekly")
 

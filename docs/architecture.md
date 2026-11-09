@@ -16,7 +16,7 @@ Principles (from the brief, unchanged): the LLM stays out of the numeric core; p
 %%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%
 flowchart LR
     subgraph src[Sources]
-        NV[nflverse parquet]
+        NV[nflverse parquet<br/>incl. player tables]
         OA[The Odds API]
         OM[Open-Meteo]
         WEB[Public web]
@@ -350,7 +350,7 @@ flowchart LR
 
 ## Players (ADR 0027, M24)
 
-Free nflverse player tables (weekly stats, snap counts, PFR advanced stats, contracts, draft picks, the id crosswalk) are curated beside the team tables and queried through the catalog. A SQL model, `derived/player_value`, gives every listed starter a value in points of spread per (season, week), point-in-time by week; `availability.value_lost` sums the value of who's missing, weighted by our own status-to-play rates, and enters the ledger as a candidate (ADR 0026) before any approach may use it. Claims about a player's value are recorded daily and graded against the market's move when he's ruled out.
+Free nflverse player tables (weekly stats 1999+, snap counts 2013+, PFR advanced stats 2018+, contracts, draft picks, the id crosswalk `players`) are curated beside the team tables (`curate_players`, optional: a failure never stops a job) and queried through the catalog; the plays table keeps who caught, ran, sacked and defended each play. A SQL model, `derived/player_value`, gives every listed starter a value in points of spread per (season, week), point-in-time by week; `availability.value_lost` sums the value of who's missing, weighted by our own status-to-play rates, and enters the ledger as a candidate (ADR 0026) before any approach may use it. Claims about a player's value are recorded daily and graded against the market's move when he's ruled out.
 
 ```mermaid
 %%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%

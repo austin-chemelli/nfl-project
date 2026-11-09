@@ -16,7 +16,7 @@ The model knows one player: the quarterback features follow the projected starte
 1(b), 2(b), 3(b), 4(a), 5(b): milestone **M24**.
 
 - **A player value table**, `marts/derived/player_value` (a SQL model through M23.3's runner): one row per (season, week, player, team): position group, snap share to date, a value in **points of spread** with its parts, and `known_as_of`. Value = a position prior from the published sizes (a top starter 0.5 to 1.5; the quarterback keeps `features/qb.py`) × a quality multiplier from production to date (EPA per target and target share; pressures per rush; coverage targets allowed), shrunk toward the position mean with a plays-based prior like the quarterback's 250 dropbacks; contract APY and draft slot are the prior for players with few snaps. Week W reads games through W−1 and prior seasons, decayed 0.75 a season.
-- **Status-to-play rates from our own history** (injuries × snap counts, 2012+): P(played | report status, position group, report day), published, replacing PFF's quoted 73% for Questionable.
+- **Status-to-play rates from our own history** (injuries × snap counts, 2013+: the 2012 file is empty upstream): P(played | report status, position group, report day), published, replacing PFF's quoted 73% for Questionable.
 - **`availability.value_lost`** = Σ over listed starters of value × P(out | status), home minus away, built into the store but in no approach. It and `availability.ol_weakest` are candidates in the ledger (ADR 0026), screened after M23.0 settles calibration. They join the Health group at a later registry bump only after a shadow line earns it; `injury_impact` stays until then.
 - **Scored claims, not what-ifs.** While the feature is context only, the public claim is the player's value: "X is worth about 1.2 points; Questionable, plays 71% of the time". `marts/player_claims` (append-only, written by the daily pass) records each claim; when a player's status changes to Out between two daily snapshots, the claim is graded against the market's move in that window (`market_history`, ADR 0024), and at season's end against the margin residual. Graded claims show on the tracker beside strong calls, with the frame that most values are under a point. When the feature is promoted, the quarterback what-if generalises to these players.
 - **Pages:** the game's Injuries tab leads with a `FormationMap` (the 11 starters, each sized by value lost) over the list; the team page gets an availability panel (key players by value, status, our status-to-play rate, value at risk). Every number carries the `ReliabilityBadge` once M23.8b ships.
@@ -35,4 +35,16 @@ The model knows one player: the quarterback features follow the projected starte
 - Files M24 owns: the registry, `ingest.py`, `curate.py`, `features/availability.py`, `swings.py`, the Injuries tab, the team availability panel. Shared and sequenced with M23: `candidates.py`, `groups.py` (only at the bump), additive `site.py` sections.
 
 ## Measured
-(M24.1 status-to-play rates, M24.2 value checks and M24.3 ledger results go here.)
+
+**M24.0, the sources (2026-11-08, local data).** Nine curated tables, built in under 3 seconds from the raw files: `player_weeks` 485,478 rows (1999–2026), `snap_counts` 335,997 (2013–2026; the 2012 file is empty upstream), PFR advanced by week 2018–2026 (pass 5,704, rush 19,428, rec 37,671, def 65,843), `players` 24,867, `contracts` 53,624, `draft_picks` 12,927. The crosswalk: 99.8% to 100% of snap-count rows find a gsis id through `players` in every season (target 95%), and 99.98% of PFR defense rows. The plays table now carries 16 player columns; receiver ids are present on every completed pass back to 2010.
+
+**M24.1, status to play (2016–2025 regular season, final report, players who had at least a quarter of their unit's snaps in an earlier game that season; 90% Wilson intervals).** Counting every listed player instead mixed availability with role: healthy backup quarterbacks never take a snap, which read as "healthy QBs play 82%".
+
+| Final status | Listed player-weeks | Played |
+|---|---|---|
+| Out | 7,673 | 0.0% |
+| Doubtful | 1,265 | 0.9% (0.6 to 1.5) |
+| Questionable | 11,706 | 70.4% (69.7 to 71.1) |
+| No status (listed in practice only) | 23,490 | 95.4% (95.2 to 95.6) |
+
+Questionable by group: linebackers 74.9%, defensive line 74.3%, wide receivers 73.2%, tight ends 72.8%, offensive line 69.2%, running backs 69.0%, defensive backs 65.4%, **quarterbacks 50.4% (45.4 to 55.3, n = 270)**. PFF's often-quoted 73% for Questionable sits a little above ours overall, and a Questionable quarterback is a coin flip.

@@ -98,6 +98,23 @@ PBP_COLUMNS = [
     "drive_start_yard_line",
     "drive_end_yard_line",
     "drive_play_count",
+    # who did what (ADR 0027, M24): the player value model credits these
+    "receiver_player_id",
+    "receiver_player_name",
+    "rusher_player_id",
+    "rusher_player_name",
+    "complete_pass",
+    "yards_after_catch",
+    "sack_player_id",
+    "half_sack_1_player_id",
+    "half_sack_2_player_id",
+    "qb_hit_1_player_id",
+    "qb_hit_2_player_id",
+    "pass_defense_1_player_id",
+    "pass_defense_2_player_id",
+    "interception_player_id",
+    "fumbled_1_player_id",
+    "forced_fumble_player_1_player_id",
 ]
 FTN_COLUMNS = [
     "starting_hash",
@@ -281,6 +298,63 @@ def curate_participation(paths: Paths) -> list[tuple[str, int, int]]:
     return _counts(con, "participation", out)
 
 
+# curated table -> (raw dataset, partitioned by season)
+PLAYER_TABLES: dict[str, tuple[str, bool]] = {
+    "player_weeks": ("player_stats", True),
+    "snap_counts": ("snap_counts", True),
+    "pfr_pass": ("pfr_pass", True),
+    "pfr_rush": ("pfr_rush", True),
+    "pfr_rec": ("pfr_rec", True),
+    "pfr_def": ("pfr_def", True),
+    "players": ("players", False),
+    "contracts": ("contracts", False),
+    "draft_picks": ("draft_picks", False),
+}
+# Nested columns dropped from contracts: the yearly history lists don't fit a flat table.
+_NESTED = {"contracts": "exclude (season_history, contract_history)"}
+
+
+def _write_single(con: duckdb.DuckDBPyConnection, sql: str, table: str, out_dir: Path) -> int:
+    """A curated table with no season partitions: one file, written to a temp name then renamed."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    tmp = out_dir / f".{table}.parquet.tmp"
+    con.execute(f"copy ({sql}) to '{tmp.as_posix()}' (format parquet)")
+    tmp.replace(out_dir / f"{table}.parquet")
+    return int(con.execute(f"select count(*) from ({sql})").fetchone()[0])
+
+
+def curate_players(
+    paths: Paths,
+    seasons: tuple[int, int] | None = None,
+    tables: tuple[str, ...] | None = None,
+) -> list[tuple[str, int, int]]:
+    """Player tables (ADR 0027, M24): weekly stats, snap counts, PFR advanced stats by week, and the
+    single-file players (the id crosswalk), contracts and draft picks. Each table is built from
+    its raw source as published; a table whose source isn't downloaded is skipped."""
+    con = duckdb.connect()
+    con.execute("set timezone='UTC'")
+    lo, hi = seasons or (0, 9999)
+    out: list[tuple[str, int, int]] = []
+    for table, (dataset, partitioned) in PLAYER_TABLES.items():
+        if tables is not None and table not in tables:
+            continue
+        files = latest_files(paths, dataset)
+        if partitioned and seasons:
+            files = {k: v for k, v in files.items() if k is not None and lo <= k <= hi}
+        if not files:
+            continue
+        star = f"* {_NESTED[table]}" if table in _NESTED else "*"
+        src = f"select {star} from ({_read_many(files)})"
+        dest = paths.curated_table(table)
+        if partitioned:
+            sql = f"select * replace (season::int as season) from ({src}) where season between {lo} and {hi}"
+            _write_partitioned(con, sql, dest, seasons)
+            out += _counts(con, table, dest)
+        else:
+            out.append((table, 0, _write_single(con, src, table, dest)))
+    return out
+
+
 def curate(
     paths: Paths,
     seasons: tuple[int, int] | None = None,
@@ -392,4 +466,9 @@ def curate(
 
     if want("participation"):
         summary += curate_participation(paths)
+    if any(want(t) for t in PLAYER_TABLES):
+        try:  # optional sources (ADR 0027): a failure here never stops a job
+            summary += curate_players(paths, seasons, tables)
+        except Exception as e:  # noqa: BLE001
+            print(f"curate: player tables failed, continuing: {type(e).__name__}: {e}")
     return summary

@@ -21,7 +21,26 @@ DATASETS: dict[str, tuple[str, str, int | None]] = {
     "injuries": ("injuries", "injuries_{season}.parquet", 2009),
     "depth_charts": ("depth_charts", "depth_charts_{season}.parquet", 2001),
     "participation": ("pbp_participation", "pbp_participation_{season}.parquet", 2016),
+    # Player-level sources (ADR 0027, M24). Optional: a failed download is logged, never fatal,
+    # since nothing in a lock reads them yet.
+    "player_stats": ("stats_player", "stats_player_week_{season}.parquet", 1999),
+    "snap_counts": ("snap_counts", "snap_counts_{season}.parquet", 2013),  # 2012's file is empty
+    "pfr_pass": ("pfr_advstats", "advstats_week_pass_{season}.parquet", 2018),
+    "pfr_rush": ("pfr_advstats", "advstats_week_rush_{season}.parquet", 2018),
+    "pfr_rec": ("pfr_advstats", "advstats_week_rec_{season}.parquet", 2018),
+    "pfr_def": ("pfr_advstats", "advstats_week_def_{season}.parquet", 2018),
+    "players": ("players", "players.parquet", None),
+    "contracts": ("contracts", "historical_contracts.parquet", None),
+    "draft_picks": ("draft_picks", "draft_picks.parquet", None),
 }
+
+# Datasets whose download or curate may fail without failing the job (ADR 0027).
+OPTIONAL_DATASETS: frozenset[str] = frozenset(
+    {"player_stats", "snap_counts", "pfr_pass", "pfr_rush", "pfr_rec", "pfr_def",
+     "players", "contracts", "draft_picks"}
+)  # fmt: skip
+# Single-file datasets fetched on every default ingest (refetched each run; unchanged files skip).
+SINGLE_FILE_DATASETS: tuple[str, ...] = ("schedules", "players", "contracts", "draft_picks")
 
 # POC defaults. Historical seasons are fetched once; the current season is re-fetched each run.
 DEFAULT_SEASONS: dict[str, tuple[int, int]] = {
@@ -30,6 +49,12 @@ DEFAULT_SEASONS: dict[str, tuple[int, int]] = {
     "injuries": (2009, 2026),
     "depth_charts": (2009, 2026),
     "participation": (2016, 2025),  # published after each season; none for the current one
+    "player_stats": (1999, 2026),
+    "snap_counts": (2013, 2026),
+    "pfr_pass": (2018, 2026),
+    "pfr_rush": (2018, 2026),
+    "pfr_rec": (2018, 2026),
+    "pfr_def": (2018, 2026),
 }
 
 # History starts here (pbp + schedules). Fits train from FIRST_TRAIN_SEASON so Elo and the
