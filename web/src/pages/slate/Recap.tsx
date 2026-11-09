@@ -24,10 +24,12 @@ function vsMarket(v: number | null | undefined): string {
 
 function RecapBlock({ r, total }: { r: WeekRecap; total?: number }) {
   const models = r.models.filter((m) => m.kind !== 'global').sort((a, b) => (a.rank || 99) - (b.rank || 99))
+  const { tiles, caption } = recapTiles(r, total)
   return (
     <div role="region" aria-label={`Week ${r.week} recap`} className="flex flex-col gap-3">
+      {caption && <p className="text-[13px] text-ink-3">{caption}</p>}
       <SummaryStrip label={`Week ${r.week} summary`}>
-        {recapTiles(r, total).map((t) => <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} modelId={t.modelId} />)}
+        {tiles.map((t) => <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} modelId={t.modelId} help={t.help} />)}
       </SummaryStrip>
       <details className="text-[14px]">
         <summary className="cursor-pointer text-[13px] text-ink-3 hover:text-ink">Full recap</summary>

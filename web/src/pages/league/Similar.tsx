@@ -1,23 +1,24 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { FinePrint } from '../../components/FinePrint'
+import { Help } from '../../components/Help'
 import { Card, ErrorBox, Loading } from '../../components/ui'
 import { isNotFound, useSimilar } from '../../data/api'
 import type { LeagueFile, SimilarFile, SimilarTeam } from '../../data/contract'
 import { TeamLink } from '../../components/TeamLink'
 import { teamInfo } from '../../lib/teams'
 import { FinishGrid } from './FinishGrid'
-import { FlagCards } from './FlagCards'
+import { FlagCards, HistoryLede } from './FlagCards'
 import { OverlapChart, OverlapKey } from './OverlapChart'
 import { poolYears, resolveSimilarTeam, similarOptions, similarRows } from './similar'
 
 const field = 'rounded-md border border-line bg-surface-1 px-2 py-1 text-[13px] text-ink'
 const COLS = 'md:grid-cols-[4.5rem_5rem_8rem_6rem_minmax(0,1fr)]'
 
-function Section({ title, lede, children }: { title: string; lede?: ReactNode; children: ReactNode }) {
+function Section({ title, lede, help, children }: { title: string; lede?: ReactNode; help?: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="flex min-w-0 flex-col gap-2">
-      <h3 className="text-[15px] font-medium text-ink">{title}</h3>
+      <h3 className="text-[15px] font-medium text-ink">{help ? <Help text={help}>{title}</Help> : title}</h3>
       {lede && <p className="m-0 text-ink-2">{lede}</p>}
       {children}
     </section>
@@ -62,8 +63,8 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
     <div className="flex min-w-0 flex-col gap-6">
       <div className="flex flex-col gap-4">
         <p className="m-0 text-ink-2">
-          {entry ? `Teams that looked like the ${name} after ${entry.games_played} games finished like this. ` : ''}This describes the past and isn't a forecast; the{' '}
-          <Link to={{ search: '?tab=odds' }}>playoff odds</Link> are the forecast.
+          {entry ? `Teams that looked like ${team} after ${entry.games_played} games, and how they finished. ` : ''}History, not a forecast; see the{' '}
+          <Link to={{ search: '?tab=odds' }}>playoff odds</Link>.
         </p>
         <p className="m-0 text-[13px]"><TeamLink team={team}>{name} team page</TeamLink></p>
 
@@ -95,20 +96,21 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
             title={`How the ${entry.nearest.length} nearest seasons finished`}
             lede={
               <>
-                {entry.made_playoffs} of {entry.k_summary} made the playoffs and {entry.rounds.conf} reached a conference game or beyond. Each square is one season, furthest round first.
+                {entry.made_playoffs} of {entry.k_summary} made the playoffs and {entry.rounds.conf} reached the conference championship game or beyond.{' '}
+                <Help text="Each square is one season, furthest round first." />
               </>
             }
           >
             <FinishGrid nearest={entry.nearest} active={active} onActive={setActive} />
           </Section>
 
-          <Section title="What history says about this team" lede="Past teams on exactly the same record, split by whether they had the trait. The counts are teams that made the playoffs, or reached a conference game where the card says so.">
+          <Section title="What history says about this team" lede={<HistoryLede />}>
             <FlagCards flags={entry.flags} gamesPlayed={entry.games_played} record={entry.record} peers={entry.peers} />
           </Section>
 
           <Section
             title="Where they overlap"
-            lede={`Each row is one measure, as a percentile from 0 to 100 among every team at ${entry.games_played} games since 2002; right is better, except on Schedule, where right is the hardest. The large dot is the ${name}, the small dots are the ${entry.nearest.length} nearest seasons, and the shaded band holds the middle half of them. Where the small dots gather around the large dot, they match. Ranks on the cards above are this season's; these percentiles are across all those seasons.`}
+            help={`Each row is a percentile among every team at ${entry.games_played} games since 2002; right is better (on Schedule, harder). Where the small dots gather around the big one, they match.`}
           >
             <OverlapChart code={team} name={name} entry={entry} measures={sim.measures} active={active} onActive={setActive} />
             <OverlapKey code={team} name={name} active={active} near={entry.nearest} />
@@ -163,7 +165,7 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
       <FinePrint label="How these seasons are picked">
         <p>
           Every team-season from {years ?? '2002 to 2025'} is compared with {entry ? name : 'the team'} at the same number of games played, not the same week, so a bye doesn't throw it off. Only seasons that played this many games count, so late in a season the pool is
-          smaller. Seasons before 2021 had 16 games and later ones have 17, so records like 12-4 and 12-5 sit side by side. The seven measures are: win percentage so far (counted double), points margin per game, a win percentage implied by points scored and allowed,
+          smaller. Ranks on the cards are this season's; the chart's percentiles are across all those seasons. Seasons before 2021 had 16 games and later ones have 17, so records like 12-4 and 12-5 sit side by side. The seven measures are: win percentage so far (counted double), points margin per game, a win percentage implied by points scored and allowed,
           offensive efficiency and defensive efficiency adjusted for opponents, the quarterback's efficiency, and strength of schedule. The closest ten are listed and the closest {entry?.k_summary ?? 25} are counted.
         </p>
         <p>

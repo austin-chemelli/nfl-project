@@ -27,12 +27,9 @@ export function PersonaHistory({ meta }: { meta: Meta }) {
       title="What history would change"
       help="Every approach spreads 100 attention points over the same feature groups. The persona chose its split by belief; history's split is what the data alone would choose."
     >
-      <p className="mb-3 text-[14px] text-ink-2">
-        Each approach spreads <strong className="text-ink">100 attention points</strong> over the same groups of evidence.
-      </p>
       <Segmented label="Approach" value={sel} onChange={setSel} options={apps.map((x) => ({ value: x.id, label: x.name.replace(/^The /, '') }))} />
-      <p className="mt-3 italic text-ink-2">{a.blurb}</p>
-      {head && <p className="mt-1 font-medium">{head}</p>}
+      <p className="mt-3 font-medium"><Help text={a.blurb}>{a.name}</Help></p>
+      {head && <p className="mt-1">{head}</p>}
       {scale && <p className="mt-1 text-[13px] text-ink-2">{scale}</p>}
       <div className="mt-3 w-full" style={{ height: 120 + 44 * keys.length }}>
         <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 400 }}>

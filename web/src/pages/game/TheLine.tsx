@@ -50,10 +50,11 @@ export function TheLine({ g }: { g: Game }) {
     <Section title="How the line moved" help="The consensus across sportsbooks at each of our snapshots before kickoff: the median spread and total, needing at least three books. The dashed line is our own number.">
       <TodayLine g={g} />
       <p className="m-0 text-ink">
-        Since we first saw it ({etStamp(m.first_seen)}): {path ?? 'no change'}.
-        {sinceLock && <> Since the lock: {sinceLock}.</>}
-        {lastDay && <> Last day: {lastDay}.</>}
+        {path ?? 'No change'} · since {etStamp(m.first_seen)}
       </p>
+      {(sinceLock || lastDay) && (
+        <p className="m-0 mt-1 text-ink">{[sinceLock && `Since the lock ${sinceLock}`, lastDay && `last day ${lastDay}`].filter(Boolean).join(' · ')}</p>
+      )}
       <div className="mt-3 flex flex-col gap-3">
         <LinePath points={series('spread_home')} marks={marks} events={evMarks} domain={domain} label="Spread"
           format={(v) => spreadLabel(v, g.home, g.away)}

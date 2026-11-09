@@ -142,7 +142,7 @@ describe('League page, playoff tabs', () => {
     renderRoute(withHistory('market'))
     const market = await screen.findByRole('list', { name: 'AFC playoff odds' })
     expect(market.querySelector('[data-team="KC"] svg')!.getAttribute('aria-label')).not.toBe(kc.getAttribute('aria-label'))
-    expect(screen.getByText(/The small line is the team's chance/)).toBeInTheDocument()
+    expect(screen.getByText(/Small line: chance at each Tuesday refresh/)).toBeInTheDocument()
   })
 
   it('Odds: with no history, or one point, nothing is drawn and the row has no extra element', async () => {

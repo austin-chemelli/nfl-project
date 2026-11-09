@@ -15,6 +15,15 @@ describe('SummaryStrip', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
+  it('a tile with help shows it beside the tile, not inside the tile button', async () => {
+    const router = createMemoryRouter([{ path: '/g', element: <SummaryStrip><Tile label="Injuries" value="2 out" tab="news" help="Players ruled out." /></SummaryStrip> }], { initialEntries: ['/g'] })
+    render(<RouterProvider router={router} />)
+    const tile = screen.getByRole('button', { name: /Injuries/ })
+    const help = screen.getByRole('button', { name: 'What is this?' })
+    expect(tile).not.toContainElement(help)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Players ruled out.')
+  })
+
   it('a tile with a tab switches the tab without leaving the page', async () => {
     const router = createMemoryRouter(
       [{ path: '/g', element: (<><SummaryStrip><Tile label="Injuries" value="2 out" tab="news" /></SummaryStrip><Tabs default="forecast" tabs={[{ id: 'forecast', label: 'Forecast', content: <p>fc</p> }, { id: 'news', label: 'News', content: <p>nw</p> }]} /></>) }],

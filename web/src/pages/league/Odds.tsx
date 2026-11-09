@@ -142,7 +142,7 @@ export function Odds({ file }: { file: LeagueFile }) {
           ),
         )}
       </div>
-      <p className="text-[13px] text-ink-3">The line sits below the seven highest chances, which isn't the same as the current seeds. Hover or tap a team for its chance in each round.{anySpark && ' The small line is the team\'s chance at each Tuesday refresh since the odds began.'}</p>
+      <p className="text-[13px] text-ink-3">The line marks the seven highest chances, not today's seeds. Tap a team for each round.{anySpark && ' Small line: chance at each Tuesday refresh.'}</p>
 
       <DataTable>
         <table className="w-full border-collapse text-[13px]">

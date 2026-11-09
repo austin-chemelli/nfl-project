@@ -113,7 +113,7 @@ export function Tendencies({ file }: { file: TeamFile }) {
         const rows = [...unit.charted].sort((a, b) => a.label.localeCompare(b.label))
         const waiting = rows.some((m) => !m.observed)
         const caller = rows.some((m) => m.caller_past) && unit.caller?.confirmed ? unit.caller.name : null
-        const line = !waiting || side !== 'off' ? undefined : caller ? `Charted once a year, so ${file.season} isn't in yet. Here are the caller's past and last season to compare with.` : `Charted once a year, so ${file.season} isn't in yet. Last season shows for comparison.`
+        const line = !waiting || side !== 'off' ? undefined : caller ? `Charted yearly; the caller's past and ${file.season - 1} show until ${file.season} is in.` : `Charted yearly; ${file.season - 1} shows until ${file.season} is in.`
         return (
           <Block key={side} title={`${name}: what to watch for`} line={line}>
             <Legend color={color} caller={caller} now={rows.some((m) => m.observed)} />

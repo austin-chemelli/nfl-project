@@ -61,3 +61,16 @@ export function teamInfo(code: string | null | undefined): TeamInfo {
   const k = code.toUpperCase()
   return TEAMS[k] ?? TEAMS[ALIAS[k]] ?? { ...FALLBACK, name: code }
 }
+
+/**
+ * Swap the two teams' full names for their codes in pipeline-written text ("Baltimore Ravens' offense" ->
+ * "BAL's offense"). The page header already names the teams; spelled out four times a sentence they
+ * made the retro's headlines the wordiest text on the page (ADR 0017 amendment 2026-11-08, rule 6).
+ */
+export function withCodes(text: string, codes: string[]): string {
+  return codes.reduce((t, code) => {
+    const name = teamInfo(code).name
+    if (!name || name === code) return t
+    return t.split(`${name}'s`).join(`${code}'s`).split(`${name}'`).join(`${code}'s`).split(name).join(code)
+  }, text)
+}

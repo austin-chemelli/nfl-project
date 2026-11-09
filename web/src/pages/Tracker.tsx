@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { FinePrint } from '../components/FinePrint'
+import { Help } from '../components/Help'
 import { SummaryStrip, Tile } from '../components/SummaryStrip'
 import { Tabs } from '../components/Tabs'
 import { Page, Loaded, Section } from '../components/ui'
@@ -23,7 +24,15 @@ export default function TrackerPage() {
   const tracker = useTracker()
   const meta = useMeta()
   return (
-    <Page title="Season tracker" lede="How the forecasts are scoring against the market (log loss: lower is better; 0.693 is a coin flip).">
+    <Page
+      title="Season tracker"
+      lede={
+        <>
+          How the forecasts score against the betting market.{' '}
+          <Help text="Log loss: lower is better; 0.693 is a coin flip. Gaps under 0.025 are too close to call at this sample size." />
+        </>
+      }
+    >
       <Loaded q={tracker} what="tracker" shape="tracker">
         {(t) => (
           <Loaded q={meta} what="tracker" shape="tracker">
@@ -48,6 +57,7 @@ export default function TrackerPage() {
                             <p>One season of live games cannot rank models, and in the backtest since 2005 nothing beats the market. Treat everything here as a measurement, not a verdict.</p>
                             <p>{t.current_season.some((r) => r.live) ? 'Before the dashed vertical line, weeks are backfill: models frozen before the season, scored after the fact. A week with any live lock counts from there, with diamonds marking it.' : 'Every week so far is backfill: models frozen before the season, scored after the fact. A dashed vertical line will mark the first week with a graded lock.'} The gray band is roughly the 90% range of a gap at this sample size, so a line inside it can't be told from the market. A handful of 16-game weeks is very noisy, so lines crossing early means little.</p>
                             <p>The chart is a running average since week 1, so early weeks swing and later ones settle. &quot;Show the numbers&quot; lists the raw log loss for every line, the market included.</p>
+                            <p>Log loss pays for confidence both ways: a bold call that lands earns a lot, one that misses costs more.</p>
                           </FinePrint>
                         </TabBody>
                       ),
@@ -64,7 +74,8 @@ export default function TrackerPage() {
                           </Section>
                           <Divergence t={t} meta={m} />
                           <FinePrint>
-                            <p>Whiskers are a 90% range from resampling whole seasons. The zero line is the market; an approach only beats it if its whole whisker sits left of the line.</p>
+                            <p>Elo updates game by game, and a few model settings were chosen later and apply to all seasons.</p>
+                            <p>Whiskers are a 90% range from resampling whole seasons. The zero line is the market; an approach only beats it if its whole whisker sits right of the line.</p>
                             <p>For each group of evidence: what the persona believes, the public line (the persona after light fitting and calibration, which is what is scored above), and what history alone would choose. Bars are shares of the 100-point attention budget; a negative bar means history says the group points the other way.</p>
                             <p>The season table shows mean log loss per season (0.693 is a coin flip); read each cell against the Market column.</p>
                             <p>Disagreement is in points of win probability. If an approach saw something the market missed, its side would win more often than the market expected, so compare those two columns. An approach can lean the right way and still lose on log loss by moving too far: the columns test the direction, log loss tests the size.</p>

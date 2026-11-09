@@ -49,7 +49,7 @@ describe('Retro', () => {
   it('shows who won each phase, and nothing on a record without them', () => {
     const { container, unmount } = render(<Retro r={r} />)
     expect(screen.getByRole('heading', { name: /^Phase by phase/ })).toBeInTheDocument()
-    expect(screen.getByText('CAR won 4 of 8 phases')).toBeInTheDocument() // GB 3, one even
+    expect(screen.getByText('CAR won 4 of 7 contested phases')).toBeInTheDocument() // GB 3, one even
     expect(container.querySelectorAll('[data-won]')).toHaveLength(7)
     expect(screen.getByText('2 of 4')).toBeInTheDocument()
     unmount()

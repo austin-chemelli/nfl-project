@@ -174,6 +174,9 @@ function finishedSentence(g: GameRow, ps: { id: string; p: number }[], won: bool
 
 // ------------------------------------------------------------------- why this game (U4)
 
+/** "Special teams" reads as "special teams" mid-sentence; an acronym like "QB" keeps its capitals. */
+const lowerFirst = (s: string) => (/^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) : s)
+
 /** An edge must beat this share of matchups to be worth a card's line. */
 const EDGE_MIN_PCT = 75
 const WEATHER_MIN = 0.5
@@ -231,7 +234,7 @@ export function whyLine(g: GameRow, meta: Meta): string | null {
   // 4. The biggest edge, when it is big
   const edge = topEdge(c.edges, meta, g.neutral_site)
   if (edge && edge.strength_pct >= EDGE_MIN_PCT) {
-    pieces.push(`${edge.favors} ${groupOf(meta, edge.id)?.name ?? edge.id} edge, bigger than ${edgePct(edge.strength_pct)}% of matchups`)
+    pieces.push(`${edge.favors} ${lowerFirst(groupOf(meta, edge.id)?.name ?? edge.id)} edge, ${ordinal(edgePct(edge.strength_pct))} pct`)
   }
 
   // 5. Weather, only where it can matter

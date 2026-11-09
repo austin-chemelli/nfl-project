@@ -65,7 +65,11 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
           </tbody>
         </table>
       </DataTable>
-      {source && <p className="mt-2 text-[13px] text-ink-3">{source}</p>}
+      {source && (
+        <p className="mt-2 text-[13px] text-ink-3">
+          <Help text={source.source}>{source.text}</Help>
+        </p>
+      )}
     </Section>
   )
 }
@@ -94,16 +98,21 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
   const domain = Math.max(1, ...opts.flatMap((o) => contributionItems(contrib[o], meta).map((i) => Math.abs(i.pp))), ...[...history.values()].map((v) => Math.abs(v ?? 0))) * 1.25
   const groups = Object.keys(cm.groups).sort((a, b) => Math.abs(cm.groups[b].pp ?? 0) - Math.abs(cm.groups[a].pp ?? 0))
   return (
-    <Section title="Why they lean the way they do" help="How much each piece of the picture moves the pick, in points of the home team's win chance.">
-      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">How far each piece of the picture pushes the pick, in points of {g.home}'s win chance: right toward {g.home}, left toward {g.away}. The outline is what history says the same part is worth (the Preview's bars); live-only parts have none.</p>
+    <Section title="Why they lean the way they do" help="How much each piece of the picture moves the pick, in points of the home team's win chance. Live-only parts have no history to outline.">
+      <p className="mb-3 max-w-3xl text-[13px] text-ink-2">What pushes this approach&apos;s pick, in points of win chance.</p>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <Segmented label="Approach" value={cur} onChange={setSel} options={opts.map((o) => ({ value: o, label: SHORT[o] ?? o }))} />
         <span className="text-[13px] text-ink-2">
           {SHORT[cur]} says: {g.home} win chance {pct(cm.p_home, 1)}.
         </span>
+        <Help text={approachOf(meta, cur)?.blurb} />
       </div>
-      {approachOf(meta, cur)?.blurb && <p className="mb-2 max-w-3xl text-[13px] text-ink-3">{approachOf(meta, cur)?.blurb}</p>}
       {chip && <p className="mb-2 inline-block rounded border border-line bg-surface-2 px-2 py-0.5 text-[13px]">{chip}</p>}
+      {history.size > 0 && (
+        <p className="mb-1 flex items-center gap-1.5 text-[12px] text-ink-3">
+          <span aria-hidden className="inline-block h-2.5 w-5 rounded-sm border border-[var(--text-muted)]" /> what history says, as on the Preview
+        </p>
+      )}
       <DivergingBars
         leftLabel={`toward ${g.away}`}
         rightLabel={`toward ${g.home}`}
@@ -158,7 +167,7 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
           )
         })}
       </div>
-      <DataTable summary="Where the four approaches differ (all groups side by side)">
+      <DataTable summary="All four approaches, side by side">
         <table className="w-full border-collapse text-[14px]">
           <thead>
             <tr>
@@ -226,7 +235,7 @@ export function TaleOfTheTape({ g, meta }: { g: Game; meta: Meta }) {
       {drawn.length > 0 && (
         <>
           <p className="mb-2 max-w-3xl text-[13px] text-ink-2">
-            {big === 0 ? `None of these ${drawn.length} gaps stands out` : `${big} of these ${drawn.length} gaps ${big === 1 ? 'stands' : 'stand'} out`}: a gap stands out when it is wider than the middle half of the league.
+            <Help text="A gap stands out when it is wider than the middle half of the league.">{big} of {drawn.length} gaps {big === 1 ? 'stands' : 'stand'} out</Help>
           </p>
           <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
             <span className="inline-flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--team-away)]" /> {g.away}</span>
@@ -298,7 +307,7 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">Where an offense and the defense it faces sit far apart, expect a mismatch.</p>
       <p className="mb-3 text-[13px] text-ink-2">
-        Who calls the plays and what to expect from them: <TeamLink team={g.away}>{g.away} team page</TeamLink> · <TeamLink team={g.home}>{g.home} team page</TeamLink>
+        Play-callers: <TeamLink team={g.away}>{g.away}</TeamLink> · <TeamLink team={g.home}>{g.home}</TeamLink>
       </p>
       <div className="mb-4 overflow-x-auto">
         <Segmented label="Situation" value={sit} onChange={setSit} options={sits.map(([value, label]) => ({ value, label }))} />
@@ -307,8 +316,7 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
       <div className="flex flex-col gap-6">
         {blocks.map((b) => (
           <Card key={b.key}>
-            <h3 className="text-[15px] font-semibold">{b.title}</h3>
-            <p className="mb-2 text-[12px] text-ink-3">{b.note}</p>
+            <h3 className="mb-2 text-[15px] font-semibold">{b.note ? <Help text={b.note}>{b.title}</Help> : b.title}</h3>
             {byUnit(b.rows).map((u) => (
               <Dumbbell
                 key={u.unit}

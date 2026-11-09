@@ -71,16 +71,16 @@ export function betsVerdict(rows: LedgerRow[], nameOf: (id: string) => string): 
   const name = nameOf(best.model_id)
   const first =
     best.roi < 0
-      ? `In the backtest, every approach has lost money. The best, ${name}, is at ${signedPct(best.roi)} a bet.`
+      ? `Every approach lost money in the backtest; ${name} lost least, ${signedPct(best.roi).replace('−', '')} a bet.`
       : best.roi_lo > 0
         ? `In the backtest, ${name} is up ${signedPct(best.roi)} a bet, and its whole range clears break-even.`
         : `In the backtest, ${name} is up ${signedPct(best.roi)} a bet, but its range still reaches below break-even.`
   const beat = lines.filter((r) => r.roi > noEdge).length
   const clear = lines.filter((r) => r.roi_lo > noEdge).length
-  const count = COUNT[beat] ?? String(beat)
-  const rest = beat === 0 ? '' : clear === 0 ? `, none by more than the noise` : `, ${(COUNT[clear] ?? String(clear)).toLowerCase()} clearly`
-  const total = (COUNT[lines.length] ?? String(lines.length)).toLowerCase()
-  return `${first} Betting with no edge at all costs ${signedPct(noEdge).replace('−', '')} a bet. ${count} of the ${total} did better than that${rest}.`
+  const word = (n: number) => (COUNT[n] ?? String(n)).toLowerCase()
+  const total = word(lines.length)
+  const rest = beat === 0 ? `none of the ${total} beat that` : `${word(beat)} of the ${total} beat that, ${clear === 0 ? 'none by more than the noise' : `${word(clear)} clearly`}`
+  return `${first} Betting with no edge loses ${signedPct(noEdge).replace('−', '')} a bet; ${rest}.`
 }
 
 /** A season's live bets for the tooltip: the most any one line has, since lines bet different games. */

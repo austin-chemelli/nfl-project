@@ -26,16 +26,17 @@ export const fmtPts = (v: number) => (Number.isInteger(v) ? `${v}` : v.toFixed(M
 const firstWith = (pts: LinePoint[], k: 'spread_home' | 'total') => pts.find((p) => p[k] != null)
 const lastWith = (pts: LinePoint[], k: 'spread_home' | 'total') => [...pts].reverse().find((p) => p[k] != null)
 
-/** "BAL −2.5 → JAX −10, total 48.75 → 40.5" from the first and latest points. */
+/** "Spread BAL −2.5 → JAX −10 · total 48.75 → 40.5" from the first and latest points. */
 export function pathSentence(pts: LinePoint[], home: string, away: string): string | null {
   const a = firstWith(pts, 'spread_home')
   const b = lastWith(pts, 'spread_home')
   const ta = firstWith(pts, 'total')
   const tb = lastWith(pts, 'total')
   const parts: string[] = []
-  if (a && b && a !== b) parts.push(`${spreadLabel(a.spread_home, home, away)} → ${spreadLabel(b.spread_home, home, away)}`)
+  if (a && b && a !== b) parts.push(`Spread ${spreadLabel(a.spread_home, home, away)} → ${spreadLabel(b.spread_home, home, away)}`)
   if (ta && tb && ta !== tb) parts.push(`total ${fmtPts(ta.total!)} → ${fmtPts(tb.total!)}`)
-  return parts.length ? parts.join(', ') : null
+  // capitalised whichever part comes first: a total-only move starts the line
+  return parts.length ? parts.join(' · ').replace(/^t/, 'T') : null
 }
 
 /** "2.5 toward BAL" / "steady" for one window's spread move. */

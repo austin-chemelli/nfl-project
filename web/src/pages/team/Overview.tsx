@@ -4,16 +4,16 @@ import { Help } from '../../components/Help'
 import { teamDotVars } from '../../lib/teamColors'
 import type { LeagueFile, SimilarFile, TeamsFile } from '../../data/contract'
 import { ordinal, fmtValue } from '../league/helpers'
-import { FlagCards } from '../league/FlagCards'
+import { FlagCards, HistoryLede } from '../league/FlagCards'
 import { fmtProb, winsRange } from '../league/playoffs'
 import { Spark } from '../league/Spark'
 import { hasSpark } from '../league/context'
 import { extremes, pctOf, standing, type Extreme, type Standing } from './overview'
 
-function Section({ title, lede, children }: { title: string; lede?: ReactNode; children: ReactNode }) {
+function Section({ title, lede, help, children }: { title: string; lede?: ReactNode; help?: string; children: ReactNode }) {
   return (
     <section aria-label={title} className="flex min-w-0 flex-col gap-2">
-      <h3 className="text-[15px] font-medium text-ink">{title}</h3>
+      <h3 className="text-[15px] font-medium text-ink">{help ? <Help text={help}>{title}</Help> : title}</h3>
       {lede && <p className="m-0 text-ink-2">{lede}</p>}
       {children}
     </section>
@@ -122,12 +122,16 @@ export function Overview({ code, teams, league, similar }: { code: string; teams
   return (
     <div data-matchup style={teamDotVars(code)} className="flex min-w-0 flex-col gap-6">
       {league && stand && (
-        <Section title="Where they stand" lede={stand.over ? 'The regular season is over.' : 'The odds come from playing out the rest of the season many times.'}>
+        <Section title="Where they stand" lede={stand.over ? 'The regular season is over.' : undefined} help={stand.over ? undefined : 'The odds come from playing out the rest of the season many times.'}>
           <Stand s={stand} />
         </Section>
       )}
       {team && ex && (ex.best.length > 0 || ex.worst.length > 0) && (
-        <Section title="Best and worst" lede={`Where they rank going into Week ${teams?.week}, on the measures the approaches use where more or less is clearly better. These are model inputs: early in the season they lean on last season, so they can differ from the results so far.`}>
+        <Section
+          title="Best and worst"
+          lede={`Ranks among ${[...ex.best, ...ex.worst][0].of} teams going into Week ${teams?.week}.`}
+          help="Model inputs where more or less is clearly better. Early in the season they lean on last season, so they can differ from the results so far."
+        >
           <div className="grid gap-4 md:grid-cols-2">
             <Group title="Best" rows={ex.best} team={team} />
             <Group title="Worst" rows={ex.worst} team={team} />
@@ -135,7 +139,7 @@ export function Overview({ code, teams, league, similar }: { code: string; teams
         </Section>
       )}
       {entry && (
-        <Section title="History says" lede="Past teams on the same record, split by a trait this team has.">
+        <Section title="History says" lede={<HistoryLede />}>
           <FlagCards flags={entry.flags} gamesPlayed={entry.games_played} record={entry.record} peers={entry.peers} />
           <p className="m-0">
             <Link to={`/league?tab=similar&team=${code}`}>See the similar seasons</Link>

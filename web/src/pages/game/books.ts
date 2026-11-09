@@ -48,5 +48,25 @@ export function booksSentence(b: Books, home: string, away: string): string {
   return parts.join(' ')
 }
 
+/** "JAX −9.5 to −8.5": the second end drops the team when both ends favor the same one, biggest number first. */
+function range(lo: number, hi: number, home: string, away: string): string {
+  const same = Math.sign(lo) === Math.sign(hi) && lo !== 0
+  const [x, y] = same && Math.abs(hi) > Math.abs(lo) ? [hi, lo] : [lo, hi]
+  const a = spreadLabel(x, home, away)
+  const b = spreadLabel(y, home, away)
+  const team = a.split(' ')[0]
+  return b.startsWith(`${team} `) ? `${a} to ${b.slice(team.length + 1)}` : `${a} to ${b}`
+}
+
+/** "Spread JAX −9.5 to −8.5 · total 40 to 40.5": the books' range when they agree. */
+export function booksRange(b: Books, home: string, away: string): string {
+  const parts: string[] = []
+  const s = b.spread
+  if (s) parts.push(`Spread ${s.gap === 0 ? spreadLabel(s.lo, home, away) : range(s.lo, s.hi, home, away)}`)
+  const t = b.total
+  if (t) parts.push(`${s ? 'total' : 'Total'} ${t.gap === 0 ? fmtPts(t.lo) : `${fmtPts(t.lo)} to ${fmtPts(t.hi)}`}`)
+  return parts.join(' · ')
+}
+
 /** American odds as printed: "+100", "−110". */
 export const price = (p: number | null) => (p == null ? '' : p > 0 ? `+${p}` : `−${Math.abs(p)}`)

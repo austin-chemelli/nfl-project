@@ -27,20 +27,14 @@ export function Ledger({ t, meta }: { t: Tracker; meta: Meta }) {
   const ids = order.filter((m) => seasons.some((r) => r.model_id === m))
   const showClv = rows.some((r) => r.clv != null)
   return (
-    <Section title="Paper bets" help="Pretend wagers, no money involved. Profit and loss over a season is dominated by luck.">
+    <Section title="Paper bets" help="Pretend wagers: one unit when a line is over 5 points of win chance from the market (moneyline), else on the spread when it's 1.5+ spread points off. Starts 2006, the first priced season.">
       {verdict && <p className="text-lg font-medium">{verdict}</p>}
-      <p className="mt-1 text-[13px] text-ink-2">
-        One paper unit whenever a line disagrees with the market: on the moneyline if it is more than 5 points of win probability away, otherwise on the spread if it is 1.5 points or more away.
-      </p>
-      <p className="mt-1 text-[13px] text-ink-2">Bets start in 2006, the first season with prices in our data.</p>
       {rows.length === 0 && <p className="mt-3 text-ink-2">No bets recorded yet.</p>}
 
       {seasons.length > 0 && (
         <>
-          <h3 className="mt-6 font-medium">Bankroll over time</h3>
-          <p className="mt-1 text-[13px] text-ink-2">
-            Running profit in units. The dotted line is no edge at all: what the bookmaker&apos;s cut takes from about as many bets. A line above it is doing better than blind betting, even while it loses. The dotted line steepens from 2023, when the prices in our data start taking a bigger cut.
-          </p>
+          <h3 className="mt-6 font-medium"><Help text="Dotted: what the bookmaker's cut takes from similar bets. Above it beats blind betting, even at a loss. Steeper from 2023, when prices carry a bigger cut.">Bankroll over time</Help></h3>
+          <p className="mt-1 text-[13px] text-ink-2">Running profit in units. Dotted: betting with no edge.</p>
           <Bankroll rows={seasons} ids={ids} />
         </>
       )}
@@ -49,7 +43,7 @@ export function Ledger({ t, meta }: { t: Tracker; meta: Meta }) {
         <>
           <h3 className="mt-6 font-medium">Return per bet</h3>
           <p className="mt-1 mb-2 text-[13px] text-ink-2">
-            Profit per unit staked in the backtest, with a 90% range. A line has only shown an edge if its whole range sits right of the no-edge mark.
+            Profit per unit, with a 90% range. An edge needs the whole range right of no edge.
           </p>
           <DotWhisker
             rows={returns.map((r) => ({
@@ -72,10 +66,8 @@ export function Ledger({ t, meta }: { t: Tracker; meta: Meta }) {
 
       {seasons.length > 0 && (
         <>
-          <h3 className="mt-6 font-medium">Season by season</h3>
-          <p className="mt-1 text-[13px] text-ink-2">
-            Units won or lost each season. Bad years tend to hit every line at once, which is why one good year says little about a line.
-          </p>
+          <h3 className="mt-6 font-medium"><Help text="A season of bets is mostly luck. Bad years tend to hit every line at once, so one good year says little about a line.">Season by season</Help></h3>
+          <p className="mt-1 text-[13px] text-ink-2">Units won or lost each season.</p>
           <SeasonGrid rows={seasons} ids={[...best, ...ids.filter((m) => !best.includes(m))]} current={t.season} />
         </>
       )}

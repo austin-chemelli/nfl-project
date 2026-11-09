@@ -220,12 +220,14 @@ export function swingRows(r: RetroGame): { variance: SwingRow[]; pure: SwingRow[
   }
 }
 
-/** "GB won 5 of 8 phases" over the ones with a winner; a tie between the teams says so. */
+/** "GB won 5 of 8 phases", or "of 7 contested phases" when a phase had no leader; a tie between the teams says so. */
 export function phaseSummary(r: RetroGame): string {
   const home = r.phases.filter((p) => p.leader === 'home').length
   const away = r.phases.filter((p) => p.leader === 'away').length
   if (home === away) return `${r.away} and ${r.home} split the phases ${home}–${away}`
-  return `${home > away ? r.home : r.away} won ${Math.max(home, away)} of ${r.phases.length} phases`
+  // a phase with no leader isn't a win for either side, so say the count is of the ones that were contested
+  const total = home + away < r.phases.length ? `${home + away} contested phases` : `${r.phases.length} phases`
+  return `${home > away ? r.home : r.away} won ${Math.max(home, away)} of ${total}`
 }
 
 /** The played-like verdict step by step, in win chances; null on a retro from before schema 3. */
@@ -309,7 +311,8 @@ export function tape(features: Game['features'], meta: Meta): { heading: string;
 // ------------------------------------------------------------------------------------ tendencies
 
 export type TendRow = { key: string; label: string; help: string; unit: string; a: number | null; b: number | null; league: number | null; n: number }
-export type TendBlock = { key: string; title: string; note: string; aName: string; bName: string; aColor: string; bColor: string; rows: TendRow[] }
+/** `note` is set only for blocks with no pairing (the teams are compared head to head); paired blocks need none. */
+export type TendBlock = { key: string; title: string; note?: string; aName: string; bName: string; aColor: string; bColor: string; rows: TendRow[] }
 
 const AWAY_COLOR = 'var(--team-away)'
 const HOME_COLOR = 'var(--team-home)'
@@ -346,7 +349,6 @@ export function tendencyBlocks(tend: Tendency[], meta: Meta, situation: string, 
     )
     blocks.push({
       key: `${offSide}-off`, title: `${offTeam} offense vs ${defTeam} defense`,
-      note: `Dot per side: ${offTeam}'s offense on the metric and ${defTeam}'s defense on its counterpart (what it allows or faces). Far apart means a mismatch.`,
       aName: `${offTeam} offense`, bName: `${defTeam} defense`,
       aColor: offSide === 'away' ? AWAY_COLOR : HOME_COLOR, bColor: offSide === 'away' ? HOME_COLOR : AWAY_COLOR, rows,
     })
@@ -357,7 +359,7 @@ export function tendencyBlocks(tend: Tendency[], meta: Meta, situation: string, 
     )
     blocks.push({
       key: `habits-${side}`, title: side === 'off' ? 'Offensive habits' : 'Defensive habits',
-      note: 'These metrics have no counterpart on the other side, so the two teams are compared directly.',
+      note: 'No direct counterpart on the other side, so the two teams are compared head to head.',
       aName: away, bName: home, aColor: AWAY_COLOR, bColor: HOME_COLOR, rows,
     })
   }
@@ -410,14 +412,21 @@ export function sourcesText(n: number): string {
 }
 
 /**
- * "Market line: The Odds API, Sun 1:00 PM ET." Null with no line or no source. A schedule line's
- * as_of is the synthetic kickoff − 2h stamp, not when it was seen, so only a snapshot prints a time.
+ * The market line's time for the page ("Market as of Thu, Nov 5, 8:06 PM ET") and where it came from, for a hover.
+ * Null with no line or no source. A schedule line's as_of is the synthetic kickoff - 2h stamp, not when it
+ * was seen, so only a snapshot prints a time.
  */
-export function marketSource(market: { p_home?: number | null; source?: string | null; as_of?: string | null } | null | undefined): string | null {
+export function marketSource(market: { p_home?: number | null; source?: string | null; as_of?: string | null } | null | undefined): { text: string; source: string } | null {
   if (market?.p_home == null || !market.source) return null
-  if (market.source === 'schedules') return 'Market line: the nflverse schedule (no time recorded).'
+  if (market.source === 'schedules') return { text: 'Market line', source: 'From the nflverse schedule; no time recorded.' }
   const name = market.source === 'odds_api' ? 'The Odds API' : market.source
-  return market.as_of ? `Market line: ${name}, ${kickoffEt(market.as_of)}.` : `Market line: ${name}.`
+  return market.as_of ? { text: `Market as of ${kickoffEt(market.as_of)}`, source: `Market line from ${name}.` } : { text: 'Market line', source: `From ${name}.` }
+}
+
+/** "Wed, Nov 4" from an ISO date or timestamp. Read as written (UTC) so the day doesn't shift with the viewer's zone. */
+export function dayOf(iso: string): string {
+  const d = new Date(/(Z|[+-]\d\d:?\d\d)$/.test(iso) || !iso.includes('T') ? iso : `${iso}Z`)
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 // ------------------------------------------------------------------------- win probability (M15.3)

@@ -6,7 +6,8 @@ import { outcome } from '../game/differ'
 import { divergenceSentence } from './helpers'
 import { label } from './names'
 
-const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' }) : null)
+const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' }) : null)
+const PC = (v: number | null) => (v == null ? '–' : `${Math.round(100 * v)}%`)
 const gameLabel = (id: string) => id.split('_').slice(2).join(' @ ')
 
 /** Every approach-game 10+ points from the market at a lock, with its reasons and how it went (ADR 0024). */
@@ -16,12 +17,12 @@ export function StrongCalls({ t }: { t: Tracker }) {
   const context = APPROACHES.map((m) => t.divergence.find((r) => r.model_id === m && r.bucket === '10+')).filter((r) => r != null)
   return (
     <>
-      <Section title="Strong calls" help="An approach 10 or more points of win chance from the market at the lock. Recorded at the lock with the groups pulling its way and the quarterback it assumed; graded after the game.">
+      <Section title="Strong calls" help="An approach 10+ points of win chance from the market at the lock. Recorded then with the groups pulling its way and the quarterback it assumed; graded after the game.">
         {!sc || sc.calls.length === 0 ? (
           <p className="text-ink-2">No strong calls recorded yet. The next lock records any it makes.</p>
         ) : (
           <>
-            <p className="m-0 mb-3 text-ink-2">Live record since {since}. A handful of calls can&apos;t rank anything; the backtest below has thousands.</p>
+            <p className="m-0 mb-3 text-ink-2">Live record since {since}. A handful of calls can&apos;t rank anything; the backtest has thousands.</p>
             <TableScroll>
               <table className="w-full border-collapse text-[14px]">
                 <thead>
@@ -64,9 +65,28 @@ export function StrongCalls({ t }: { t: Tracker }) {
       </Section>
       {context.length > 0 && (
         <Section title="The same gap in the backtest" help="Every game since 2005 where an approach was 10+ points from the closing market, scored as if locked.">
-          <ul className="m-0 list-disc pl-5 text-ink-2">
-            {context.map((r) => <li key={r.model_id}>{divergenceSentence(r, label(r.model_id))}</li>)}
-          </ul>
+          <TableScroll>
+            <table className="w-full border-collapse text-[14px]">
+              <thead>
+                <tr>
+                  <th className={th}>Approach</th>
+                  <th className={th}>Games 10+ pts off</th>
+                  <th className={th}>Its side won</th>
+                  <th className={th}>Market expected</th>
+                </tr>
+              </thead>
+              <tbody>
+                {context.map((r) => (
+                  <tr key={r.model_id} title={divergenceSentence(r, label(r.model_id))}>
+                    <td className={td}><ModelBadge modelId={r.model_id} /></td>
+                    <td className={`${td} tabular`}>{r.n.toLocaleString('en-US')}</td>
+                    <td className={`${td} tabular`}>{PC(r.lean_win_rate)}</td>
+                    <td className={`${td} tabular`}>{PC(r.market_expected_rate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
         </Section>
       )}
       <DataTable summary="What the score means">

@@ -21,8 +21,8 @@ describe('tracker summaryTiles', () => {
       ...[1, 2].map((week) => ({ model_id: 'student', week, n: 8, cum_log_loss: p, live: false })),
     ]
     const tile = (p: number) => summaryTiles({ ...t, current_season: rows(p) })[0]
-    expect(tile(0.62)).toMatchObject({ value: 'Same as market', sub: expect.stringContaining('about the same as the market') })
-    expect(tile(0.64)).toMatchObject({ value: 'Trails the market', sub: expect.stringContaining('0.040 worse') })
+    expect(tile(0.62)).toMatchObject({ value: 'Same as market', sub: 'within 0.025 over 16 games' })
+    expect(tile(0.64)).toMatchObject({ value: 'Trails the market', sub: '0.040 behind, 16 games' })
     expect(tile(0.56)).toMatchObject({ value: 'Beats the market' })
   })
 
@@ -33,11 +33,12 @@ describe('tracker summaryTiles', () => {
     ]
     const best = (lls: Record<string, number>) => summaryTiles({ ...t, current_season: rows(lls) })[2]
     const close = best({ student: 0.61, analyst: 0.62 })
-    expect(close).toMatchObject({ value: 'Too close to call', sub: expect.stringContaining('is lowest at 0.610, inside the noise') })
+    expect(close).toMatchObject({ value: 'Too close to call', sub: 'Student lowest, within noise' })
     expect(close.modelId).toBeUndefined()
     const clear = best({ student: 0.61, analyst: 0.65 })
     expect(clear.value).not.toBe('Too close to call')
     expect(clear.modelId).toBe('student')
+    expect(clear.sub).toBe('0.610, about the same as the market')
     expect(best({ student: 0.61 }).modelId).toBe('student')
   })
 
@@ -52,14 +53,15 @@ describe('tracker summaryTiles', () => {
     const live = summaryTiles({ ...t, ledger: [{ ...base, kind: 'backfill', units: -126, bets: 3603 }, { ...base, kind: 'live', units: 3.24 }] })[4]
     expect(live).toMatchObject({ value: '+3.2 units', sub: '6-4 on 10 live bets' })
     // the backfill spans every season since 2005, so it is told per bet
-    const back = summaryTiles({ ...t, ledger: [{ ...base, kind: 'backfill', units: -126.04, roi: -0.035 }] })[4]
+    const back = summaryTiles({ ...t, ledger: [{ ...base, kind: 'backfill', units: -126.04, roi: -0.035, bets: 3648 }], ledger_seasons: [{ model_id: 'student', season: 2006 }, { model_id: 'student', season: 2007 }] as never })[4]
     expect(back).toMatchObject({ label: 'Paper bets, backtest', value: '−3.5% a bet' })
-    expect(back.sub).toContain('live bets start with the locks')
+    expect(back.sub).toBe('Student: 3,648 bets since 2006')
     expect(summaryTiles({ ...t, ledger: [] })[4].value).toBe('None yet')
   })
 
   it('calibration: a verdict, not a number', () => {
     expect(summaryTiles(t)[3].value).toMatch(/Well calibrated|Overconfident|Underconfident|Too few to judge/)
+    expect(summaryTiles(t)[3].sub).toMatch(/^60–80% calls won \d+%$/)
     expect(summaryTiles({ ...t, reliability: [] })[3].value).toBe('Too few to judge')
   })
 })

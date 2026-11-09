@@ -1,7 +1,7 @@
 import { Help } from '../../components/Help'
 import { Card, Section } from '../../components/ui'
 import type { Game, Narrative as N } from '../../data/contract'
-import { impactMarker, QB_STATUS, sortMatchupNotes, sortNotes, sourcesText, trendStatus } from './helpers'
+import { dayOf, impactMarker, QB_STATUS, sortMatchupNotes, sortNotes, sourcesText, trendStatus } from './helpers'
 
 function Link({ href, children }: { href: string; children: React.ReactNode }) {
   return <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{children}</a>
@@ -78,10 +78,12 @@ export function NarrativeSection({ g }: { g: Game }) {
   }
   const mnotes = sortMatchupNotes(nar.matchup_notes)
   return (
-    <Section title="The week's narrative" help="Text written from cited public coverage. It never feeds the probabilities.">
+    <Section title="The week's narrative">
       <p className="mb-3 max-w-3xl text-[13px] text-ink-3">
-        What the week's coverage says, as of {nar.known_as_of} (producer: {nar.producer}, model: {nar.model}). Written from cited sources; it never
-        feeds the probabilities.
+        {/* the model and producer come from the record, so a new model needs no edit here */}
+        <Help text={`Written by a language model (${nar.model}, ${nar.producer}) from cited sources; every claim links to its source.`}>
+          This week&apos;s coverage, as of {dayOf(nar.known_as_of)}. It never feeds the probabilities.
+        </Help>
       </p>
       {nar.consensus_narrative && (
         <p className="mb-4 max-w-3xl">

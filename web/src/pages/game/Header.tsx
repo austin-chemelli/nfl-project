@@ -35,7 +35,7 @@ export function GameHeader({ g }: { g: Game }) {
     kickoffEt(g.kickoff_utc),
     g.stadium ? `${g.stadium}${g.roof ? ` (${g.roof})` : ''}` : null,
     g.neutral_site ? 'neutral site' : null,
-    `QBs ${g.away_qb ?? 'n/a'} / ${g.home_qb ?? 'n/a'}`,
+    `${g.away} ${g.away_qb ?? 'QB n/a'} · ${g.home} ${g.home_qb ?? 'QB n/a'}`,
   ].filter(Boolean)
   const r = g.result
   return (

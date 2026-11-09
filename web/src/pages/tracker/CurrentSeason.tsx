@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
-import { colorVar, dashArray, HEADLINE, isPublicLine, isReference } from '../../lib/models'
-import { currentSummary, gapLimit, gapRows, headlineSentence, GAP_BAND, signedGap } from './helpers'
-import { KEY_LINES, label, sentenceName } from './names'
+import { colorVar, dashArray, isPublicLine, isReference } from '../../lib/models'
+import { currentSummary, gapLimit, gapRows, GAP_BAND, signedGap } from './helpers'
+import { KEY_LINES, label } from './names'
 
-const HELP_LL =
-  'Log loss is the scoring rule: it punishes confident wrong calls hard. Lower is better; 0.693 is a coin flip. The market scores about 0.61, so read every number as a distance from the market. Differences under 0.025 are too close to call at this sample size. The score is on win probability and pays for confidence both ways: a bold call that lands earns a lot, one that misses costs more.'
+// A hover on the table header: the lede's help has the same facts, this is the column's own definition.
+const HELP_LL = 'Log loss punishes confident wrong calls hardest. Lower is better; 0.693 is a coin flip, and the market scores about 0.61. Gaps under 0.025 are too close to call.'
 
-export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
+export function CurrentSeason({ t }: { t: Tracker; meta: Meta }) {
   const cur = t.current_season
   const chart = useMemo(() => gapRows(cur), [cur])
   const summary = useMemo(() => currentSummary(cur), [cur])
@@ -25,7 +25,6 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
     )
   }
 
-  const focus = summary.rows.find((r) => r.model_id === HEADLINE) ?? summary.rows.find((r) => r.model_id !== 'market_baseline')
   const weeks = chart.map((r) => r.week)
   const firstLive = cur.filter((r) => r.live).map((r) => r.week).sort((a, b) => a - b)[0]
   const liveWeeks = new Set(cur.filter((r) => r.live).map((r) => r.week))
@@ -39,16 +38,11 @@ export function CurrentSeason({ t, meta }: { t: Tracker; meta: Meta }) {
 
   return (
     <Section title={title} help="Games already played this season, each scored against the market.">
-      {focus && <p className="text-lg font-medium">{headlineSentence(focus, sentenceName(meta, focus.model_id))}</p>}
-      <p className="mt-1 text-[13px] text-ink-2">
-        {summary.liveGames === 0
-          ? 'No live locks have been graded yet, so every number here is backfill.'
-          : `${summary.liveGames} live ${summary.liveGames === 1 ? 'game has' : 'games have'} been graded (${summary.liveWeeks} ${summary.liveWeeks === 1 ? 'week' : 'weeks'}); the rest is backfill.`}
-      </p>
+      {/* With live games, the Live tile above already says the split. */}
 
       <h3 className="mt-6 font-medium">Gap to the market, by week</h3>
       <p className="mt-1 text-[13px] text-ink-2">
-        Each line&apos;s running log loss, taken from the market&apos;s. Above zero a line is ahead of the market; below it, behind. The gray band is too close to call.
+        Each line&apos;s running gap to the market; above zero is ahead.
       </p>
       <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lines to show">
         {[...ids].sort((a, b) => order(a) - order(b)).filter((m) => m !== 'market_baseline' && isPublicLine(m)).map((m) => (

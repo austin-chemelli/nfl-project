@@ -20,7 +20,7 @@ describe('line words', () => {
       { ts: 'b', spread_home: null, total: 45, p_home: null, n_books: 3 },
       { ts: 'c', spread_home: -10, total: 40.5, p_home: 0.19, n_books: 9 },
     ]
-    expect(pathSentence(pts, 'BAL', 'JAX')).toBe('BAL −2.5 → JAX −10, total 48.75 → 40.5')
+    expect(pathSentence(pts, 'BAL', 'JAX')).toBe('Spread BAL −2.5 → JAX −10 · total 48.75 → 40.5')
     expect(pathSentence(pts.slice(0, 1), 'BAL', 'JAX')).toBeNull()
   })
   it('prints half and quarter points', () => {

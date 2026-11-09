@@ -64,10 +64,10 @@ describe('flag sentences', () => {
     expect(c.title).toBe('Offense: 27th.')
     expect(c.body).toBe('Among past teams at 5-2, those with a bottom-quarter offense made the playoffs 11 of 28 times, against 58 of 80 for the rest.')
   })
-  it('says a conference game for outcome conf', () => {
+  it('says the conference championship game for outcome conf', () => {
     const c = flagCard(flag({ kind: 'strength', measure: 'strength.elo_pre', label: 'Long-run rating', rank: 3, quarter: 'top', outcome: 'conf', flagged: [16, 40], others: [20, 110] }))
     expect(c.title).toBe('Long-run rating: 3rd.')
-    expect(c.body).toBe('Among past teams at 5-2, those with a top-quarter long-run rating reached a conference game 16 of 40 times, against 20 of 110 for the rest.')
+    expect(c.body).toBe('Among past teams at 5-2, those with a top-quarter long-run rating reached the conference championship game 16 of 40 times, against 20 of 110 for the rest.')
   })
   it('has a template per kept measure', () => {
     const t = (measure: string, quarter: 'bottom' | 'top' = 'bottom') => flagCard(flag({ measure, quarter })).body
@@ -112,9 +112,14 @@ describe('flag sentences', () => {
     for (const f of sim.teams.CHI.flags) {
       const c = flagCard(f)
       const text = `${c.title} ${c.lead ?? ''} ${c.body} ${c.verdict} ${c.note ?? ''}`
-      expect(text).not.toMatch(/%|\bwill\b/i)
+      expect(text).not.toMatch(/\bwill\b/i)
       expect(text).toMatch(/Among past teams at/)
     }
+  })
+  it('flags a small sample when either denominator is under 20', () => {
+    expect(flagCard(flag({ flagged: [3, 19], others: [40, 90] })).small).toBe(true)
+    expect(flagCard(flag({ flagged: [30, 79], others: [3, 19] })).small).toBe(true)
+    expect(flagCard(flag({ flagged: [30, 79], others: [10, 38] })).small).toBe(false)
   })
   it('groups red, looks-bad, strength in that order and drops empty groups', () => {
     const flags = [flag({ kind: 'strength', measure: 'strength.qb_epa' }), flag({ kind: 'red' }), flag({ kind: 'strength', measure: 'strength.elo_pre' })]

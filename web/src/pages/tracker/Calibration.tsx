@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { CartesianGrid, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
-import { DataTable, ModelBadge, Section, td, th } from '../../components/ui'
+import { Help } from '../../components/Help'
+import { DataTable, ModelBadge, Section, TableScroll, td, th } from '../../components/ui'
 import type { Meta, Tracker } from '../../data/contract'
 import { colorVar, isReference } from '../../lib/models'
-import { calibrationVerdict, foldReliability } from './helpers'
-import { KEY_LINES, label, sentenceName } from './names'
+import { calibrationVerdict, foldReliability, verdictWords } from './helpers'
+import { KEY_LINES, label } from './names'
 
 const PC = (v: number) => `${Math.round(100 * v)}%`
 
-export function Calibration({ t, meta }: { t: Tracker; meta: Meta }) {
+export function Calibration({ t }: { t: Tracker; meta: Meta }) {
   const avail = useMemo(() => KEY_LINES.filter((m) => t.reliability.some((r) => r.model_id === m)), [t.reliability])
   const [sel, setSel] = useState<string[]>(() => ['market_baseline', 'traditionalist', 'sharp'].filter((m) => avail.includes(m as never)))
   if (!avail.length) return null
@@ -19,14 +20,34 @@ export function Calibration({ t, meta }: { t: Tracker; meta: Meta }) {
       title="Calibration: when an approach says 70%, how often does that team win?"
       help="A calibrated forecaster's 70% calls win about 70% of the time. Points below the diagonal mean the approach was overconfident; above it, underconfident."
     >
-      <ul className="mb-3 list-disc pl-5 text-[14px]">
-        {avail.map((m) => {
-          const v = calibrationVerdict(t.reliability.filter((r) => r.model_id === m), m === 'market_baseline' ? 'The market' : sentenceName(meta, m).replace(/^the /, 'The '))
-          return (
-            <li key={m} className={v.kind === 'over' || v.kind === 'under' ? '' : 'text-ink-2'}>{v.text}</li>
-          )
-        })}
-      </ul>
+      <TableScroll>
+        <table className="mb-4 w-full border-collapse text-[14px]">
+          <thead>
+            <tr>
+              <th className={th}>Line</th>
+              <th className={th}><Help text="Judged on each line's 60–80% calls, both sides pooled. Within 3 points of what it said counts as well calibrated.">Verdict</Help></th>
+              <th className={th}>Said</th>
+              <th className={th}>Won</th>
+              <th className={th}>60–80% calls</th>
+            </tr>
+          </thead>
+          <tbody>
+            {avail.map((m) => {
+              const v = calibrationVerdict(t.reliability.filter((r) => r.model_id === m), label(m))
+              const judged = v.kind !== 'few'
+              return (
+                <tr key={m} title={v.text} className={v.kind === 'over' || v.kind === 'under' ? '' : 'text-ink-2'}>
+                  <td className={td}><ModelBadge modelId={m} reference={isReference(m)} /></td>
+                  <td className={td}>{verdictWords(v)}</td>
+                  <td className={`${td} tabular`}>{judged ? PC(v.said) : '–'}</td>
+                  <td className={`${td} tabular`}>{judged ? PC(v.won) : '–'}</td>
+                  <td className={`${td} tabular`}>{v.n.toLocaleString('en-US')}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </TableScroll>
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Lines to compare (up to 3)">
         <span className="text-[13px] text-ink-3">Compare up to 3:</span>
         {avail.map((m) => (

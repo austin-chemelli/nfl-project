@@ -23,13 +23,11 @@ export default function HypothesesPage() {
         {(h) => (
           <>
             <p className="-mt-4 text-[13px] text-ink-3">
-              {h.trained_seasons[0]}–{h.trained_seasons[h.trained_seasons.length - 1]}, {h.n_games.toLocaleString('en-US')} games. Generated {h.generated_at.slice(0, 16).replace('T', ' ')} UTC.
-            </p>
-            <p className="text-[13px] text-ink-3">
-              Finished seasons only, so 2026 isn&apos;t here. It starts before the backtest because it studies past results and doesn&apos;t score forecasts; season-by-season scores start in 2005, as the backtest does.
+              {h.trained_seasons[0]}–{h.trained_seasons[h.trained_seasons.length - 1]} · {h.n_games.toLocaleString('en-US')} games
             </p>
             <FinePrint label="How to read this, and the caveats">
               <ul className="list-disc space-y-1.5 pl-5">
+                <li><b>Scope.</b> Finished seasons only, so 2026 isn&apos;t here. It starts before the backtest because it studies past results and doesn&apos;t score forecasts; season-by-season scores start in 2005, as the backtest does. Generated {h.generated_at.slice(0, 16).replace('T', ' ')} UTC.</li>
                 <li><b>Effect</b> = change in the home team's win probability, in points, when the feature is one standard deviation (SD) better for the home side than the away side, at a pick'em game. +1.0 means a 50% game becomes 51%.</li>
                 <li><b>Range</b> = the 5th to 95th percentile over 200 refits that resample whole seasons (a 90% interval). The fit is shrunk toward zero, so every effect is modest. With this many features, a few will look good by chance (multiple comparisons).</li>
                 <li><b>Observational, not causal.</b> Teams that rest more are not randomly assigned.</li>

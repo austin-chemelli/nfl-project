@@ -64,8 +64,8 @@ export function unitLine(unit: TeamUnit, team: string): string | null {
     return `Looks like ${name}'s past on ${pastN} of ${withPast.length} measures, and like last year's ${team} on ${lastN} of ${withLast.length}.`
   }
   const anyPast = unit.charted.some((m) => m.caller_past)
-  const why = !name ? 'No confirmed play-caller here' : anyPast ? `${name}'s confirmed past doesn't cover these measures` : `${name} has no confirmed past as a play-caller in our data`
-  return `${why}, so the comparison is last year's ${team}: the same on ${lastN} of ${withLast.length} measures.`
+  const why = !name ? 'No confirmed play-caller' : anyPast ? `${name}'s past doesn't cover these measures` : 'No confirmed play-calling past'
+  return `${why}, so vs last year's ${team}: same on ${lastN} of ${withLast.length}.`
 }
 
 /** The latest play-calling change on a side this season, if there was one. */

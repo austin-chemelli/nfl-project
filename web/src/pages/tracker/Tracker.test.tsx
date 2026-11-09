@@ -14,8 +14,9 @@ describe('Tracker page', () => {
     renderRoute('/tracker')
     const strip = await screen.findByRole('group', { name: 'Tracker summary' })
     expect(within(strip).getAllByRole('button')).toHaveLength(5)
-    expect(await screen.findByText(/^After \d+ games, the Student is/)).toBeInTheDocument()
-    expect(screen.getByText(/No live locks have been graded yet/)).toBeInTheDocument()
+    expect(await screen.findByText('Gap to the market, by week')).toBeInTheDocument()
+    expect(screen.getByText('every number so far is backfill')).toBeInTheDocument() // the Live tile says it; the tab doesn't repeat it
+    expect(screen.queryByText(/^After \d+ games/)).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /Log loss by season/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /Backtest: how far/ })).not.toBeInTheDocument()
   })
@@ -29,7 +30,9 @@ describe('Tracker page', () => {
   it('strong calls tab: says none are recorded yet and still shows the backtest context', async () => {
     renderRoute('/tracker?tab=strong')
     expect(await screen.findByText(/No strong calls recorded yet/)).toBeInTheDocument()
-    expect(screen.getByText('The same gap in the backtest')).toBeInTheDocument()
+    const section = screen.getByText('The same gap in the backtest').closest('section')!
+    expect(within(section).getByRole('columnheader', { name: 'Games 10+ pts off' })).toBeInTheDocument()
+    expect(within(section).getAllByRole('row').length).toBeGreaterThan(1)
   })
 
   it('totals block: hidden before the first locked total, then weeks tracked and the market beside it', () => {
@@ -37,7 +40,7 @@ describe('Tracker page', () => {
     expect(render(<Totals t={none} />).container).toBeEmptyDOMElement()
     const t = { totals: { first_lock: '2026-11-12T14:00:00Z', weeks: 1, n: 0, mae: null, market_mae: null, side_right: 0, side_n: 0 } } as unknown as Tracker
     const { unmount } = render(<Totals t={t} />)
-    expect(screen.getByText(/Tracked since Nov 12, 2026, 1 week\. No locked game has finished yet\./)).toBeInTheDocument()
+    expect(screen.getByText(/Tracked since Thu, Nov 12 \(1 week\)\. No locked game has finished yet\./)).toBeInTheDocument()
     unmount()
     const later = { totals: { first_lock: '2026-11-12T14:00:00Z', weeks: 2, n: 14, mae: 9.84, market_mae: 9.21, side_right: 8, side_n: 13 } } as unknown as Tracker
     render(<Totals t={later} />)
@@ -84,8 +87,9 @@ describe('Tracker page', () => {
     const section = h.closest('section')!
     expect(within(section).getAllByText(/Student/).length).toBeGreaterThan(0)
     expect(within(section).queryByText(/Ensemble/)).toBeNull()
-    expect(within(section).getAllByText(/games and \d+ seasons/, { exact: false }).length).toBeGreaterThan(0)
-    expect(screen.getAllByText('better than the market', { exact: false }).length).toBeGreaterThan(0)
+    expect(within(section).getAllByText(/\d+ seasons, up to [\d,]+ games a line/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('ahead of the market', { exact: false }).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/the opposite of the season chart/)).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /What history would change/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Log loss by season/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /When an approach disagrees with the market/ })).toBeInTheDocument()
@@ -94,7 +98,9 @@ describe('Tracker page', () => {
 
   it('calibration tab: a verdict per line', async () => {
     renderRoute('/tracker?tab=calibration')
-    expect(await screen.findByText(/The Analyst: (well calibrated|overconfident by \d+ points|underconfident by \d+ points)/)).toBeInTheDocument()
+    const row = (await screen.findAllByText('Analyst'))[0].closest('tr')!
+    expect(within(row).getByText(/^(Well calibrated|Overconfident by \d+ pts|Underconfident by \d+ pts|Too few to judge)$/)).toBeInTheDocument()
+    expect(screen.getAllByRole('columnheader', { name: /Verdict/ }).length).toBe(1)
   })
 
   it('backtest tab: the disagreement table for the selected approach, with no chart', async () => {
@@ -122,7 +128,7 @@ describe('Tracker page', () => {
 
   it('the removed disagreements tab falls back to the default', async () => {
     renderRoute('/tracker?tab=disagreements')
-    expect(await screen.findByText(/^After \d+ games, the Student is/)).toBeInTheDocument()
+    expect(await screen.findByText('Gap to the market, by week')).toBeInTheDocument()
   })
 
   it('the ledger shows no diagnostic, though the file can carry one', () => {
@@ -141,8 +147,8 @@ describe('Tracker page', () => {
 
   it('bets tab: says how the lines did, with the bankroll, the returns and the seasons', async () => {
     renderRoute('/tracker?tab=bets')
-    expect(await screen.findByText(/^In the backtest, every approach has lost money\. The best, the Sharp/)).toBeInTheDocument()
-    for (const name of ['Bankroll over time', 'Return per bet', 'Season by season']) expect(screen.getByRole('heading', { name })).toBeInTheDocument()
+    expect(await screen.findByText(/^Every approach lost money in the backtest; the Sharp lost least/)).toBeInTheDocument()
+    for (const name of ['Bankroll over time', 'Return per bet', 'Season by season']) expect(screen.getByRole('heading', { name: new RegExp(`^${name}`) })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Lines to show' })).toBeInTheDocument()
     expect(screen.getByRole('rowheader', { name: /Sharp/ })).toBeInTheDocument()
   })

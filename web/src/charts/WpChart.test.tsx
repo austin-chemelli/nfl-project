@@ -56,14 +56,14 @@ describe('WpChart', () => {
   it('names start, low and final in the aria-label', () => {
     render(chart())
     const label = screen.getByRole('img').getAttribute('aria-label')!
-    expect(label).toContain('GB 65% at kickoff')
+    expect(label).toContain('GB 65% at kickoff (nflfastR)')
     expect(label).toContain('CAR low of 16% in Q2')
     expect(label).toContain('CAR won 23–20')
   })
 
   it('annotates kickoff and final, and rings the winner low only under 25%', () => {
     const { container } = render(chart())
-    expect(screen.getByTestId('wp-start-note')).toHaveTextContent('GB 65% at kickoff')
+    expect(screen.getByTestId('wp-start-note')).toHaveTextContent('GB 65% at kickoff (nflfastR)')
     expect(screen.getByTestId('wp-end-note')).toHaveTextContent('CAR won 23–20')
     expect(screen.getByTestId('wp-low')).toBeInTheDocument()
     expect(screen.getByTestId('wp-low-note')).toHaveTextContent('CAR 16%')

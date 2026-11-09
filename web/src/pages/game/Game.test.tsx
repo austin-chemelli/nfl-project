@@ -70,8 +70,18 @@ describe('Game page', () => {
     await userEvent.click(tab)
     expect(screen.getByRole('heading', { name: /^How the line moved/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /^What each sportsbook says/ })).toBeInTheDocument()
-    expect(screen.getByTestId('books-read')).toHaveTextContent(/Books disagree\. The books sit on both sides of 3, a key number: GB −3 at DraftKings, GB −4 at FanDuel/)
+    expect(screen.getByTestId('books-read')).toHaveTextContent(/Books split on the spread: The books sit on both sides of 3, a key number: GB −3 at DraftKings, GB −4 at FanDuel/)
     expect(screen.getByRole('cell', { name: 'BetMGM' })).toBeInTheDocument()
+  })
+
+  it('names each QB under its team, links the Preview to the Approaches tab, and builds the narrative help from the record', async () => {
+    renderRoute('/game/2026_08_CAR_GB')
+    expect(await screen.findByText(/CAR Bryce Young · GB /)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'By approach →' }))
+    expect(screen.getByRole('tab', { name: 'Approaches' })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(screen.getByRole('tab', { name: 'Injuries & news' }))
+    expect(screen.getByText(/This week's coverage, as of \w{3}, \w{3} \d+\. It never feeds the probabilities\./)).toBeInTheDocument()
+    expect(screen.getByText(/Written by a language model \(claude-code\/sonnet-5.5, /)).toBeInTheDocument()
   })
 
   it('has no line tab until there is a line or three books', async () => {
@@ -107,14 +117,14 @@ describe('Game page', () => {
 
   it('draws the tape on league bands and says how many gaps stand out', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB?tab=details')
-    expect(await screen.findByText(/of these \d+ gaps stands? out/)).toBeInTheDocument()
+    expect(await screen.findByText(/\d+ of \d+ gaps stands? out/)).toBeInTheDocument()
     expect(container.querySelectorAll('[data-testid="band"]').length).toBeGreaterThan(0)
     expect(container.querySelectorAll('[data-testid="band-core"]').length).toBeGreaterThan(0)
   })
 
   it('a hovered band row shows both teams and where the league sits; it leaves with the pointer', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB?tab=details')
-    await screen.findByText(/of these \d+ gaps stands? out/)
+    await screen.findByText(/\d+ of \d+ gaps stands? out/)
     const row = container.querySelector('svg g[tabindex]')!
     fireEvent.pointerMove(row, { clientX: 40, clientY: 10 })
     const tip = await screen.findByTestId('chart-tip')
@@ -127,7 +137,7 @@ describe('Game page', () => {
 
   it('a band row shows the same card on keyboard focus', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB?tab=details')
-    await screen.findByText(/of these \d+ gaps stands? out/)
+    await screen.findByText(/\d+ of \d+ gaps stands? out/)
     fireEvent.focus(container.querySelector('svg g[tabindex]')!)
     expect(await screen.findByTestId('chart-tip')).toHaveTextContent(/League median/)
   })
