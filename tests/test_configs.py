@@ -11,7 +11,7 @@ def test_all_configs_load_and_ids_match_files():
     assert {"traditionalist", "analyst", "sharp", "student"} <= set(approaches)
     for a in approaches.values():
         assert a.features
-        assert a.emphasis or a.id == "student"
+        assert a.emphasis or a.id in ("student", "student_v2")  # data-only lines, no emphasis
 
 
 def test_emphasis_families_get_the_most_weight():

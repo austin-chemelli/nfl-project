@@ -116,6 +116,14 @@ Register-ScheduledTask -TaskName "nfl-narrative" -Action $a -Trigger $t -Setting
 ```
 The task runs when Austin is signed in, which Ollama needs anyway (docs/desktop-llm-setup.md §6). Check the task's environment without a full pass (uv and gcloud on the login shell's PATH): `wsl -d <distro> -- bash -lc "cd ~/dev/nfl-project && uv run nfl narrative week && echo OK"`. Run a pass by hand: `Start-ScheduledTask nfl-narrative`, or `bash scripts/desktop-narrative.sh` in WSL. Logs: `data/raw/narrative_local/passes/` on the desktop, and `gcloud logging read 'logName="projects/nfl-project-prod/logs/nfl-desktop-narrative"' --limit 20`.
 
+## Adding an approach mid-season (ADR 0026; e.g. `student_v2`)
+
+A new YAML changes no existing config hash (a test pins the live four), so the other fits stay frozen. The site job needs the new approach's fit files the moment the new image runs, and the backfill rows go in a quiet window right after:
+
+1. Before merging: on a fresh copy of the bucket (`.data-cutover`, as below), `nfl fit --only <id>`, then upload only `marts/fits/<id>/` (the old image never reads it). Check with `--dry-run` that nothing else would upload.
+2. Merge. CI builds the image and runs `nfl-site`: the new approach scores upcoming games, with no history yet.
+3. Straight after, in a gap with no job due: take the job lock (`NFL_DATA_BUCKET=nfl-project-prod-data uv run nfl joblock acquire manual`), pull `marts/` fresh, `nfl predict --backfill --only <id> && nfl grade`, upload `marts/` with the checksum pass twice, release the lock (`nfl joblock release <generation>`), rerun `nfl-site`. Then `nfl readme` from the primary checkout.
+
 ## Model wave cutover (ADR 0018; any change to approach configs or groups)
 
 `nfl lock` and `nfl site` both refuse a fit whose config hash differs from the YAML, so the code and the fits have to change together. Any job that builds previews between the two fails loudly and emails. Do it when nothing is scheduled to write `marts/`: Tuesday after the 10:00 refresh is the widest gap, and any evening with no job due works. A desktop pass ending mid-cutover only fails its `nfl-site` step; rerun that job. `marts/predictions.parquet` must be pulled and pushed inside that gap, or a live row could be lost.

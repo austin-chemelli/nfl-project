@@ -14,5 +14,5 @@ export function sentenceName(meta: Meta, id: string): string {
   return `the ${label(id)} line`
 }
 
-export const KEY_LINES = ['traditionalist', 'analyst', 'sharp', 'student', 'market_baseline'] as const
+export const KEY_LINES = ['traditionalist', 'analyst', 'sharp', 'student', 'student_v2', 'market_baseline'] as const
 export const REF_LINES = ['elo_v0', 'home_naive'] as const

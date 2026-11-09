@@ -1,0 +1,27 @@
+# The Student v2 (ADR 0026, M23.1; Austin 2026-11-08: a new approach beside the Student, which stays
+# the headline). Same groups and starting weights as the Student; the difference is the calibration:
+# the Student learns home field from every season since 2002 (2.5 points then, 1.4-2.1 since 2016),
+# so it leans home by about 0.85 points. The decomposition members (M23.5) arrive here first.
+id: student_v2
+name: The Student v2
+blurb: >-
+  The Student, with home field measured on the last ten seasons instead of every season since 2002.
+  It shows the next features first (ADR 0026); the Student stays the headline line.
+emphasis: []
+calibration: shift_10  # one offset on the last ten training seasons (M23.0: Δ log loss −0.0007, CI excludes 0)
+public: fitted  # its identity is what the data says; the equal-weight start is shown as its persona
+intercept: {w: 0.0, why: "Learns home field from results"}
+groups:
+  quality:       {w: 0.1, why: "Equal start"}
+  offense:       {w: 0.1, why: "Equal start"}
+  defense:       {w: 0.1, why: "Equal start"}
+  quarterback:   {w: 0.1, why: "Equal start"}
+  health:        {w: 0.1, why: "Equal start"}
+  form:          {w: 0.1, why: "Equal start"}
+  stakes:        {w: 0.1, why: "Equal start"}
+  rest_travel:   {w: 0.1, why: "Equal start"}
+  venue_weather: {w: 0.1, why: "Equal start"}
+  special_teams: {w: 0.1, why: "Equal start"}
+  market:        {w: 0.065, why: "Declared, not learned: line moves have no history"}
+overrides:
+  market: {market.line_move_pts: 1.0}

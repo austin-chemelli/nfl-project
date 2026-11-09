@@ -52,7 +52,10 @@ class Approach(BaseModel):
     name: str
     blurb: str
     emphasis: list[str]  # families (flat form) or group ids (grouped form)
-    calibration: Literal["platt", "none"] = "platt"
+    # "shift_10" (ADR 0026, M23.1): the public line's logit gets one offset, fitted on the last ten
+    # training seasons, so home field follows the recent game. A value, not a new field: a new
+    # field would change every approach's config hash and the lock would refuse every fit.
+    calibration: Literal["platt", "none", "shift_10"] = "platt"
     shadow: bool = False  # scored and shown, but excluded from the ensemble and headline scorecard
     # ADR 0004 amendment: the one public line. "light" = persona weights lightly fitted + calibrated;
     # "fitted" = the walk-forward fitted weights (the Student, whose identity is the data).

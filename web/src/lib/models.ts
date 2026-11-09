@@ -1,5 +1,5 @@
 /** Model identity: order, colors (CSS variables from the palette), line style. */
-export const APPROACHES = ['traditionalist', 'analyst', 'sharp', 'student'] as const
+export const APPROACHES = ['traditionalist', 'analyst', 'sharp', 'student', 'student_v2'] as const
 export type ApproachId = (typeof APPROACHES)[number]
 /** The site's headline line: the pick, the slate and the tracker's tiles read it (D5). */
 export const HEADLINE = 'student'
@@ -16,11 +16,12 @@ export function colorVar(modelId: string): string {
 }
 
 export function dashArray(modelId: string): string | undefined {
+  if (modelId === 'student_v2') return '6 3' // the Student's family, dashed: a variant, not a fifth persona (ADR 0026)
   if (modelId === 'home_naive') return '9 3' // Elo and the home line share a colour, so the dash tells them apart
   return modelId === 'elo_v0' || modelId === 'global' ? '4 3' : undefined
 }
 
 export const SHORT: Record<string, string> = {
-  traditionalist: 'Traditionalist', analyst: 'Analyst', sharp: 'Sharp', student: 'Student',
+  traditionalist: 'Traditionalist', analyst: 'Analyst', sharp: 'Sharp', student: 'Student', student_v2: 'Student v2',
   market_baseline: 'Market', elo_v0: 'Elo', home_naive: 'Home 57%', global: 'Global fit',
 }

@@ -92,13 +92,17 @@ def predict(
     backfill: bool = typer.Option(
         False, help="Score the approaches on completed games (needs `nfl fit`); default 2005-now."
     ),
+    only: Annotated[
+        list[str] | None,
+        typer.Option("--only", help="With --backfill: just these approach ids (repeatable)."),
+    ] = None,
 ) -> None:
     """Reference models (market, Elo, naive), or with --backfill the approaches."""
     if backfill:
         from nfl.approaches.run import backfill as run_backfill
 
         rng = _parse_range(seasons) if seasons != "2025-2026" else None
-        n = run_backfill(get_paths(), rng)
+        n = run_backfill(get_paths(), rng, set(only) if only else None)
         console.print(
             f"[bold]predict --backfill:[/bold] {n:,} approach rows written {rng or 'all'}"
         )
@@ -112,11 +116,15 @@ def predict(
 @app.command()
 def fit(
     seasons: str = typer.Option("2005-2026", help="Seasons to produce walk-forward fits for."),
+    only: Annotated[
+        list[str] | None,
+        typer.Option("--only", help="Just these approach ids (repeatable); the others' fits stay."),
+    ] = None,
 ) -> None:
     """Select λ and write walk-forward fit artifacts for every approach and the global fit."""
     from nfl.approaches.run import fit_all
 
-    table = fit_all(get_paths(), _parse_range(seasons))
+    table = fit_all(get_paths(), _parse_range(seasons), set(only) if only else None)
     t = Table(title="fit: validation log loss by λ (2022-2024)")
     for col in ("approach", "λ", "val log loss", "n", ""):
         t.add_column(col)
@@ -716,7 +724,7 @@ def lock_cmd(
             f"[yellow]lock: no {slot} games left to lock in {res.season} week {res.week}[/]"
         )
         return
-    show = ["market_baseline", "traditionalist", "analyst", "sharp", "student", "elo_v0"]  # fmt: skip
+    show = ["market_baseline", "traditionalist", "analyst", "sharp", "student", "student_v2", "elo_v0"]  # fmt: skip
     t = Table(title=f"{'DRY RUN ' if dry_run else ''}lock {res.season} W{res.week:02d} {slot} "
                     f"at {res.lock_ts:%Y-%m-%d %H:%M}Z: P(home win)")  # fmt: skip
     t.add_column("game")

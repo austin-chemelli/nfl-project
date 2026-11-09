@@ -34,25 +34,37 @@ def known_features(paths: Paths) -> set[str]:
     return set(store.read_features(paths).get_column("feature").unique().to_list())
 
 
-def scored_approaches(paths: Paths) -> list[Approach]:
+def scored_approaches(paths: Paths, only: set[str] | None = None) -> list[Approach]:
+    """Every fitted approach plus the global fit; `only` keeps just those ids (a new approach is
+    fitted and backfilled on its own, so the frozen fits of the others stay as they are)."""
     known = known_features(paths)
     out = []
     for a in load_all().values():
         if a.id == "narrative":  # live-only, persona flavor, never fitted (M6.5)
             continue
+        if only is not None and a.id not in only:
+            continue
         if not a.grouped:
             check_features(a, known)
         out.append(a)
+    if only is not None and ensemble.GLOBAL_ID not in only:
+        return out
     return [*out, ensemble.global_approach(known)]
 
 
-def fit_all(paths: Paths, scored: tuple[int, int] = (FIRST_SCORED_SEASON, 2026)) -> pl.DataFrame:
+def fit_all(
+    paths: Paths,
+    scored: tuple[int, int] = (FIRST_SCORED_SEASON, 2026),
+    only: set[str] | None = None,
+) -> pl.DataFrame:
     known = known_features(paths)
-    tables = [fit.fit_approach(paths, a, scored, known) for a in scored_approaches(paths)]
+    tables = [fit.fit_approach(paths, a, scored, known) for a in scored_approaches(paths, only)]
     return pl.concat(tables)
 
 
-def backfill(paths: Paths, scored: tuple[int, int] | None = None) -> int:
+def backfill(
+    paths: Paths, scored: tuple[int, int] | None = None, only: set[str] | None = None
+) -> int:
     """Default: every completed game from FIRST_SCORED_SEASON through the current season (current-season
     games use the frozen fits trained through last season, labeled backfill, never locks).
 
@@ -62,7 +74,9 @@ def backfill(paths: Paths, scored: tuple[int, int] | None = None) -> int:
     games = store.games_frame(paths).filter(
         pl.col("season").is_between(*scored) & pl.col("result").is_not_null()
     )
-    new, model_ids = _score(paths, games)
+    new, model_ids = _score(paths, games, only)
+    if only is not None:  # a new approach on its own: replace only its backfill rows
+        return append_rows(paths, new, replace_backfill_for=model_ids)
     # also drop backfill rows of retired ids (<approach>.persona / .fitted before 2026-10-27, the
     # ensemble after ADR 0018); its live rows are the record and stay
     retired = {f"{a}.{f}" for a in model_ids for f in ("persona", "fitted")}
@@ -87,10 +101,12 @@ def fill_unscored(paths: Paths, season: int | None = None) -> int:
     return append_rows(paths, new)
 
 
-def _score(paths: Paths, games: pl.DataFrame) -> tuple[pl.DataFrame, set[str]]:
+def _score(
+    paths: Paths, games: pl.DataFrame, only: set[str] | None = None
+) -> tuple[pl.DataFrame, set[str]]:
     """Backfill rows (synthetic lock, kickoff − 1h) for `games`: every approach with its fit trained
     through the season before."""
-    approaches = scored_approaches(paths)
+    approaches = scored_approaches(paths, only)
     sha = git_sha()
     rows = []
     model_ids: set[str] = set()
