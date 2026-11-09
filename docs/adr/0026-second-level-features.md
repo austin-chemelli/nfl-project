@@ -1,0 +1,39 @@
+# ADR 0026: Second-level features: calibrate first, split what we have, keep every candidate on the record
+
+Status: accepted 2026-11-08 (Austin). Extends ADR 0012 (groups), ADR 0018 (the Student is the headline; context-only groups; the bar for a public line) and ADR 0025 (SQL models). The player-level work (value-weighted injuries, the offensive line) is a separate flight in another chat and is out of this ADR's scope.
+
+## Context
+Austin wants "second-level" features: numbers that go beyond one team's season-to-date stat, add context on the site, and, where they earn it, move the predictions. Research and measurement on 2026-11-08 (`.notes/second-level-research.md`, `-inventory.md`, `-plan.md`, `-screen.py`) found:
+
+- **No evidence for interaction features**, public or ours. Team splits against the blitz, the box and play action have split-half r ≈ 0; all 11 style × style products had |t| < 1.5 (2026-11-05). The public literature has nothing positive either.
+- **The evidence favors decomposition:** splitting each stat into the part that repeats and the part that is luck. On our data (team-seasons 2006–2025, weeks ≥ 4 as of the game): defense EPA without turnovers predicts the second half beyond plain defense EPA (partial r +0.09; offense +0.06); fumble recovery rate has split-half r 0.00; defenses repeat half as much as offenses (0.31 vs 0.61); offensive success rate explains +0.63 points per SD of what the market misses (90% CI +0.28 to +0.98), the one clear market residual in 15 spread tests. Win-probability-weighted EPA did worse than raw EPA here (r 0.537 vs 0.563 with the second half) despite a public +14% claim. The QB's own sack rate, pace and pass rate over expected showed nothing.
+- **The Student's biggest flaw is calibration, not a missing feature.** On its 2016–2025 backfill: home favorites at 0.55–0.75 win 3–5 points less often than it says (0.55 → 0.497, 0.648 → 0.622, 0.747 → 0.717), home dogs at 0.35 win less often too (→ 0.315), so the error is a home shift, not a slope. Its mean spread is 2.56 against a 1.77 home margin (the market: 1.67); the fit pools 2002 onward, where home field was 2.5 points, and it is 1.4–2.1 since 2016. The margin moves 0.86–0.89 points per point of its spread (the market: 1.04–1.06). Every EPA variant has a negative residual against the Student (−0.52 points per SD) and a positive one against the market: it over-weights what it already has. The Student is not Platt-calibrated (`public: fitted` skips it). Log loss 2016–2025: 0.6282 against the market's 0.6137.
+- **Austin wants every candidate kept**, including the ones that fail, with the interesting ones easy to find.
+
+## Options
+1. **Build the matchup family** as planned in M1.13: seven interaction members and a Matchup approach. Fan-readable, but every measurement says noise, and ADR 0018 already made the group context-only.
+2. **Decomposition members in the existing groups, behind gates, after a calibration fix.** New members split what the groups already measure; the groups keep their names and the site's "which groups mattered" keeps its shape. Small accuracy gains at best; large gains in what the site can explain.
+3. **A new "luck" group** holding the luck terms (fumble recoveries, one-score record, turnover margin minus expected). Cleaner story, but a new group changes every composite, every persona's weights and the UI's group lists mid-season.
+
+## Decision
+Option 2, with these rules.
+
+- **Calibration first (D22).** A walk-forward study of the Student's logits (recent-window and decayed Platt, intercept-only shift, decayed fitting weights) with paired Δ log loss against today's Student on 2016–2025, season-block bootstrap. Only a gain whose 90% CI excludes 0 ships. No feature is judged against the Student until this is settled: a mis-shifted Student masks or fakes a residual.
+- **One funnel for every candidate, the same rules as the Hypotheses page plus two cheaper gates in front:** stable (split-half r ≥ 0.3 within season; a luck measure fails on purpose and becomes a regression or a luck readout); predicts the future beyond what we have (first-half to second-half team-season partial r, CI > 0); explains a residual (walk-forward slope against the Student and the market, 90% CI excluding 0); earns it in a shadow approach (paired Δ log loss < 0, 90% CI, 2016 onward). Only then does it join a group, at a registry bump.
+- **A candidates ledger (`marts/candidates.parquet`, append-only; `nfl candidates`).** Every candidate is defined once in code (`src/nfl/candidates.py`: definition, source, first season, why it's interesting, an `interesting` flag Austin sets), the runner writes each gate's numbers, and the site shows all of them on the History page under "Tested, not used" with the interesting ones first. A failed candidate is a result, not a deletion.
+- **Features join existing groups (D24).** `epa_def_noto` / `epa_off_noto` beside the EPA members; `takeaway_rate` in Defense, shrunk hard; `fum_luck` and, if it passes, `one_score_luck` in Quality with sign −1. Registry v7 at the next refit; no change to the public Student before a shadow line earns it (ADR 0018's bar).
+- **Derived aggregates are SQL models (M22.3 lands here):** one as-of team-week table under `marts/derived/`, read by the candidates runner, the new builders and the site, with a leakage test per model (ADR 0025).
+- **Visuals (D25):** a `DecompBar` (how much of a rating is repeatable efficiency, how much turnovers, how much fumble luck) on the game Preview and the team Overview, and a `ReliabilityBadge` (stable / some / noise, from the ledger) wherever a second-level number appears. Everything else reuses the kit: `Scatter` for luck-adjusted team positions and the pressure 2×2, `DotWhisker` for the ledger, `MatchupBand` and `Dumbbell` for the context splits, `RangeRow` for wind.
+- **Interaction splits stay context** (the MX.1–MX.4 views from `.notes/plans/interaction-features.md`), labeled "what happened" with their reliability badge. The pressure prior is the one split that repeats (year-to-year 0.43) and is the first context split built.
+- **Totals:** observed wind is post-game data; a forecast-wind term waits for Open-Meteo's historical forecast archive or a season of our own forecasts. Pace and pass rate over expected are context only (0 against the market total).
+- **Out of scope here:** player-level data (another chat; its candidates go through the same ledger), a learned Student (negative result 2026-11-05), the matchup family as model input.
+
+## Consequences
+- The Student doesn't change. The recalibrated and extended line is a new approach, `student_v2` ("The Student, recalibrated"), scored and shown beside it on the slate, the game page and the tracker; the Student stays the headline (D23, Austin 2026-11-08). Whether the new one ever takes the headline is a later decision, made on its live record.
+- Expect accuracy gains in thousandths of log loss: the public research found nothing that beats the close. The site's explanations gain more than the model does, and the ledger makes the failures part of the story.
+- About 30 tests already ran at 90%: a few chance hits are expected, which is why the gates are sequential and walk-forward, and why no single CI ships a feature.
+- Two more as-of implementations exist (the SQL team-week model and the Polars builders); the parity and leakage tests are what keep them one rule.
+- The matchup family (M1.13) is closed as model input; its context views move into M23.
+
+## Measured
+Filled in as M23 lands: the calibration study table (M23.0), the ledger's first run (M23.2), the shadow Student's paired Δ (M23.7).

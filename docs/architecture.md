@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-08 (the catalog row, ADR 0025); the live state is [state.md](state.md).
+Status: current, verified 2026-11-08 (the catalog row, ADR 0025; §3.8 the candidates ledger, ADR 0026, planned); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
@@ -232,6 +232,27 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, best call and costliest miss, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.
+
+### 3.8 Candidates ledger and the gates (ADR 0026, M23)
+
+A second-level feature is a split of something a group already measures (EPA without turnovers, takeaways, fumble luck), not a matchup product: every measurement found interaction features to be noise. Every candidate, passing or failing, is defined once in `nfl/candidates.py` and screened by `nfl candidates run` into `marts/candidates.parquet` (append-only: one row per candidate per `screen_version`, every gate's numbers, a verdict, Austin's `interesting` flag and note). The site's History page shows the whole ledger under "Tested, not used". Derived aggregates the screen and the builders share are SQL models (`src/nfl/sql/models/*.sql` → `marts/derived/`, `nfl models build`), each with a leakage test.
+
+```mermaid
+%%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%
+flowchart LR
+    C[candidate] --> S{stable?<br/>split-half r ≥ 0.3}
+    S -- no --> L[luck term or readout]
+    S -- yes --> F{predicts the 2nd half<br/>beyond what we have?}
+    F -- no --> X[context, labeled]
+    F -- yes --> R{residual vs Student<br/>and market, CI ≠ 0}
+    R -- no --> X
+    R -- yes --> M[member in a shadow approach]
+    M --> G{paired Δ log loss < 0,<br/>90% CI, 2016+}
+    G -- yes --> P[public Student at a refit]
+    G -- no --> X
+```
+
+The first three gates are cheap and high-powered (team-seasons); the last is ADR 0018's bar for a public line. The Student's calibration (a home shift inherited from pooling 2002 onward) is fixed before any candidate is judged against it, as a `platt_recent` calibration on a shadow `student_v2`.
 
 ## 4. Key flows
 
