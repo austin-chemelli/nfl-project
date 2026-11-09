@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-08 (the market data row gains `books`, M20.13); the live state is [state.md](state.md).
+Status: current, verified 2026-11-08 (the catalog row, ADR 0025); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
@@ -57,6 +57,7 @@ flowchart LR
 |---|---|---|
 | Ingest | `nfl/ingest.py`, `nfl/odds.py`, `nfl/weather.py` | Download upstream bytes into immutable snapshots with manifests. nflverse by URL; Odds API JSON; Open-Meteo JSON. |
 | Curate | `nfl/curate.py` | DuckDB builds `games`, `plays` (pbp ⋈ FTN), `injuries`, `depth_charts`, `lines`, `weather` from the latest snapshots. Deterministic. |
+| Catalog | `nfl/catalog.py` | One DuckDB view per table (curated, features, marts as one file or parts) plus `features_asof(ts)` and `game_vectors(ts)`, built per process, never written; `nfl sql` (ADR 0025). |
 | Audit | `nfl/audit.py` | Null rates per column per season; freshness per dataset. |
 | Tendencies | `nfl/tendencies.py` | Team × situation × metric rates with shrinkage and recency decay. Feeds features and the game page. |
 | Feature store | `nfl/features/` | One long as-of table of every input any approach uses. Builders per family. |

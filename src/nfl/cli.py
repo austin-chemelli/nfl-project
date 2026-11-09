@@ -471,6 +471,44 @@ def daily_cmd(
     daily.run(get_paths(), console, odds=odds)
 
 
+@app.command("sql")
+def sql_cmd(
+    query: Annotated[str | None, typer.Argument(help="SQL over the catalog's views.")] = None,
+    tables: bool = typer.Option(False, "--tables", help="List the views, rows and columns."),
+    csv: Annotated[
+        Path | None, typer.Option(help="Write the full result to this CSV file.")
+    ] = None,
+    parquet: Annotated[Path | None, typer.Option(help="Write it to this parquet file.")] = None,
+    limit: int = typer.Option(40, help="Rows to print (the file gets all of them)."),
+) -> None:
+    """Query every table with SQL (ADR 0025): views over the parquet files, read-only.
+
+    Point in time: `select * from features_asof(timestamp '2026-11-05 14:00')`, `game_vectors(ts)`."""
+    from nfl import catalog
+
+    paths = get_paths()
+    con = catalog.connect(paths)
+    if tables or not query:
+        t = Table("view", "rows", "columns", "what it is")
+        for d in catalog.describe(con):
+            cols = ", ".join(d["columns"][:8]) + (" ..." if len(d["columns"]) > 8 else "")
+            t.add_row(d["name"], f"{d['rows']:,}", cols, d["about"])
+        console.print(t)
+        if gone := catalog.missing(paths):
+            console.print(f"no files yet: {', '.join(gone)}")
+        return
+    df = con.sql(query).pl()
+    if csv:
+        df.write_csv(csv)
+    if parquet:
+        df.write_parquet(parquet)
+    t = Table(*df.columns)
+    for row in df.head(limit).iter_rows():
+        t.add_row(*("" if v is None else str(v) for v in row))
+    console.print(t)
+    console.print(f"{df.height:,} rows" + (f", first {limit} shown" if df.height > limit else ""))
+
+
 @app.command("site")
 def site_cmd(season: int = typer.Option(None, help="Default: current season.")) -> None:
     """Write the UI JSON contract (marts/site/): meta, slates, games, tracker, audit."""

@@ -20,7 +20,6 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import duckdb
 import polars as pl
 
 from nfl.config import FIRST_SEASON, Paths
@@ -50,11 +49,11 @@ FEATURE_RX = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
 
 def games_frame(paths: Paths, min_season: int = FIRST_SEASON) -> pl.DataFrame:
     """All curated game columns, ordered by kickoff. The shared input for every builder."""
-    con = duckdb.connect()
-    con.execute("set timezone='UTC'")
-    glob = f"{paths.curated_table('games').as_posix()}/*/*.parquet"
+    from nfl import catalog
+
+    con = catalog.connect(paths, only=["games"])
     return con.sql(
-        f"select * exclude (raw_snapshot_ts) from read_parquet('{glob}', hive_partitioning=true) "
+        f"select * exclude (raw_snapshot_ts) from games "
         f"where season >= {min_season} order by kickoff_utc nulls last, game_id"
     ).pl()
 
