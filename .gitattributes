@@ -1,0 +1,6 @@
+# Generated or copied data: GitHub collapses these in PR diffs ("Load diff") so the code shows first.
+# `git diff` still shows them in full. ADR 0025.
+web/src/test/fixtures/** linguist-generated=true
+tests/fixtures/** linguist-generated=true
+uv.lock linguist-generated=true
+web/package-lock.json linguist-generated=true

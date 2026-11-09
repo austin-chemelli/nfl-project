@@ -1,6 +1,6 @@
 # Hosting plan (step 5)
 
-Status: current, verified 2026-11-07. Everything in §1–§2 is built and running (locks live from 2026 Week 9); §3 is the by-hand setup record, §4 the order it was built in. The live schedule, links and known issues are in [state.md](state.md).
+Status: current, verified 2026-11-08. Everything in §1–§2 is built and running (locks live from 2026 Week 9); §3 is the by-hand setup record, §4 the order it was built in. The live schedule, links and known issues are in [state.md](state.md).
 
 How the project runs once it leaves the laptop, what Austin sets up by hand, and in what order. Decisions: ADR 0008 (cloud-first, Terraform, Firebase), ADR 0009 (static React site), ADR 0014 (LLM on the desktop), ADR 0015 (two runners, one bucket). Written before the build (2026-10-28); the status line above says what is live.
 
@@ -57,6 +57,8 @@ The desktop runs, on a Windows scheduled task: Wed and Sat early morning `nfl na
 ## 2. What each piece does
 
 **Container (M7.1).** One Docker image built from `pyproject.toml` with `uv`, entrypoint `nfl`. Built by GitHub Actions when a push to `main` changes job code and the tests pass (`ci.yml` calls `image.yml`), pushed to Artifact Registry, and the Cloud Run Jobs are updated to the new digest. The lock job refuses to run only if job code on `main` changed after the image's commit (`scripts/cloud-job.sh`), so lock, docs and web commits don't block it. The same image runs on the laptop (`docker run ... nfl lock --dry-run`) so "works in the cloud" is testable at home.
+
+**One job at a time (ADR 0025, from 2026-11-08).** `cloud-job.sh` takes a lock object, `locks/jobs.lock` in the data bucket (created only if absent, released by generation on exit, expiring at the holder's Cloud Run timeout plus 5 minutes, since a killed job never runs its exit trap; `NFL_DATA_BUCKET` names the bucket), before every job except `narrative-check`. A job waits up to 20 minutes; then the lock jobs run anyway and the others fail and alert. Jobs take 2 to 11 minutes (2026-11), so a wait means two jobs really overlapped, e.g. the `nfl-site` run the desktop starts after a long Saturday pass and the 12:00 lock.
 
 **Data root in GCS (M7.3).** The private bucket `nfl-data` holds exactly today's `./data` layout. Cloud Run Jobs mount it as a volume at `/mnt/data` (Cloud Run's native Cloud Storage volume mount), and `NFL_DATA_ROOT=/mnt/data`, so no code changes. First concern is speed: the weekly refresh scans ~2 GB of play-by-play through the mount. If that is slow, the job rsyncs the bucket to local disk at start and the marts back at the end (a small wrapper, no pipeline change). Decide after measuring the first cloud run.
 

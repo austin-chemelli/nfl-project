@@ -20,9 +20,9 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import duckdb
 import polars as pl
 
+from nfl import io
 from nfl.config import FIRST_SEASON, Paths
 
 # Synthetic locks for historical games are kickoff - 1h (predict.py); feature rows must be strictly
@@ -50,11 +50,11 @@ FEATURE_RX = re.compile(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$")
 
 def games_frame(paths: Paths, min_season: int = FIRST_SEASON) -> pl.DataFrame:
     """All curated game columns, ordered by kickoff. The shared input for every builder."""
-    con = duckdb.connect()
-    con.execute("set timezone='UTC'")
-    glob = f"{paths.curated_table('games').as_posix()}/*/*.parquet"
+    from nfl import catalog
+
+    con = catalog.connect(paths, only=["games"])
     return con.sql(
-        f"select * exclude (raw_snapshot_ts) from read_parquet('{glob}', hive_partitioning=true) "
+        f"select * exclude (raw_snapshot_ts) from games "
         f"where season >= {min_season} order by kickoff_utc nulls last, game_id"
     ).pl()
 
@@ -192,6 +192,18 @@ def _same(a: float | None, b: float | None) -> bool:
     return abs(a - b) <= 1e-12 * max(1.0, abs(a), abs(b))
 
 
+def _unchanged(a: pl.DataFrame, b: pl.DataFrame) -> bool:
+    """Same rows in the same order, values equal by `_same`'s tolerance: a rebuild's sums can differ
+    in the last bits from run to run (parallel aggregation order), which isn't a change."""
+    if a.height != b.height or not a.drop("value").equals(b.drop("value")):
+        return False
+    x, y = a["value"], b["value"]
+    close = (x - y).abs() <= 1e-12 * pl.max_horizontal(pl.lit(1.0), x.abs(), y.abs())
+    both_null = x.is_null() & y.is_null()
+    ok = pl.select(pl.when(both_null).then(True).otherwise(close).fill_null(False).all()).item()
+    return bool(ok)
+
+
 def write_features(paths: Paths, df: pl.DataFrame) -> int:
     """Upsert rows into the store, one file per (season, family). Returns rows written (new or
     replaced). See module docstring for the dedup rule."""
@@ -204,8 +216,9 @@ def write_features(paths: Paths, df: pl.DataFrame) -> int:
     for (season, family), part in fam.group_by(["season", "_family"], maintain_order=True):
         part = part.drop("_family")
         f = _file(paths, int(season), str(family))
-        if f.exists():
-            old = pl.read_parquet(f).cast(FEATURE_SCHEMA)
+        stored = pl.read_parquet(f).cast(FEATURE_SCHEMA) if f.exists() else None
+        if stored is not None:
+            old = stored
             # drop new rows that repeat the latest stored value for their key at a later as-of
             latest = (
                 old.sort("known_as_of")
@@ -222,9 +235,12 @@ def write_features(paths: Paths, df: pl.DataFrame) -> int:
             merged = pl.concat([old, part])
         else:
             merged = part
+        order = ["game_id", "feature", "side", "known_as_of"]
+        merged = merged.sort(order)
+        if stored is not None and _unchanged(merged, stored.sort(order)):
+            continue  # nothing new or changed: leave the file (and its object in the bucket) alone
         written += part.height
-        f.parent.mkdir(parents=True, exist_ok=True)
-        merged.sort(["game_id", "feature", "side", "known_as_of"]).write_parquet(f)
+        io.write_parquet(merged, f)
     return written
 
 

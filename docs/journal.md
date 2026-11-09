@@ -620,3 +620,16 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Left for later.** The pipeline's own sentences (retro headlines, recap, feature effects) are still long; shortening them at the source needs a retro rebuild (M21.8). The injury table overflows a 375 px phone by 51 px (on production before this change).
 
+## 2026-11-08: A SQL catalog instead of a database (M22, ADR 0025)
+
+**Why.** Austin asked whether the project needs a real database: questions take Python glob code, cross-source joins are hand-written, PR diffs look huge, and the interaction features will join five sources.
+
+**Findings.** The data is small: 691 MB raw, 146 MB curated and 61 MB of marts in the production bucket, a 5.5 MB feature store, reads in milliseconds. The huge diffs are regenerated test fixtures (35k of 113k added lines), never data. The real gaps were a query surface, whole-file rewrites of append-only marts, in-place writes, no lock between jobs, and undeclared schemas.
+
+**What was decided.** DuckDB views over the existing parquet, built per process (ADR 0025), then safe writes, then SQL models with the interaction features; DuckLake only on a trigger; no server. Built so far: `.gitattributes` collapsing fixtures and lockfiles in GitHub diffs, `nfl.catalog` with 28 registered tables and the point-in-time macros, `nfl sql`. The SQL `features_asof` and `game_vectors` matched the Polars versions row for row on the whole local feature store at three dates (874k as-of rows at 2026-10-25).
+
+**AI tooling note.** Three research agents (Polymarket, nflmcp.com, storage) ran in parallel on Sonnet; their claims were spot-checked before anything was planned on them (the nflmcp licence, the snap-count gap, the storage measurements, production bucket sizes, one live Polymarket request).
+
+**Phase 2, safe writes (same day).** One write helper (temp file then rename; appends keep the stored rows first and untouched), feature files left alone when nothing changed, and a job lock in the data bucket that `cloud-job.sh` takes before every job that writes. Two planned pieces were dropped on evidence (ADR 0025, Measured): one file per append, because `predictions` and `bets` replace their backfill rows and every reader would change for little gain at 9 MB; and current-season-only builds, because skipping unchanged files already stops past seasons being rewritten. The skip first missed 62 of 235 files on an identical rebuild: Polars sums in parallel, so values differ in the last bits between runs; comparing with the store's own 1e-12 tolerance took it to 0. Production jobs take 2 to 11 minutes; the overlap the lock is for is the desktop's `nfl-site` run landing on Saturday's 12:00 lock. The lock fails open: a lock error runs the job without it, and only a 20-minute wait fails a job, never a lock.
+
+**Review (same day).** The `reviewer` agent found nothing that could stop a lock, and four ways a dead job could leave the lock held for up to 2 h 15 min: Cloud Run kills a timed-out job without running its exit trap, a create whose response is lost made the job wait on itself, a lock that kept vanishing could spin past the wait, and a failed release wasn't retried. Each lock now expires at its own job's timeout plus 5 minutes (a test reads the timeouts from `infra/jobs.tf`), carries a nonce, and is released with retries.

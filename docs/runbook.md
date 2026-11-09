@@ -1,6 +1,6 @@
 # Weekly runbook
 
-Status: current, verified 2026-11-07. The cloud runs the week (§In the cloud); the hand commands are the fallback.
+Status: current, verified 2026-11-08. The cloud runs the week (§In the cloud); the hand commands are the fallback.
 
 How to operate the live pipeline by hand when a cloud job can't. Every command runs from the repo root. Times are US Eastern (Daylight Time until Nov 1, 2026, then Standard). The Odds API free tier allows 500 credits a month; `nfl odds status` shows usage, and the code refuses past a soft cap of 400.
 
@@ -60,6 +60,7 @@ Job code is `src/`, `scripts/`, `pyproject.toml`, `uv.lock` and `Dockerfile`. Me
 - **Odds API fails or is out of credits:** `--no-odds`; the market features then come from the latest snapshot on disk, or nflverse's line.
 - **Missing fit artifacts:** `uv run nfl fit` (only between seasons, or after an announced persona change).
 - **Push refused:** read the listed commits; push code commits yourself, then `git push` the lock.
+- **A job waited for the data lock and failed** ("joblock: ... has held the data lock"): another job was still running after 20 minutes. Check it in the Cloud Run console; if nothing is running, the lock is left from a job killed without its exit trap: `gcloud storage rm gs://nfl-project-prod-data/locks/jobs.lock`, then rerun. A lock expires at its job's Cloud Run timeout plus 5 minutes and is then taken over automatically; the lock jobs never wait more than 20 minutes and then run without it (ADR 0025).
 
 ## In the cloud (step 5, from 2026-10-28)
 

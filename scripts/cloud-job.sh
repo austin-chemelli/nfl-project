@@ -8,12 +8,25 @@
 #   narrative-check  fail (and so alert) if an upcoming game has no record from the last desktop pass
 #   retro            nfl retro daily (current-season ingest, curate, game retros + recaps), then grade
 #                    and rebuild the site JSON so the tracker counts last night's games, publish
-# Environment: NFL_DATA_ROOT (bucket mount), NFL_SITE_BUCKET (public bucket name, optional),
+# Environment: NFL_DATA_ROOT (bucket mount), NFL_DATA_BUCKET (its name, for the job lock),
+#   NFL_SITE_BUCKET (public bucket name, optional),
 #   ODDS_API_KEY, GITHUB_DEPLOY_KEY_FILE (lock only), NFL_IMAGE_SHA (set at image build), NFL_REPO.
 set -euo pipefail
 
 job="${1:?job name}"; shift || true
 repo_url="${NFL_REPO:-git@github.com:austin-chemelli/nfl-project.git}"
+
+# One job at a time on the data (ADR 0025): every job that writes takes the bucket lock and releases it
+# on exit. The lock jobs run anyway after waiting (a missed lock is worse than a rare race); the rest
+# fail, which alerts. No-op without NFL_DATA_BUCKET.
+lock_gen=0
+release_lock() { [ "$lock_gen" = 0 ] || nfl joblock release "$lock_gen" || true; }
+if [ "$job" != narrative-check ]; then
+  proceed=""; [ "$job" = lock ] && proceed="--proceed"
+  lock_gen=$(nfl joblock acquire "$job${1:+-$1}" $proceed)
+  trap release_lock EXIT
+  trap 'exit 143' TERM INT
+fi
 
 publish() {
   # Upload site JSON (and lock artifacts, if a repo clone is given) to the public bucket with a

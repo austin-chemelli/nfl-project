@@ -21,6 +21,7 @@ from datetime import datetime
 
 import polars as pl
 
+from nfl import io
 from nfl.config import Paths
 from nfl.features.groups import FEATURE_GROUP, GROUPS
 
@@ -130,10 +131,7 @@ def append(paths: Paths, new: pl.DataFrame) -> int:
     """Append-only: rows already written are never modified or dropped."""
     if new.is_empty():
         return 0
-    f = paths.marts / FILE
-    old = pl.read_parquet(f) if f.exists() else pl.DataFrame(schema=SCHEMA)
-    pl.concat([old.cast(SCHEMA), new.select(list(SCHEMA)).cast(SCHEMA)]).write_parquet(f)
-    return new.height
+    return io.append(paths.marts / FILE, new, SCHEMA)
 
 
 def load(paths: Paths) -> pl.DataFrame:

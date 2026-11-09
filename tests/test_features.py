@@ -113,8 +113,8 @@ def test_write_is_upsert_and_skips_unchanged_values(tmp_path):
     paths = Paths(tmp_path)
     a = team_rows([("G2", "GB", "form.streak", 1.0)], build=BUILD)
     assert store.write_features(paths, a) == 1
-    # identical rebuild at the same stamp replaces, no growth
-    assert store.write_features(paths, a) == 1
+    # identical rebuild at the same stamp: nothing changed, so nothing is written (ADR 0025)
+    assert store.write_features(paths, a) == 0
     assert store.read_features(paths).height == 1
     # later build with the same value: skipped
     same = team_rows([("G2", "GB", "form.streak", 1.0)], build=BUILD + timedelta(hours=6))

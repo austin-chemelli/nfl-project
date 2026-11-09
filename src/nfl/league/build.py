@@ -23,6 +23,7 @@ import polars as pl
 from polars.exceptions import PanicException
 from pydantic import BaseModel, ConfigDict
 
+from nfl import io
 from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
 from nfl.league import similar
@@ -386,10 +387,7 @@ def append_snapshot(path: Path, rows: pl.DataFrame) -> bool:
         if old.join(key, on=["as_of", "kind"], how="semi").height:
             return False
     out = rows if old is None else pl.concat([old, rows.select(old.columns)])
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(f".{os.getpid()}.tmp")
-    out.write_parquet(tmp)
-    os.replace(tmp, path)
+    io.write_parquet(out, path)
     return True
 
 

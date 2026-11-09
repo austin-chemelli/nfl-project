@@ -235,6 +235,9 @@ def test_traits_need_every_season_on_one_side():
     assert ctx.traits([{**row, "prior": 0.7}]) == []  # not far enough from the middle
     low = {**row, "metric": "low", "prior": 0.05, "prior_min": 0.01, "prior_max": 0.2}
     assert [t["metric"] for t in ctx.traits([row, low])] == ["low", "m"]
+    mirror = {**row, "metric": "a", "prior": 0.1, "prior_min": 0.05, "prior_max": 0.3}
+    for rows in ([row, mirror], [mirror, row]):  # equally far from the middle: by metric, any order
+        assert [t["metric"] for t in ctx.traits(rows)] == ["a", "m"]
 
 
 def test_lean_follows_the_study_and_drops_weak_cells():
