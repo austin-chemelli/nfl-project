@@ -685,6 +685,14 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** Context injected into every session is a cost on every session; inject what changes the first action, and point at the rest.
 
+## 2026-11-09: A value in points for every starter (M24.2)
+
+**What changed.** `src/nfl/players/value.py` and `nfl players value`: every player's worth in points of spread at the start of each regular-season week since 2013, from earlier games only, in `marts/derived/player_value.parquet`.
+
+**Findings.** The tops read like the league: Brees and Julio Jones in 2016, Mahomes and Michael Thomas in 2019, Purdy, St. Brown, Trent Williams and Hutchinson in 2025; a top non-quarterback is 0.6 to 1.4 points and a median starting quarterback 2.0, inside the published ranges. Two bugs surfaced only by looking at names: the line's top five were rookies (a cap share and a draft score on different scales), and a one-season build disagreed with the full build (the shrinkage target averaged whatever seasons were loaded).
+
+**Lesson.** A model that's all priors and percentiles passes its unit tests either way; reading the top five per position is the test that found both bugs.
+
 ## 2026-11-10: The project hub replaces the board (hub track)
 
 **Why.** `.notes/board.md` was one file every thread edited and nothing displayed; `state.md` only shows what reached `main`. Austin wanted a side-screen view of what needs him, which thread is on what, PR state, and plans with diagrams, current the moment an agent saves a file (`~/dev/.notes/project-hub-plan.md`, D34).
