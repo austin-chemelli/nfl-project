@@ -12,19 +12,30 @@ Every week, predictions for every game are locked before kickoff and committed t
 
 ### Live record
 
-No graded live locks yet. Lock files are committed under `public/predictions/` before kickoff.
+| Model | Games | Log loss | Brier |
+|---|---|---|---|
+| Market (vig-free moneyline) | 14 | 0.4132 | 0.1196 |
+| The Traditionalist | 14 | 0.4302 | 0.1272 |
+| The Analyst | 14 | 0.4591 | 0.1400 |
+| The Sharp | 14 | 0.5453 | 0.1797 |
+| The Student | 14 | 0.4515 | 0.1366 |
+| Elo | 14 | 0.4755 | 0.1497 |
+| Home team 57% | 14 | 0.7433 | 0.2749 |
+
+Lower is better. A season of live games cannot rank models; see the backtest for intervals.
 
 ### Backtest, 2005–2025 (walk-forward: each season scored by models trained only on earlier seasons)
 
 | Model | Games | Log loss | Δ vs market (90% CI) |
 |---|---|---|---|
-| Market (vig-free moneyline) | 5,804 | 0.6095 |  |
-| The Traditionalist | 5,804 | 0.6294 | +0.0199 (+0.0151 to +0.0247) |
-| The Analyst | 5,804 | 0.6250 | +0.0155 (+0.0115 to +0.0193) |
-| The Sharp | 5,804 | 0.6288 | +0.0193 (+0.0145 to +0.0246) |
-| The Student | 5,804 | 0.6247 | +0.0152 (+0.0110 to +0.0190) |
-| Elo | 5,804 | 0.6295 | +0.0200 (+0.0154 to +0.0241) |
-| Home team 57% | 5,804 | 0.6865 | +0.0771 (+0.0699 to +0.0831) |
+| Market (vig-free moneyline) | 5,818 | 0.6090 |  |
+| The Traditionalist | 5,818 | 0.6289 | +0.0199 (+0.0146 to +0.0249) |
+| The Analyst | 5,818 | 0.6246 | +0.0156 (+0.0119 to +0.0196) |
+| The Sharp | 5,818 | 0.6286 | +0.0196 (+0.0147 to +0.0244) |
+| The Student | 5,818 | 0.6243 | +0.0153 (+0.0113 to +0.0191) |
+| The Student v2 | 5,818 | 0.6240 | +0.0150 (+0.0112 to +0.0187) |
+| Elo | 5,818 | 0.6291 | +0.0201 (+0.0153 to +0.0240) |
+| Home team 57% | 5,818 | 0.6867 | +0.0777 (+0.0712 to +0.0840) |
 
 <!-- scorecard:end -->
 
