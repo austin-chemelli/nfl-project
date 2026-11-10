@@ -119,12 +119,22 @@ python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI 
 
 ## Working conventions
 
-- **Every session starts informed.** The SessionStart hook (`scripts/hooks/session-start.sh`, registered in the repo's `.claude/settings.json` and in `~/dev/.claude/settings.json` since sessions start in the `~/dev` workspace) injects `docs/state.md`, `.notes/board.md`, the last two journal entries and `scripts/state_check.py`'s findings. Run `git fetch` before starting work. Keep those files current as you work, at the boundaries in [docs/state-maintenance.md](docs/state-maintenance.md) (track start, checkpoint before a PR or when a decision or finding changes direction, close after the merge). Austin never maintains them by hand.
+- **Every session starts informed.** The SessionStart hook (`scripts/hooks/session-start.sh`, registered in the repo's `.claude/settings.json` and in `~/dev/.claude/settings.json` since sessions start in the `~/dev` workspace) injects a digest: the bottom line and open decisions of `docs/state.md`, the `.notes/board.md` table, the latest journal headings and `scripts/state_check.py`'s findings. Read `docs/state.md` in full before changing code or docs, and run `git fetch` before starting work. Keep those files current as you work, at the boundaries in [docs/state-maintenance.md](docs/state-maintenance.md) (track start, checkpoint before a PR or when a decision or finding changes direction, close after the merge). Austin never maintains them by hand.
 - Work from `docs/tasks.md`; tasks are sized for the `implementer` agent. Run siblings marked **P** in parallel, then review the diffs.
 - Tests for anything touching time boundaries (as-of joins, walk-forward splits, ledger immutability). Leakage guards run in CI.
 - Prefer small, verifiable steps that move toward the live pipeline. In-season work is only what needs live games; everything else can wait for the offseason.
 - Licensing: code MIT; published derived data CC-BY-SA 4.0 with nflverse + FTN credit; "fan-made, not affiliated with the NFL"; no logos (ADR 0011).
 - Writing about how AI coding tools were used is part of the project. Note notable wins or failures and how output was verified when they come up.
+
+## Writing for Austin
+
+Austin reads results and decides, and rarely reads code. Keep everything he reads short, and move detail into a visual or a linked file instead of the chat. The global rules (`~/.claude/CLAUDE.md`, How to respond) apply; here is how they work in this repo:
+
+- **Chat replies are short by default.** Give the answer or the result first. Expand only when Austin needs it to decide or to verify, and then point to the file or visual instead of pasting it in.
+- **End every turn that did work with the same three lists:** **Done** (one line per change), **Verified** (commands and results), **Needs you** (numbered questions, or "nothing").
+- **Decisions get a brief:** `.notes/decisions/<slug>.md`, or a rendered HTML page when a chart or table carries it better (`html_render` in T3 Code). Above a `---` line, keep it to one screen: the call to make (1–3 lines), an options table with a recommendation, and one Mermaid diagram. Details go below the line and can be skipped. Add the decision to Open decisions in `docs/state.md` and link the brief.
+- **"How does X work" answers** are one diagram plus a short walkthrough in `.notes/`, not a tour of the code.
+- `docs/state.md`, `journal.md` and `tasks.md` are agent memory: dense and complete. Don't send Austin to them; summarize what he needs.
 
 ## Parallel work (several chats on one repo)
 
