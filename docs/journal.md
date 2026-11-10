@@ -679,7 +679,7 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 ## 2026-11-09: A shorter session start and rules for writing to Austin
 
-**Why.** Austin rarely reads code; he reads what the agents write and decides. Long replies and dense notes made that hard, and the SessionStart hook put about 37 KB (the whole hub, the board's prose, 150 journal lines) into every session, including ones about other projects.
+**Why.** Austin rarely reads code and works from what the agents write. Long replies and dense notes made that hard, and the SessionStart hook put about 37 KB (the whole hub, the board's prose, 150 journal lines) into every session, including ones about other projects.
 
 **What changed.** The hook now injects a digest: the hub's bottom line, the open rows of Open decisions as "Waiting on Austin", the board table, the latest journal headings and `state_check`'s output, about 5.5 KB. Chats read `docs/state.md` in full before changing anything. CLAUDE.md gained "Writing for Austin": short replies by default with detail pointed to rather than pasted, the same Done / Verified / Needs you ending, and one-screen decision briefs (options table, one diagram, details below a line) in `.notes/decisions/` or as a rendered page. The global `~/.claude/CLAUDE.md` got the same concision rule for every project.
 

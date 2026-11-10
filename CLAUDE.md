@@ -128,13 +128,13 @@ python3 scripts/firebase_deploy.py --dry-run   # what a deploy would upload (CI 
 
 ## Writing for Austin
 
-Austin reads results and decides, and rarely reads code. Keep everything he reads short, and move detail into a visual or a linked file instead of the chat. The global rules (`~/.claude/CLAUDE.md`, How to respond) apply; here is how they work in this repo:
+Austin reads results and decides, and rarely reads code. Keep everything written for Austin short, and move detail into a visual or a linked file instead of the chat. The global rules (`~/.claude/CLAUDE.md`, How to respond) apply; here is how they work in this repo:
 
 - **Chat replies are short by default.** Give the answer or the result first. Expand only when Austin needs it to decide or to verify, and then point to the file or visual instead of pasting it in.
 - **End every turn that did work with the same three lists:** **Done** (one line per change), **Verified** (commands and results), **Needs you** (numbered questions, or "nothing").
 - **Decisions get a brief:** `.notes/decisions/<slug>.md`, or a rendered HTML page when a chart or table carries it better (`html_render` in T3 Code). Above a `---` line, keep it to one screen: the call to make (1–3 lines), an options table with a recommendation, and one Mermaid diagram. Details go below the line and can be skipped. Add the decision to Open decisions in `docs/state.md` and link the brief.
 - **"How does X work" answers** are one diagram plus a short walkthrough in `.notes/`, not a tour of the code.
-- `docs/state.md`, `journal.md` and `tasks.md` are agent memory: dense and complete. Don't send Austin to them; summarize what he needs.
+- `docs/state.md`, `journal.md` and `tasks.md` are agent memory: dense and complete. Don't send Austin to them; summarize what Austin needs.
 
 ## Parallel work (several chats on one repo)
 
