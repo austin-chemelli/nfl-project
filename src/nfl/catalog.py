@@ -9,7 +9,8 @@ written, so the catalog is never a second source of truth. Build it again to see
 
 A table is a set of parquet files: curated tables are hive-partitioned by season; a mart is either one
 file (`marts/<name>.parquet`) or a folder of parts (`marts/<name>/**/*.parquet`), and the view reads
-both, so a mart can move to one file per append without changing a reader. A table with no files yet
+both, so a mart can move to one file per append without changing a reader. A derived table is a SQL
+model's output (`marts/derived/<name>.parquet`, built by `nfl models build`). A table with no files yet
 gets no view (`missing()` lists them).
 
 Point in time (ADR 0005): `features_asof(ts)` is `store.as_of` in SQL, the latest row per
@@ -31,7 +32,7 @@ from nfl.config import Paths
 @dataclass(frozen=True)
 class Table:
     name: str
-    layer: str  # curated | features | mart
+    layer: str  # curated | features | derived | mart
     about: str
 
 
@@ -73,6 +74,8 @@ TABLES: tuple[Table, ...] = (
     Table("scheme_qb_season", "mart", "scheme rates by quarterback-season"),
     Table("audit", "mart", "null rates per table and column"),
     Table("llm_calls", "mart", "one row per local-model request"),
+    Table("candidates", "mart", "the candidates ledger: every second-level candidate's gates and verdict (append-only)"),
+    Table("team_week", "derived", "SQL model: plays aggregated per season, week, game, team and side (off/def)"),
 )  # fmt: skip
 
 BY_NAME = {t.name: t for t in TABLES}
@@ -105,6 +108,9 @@ def files(paths: Paths, t: Table) -> list[Path]:
         return sorted(d.glob("season=*/*.parquet")) or sorted(d.glob("*.parquet"))
     if t.layer == "features":
         return sorted((paths.marts / "features").glob("season=*/*.parquet"))
+    if t.layer == "derived":
+        f = paths.marts / "derived" / f"{t.name}.parquet"
+        return [f] if f.exists() else []
     single = paths.marts / f"{t.name}.parquet"
     parts = (
         sorted((paths.marts / t.name).rglob("*.parquet")) if (paths.marts / t.name).is_dir() else []

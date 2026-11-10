@@ -68,6 +68,9 @@ uv run nfl weekly refresh    # Tuesday job: current-season ingest, odds, curate,
 uv run nfl readme            # rewrite the README scorecard section
 uv run nfl site              # UI JSON contract -> marts/site/ (auto after weekly refresh and real locks)
 uv run nfl sql "select ..."   # SQL over every table (ADR 0025): views over the parquet, `--tables` lists them; point in time: features_asof(ts), game_vectors(ts)
+uv run nfl models build [name]   # SQL models (src/nfl/sql/models/*.sql) -> marts/derived/<name>.parquet; unchanged output not rewritten (ADR 0026, M23.3)
+uv run nfl candidates run [--only ID] [--season-from 2006]   # screen the candidates registry through the gates -> marts/candidates.parquet (append-only; unchanged rerun appends nothing)
+uv run nfl candidates list [--interesting]   # latest ledger row per candidate
 uv run nfl league [--snapshot refresh|lock]   # standings, simulated playoff odds, leverage -> site/league.json (auto at the end of every `nfl site`)
 uv run nfl hypotheses        # per-feature coef + 90% CI + verdict -> site/hypotheses.json
 uv run nfl diy-matrix        # group composites per game for the build-your-own page
