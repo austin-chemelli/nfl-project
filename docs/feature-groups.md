@@ -1,6 +1,6 @@
 # Feature groups
 
-Status: current, verified 2026-11-04 (registry v6, ADR 0018).
+Status: current, verified 2026-11-09 (registry v6, ADR 0018; the `matchups` group note from ADR 0028).
 
 The two-level feature design is ADR 0012. This file is the group registry in prose; the code registry is `src/nfl/features/groups.py` (M2.8). Chosen 2026-10-27 (option B of `.notes/feature-group-options.md`, with the scheme group split three ways). Signs are the declared default direction *for the team* (positive = good for the home team when home − away is positive); the fitted inner weights may disagree, and the Hypotheses page reports when they do. "Exists" means built as of 2026-10-27; everything else has a task in `docs/tasks.md`. Members marked *adv* are hidden behind "more" in the UI but always part of the composite once built.
 

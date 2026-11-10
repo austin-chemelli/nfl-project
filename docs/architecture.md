@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-08 (the catalog row, ADR 0025; §3.8 the candidates ledger, ADR 0026, planned); the live state is [state.md](state.md).
+Status: current, verified 2026-11-09 (§3.8 the candidates ledger live, ADR 0026; §3.9 matchups and paths to an upset, ADR 0028, planned); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
