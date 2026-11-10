@@ -252,7 +252,27 @@ flowchart LR
     G -- no --> X
 ```
 
-The first three gates are cheap and high-powered (team-seasons); the last is ADR 0018's bar for a public line. The Student's calibration (a home shift inherited from pooling 2002 onward) is fixed before any candidate is judged against it, as a `platt_recent` calibration on a shadow `student_v2`.
+The first three gates are cheap and high-powered (team-seasons); the last is ADR 0018's bar for a public line. The Student's calibration (a home shift inherited from pooling 2002 onward) was fixed first, as the approach `student_v2` (a 10-season home-field offset beside the Student, live 2026-11-09).
+
+### 3.9 Matchups, paths to an upset, market leans (ADR 0028, M25)
+
+Situation splits are context first. `splits.py` registers each situation once (who chooses it, source, first season); the SQL model `derived/team_split_week` holds every unit's plays, EPA and success with and without each flag per game, as of nothing (consumers read `week < w`). `matchups.py` turns that into per-game edges: the opponent's habit minus the habit already faced, times this unit's gap shrunk toward the league-wide effect (k fitted on earlier seasons), times base plays, in points per game, each with a reliability badge from the candidates ledger. `paths.py` reads `derived/upset_conditions` (dogs' win rates by size and in-game condition since 2006) and says how the underdog wins as conditions and plausibility, never as a probability: pre-game team rates predict a game's turnover margin with r 0.00. `leans.py` sums the ledger's `use` candidates' slopes against the market times this game's gaps into one number in points, graded live. Nothing here is lock code; the headline chance never moves. Edges reach a line only through a separate `matchup` approach after the ledger's gates (phase 3, offseason).
+
+```mermaid
+%%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%
+flowchart LR
+    PL[(plays)] --> SW[derived/team_split_week]
+    SP[splits.py registry] --> SW
+    SW --> ME[matchups.py<br/>shrunk gaps, edges in points]
+    LG[candidates ledger] --> ME
+    PL --> UC[derived/upset_conditions]
+    UC --> PA[paths.py<br/>conditions and plausibility]
+    LG --> LE[leans.py<br/>what the market misses]
+    ME --> GJ[game JSON: matchups<br/>team JSON: splits<br/>retro: splits, paths]
+    PA --> GJ
+    LE --> GJ
+    ME -. phase 3, gated .-> MA[matchup approach<br/>beside the Student]
+```
 
 ## 4. Key flows
 

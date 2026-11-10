@@ -123,6 +123,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M22 data catalog and safe writes | phases 0-2 live 2026-11-08 (#32, ADR 0025): fixtures collapsed in diffs, `nfl sql` over every table, safe writes and a job lock; M22.3 SQL models moved to M23.3 |
 | M23 second-level features | planned 2026-11-08 (ADR 0026): calibration study first (the Student carries a home shift from pooling 2002+: favorites at 0.55-0.75 win 3-5 points less than it says), a candidates ledger that keeps every tested feature on the History page, EPA without turnovers / takeaways / fumble luck into the existing groups via a shadow `student_v2`, `DecompBar` and `ReliabilityBadge`, the context splits; player-level data is another chat's flight |
 | M24 Player value and scored impact claims | M24.0 sources and M24.1 status-to-play rates built 2026-11-08 (ADR 0027), PR pending; M24.2 next; screening waits on M23 phase 0 |
+| M25 Matchups and paths to an upset | planned 2026-11-09 (ADR 0028): situation splits as a SQL model and a matchup engine (edges in points, shrunk toward the league effect, badged), paths to an upset as conditions and plausibility (pre-game rates predict a game's turnover margin with r 0.00, so never a probability), market leans from the ledger, a Matchups tab, `UpsetPaths` and `MatchupGrid`; phases 0-2 are site work in season, phase 3 (a `matchup` approach beside the Student) is offseason and gated; nothing built |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -149,6 +150,10 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D23 | When a recalibrated or extended Student beats the public one in shadow: swap mid-season (a second `model_version` in the public record from that week) or at the offseason refit? | **decided 2026-11-08: neither for now. The new line is its own approach (`student_v2`), shown beside the Student; the Student stays the headline** | Austin | 2026-11-08 |
 | D24 | New features join the existing groups, or a new "luck" group? | **decided 2026-11-08: existing groups** | Austin | 2026-11-08 |
 | D25 | Keep failed candidates visible (ledger + History page "Tested, not used") and build `DecompBar` + `ReliabilityBadge`? | **decided 2026-11-08: yes to both; player-level data stays in its own chat** | Austin | 2026-11-08 |
+| D26 | Paths to an upset: the lead of M25, or one part of it beside the split library and the matchup engine? | **decided 2026-11-09: one part of it** | Austin | 2026-11-09 |
+| D27 | Coverage and personnel splits in season: last season's numbers labeled "2025", or out until the 2026 participation file lands? | **decided 2026-11-09: out until February** | Austin | 2026-11-09 |
+| D28 | Matchup edges into the Student, or only a separate `matchup` approach beside it? | **decided 2026-11-09: separate approach only; the Student never carries them** | Austin | 2026-11-09 |
+| D29 | Paths as conditions and plausibility (never a probability; the headline chance doesn't move) and a per-game market lean from the ledger's `use` candidates, shown as context with a live record? | **decided by default 2026-11-09 (ADR 0028), Austin to object** | Austin | 2026-11-09 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
@@ -189,17 +194,17 @@ Current docs, what each is for, and when it was last verified against the code o
 
 | Doc | Read it when | Verified |
 |---|---|---|
-| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-08 |
-| [adr/](adr/) | before re-opening a decision; ADR 0026 is the newest (0025 catalog and safe writes, 0026 second-level features) | 2026-11-08 |
-| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-08 |
-| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-08 |
+| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-09 |
+| [adr/](adr/) | before re-opening a decision; ADR 0028 is the newest (0026 second-level features, 0027 player value, 0028 matchups and paths to an upset) | 2026-11-09 |
+| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-09 |
+| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-09 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-08 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-08 |
-| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-08 |
+| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-09 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-04 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |
-| [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona (M23.5 adds members; registry v7 at M23.7) | 2026-11-04 |
+| [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona (M23.5 adds members; registry v7 at M23.7 and M25.10) | 2026-11-09 |
 | [PROJECT_BRIEF.md](PROJECT_BRIEF.md) | the original scope; historical, ADRs win on conflict | 2026-10-27 |
 | `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `project-review-2026-11.md` the 2026-11-05 review and next directions (D9–D13); `plans/` one research plan per enhancement (2026-11-05: interaction features, learned Student, boldness view, league page, team scatter, WP chart and motion), each ending in decisions for Austin; `plans/pop-chat-prompt.md` starts the M15 chat; `archive/` notes that were true once | 2026-11-04 |
 
