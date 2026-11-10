@@ -83,7 +83,7 @@ About 33 Odds API credits a week (daily snapshots from M20, ADR 0024). A failed 
 
 ## Workstreams
 
-Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted, shared by every worktree). This table is the durable version: one row per track, updated when a track starts, opens a PR and finishes.
+Live view, with the areas each chat has claimed: `.notes/hub/tracks/` (uncommitted, shared by every worktree), shown by the project hub at <http://localhost:8765/nfl-project/>. This table is the durable version: one row per track, updated when a track starts, opens a PR and finishes.
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
@@ -95,6 +95,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | data | `data-catalog`, `data-writes`, `calibration`, `candidates`, now `matchups` | `~/dev/nfl-project-data` | M22 (ADR 0025) done. M23 (ADR 0026) phase 0: the Student v2 (calibration), the SQL models and the candidates ledger. Next: M25 Matchups and paths to an upset (splits and matchups as context, upset paths, justified market disagreements; edges only through a separate approach), to be planned on Fable from `.notes/matchup-insights-direction.md` | M23.0-M23.3 live 2026-11-09 (#35, #37); `student_v2` fits uploaded, backfilled and graded under the job lock, `nfl-site` rerun, README updated (2878876); its live record starts Week 10 | #35, #37 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
 | project-state | `project-state` | removed | this hub, the board, the maintenance checklist, hooks and CI guard | merged 2026-11-04, hooks registered in `.claude/settings.json` | #7 |
+| hub | `hub-setup` | `~/dev/nfl-project-hub` | the project hub (`~/dev/hub`, its own repo): `hub.toml`, `.notes/hub/` replaces `.notes/board.md` as the live layer, the session hook injects the thread's own track file and the hub rules, `state_check` reads track files | branch ready 2026-11-10, PR waiting on Austin's go to push | |
 | harness | `harness-concise` | removed | shorter session-start digest (~37 KB to ~5 KB) and Writing for Austin rules in CLAUDE.md | merged 2026-11-09, worktree and branch removed | #38 |
 | hooks | `hooks-dev-folder`, `hooks-log` | removed | the state hooks at the `~/dev` level, executable bit, run log | merged 2026-11-04; hooks verified firing on resume | #8, #9 |
 | narrative-sources | `narrative-sources` | removed | fix the 2026-11-04 pass failures: feeds and Tavily before search, resumable passes, failure detail, reset instead of pull | merged 2026-11-05, image `c12c6a5`; worktree and branch removed; first desktop pass on it finished 2026-11-05 06:32Z with 15 of 15 games | #15 |
@@ -134,7 +135,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D1 | Keep the production number audit (`.notes/audit_site.py`, uncommitted) as a CI or post-publish check? | (a) a step after `nfl publish` that fails the job; (b) a CI check against the public bucket; (c) leave it manual | Austin's call; a chat can build (a) in a day | 2026-11-03 |
 | D2 | Tendencies on the league band too (`RangeRow` over `tendencies.parquet`), the follow-up ADR 0017 left out? | (a) next UI round; (b) not worth it | the next UI look | 2026-11-03 |
 | D3 | How should narrative research get smarter? Plans in `docs/tasks.md` (M6.6, M6.7) | (a) M6.6: one model-proposed follow-up search per game in the local pipeline, a few hours, free; (b) M6.7: hosted free-roaming agent on API credits, better writing and no desktop dependence, but reverses the no-paid-API rule; (c) leave it as it is | Austin; both parked, neither scheduled | 2026-11-05 |
-| D3 | A better knowledge-base tool for cross-chat tracking than `.notes/board.md`? | later; revisit when the board stops being enough | nothing yet | 2026-11-04 |
+| D34 | A better knowledge-base tool for cross-chat tracking than `.notes/board.md`? (was listed as a second D3) | **decided 2026-11-10: the project hub (`~/dev/hub`, `.notes/hub/`), `.notes/project-hub-plan.md` in `~/dev`** | Austin | 2026-11-04 |
 | D10 | Betting integration (§5): which venue is lawful where Austin lives; then read-only prices only, or execution with a fixed small stake? | legal check first; read-only / execute | Austin | 2026-11-05 |
 | D11 | GPU for the desktop (§6): a 24 GB card to run 27–32B models, or stay on the 1070 with prompts and evals only? | buy / stay | Austin's money | 2026-11-05 |
 | D12 | Learned Student (§3.1): a fifth line in shadow (recommended) or a replacement for the Student? | shadow / replace | Austin | 2026-11-05 |
@@ -174,7 +175,7 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 - Narrative models: `qwen3.5:9b` plus `qwen3:14b` for the matchup job, thinking off; gemma4 and gpt-oss dropped (journal 2026-11-03).
 - Site layout: tabs plus a summary strip, thin team-color accent, matchup cards, retro as the default tab (ADR 0017, 2026-11-03).
 - Branch and worktree cleanup after a merge happens without asking (CLAUDE.md, 2026-11-04).
-- The live coordination board stays uncommitted in `.notes/` (journal 2026-11-04).
+- The live coordination layer stays uncommitted in `.notes/` (journal 2026-11-04); since 2026-11-10 it is `.notes/hub/` (one track file per thread), shown by the project hub.
 - Docs maintenance is automatic at boundaries, not a weekly audit (journal 2026-11-04).
 
 ## Known issues and risks
@@ -207,20 +208,20 @@ Current docs, what each is for, and when it was last verified against the code o
 | [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-09 |
 | [adr/](adr/) | before re-opening a decision; ADR 0028 is the newest (0026 second-level features, 0027 player value, 0028 matchups and paths to an upset) | 2026-11-09 |
 | [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-09 |
-| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-09 |
+| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-10 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-08 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-08 |
 | [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-09 |
-| [state-maintenance.md](state-maintenance.md) | updating this file, the journal or the board (every chat, at track boundaries) | 2026-11-09 |
+| [state-maintenance.md](state-maintenance.md) | updating this file, the journal or your hub track file (every chat, at track boundaries) | 2026-11-10 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |
 | [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona (M23.5 adds members; registry v7 at M23.7 and M25.10) | 2026-11-09 |
 | [PROJECT_BRIEF.md](PROJECT_BRIEF.md) | the original scope; historical, ADRs win on conflict | 2026-10-27 |
-| `.notes/` (uncommitted) | `board.md` live tracks; `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `project-review-2026-11.md` the 2026-11-05 review and next directions (D9–D13); `plans/` one research plan per enhancement (2026-11-05: interaction features, learned Student, boldness view, league page, team scatter, WP chart and motion), each ending in decisions for Austin; `plans/pop-chat-prompt.md` starts the M15 chat; `archive/` notes that were true once | 2026-11-04 |
+| `.notes/` (uncommitted) | `hub/` live tracks, plans and briefs (the project hub reads it; `board.md` is retired); `audit_site.py` the production number audit; `backtest-2025.md`, `feature-dictionary.md`, `data-walkthrough.md`, `local-llm-limits.md` reference; `project-state-plan.md` this system's plan; `project-review-2026-11.md` the 2026-11-05 review and next directions (D9–D13); `plans/` one research plan per enhancement (2026-11-05: interaction features, learned Student, boldness view, league page, team scatter, WP chart and motion), each ending in decisions for Austin; `plans/pop-chat-prompt.md` starts the M15 chat; `archive/` notes that were true once | 2026-11-04 |
 
 ## Maintenance
 
 - Chats update this file at track boundaries and whenever a decision or finding changes direction; the checklist is [state-maintenance.md](state-maintenance.md). Austin never has to edit it by hand.
-- Each hook run appends a line to `~/.claude/nfl-hooks.log` (when it ran, from which cwd). Check it when a session seems to have started without the hub.
-- `scripts/state_check.py` runs at session start (`scripts/hooks/session-start.sh`, which also injects a digest: this file's bottom line and open decisions, the board table, the latest journal headings), before `gh pr create` / `git push` (`scripts/hooks/pr-guard.sh`) and in CI (`docs` job). The hooks are registered in the repo's `.claude/settings.json` and in `~/dev/.claude/settings.json` (sessions start in the `~/dev` workspace; `scripts/hooks/dev-folder-settings.json`): links, the schedule table, workstream rows vs worktrees and PRs, docs-map dates, the bottom line's age.
+- Each hook run appends a line to `~/.claude/nfl-hooks.log` (when it ran, from which cwd). Check it when a session seems to have started without the digest.
+- `scripts/state_check.py` runs at session start (`scripts/hooks/session-start.sh`, which also injects a digest: this file's bottom line and open decisions, the hub tracks and the session's own track file, the latest journal headings), before `gh pr create` / `git push` (`scripts/hooks/pr-guard.sh`) and in CI (`docs` job). The hooks are registered in the repo's `.claude/settings.json` and in `~/dev/.claude/settings.json` (sessions start in the `~/dev` workspace; `scripts/hooks/dev-folder-settings.json`): links, the schedule table, workstream rows vs worktrees and PRs, docs-map dates, the bottom line's age.
 - A code PR that changes neither this file nor the journal is blocked by the hook and by CI (label `docs-not-needed` to override).

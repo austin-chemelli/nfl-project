@@ -1,0 +1,18 @@
+# The project hub (~/dev/hub) reads this file. Live data: .notes/hub/ (gitignored, shared by every
+# worktree through the .notes symlink). Run it: T3 project script "Hub", or
+# `cd ~/dev/hub && uv run hub serve`, then http://localhost:8765/nfl-project/
+name = "nfl-project"
+title = "NFL Project"
+github = "austin-chemelli/nfl-project"
+hub_dir = ".notes/hub"
+
+[docs]
+state = "docs/state.md"
+tasks = "docs/tasks.md"
+adr = "docs/adr"
+architecture = "docs/architecture.md"
+journal = "docs/journal.md"
+
+[board]
+stale_hours = 24     # a running track whose file is older than this is flagged
+milestone_from = 14  # the milestone strip starts here

@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / "docs" / "state.md"
 JOBS_TF = ROOT / "infra" / "jobs.tf"
 NARRATIVE_PY = ROOT / "src" / "nfl" / "llm" / "narrative.py"
-BOARD = ROOT / ".notes" / "board.md"
+TRACKS = ROOT / ".notes" / "hub" / "tracks"  # the live layer (~/dev/hub); replaced .notes/board.md
 WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 BOTTOM_LINE_MAX_AGE = 7
 VERIFIED_MAX_AGE = 30
@@ -164,12 +164,16 @@ def workstream_rows(text: str) -> list[dict[str, str]]:
 
 
 def board_branches() -> set[str] | None:
-    if not BOARD.exists():
+    """Branches named by the hub's track files (`branch:` in each file's frontmatter)."""
+    if not TRACKS.is_dir():
         return None
     out: set[str] = set()
-    for row in table_rows(BOARD.read_text()):
-        if len(row) >= 3:
-            out.update(codes(row[2]))
+    for f in TRACKS.glob("*.md"):
+        m = re.search(
+            r"^branch:\s*[\"'`]?([^\s\"'`]+)", f.read_text(errors="replace"), re.MULTILINE
+        )
+        if m:
+            out.add(m.group(1))
     return out
 
 
@@ -219,13 +223,15 @@ def check_workstreams(text: str) -> list[Finding]:
         found.append(
             (
                 "WARN",
-                ".notes/board.md is missing (one row per active track; see docs/state-maintenance.md)",
+                ".notes/hub/tracks/ is missing (one file per active track; see docs/state-maintenance.md)",
             )
         )
     else:
         for branch, path in worktree_branches().items():
             if branch not in board:
-                found.append(("WARN", f"worktree {path} ({branch}) has no row on .notes/board.md"))
+                found.append(
+                    ("WARN", f"worktree {path} ({branch}) has no track file in .notes/hub/tracks/")
+                )
     prs = open_prs()
     if prs is not None:
         for branch, number in prs.items():
