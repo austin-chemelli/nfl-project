@@ -89,8 +89,8 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 |---|---|---|---|---|---|
 | league | `league-teams`, `league-playoffs`, `league-context` | removed | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | merged 2026-11-06, all three phases live and checked in production. The first real snapshot lands with Saturday's lock: check the job log for `SNAPSHOT NOT SAVED` | #20, #23, #24 |
 | pop | `retro-wp`, `retro-drives`, `retro-story` | removed | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; pinned result | merged 2026-11-05, all three phases live; `nfl-retro` run by hand on d969ab3, retros on schema 6; worktree and branches removed. M15.10 route crossfades optional, not built | #19, #21, #22 |
-| ui | `ui-copy` | `~/dev/nfl-project-ui` | M21 copy pass: shorter ledes, explanations behind hover and fine print, parallel sentences as tables, team codes in sentences (ADR 0017 amendment); earlier: site walk fixes and the approach-free Preview (#30), Coaches and Build hidden (#25), M13 (#18), round 2 | PR open 2026-11-08 | #31 |
-| players | `player-ingest` | `~/dev/nfl-project-players` | M24.0 sources and M24.1 status-to-play rates (ADR 0027) | built, PR pending | none yet |
+| ui | `ui-copy` | `~/dev/nfl-project-ui` | M21 copy pass: shorter ledes, explanations behind hover and fine print, parallel sentences as tables, team codes in sentences (ADR 0017 amendment); earlier: site walk fixes and the approach-free Preview (#30), Coaches and Build hidden (#25), M13 (#18), round 2 | merged 2026-11-09 (#31); worktree kept for the next UI round | #31 |
+| players | `player-ingest`, `player-value` | `~/dev/nfl-project-players` | M24.0 sources and M24.1 status-to-play rates, M24.2 value model (ADR 0027) | M24.0/M24.1 merged 2026-11-09 (#33); M24.2 PR open; M24.4 waits on Austin's go (D33) | #33, #34 |
 | market | `market-swings` | removed | M20: line history, daily pass, previews, what-ifs, strong calls, weather, the total | merged 2026-11-08, worktree and branches removed. Check the first daily pass and the next lock (strong calls, `student_total` in the lock file). Follow-ups: prediction-market prices (waiting on Austin's legal check), strong calls checked against the books' range | #29 |
 | data | `data-catalog`, `data-writes`, `calibration`, `candidates`, now `matchups` | `~/dev/nfl-project-data` | M22 (ADR 0025) done. M23 (ADR 0026) phase 0: the Student v2 (calibration), the SQL models and the candidates ledger. Next: M25 Matchups and paths to an upset (splits and matchups as context, upset paths, justified market disagreements; edges only through a separate approach), to be planned on Fable from `.notes/matchup-insights-direction.md` | M23.0-M23.3 live 2026-11-09 (#35, #37); `student_v2` fits uploaded, backfilled and graded under the job lock, `nfl-site` rerun, README updated (2878876); its live record starts Week 10 | #35, #37 |
 | model-wave2 | `model-wave2`, `qb-charted-starter` | removed | `.notes/ui-round2.md` §6: line-move cap, scheme groups zeroed, pressure rate into Defense, special-teams group, ensemble demoted (the QB fix ships ahead on its own branch); one `model_version`, live before the first public lock | merged and cut over 2026-11-04; worktree kept until the first lock passes (rollback backup) | #12 |
@@ -120,10 +120,10 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | M18 Team page | done 2026-11-07 (#27, ADR 0022): `/team` in the nav, staff with sources, coach profiles, tendencies vs the caller's confirmed past |
 | M19 site name and custom domain | parked 2026-11-07: researched, waiting on Austin's calls (domain, display name, repo rename). Plan: `.notes/plans/rename-and-domain.md` |
 | M20 spreads and totals, market movement, swing factors, strong calls | live 2026-11-08 (#29, ADR 0024): movement, where the books disagree, previews, what-ifs, strong calls, spread beside the pick, weather, the total |
-| M21 copy pass | built 2026-11-08, PR open: web only; pipeline sentences (M21.8) wait on Austin |
+| M21 copy pass | live 2026-11-09 (#31): web only; pipeline sentences (M21.8) wait on Austin (D30) |
 | M22 data catalog and safe writes | phases 0-2 live 2026-11-08 (#32, ADR 0025): fixtures collapsed in diffs, `nfl sql` over every table, safe writes and a job lock; M22.3 SQL models moved to M23.3 |
 | M23 second-level features | planned 2026-11-08 (ADR 0026): calibration study first (the Student carries a home shift from pooling 2002+: favorites at 0.55-0.75 win 3-5 points less than it says), a candidates ledger that keeps every tested feature on the History page, EPA without turnovers / takeaways / fumble luck into the existing groups via a shadow `student_v2`, `DecompBar` and `ReliabilityBadge`, the context splits; player-level data is another chat's flight |
-| M24 Player value and scored impact claims | M24.0 sources and M24.1 status-to-play rates built 2026-11-08 (ADR 0027), PR pending; M24.2 next; screening waits on M23 phase 0 |
+| M24 Player value and scored impact claims | M24.0 sources and M24.1 status-to-play rates live 2026-11-09 (#33, ADR 0027); M24.2 value model in PR #34; M24.4 waits on D33; screening waits on M23 phase 0 |
 | M25 Matchups and paths to an upset | planned 2026-11-09 (ADR 0028): situation splits as a SQL model and a matchup engine (edges in points, shrunk toward the league effect, badged), paths to an upset as conditions and plausibility (pre-game rates predict a game's turnover margin with r 0.00, so never a probability), market leans from the ledger, a Matchups tab, `UpsetPaths` and `MatchupGrid`; phases 0-2 are site work in season, phase 3 (a `matchup` approach beside the Student) is offseason and gated; nothing built |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
@@ -155,6 +155,10 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 | D27 | Coverage and personnel splits in season: last season's numbers labeled "2025", or out until the 2026 participation file lands? | **decided 2026-11-09: out until February** | Austin | 2026-11-09 |
 | D28 | Matchup edges into the Student, or only a separate `matchup` approach beside it? | **decided 2026-11-09: separate approach only; the Student never carries them** | Austin | 2026-11-09 |
 | D29 | Paths as conditions and plausibility (never a probability; the headline chance doesn't move) and a per-game market lean from the ledger's `use` candidates, shown as context with a live record? | **decided by default 2026-11-09 (ADR 0028), Austin to object** | Austin | 2026-11-09 |
+| D30 | M21.8: shorter pipeline sentences (needs a measured `SCHEMA_VERSION` rebuild), and the phone injury-table overflow as its own small PR? | do both / sentences only / leave | Austin | 2026-11-08 |
+| D31 | A weekly league-wide note from the desktop model (firings, benchings, major injuries, headlines) on This Week, also feeding the staff table (M17.4; `.notes/project-review-2026-11.md`, `coaches-refinement.md` §7)? Austin: "id like to maybe look into that soon" | plan it / later | Austin | 2026-11-06 |
+| D32 | Desktop pass hardening: lock push retries, "wake the computer to run this task" (`WakeToRun`), a pre-flight memory and restarting-container warning in `scripts/desktop-narrative.sh` | build / drop each | Austin | 2026-11-07 |
+| D33 | Start M24.4 now (M24.3 waits on the M23 ledger)? | go / wait for #34 to merge | Austin | 2026-11-09 |
 
 **Recently closed** (kept two weeks; the ADR or journal entry holds the record):
 
@@ -185,7 +189,12 @@ Live view, with the areas each chat has claimed: `.notes/board.md` (uncommitted,
 - A correction to an earlier game doesn't mark later retros stale (accepted 2026-11-03; the daily job only rehashes each game's own inputs).
 - NO @ NYG Week 6: the books' spread and moneyline disagree on the favorite at a coin flip. Real market data, not a bug.
 - The GCP free trial ends about late January 2027: upgrade the billing account before then (`docs/hosting.md` §3.1).
-- M8 leftovers: no uptime check on `meta.json`, no data-freshness alert.
+- M8 leftovers: no uptime check on `meta.json`, no data-freshness alert; bucket object versioning is off (review §7).
+- The League team panel can be a game behind the standings: the shared team-numbers file takes records from the last feature build (about an hour to fix; not started, 2026-11-07).
+- Elo on JAX @ BAL reads 44.8 on the page and 39.8 in the lock (2026-11-05; unexplained).
+- Coach profiles go stale when a coach moves or a new one arrives; the research has to be rerun by hand (2026-11-07).
+- The game page's injury table overflows a 375 px phone by 51 px (2026-11-08; fix is part of D30).
+- Wednesday 2026-11-11 desktop pass tests whether Saturday's speed-up (about 15 min a game against 26.5) came from removing stale Docker containers rather than from feed pages.
 - README scorecard CIs change between `nfl readme` runs: on 2026-11-03 only the bootstrap CI digits moved (point estimates and counts identical), although `grade.py` seeds its RNG. Cause unverified; that run's README change was discarded.
 - gcsfuse logs ERROR `BufferedWriteHandler.OutOfOrderError` on curated parquet writes in cloud jobs (seen in dry run `nfl-lock-thu-5mqhw`, 2026-11-04). The job succeeded; the effect on the written files wasn't checked.
 
