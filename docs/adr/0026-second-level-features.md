@@ -36,5 +36,18 @@ Option 2, with these rules.
 - The matchup family (M1.13) is closed as model input; its context views move into M23.
 
 ## Measured
+Filled in as M23 lands: the calibration study (M23.0), the Student v2 (M23.1), the ledger's first run (M23.2), the Student v2 with the new members (M23.7).
+
+- **Calibration study (M23.0, `scripts/calibration_study.py`, 2026-11-08):** the Student's own walk-forward backfill logits, recalibrated on earlier seasons only, scored 2016–2025 (2,629 games):
+
+  | Variant | Log loss | Δ vs the Student [90% CI] | Spread bias |
+  |---|---|---|---|
+  | the Student | 0.6283 | — | +0.85 |
+  | offset, last 3 / 5 / 10 seasons | 0.6284 / 0.6274 / 0.6276 | +0.0001 / −0.0009 [−0.0019, +0.0001] / **−0.0007 [−0.0013, −0.0001]** | +0.09 / +0.19 / +0.45 |
+  | Platt, last 3 / 5 / 10 | 0.6291 / 0.6277 / 0.6277 | +0.0008 / −0.0006 / −0.0005 [−0.0011, −0.0000] | |
+  | Platt, half-life 3 / 6 seasons | 0.6277 / 0.6276 | −0.0006 / −0.0007 [−0.0015, −0.0000] | |
+  | the market | 0.6084 | | |
+
+  The home lean is real and fixable, but it's worth about 0.0007 log loss: under 4% of the gap to the market, not the "biggest lever" the screen suggested. Platt's slope stays near 1 and the spread slope stays 0.86–0.89, so the Student isn't over-confident in probability terms; the steep spread is the 13.5-point mapping (ADR 0024's spread check: 0.27 points of MAE). Chosen: the 10-season offset, the simplest variant whose interval excludes zero.
+- **The Student v2 (M23.1), in the fit itself:** `calibration: shift_10` re-fits only the public line's offset on the last ten training seasons (in sample, so a little weaker than the study's out-of-sample version). Backfill, paired against the Student: 2016–2025 −0.0004 [−0.0007, −0.0001], spread bias +0.85 → +0.59; 2021–2025 −0.0008 [−0.0010, −0.0005], bias +0.49 → +0.11; 2005–2015 −0.0000. Fitting and backfilling it with `--only student_v2` left all 46,672 existing prediction rows byte-identical and every existing config hash unchanged (a test pins them: a new schema field with a default would have changed all four and stopped every lock).
 - **The ledger's first run (M23.2, production copy, 2026-11-08; 18 candidates, 2006–2025, 4,316 games):** `use` (goes to the shadow approach): `net_def_half` (defense at half weight: second-half partial r +0.13, CI from +0.06; market residual +0.34 [+0.07, +0.67]), `net_epa_noto` (partial r +0.06, CI from 0.00: borderline), and the in-model `success_off` (market +0.58 [+0.28, +0.91]) and `net_epa`. `luck`: `fum_luck` (split-half −0.07), `one_score_luck` (0.06). `context`: `net_wepa` (worse than raw EPA), pass rate over expected (stable 0.63, nothing against the market total), plays per game, wind ≥10 and ≥15 mph (−0.88 and −0.73 points against the market total, CIs exclude 0, but observed wind isn't known at a lock: capped at `context` until forecasts exist). `none`: the QB-owned sack rate, defensive sack rate, neutral pace, plays allowed, wind ≥20, the luck-stripped turnover margin. The screen script in `.notes` had joined games on printed team codes and silently dropped every STL, SD and OAK game; the ledger maps both sides through `TEAM_ALIASES`, so its numbers supersede the Context's where they differ (success rate +0.58 here, +0.63 there). A negative slope against the Student never counts toward `use` for a spread candidate: it means the Student already over-weights it.
-Filled in as M23 lands: the calibration study table (M23.0), the ledger's first run (M23.2), the shadow Student's paired Δ (M23.7).

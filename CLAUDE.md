@@ -49,6 +49,7 @@ uv run nfl audit             # null-rate audit -> marts/audit.parquet
 uv run nfl tendencies        # team x situation x metric rates -> marts/tendencies.parquet
 uv run nfl features          # feature families -> marts/features/season=YYYY/<family>.parquet (upsert)
 uv run nfl fit               # λ selection + walk-forward fits -> marts/fits/<model_id>/<trained_through>.json
+uv run nfl fit --only student_v2 && uv run nfl predict --backfill --only student_v2   # one new approach; the others' frozen fits and rows stay
 uv run nfl predict           # reference models (market, Elo, naive) -> marts/predictions.parquet (append-only)
 uv run nfl predict --backfill  # approaches + global + ensemble at synthetic locks; replaces ALL backfill rows of those models, whatever --seasons says
 uv run nfl grade             # scorecard (+ECE), reliability, summary with CIs, divergence buckets, site JSON

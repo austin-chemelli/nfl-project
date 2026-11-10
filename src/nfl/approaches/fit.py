@@ -97,6 +97,20 @@ def fit_platt(logit: np.ndarray, y: np.ndarray) -> tuple[float, float]:
     return float(res.x[0]), float(res.x[1])
 
 
+SHIFT_SEASONS = {"shift_10": 10}  # calibration value -> training seasons the offset is fitted on
+
+
+def fit_shift(logit: np.ndarray, y: np.ndarray) -> float:
+    """The one offset c with p = σ(logit + c), maximum likelihood (ADR 0026, M23.1)."""
+
+    def f(t):
+        eta = logit + t[0]
+        return _nll(eta, y), np.array([(expit(eta) - y).sum()])
+
+    res = minimize(f, np.array([0.0]), jac=True, method="L-BFGS-B")
+    return float(res.x[0])
+
+
 def fit_ridge(
     z: np.ndarray, y: np.ndarray, w0: np.ndarray, lam: float, b0: float = 0.0
 ) -> tuple[float, np.ndarray]:
@@ -194,6 +208,7 @@ def fit_flavors(
     }
     if approach.grouped:
         return _fit_grouped(approach, train, feats, scaler, z, y, lam, meta)
+    seasons = train.get_column("season").to_numpy()
 
     persona = persona_model(approach, scaler)
     if approach.calibration == "platt":
@@ -212,11 +227,14 @@ def fit_flavors(
         scaler=scaler,
         meta=meta | {"flavor": "fitted", "lambda": lam},
     )
-    return FitResult(persona, fitted, _public_from(approach, fitted, None, z, y))
+    return FitResult(persona, fitted, _public_from(approach, fitted, None, z, y, seasons))
 
 
-def _public_from(approach: Approach, fitted: Model, light: Model | None, z, y) -> Model:
-    """The public line: `light` (calibrated) for personas, or the fitted model for public: fitted."""
+def _public_from(
+    approach: Approach, fitted: Model, light: Model | None, z, y, seasons: np.ndarray
+) -> Model:
+    """The public line: `light` (calibrated) for personas, or the fitted model for public: fitted.
+    `shift_10` re-fits only the offset on the last ten training seasons (`seasons` = each row's)."""
     src = fitted if (approach.public == "fitted" or light is None) else light
     pub = Model(
         model_id=approach.id,
@@ -228,10 +246,16 @@ def _public_from(approach: Approach, fitted: Model, light: Model | None, z, y) -
     )
     if src is light and approach.calibration == "platt":
         pub.calib_a, pub.calib_c = fit_platt(pub.raw_logit(z), y)
+    elif approach.calibration in SHIFT_SEASONS:
+        recent = seasons > seasons.max() - SHIFT_SEASONS[approach.calibration]
+        pub.calib_a = 1.0
+        pub.calib_c = fit_shift(pub.raw_logit(z)[recent], y[recent])
+        pub.meta |= {"calibration": approach.calibration, "calib_seasons": int(recent.sum())}
     return pub
 
 
 def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta) -> FitResult:
+    seasons = train.get_column("season").to_numpy()
     inner = inner_weights(approach, train, feats, z, y)
     gids = [g for g in approach.groups if inner.get(g)]
     W_persona = {g: approach.groups[g].w for g in gids}
@@ -280,7 +304,7 @@ def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta) -> FitResult:
         meta=gmeta
         | {"lambda": lam_pub, "group_weights": W_light, "persona_group_weights": W_persona},
     )
-    return FitResult(persona, fitted, _public_from(approach, fitted, light, z, y))
+    return FitResult(persona, fitted, _public_from(approach, fitted, light, z, y, seasons))
 
 
 def config_hash(approach: Approach) -> str:

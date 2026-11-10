@@ -104,3 +104,53 @@ def test_declared_line_move_weight_survives_fitting_with_no_history(approach_id)
     pub = res.public
     w = pub.weights[pub.features.index("market.line_move_pts")]
     assert w == pytest.approx(a.groups["market"].w, rel=1e-6)
+
+
+# ---------------------------------------------------------------- shift_10 (ADR 0026, M23.1)
+
+
+def test_shift_recovers_an_offset():
+    rng = np.random.default_rng(3)
+    logit = rng.standard_normal(6000) * 1.5
+    y = (rng.random(6000) < 1 / (1 + np.exp(-(logit - 0.2)))).astype(float)
+    assert fit.fit_shift(logit, y) == pytest.approx(-0.2, abs=0.06)
+
+
+def test_shift_10_fits_its_offset_on_the_last_ten_training_seasons_only():
+    """Home field moves: a model trained since 2002 carries the old level. The offset is fitted on
+    the ten seasons before the scored one, never on the scored season itself."""
+    rng = np.random.default_rng(4)
+    seasons = np.repeat(np.arange(2002, 2026), 300)
+    logit = rng.standard_normal(seasons.size)
+    home = np.where(seasons > 2015, -0.3, 0.3)  # recent seasons: the model over-states home field
+    y = (rng.random(seasons.size) < 1 / (1 + np.exp(-(logit + home)))).astype(float)
+    a = schema.load_all()["student_v2"]
+    assert a.calibration == "shift_10"
+    m = fit.Model(model_id="x", features=["f"], intercept=0.0, weights=[1.0],
+                  scaler=fit.Scaler(["f"], [0.0], [1.0]))  # fmt: skip
+    pub = fit._public_from(a, m, None, logit[:, None], y, seasons)
+    assert pub.calib_a == 1.0
+    assert pub.meta["calib_seasons"] == 10 * 300
+    assert pub.calib_c == pytest.approx(-0.3, abs=0.08)  # the recent level, not the pooled 0
+
+
+def test_existing_approach_hashes_are_pinned():
+    """The lock refuses a fit whose config hash differs from the YAML. A schema change that alters
+    every config's serialized form (a new field with a default) would stop every lock; this pins
+    the four live approaches. Changing a persona on purpose: update the pin and follow the
+    runbook's cutover (refit, backfill, upload in one go)."""
+    pins = {"traditionalist": "be7c85737c30", "analyst": "e48221c40daa",
+            "sharp": "a00612aec0b3", "student": "38b91b6e4ee1"}  # fmt: skip
+    got = {k: fit.config_hash(a) for k, a in schema.load_all().items() if k in pins}
+    assert got == pins
+
+
+def test_only_keeps_just_the_named_approaches(tmp_path, monkeypatch):
+    from nfl.approaches import ensemble, run
+    from nfl.config import Paths
+
+    monkeypatch.setattr(run, "known_features", lambda paths: {"strength.epa_off"})
+    paths = Paths(tmp_path)
+    assert [a.id for a in run.scored_approaches(paths, {"student_v2"})] == ["student_v2"]
+    every = [a.id for a in run.scored_approaches(paths)]
+    assert {"student", "student_v2", ensemble.GLOBAL_ID} <= set(every)

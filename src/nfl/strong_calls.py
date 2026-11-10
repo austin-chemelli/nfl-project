@@ -26,7 +26,7 @@ from nfl.config import Paths
 from nfl.features.groups import FEATURE_GROUP, GROUPS
 
 STRONG_GAP = 0.10
-APPROACHES = ("traditionalist", "analyst", "sharp", "student")
+APPROACHES = ("traditionalist", "analyst", "sharp", "student", "student_v2")
 FILE = "strong_calls.parquet"
 GRADED = "strong_calls_graded.parquet"
 TOP_GROUPS = 3
