@@ -549,8 +549,19 @@ Plan: `.notes/plans/player-impact.md`. Worktree `~/dev/nfl-project-players`, bra
 - **M24.4 Scored claims.** Deps: M24.2, M24.1. Files: new `src/nfl/players/claims.py` (`marts/player_claims.parquet`, append-only through `nfl.io`: per daily pass and game, the top three listed players per side by value with status, P(out), value; grading: a status change to Out between two snapshots grades the claim against `market_history`'s move in that window; season end against the margin residual), `nfl daily` calls it, `src/nfl/site.py` (`tracker.json.player_claims`, additive; game `injuries.key_players`; team `availability`), `web/src/data/contract.ts`, fixtures, tests. Acceptance: a claim is never regraded; a game with no listed starter writes no claim; the tracker section renders from the fixture; the lock never reads the claims. A day.
 - **M24.5 Web: Injuries tab, availability panel, tracker section.** Deps: M24.4. *Two tasks, P with each other once the contract is agreed.* **M24.5a** `web/src/charts/FormationMap.tsx` (the 11 starters on a field diagram, each sized by value lost, team color through `matchupVars`; `/dataviz`) and the Injuries tab lead (`pages/game/Sections.tsx`: map, then key players with value, status, status-to-play rate, value at risk, then the list). **M24.5b** the team page availability panel (`pages/team/Staff.tsx` or a new `Availability.tsx`) and the tracker's graded claims section (`pages/tracker/`), the `ReliabilityBadge` when M23.8b exists. Acceptance: no number not in the JSON; an unlisted player never shows a status; no horizontal scroll at 360 px; `npm run typecheck`, `lint`, `test`, `build` green; a `/site-walk` with the goal "find out who this team is missing this week and how much it matters" for casual-fan and auditor. A day.
 - **M24.6 Docs and review.** `docs/architecture.md` (§ players), `docs/site.md` (Injuries tab, panel, tracker section, `FormationMap`), `docs/feature-groups.md`, the journal, the hub; `reviewer` before each PR; production checks after each merge.
-- **Later, each with its trigger:** promotion of `value_lost` to the Health group at the next registry bump after a shadow line (ADR 0018's bar); the quarterback what-if generalised to listed players (after promotion); with/without splits and player cards (after a season of graded claims); props (a credit plan and the Odds API's redistribution terms); a lineup plus-minus on participation (offseason); Next Gen Stats (when a parquet asset exists, or a csv.gz loader).
+- **Later, each with its trigger:** promotion of `value_lost` to the Health group at the next registry bump after a shadow line (ADR 0018's bar); the quarterback what-if generalised to listed players (after promotion); with/without splits and player cards (after a season of graded claims); props (a credit plan and the Odds API's redistribution terms); a lineup plus-minus on participation (offseason); Next Gen Stats (when a parquet asset exists, or a csv.gz loader); scored impact widened to more positions (Austin, 2026-11-09: "maybe expand to wide later"); a highlight of player prop lines that look unusually good or bad (after props).
 
+
+## UI backlog: site-walk leftovers (not started; wait for Austin's go)
+
+From `.notes/site-walk/2026-11-07-2/report.md` (items M21 didn't cover) and the 2026-11-05 round-2 notes:
+- Team page: the next game is bare (no time, pick or link) and the bye week is missing.
+- Phone nav: no hint that the tab row scrolls (a fade at the edge).
+- Game page: doesn't say when the game was locked; EPA baselines are unlabeled.
+- Win-probability chart: direction confuses the away team's fans.
+- Worth adding (walk personas): where the LLM sits (the engineer persona's top gap two walks running; overlaps the "how it's built" page in `.notes/project-review-2026-11.md`), results at a glance on the home page, price and CLV, a who-wins sentence per card.
+- Chart dots: a richer hover popup than a plain text box; emphasis for how concentrated values are within a range bar (e.g. opacity).
+- Check tips on a real iPhone.
 
 ## M25: Matchups and paths to an upset (planned 2026-11-09 on Fable; ADR 0028)
 

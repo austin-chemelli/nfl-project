@@ -27,19 +27,24 @@ if [ -z "$root" ]; then
 fi
 cd "$root" || exit 0
 
-echo "# Project state (docs/state.md in $root, injected by scripts/hooks/session-start.sh). Keep it current: docs/state-maintenance.md."
+# Keep this short (journal 2026-11-09): the full hub, board prose and journal tail ran ~37 KB per
+# session. Inject the parts that change what a chat does first; everything else is one Read away.
+echo "# Project state: a digest of docs/state.md in $root (scripts/hooks/session-start.sh)."
+echo "Read docs/state.md in full before changing code or docs. Keep it current: docs/state-maintenance.md."
 [ -n "$note" ] && echo "$note"
 echo
-cat docs/state.md
+# The bottom line, up to the next section.
+awk '/^## Bottom line/{on=1} on&&/^## /&&!/^## Bottom line/{exit} on' docs/state.md
+echo "## Waiting on Austin (open rows of the Open decisions table)"
 echo
-echo "# Live board (.notes/board.md: who is doing what right now; add your row when a track starts)"
+awk '/^## Open decisions/{on=1;next} on&&/^## /{exit} on&&/^\|/&&!/decided/' docs/state.md
 echo
-if [ -f .notes/board.md ]; then cat .notes/board.md; else echo "(no board file yet)"; fi
+echo "# Live board (.notes/board.md table; read the file for its notes)"
 echo
-echo "# Last two journal entries (docs/journal.md)"
+if [ -f .notes/board.md ]; then grep '^|' .notes/board.md; else echo "(no board file yet)"; fi
 echo
-start=$(grep -n '^## ' docs/journal.md | tail -2 | head -1 | cut -d: -f1)
-if [ -n "$start" ]; then tail -n "+$start" docs/journal.md | head -150; fi
+echo "# Latest journal headings (docs/journal.md)"
+grep '^## ' docs/journal.md | tail -3
 echo
 echo "# state_check (scripts/state_check.py; fix ERRORs the first time you touch docs this session)"
 echo
