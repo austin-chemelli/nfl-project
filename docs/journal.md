@@ -731,3 +731,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Findings.** No split repeats: the best split-half r is 0.14 (no-huddle), blitz −0.09, light box 0.03; all verdicts `none`. The blitz number depends on the minimum plays per half (−0.18 at 20, −0.09 at 40, −0.04 at 60); the conclusion doesn't. Screen and RPO are too rare to measure at 40 plays a half. The local `data/` has no ledger or `team_week` (production has them), so the rows were checked on a scratch copy.
 
 **Lesson.** A "reproduce within 0.05" acceptance invites tuning a free parameter until it matches; report the sensitivity next to the number.
+
+## 2026-11-11: The matchup engine (M25.1, data track)
+
+**Why.** The Matchups tab needs, per game, each unit's results in each situation shrunk toward the league, and the edge in points per game when one side's habit meets the other's weakness (ADR 0028).
+
+**What changed.** `src/nfl/matchups.py`: `unit_splits`, `matchup_edges`, `unit_rank`, `opponents_faced` and `reliability` (the badge from the split's ledger row, `noise` without one), pure functions over `team_split_week` as of the week (weeks before only). The shrunk gap is league + n/(n+k) × (team − league) with n the harmonic mean of with and without plays (the gap's variance is σ²/n in that n) and k by method of moments on earlier seasons, clamped to [400, 5000]. Edges only for scheme choices the other unit reacts to: `splits.Split.no_edge` marks shotgun, no-huddle and deep pass as context only, since their league gaps are the situation itself (deep pass alone was +0.8 points on both sides of GB at NE and would have led every game).
+
+**Findings.** k hits the 5000 cap for every FTN split: team gaps from 2022–2025 are barely above sampling noise, so the edges are almost entirely the opponent's habit times the league effect. GB at NE, Week 9 reproduces the brief: NE's offense 9th, GB's defense 7th, NE's schedule league-average; the largest edges are 0.1–0.2 points a game (screen, blitz, RPO, motion).
+
+**Lesson.** A formula that multiplies a habit by a league effect will rank whatever split has the biggest built-in league effect first; decide which splits are matchups before ranking them.
