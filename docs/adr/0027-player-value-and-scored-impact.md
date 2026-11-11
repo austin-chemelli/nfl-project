@@ -48,3 +48,14 @@ The model knows one player: the quarterback features follow the projected starte
 | No status (listed in practice only) | 23,490 | 95.4% (95.2 to 95.6) |
 
 Questionable by group: linebackers 74.9%, defensive line 74.3%, wide receivers 73.2%, tight ends 72.8%, offensive line 69.2%, running backs 69.0%, defensive backs 65.4%, **quarterbacks 50.4% (45.4 to 55.3, n = 270)**. PFF's often-quoted 73% for Questionable sits a little above ours overall, and a Questionable quarterback is a coin flip.
+
+**M24.2, the value model (2026-11-09, local data; `nfl players value`, `src/nfl/players/value.py`, priors in `players/priors.py`).** 435,932 rows: every player with a game in this or last season, each regular-season week 2013–2026, as of the start of the week. Value = the group's top-starter points × a 0 to 1.25 multiplier from his quality percentile among regular starters (0 at the 30th, 1 at the 90th) × role (snap share over his last three games, full from 70%). Quality blends recency-weighted, shrunk production with a prior: the contract's cap-share percentile among veterans, or the draft slot on a rookie deal (first pick ranks like an 85th-percentile veteran). Linemen use the prior alone.
+
+| Week 10 | QB | WR | OL | EDGE | CB |
+|---|---|---|---|---|---|
+| 2016 | Brees 6.9, Ryan 6.7, Roethlisberger 6.6 | Julio Jones, A.J. Green, Beckham 1.4 | Tyron Smith, Trent Williams 0.6 | J.J. Watt 1.2, Von Miller 1.1 | Trumaine Johnson, Haden, Sherman 0.9 |
+| 2019 | Mahomes 6.9, Brees 6.6, Ryan 6.6 | Michael Thomas, Julio Jones, Adams 1.4 | Lane Johnson, Tyron Smith 0.6 | Watt 1.2, Miller 1.1 | Fuller, Jenkins, Howard 0.9 |
+| 2025 | Purdy 6.9, Jackson 6.7, Allen 6.5 | St. Brown, Chase, A.J. Brown 1.4 | Trent Williams, Tunsil, Sewell 0.6 | Hutchinson, Parsons, Watt 1.1 | Stingley, Ward, Adebo 0.9 |
+
+The median regular starter: QB 2.0, WR 0.38, EDGE 0.28, CB 0.27, TE 0.21, RB 0.19, OL 0.17, S 0.16 points. Two fixes found while checking: the prior first mixed a raw cap share (0.12) with a draft score (0.2 to 0.95), so the offensive line's top five were all rookies; and the shrinkage target averaged every season a build loaded, so a one-season build and a full build disagreed on 2025's top quarterback. Both are fixed and tested (a one-season build equals the full one; a planted week never changes that week's values). The quarterback value here is this model's, not `features/qb.py`'s: whether `value_lost` counts quarterbacks or leaves them to the existing quarterback group is M24.3's question.
+

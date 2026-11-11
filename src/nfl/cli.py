@@ -762,6 +762,36 @@ players_app = typer.Typer(no_args_is_help=True, help="Player-level data (ADR 002
 app.add_typer(players_app, name="players")
 
 
+@players_app.command("value")
+def players_value(
+    season_from: int = typer.Option(2013, help="First season (snap counts start in 2013)"),
+    season_to: int = typer.Option(2026, help="Last season"),
+    show: str = typer.Option("", help="Print the top values for SEASON:WEEK, e.g. 2025:10"),
+) -> None:
+    """What each player is worth in points of spread, week by week (ADR 0027, M24.2)."""
+    import polars as pl
+    from rich.table import Table
+
+    from nfl.players.value import build
+
+    df = build(get_paths(), (season_from, season_to))
+    console.print(
+        f"[bold]player value:[/bold] {df.height:,} rows -> marts/derived/player_value.parquet"
+    )
+    if show:
+        s, w = (int(x) for x in show.split(":"))
+        sl = df.filter((pl.col("season") == s) & (pl.col("week") == w))
+        for grp in ("QB", "WR", "TE", "RB", "OL", "EDGE", "CB", "S"):
+            t = Table(title=f"{grp}, {s} week {w}")
+            for h in ("player", "team", "role", "quality", "points"):
+                t.add_column(h, justify="left" if h in ("player", "team") else "right")
+            top = sl.filter(pl.col("grp") == grp).sort("value_pts", descending=True).head(5)
+            for r in top.iter_rows(named=True):
+                t.add_row(r["player"] or r["gsis_id"], r["team"], f"{r['role']:.0%}",
+                          f"{r['quality_pct']:.0%}", f"{r['value_pts']:.2f}")  # fmt: skip
+            console.print(t)
+
+
 @players_app.command("status")
 def players_status(
     season_from: int = typer.Option(2013, help="First season (snap counts start in 2013)"),
