@@ -16,3 +16,11 @@ journal = "docs/journal.md"
 [board]
 stale_hours = 24     # a running track whose file is older than this is flagged
 milestone_from = 14  # the milestone strip starts here
+
+# Status tab (hub-v2 Contract B): did each scheduled job run? `nfl status --json` (src/nfl/status.py).
+[[status.source]]
+command = "uv run nfl status --json"
+every_minutes = 10
+
+[[status.source]]
+builtin = "github-actions"

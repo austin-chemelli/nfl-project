@@ -1,0 +1,128 @@
+[
+ {
+  "metadata": {
+   "name": "nfl-odds-snapshot-kj2l2",
+   "creationTimestamp": "2026-11-10T01:05:08.645543Z",
+   "labels": {
+    "run.googleapis.com/job": "nfl-odds-snapshot"
+   }
+  },
+  "status": {
+   "completionTime": "2026-11-10T01:10:53.583428Z",
+   "conditions": [
+    {
+     "lastTransitionTime": "2026-11-10T01:10:53.583428Z",
+     "message": "Execution completed successfully in 5m37.27s.",
+     "status": "True",
+     "type": "Completed"
+    },
+    {
+     "lastTransitionTime": "2026-11-10T01:05:09.455554Z",
+     "message": "Provisioned imported containers.",
+     "status": "True",
+     "type": "ResourcesAvailable"
+    },
+    {
+     "lastTransitionTime": "2026-11-10T01:06:35.689495Z",
+     "message": "Started deployed execution in 1m26.23s.",
+     "status": "True",
+     "type": "Started"
+    },
+    {
+     "lastTransitionTime": "2026-11-10T01:05:09.355934Z",
+     "message": "Imported container image.",
+     "status": "True",
+     "type": "ContainerReady"
+    }
+   ],
+   "logUri": "https://console.cloud.google.com/logs/viewer?project=nfl-project-prod&advancedFilter=resource.type%3D%22cloud_run_job%22%0Aresource.labels.job_name%3D%22nfl-odds-snapshot%22%0Aresource.labels.location%3D%22us-central1%22%0Alabels.%22run.googleapis.com/execution_name%22%3D%22nfl-odds-snapshot-kj2l2%22",
+   "observedGeneration": 1,
+   "startTime": "2026-11-10T01:05:16.306952Z",
+   "succeededCount": 1
+  }
+ },
+ {
+  "metadata": {
+   "name": "nfl-odds-snapshot-2cpbk",
+   "creationTimestamp": "2026-11-09T01:10:04.322409Z",
+   "labels": {
+    "run.googleapis.com/job": "nfl-odds-snapshot"
+   }
+  },
+  "status": {
+   "completionTime": "2026-11-09T01:15:28.523449Z",
+   "conditions": [
+    {
+     "lastTransitionTime": "2026-11-09T01:15:28.523449Z",
+     "message": "Execution completed successfully in 5m17.43s.",
+     "status": "True",
+     "type": "Completed"
+    },
+    {
+     "lastTransitionTime": "2026-11-09T01:10:05.235738Z",
+     "message": "Provisioned imported containers.",
+     "status": "True",
+     "type": "ResourcesAvailable"
+    },
+    {
+     "lastTransitionTime": "2026-11-09T01:11:10.678509Z",
+     "message": "Started deployed execution in 1m5.44s.",
+     "status": "True",
+     "type": "Started"
+    },
+    {
+     "lastTransitionTime": "2026-11-09T01:10:05.133999Z",
+     "message": "Imported container image.",
+     "status": "True",
+     "type": "ContainerReady"
+    }
+   ],
+   "logUri": "https://console.cloud.google.com/logs/viewer?project=nfl-project-prod&advancedFilter=resource.type%3D%22cloud_run_job%22%0Aresource.labels.job_name%3D%22nfl-odds-snapshot%22%0Aresource.labels.location%3D%22us-central1%22%0Alabels.%22run.googleapis.com/execution_name%22%3D%22nfl-odds-snapshot-2cpbk%22",
+   "observedGeneration": 1,
+   "startTime": "2026-11-09T01:10:11.092459Z",
+   "succeededCount": 1
+  }
+ },
+ {
+  "metadata": {
+   "name": "nfl-odds-snapshot-dqvnx",
+   "creationTimestamp": "2026-11-08T21:00:02.994900Z",
+   "labels": {
+    "run.googleapis.com/job": "nfl-odds-snapshot"
+   }
+  },
+  "status": {
+   "completionTime": "2026-11-08T21:06:12.988760Z",
+   "conditions": [
+    {
+     "lastTransitionTime": "2026-11-08T21:06:12.988760Z",
+     "message": "Execution completed successfully in 6m3.36s.",
+     "status": "True",
+     "type": "Completed"
+    },
+    {
+     "lastTransitionTime": "2026-11-08T21:00:03.853169Z",
+     "message": "Provisioned imported containers.",
+     "status": "True",
+     "type": "ResourcesAvailable"
+    },
+    {
+     "lastTransitionTime": "2026-11-08T21:01:15.514487Z",
+     "message": "Started deployed execution in 1m11.66s.",
+     "status": "True",
+     "type": "Started"
+    },
+    {
+     "lastTransitionTime": "2026-11-08T21:00:03.743890Z",
+     "message": "Imported container image.",
+     "status": "True",
+     "type": "ContainerReady"
+    }
+   ],
+   "logUri": "https://console.cloud.google.com/logs/viewer?project=nfl-project-prod&advancedFilter=resource.type%3D%22cloud_run_job%22%0Aresource.labels.job_name%3D%22nfl-odds-snapshot%22%0Aresource.labels.location%3D%22us-central1%22%0Alabels.%22run.googleapis.com/execution_name%22%3D%22nfl-odds-snapshot-dqvnx%22",
+   "observedGeneration": 1,
+   "startTime": "2026-11-08T21:00:09.626106Z",
+   "succeededCount": 1
+  }
+ }
+]

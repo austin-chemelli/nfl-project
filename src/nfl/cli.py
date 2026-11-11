@@ -173,6 +173,27 @@ def odds_status() -> None:
     )
 
 
+@app.command("status")
+def status_cmd(
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Contract B JSON for the project hub.")
+    ] = False,
+) -> None:
+    """Did each scheduled job run? Cloud jobs, desktop passes, site freshness, Odds API credits.
+
+    Read-only; needs the gcloud login (reported as a failed item, never an error exit).
+    """
+    import json
+
+    from nfl import status
+
+    items = status.collect(Path(__file__).resolve().parents[2])
+    if as_json:
+        print(json.dumps({"items": items}))
+    else:
+        print(status.render_text(items))
+
+
 @app.command("ledger")
 def ledger_cmd(
     season_from: int = typer.Option(2022, help="First season to print in the summary."),

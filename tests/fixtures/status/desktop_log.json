@@ -1,0 +1,156 @@
+[
+  {
+    "insertId": "1ad81olf32u7cn",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-07T21:02:46.327910375Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "desktop narrative pass done: 2026 week 9",
+    "timestamp": "2026-11-07T21:02:46.327910375Z"
+  },
+  {
+    "insertId": "14sv0sjf2g9fg0",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-07T17:34:44.619894586Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "desktop narrative pass started: 2026 week 9",
+    "timestamp": "2026-11-07T17:34:44.619894586Z"
+  },
+  {
+    "insertId": "tg9l96f2px9t5",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-07T16:22:05.880360770Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "desktop narrative pass started: 2026 week 9",
+    "timestamp": "2026-11-07T16:22:05.880360770Z"
+  },
+  {
+    "insertId": "209zzhf2119fj",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-05T06:32:40.885479141Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "desktop narrative pass done: 2026 week 9",
+    "timestamp": "2026-11-05T06:32:40.885479141Z"
+  },
+  {
+    "insertId": "4gvx4of1kn4kr",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-05T03:26:41.602547579Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "desktop narrative pass started: 2026 week 9",
+    "timestamp": "2026-11-05T03:26:41.602547579Z"
+  },
+  {
+    "insertId": "al7f90f1dr3lf",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-05T03:25:58.193050026Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "desktop narrative pass started: 2026 week 9",
+    "timestamp": "2026-11-05T03:25:58.193050026Z"
+  },
+  {
+    "insertId": "1mlx8nlf1eazw3",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-05T01:40:18.626276058Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "ERROR",
+    "textPayload": "desktop narrative pass failed: some games failed in 2026 week 9 (the rest were uploaded) (log: data/raw/narrative_local/passes on the desktop)",
+    "timestamp": "2026-11-05T01:40:18.626276058Z"
+  },
+  {
+    "insertId": "ava50af147mbk",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-04T23:41:51.177076499Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "desktop narrative pass started: 2026 week 9",
+    "timestamp": "2026-11-04T23:41:51.177076499Z"
+  },
+  {
+    "insertId": "kutwofen2rom",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-04T23:00:04.624582129Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "ERROR",
+    "textPayload": "desktop narrative pass failed: git pull (log: data/raw/narrative_local/passes on the desktop)",
+    "timestamp": "2026-11-04T23:00:04.624582129Z"
+  },
+  {
+    "insertId": "wr81qhfoyr6p8",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-04T16:34:24.323360797Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "desktop setup test",
+    "timestamp": "2026-11-04T16:34:24.323360797Z"
+  },
+  {
+    "insertId": "1ubhvi8f4q8g9x",
+    "logName": "projects/nfl-project-prod/logs/nfl-desktop-narrative",
+    "receiveTimestamp": "2026-11-03T19:58:46.324756330Z",
+    "resource": {
+      "labels": {
+        "project_id": "nfl-project-prod"
+      },
+      "type": "global"
+    },
+    "severity": "INFO",
+    "textPayload": "setup test from the laptop (M6.2u), ignore",
+    "timestamp": "2026-11-03T19:58:46.324756330Z"
+  }
+]
