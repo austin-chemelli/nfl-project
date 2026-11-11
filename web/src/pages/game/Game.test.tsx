@@ -22,7 +22,7 @@ describe('Game page', () => {
     expect(screen.getByText(/Inside each group/)).toBeInTheDocument()
     expect(screen.getAllByText(/toward GB/).length).toBeGreaterThan(0)
     // tendencies have their own tab
-    await userEvent.click(screen.getByRole('tab', { name: 'Tendencies' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Matchups' }))
     expect(screen.getByText('CAR offense vs GB defense')).toBeInTheDocument()
     expect(screen.getByText('Defensive habits')).toBeInTheDocument()
     // narrative, on the news tab
@@ -33,13 +33,34 @@ describe('Game page', () => {
     expect(screen.getByText(/Claims and sources/)).toBeInTheDocument()
   })
 
+  it('the Matchups tab leads with the lede, a grid per side, then the tendencies', async () => {
+    renderRoute('/game/2026_08_CAR_GB?tab=tendencies')
+    expect(await screen.findByText(/The matchup that matters most: GB's defense against CAR's run-pass option/)).toBeInTheDocument()
+    expect(screen.getAllByTestId('matchup-grid')).toHaveLength(2)
+    expect(screen.getAllByText(/barely repeat from one half-season/)).toHaveLength(1)
+  })
+
+  it('without matchups the tab shows the tendencies as before', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nfl-nomatchups-'))
+    fs.cpSync(path.resolve(import.meta.dirname, '../../test/fixtures'), root, { recursive: true })
+    const gp = path.join(root, 'site/game/2026_08_CAR_GB.json')
+    const game = JSON.parse(fs.readFileSync(gp, 'utf8'))
+    game.matchups = null
+    fs.writeFileSync(gp, JSON.stringify(game))
+    renderRoute('/game/2026_08_CAR_GB?tab=tendencies', root)
+    expect(await screen.findByText('Defensive habits')).toBeInTheDocument()
+    expect(screen.queryByTestId('matchup-grid')).toBeNull()
+    expect(screen.queryByText(/barely repeat/)).toBeNull()
+    fs.rmSync(root, { recursive: true, force: true })
+  })
+
   it('switches approach and situation', async () => {
     renderRoute('/game/2026_08_CAR_GB')
     await screen.findByText(/Lambeau Field/)
     await userEvent.click(screen.getByRole('tab', { name: 'Approaches' }))
     await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Approach' })).getByRole('radio', { name: 'Analyst' }))
     expect(screen.getByText(/Analyst says: GB win chance 71.2%/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Tendencies' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Matchups' }))
     await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Situation' })).getByRole('radio', { name: 'Third down' }))
     expect(screen.getByRole('radio', { name: 'Third down' })).toHaveAttribute('aria-checked', 'true')
   })

@@ -1378,12 +1378,15 @@ def matchups_lede(sides: list[dict]) -> str | None:
     if best is None:
         return None
     sd, r = best
+    # positive edge = favours the offense (matchups.py)
+    fav = r.get("favours") or ("offense" if r["edge_pts_pg"] > 0 else "defense")
     if r["chooser"] == "offense":  # the offense's habit against the defense's matchup
         who = f"{sd['defense']}'s defense against {sd['offense']}'s {r['label'].lower()}"
     else:
         who = f"{sd['defense']}'s {r['label'].lower()} against {sd['offense']}'s offense"
     return (
-        f"The matchup that matters most: {who}, worth {abs(r['edge_pts_pg'])} points a game, "
+        f"The matchup that matters most: {who}, worth {abs(r['edge_pts_pg'])} points a game "
+        f"to {sd['offense'] if fav == 'offense' else sd['defense']}, "
         f"and {LEDE_BADGE[r['reliability']]}."
     )
 

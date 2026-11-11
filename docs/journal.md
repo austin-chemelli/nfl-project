@@ -757,3 +757,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Findings.** The depth chart lists three receivers as one position with ranks interleaved across three slots, so "rank 1" alone finds one receiver: a starter is the top rank per formation slot. The lock's own chart lookup keeps rank 1 per position, which is right for its features and wrong for a picture of the eleven, so the map has its own reader and the lock code is untouched. Linebackers and interior linemen have no value yet; the map shows them dashed rather than leaving holes.
 
 **Lesson.** Render the chart and look at it before calling it done: the first map put offense and defense side by side inside each team's column, four panels across on a laptop, too small to read; tests passed either way.
+
+## 2026-11-11: The Matchups tab and the upset card (M25.3, M25.5a, M25.5b; data track)
+
+**Why.** The first visible part of M25: what the splits and the upset conditions say about a game, on the game page (ADR 0028).
+
+**What changed.** Game files gain `matchups` (per side, the split rows as of the game's week, a lede naming the largest edge and who it favours), `paths` and `paths_outcome`; `meta.json` gains `split_defs`; daily and weekly build the SQL models before the site. On the web, the Tendencies tab is now "Matchups" (same id): a `MatchupGrid` per side with the choosing unit's habit on the league band, the other unit's shrunk result, the edge as a pill in the favoured team's colour and the reliability label, context rows folded; and an `UpsetPaths` card ("How GB wins") under "Who has the edge" on the Preview, with checks per condition once the game is played. The local fits were older than model wave 2 (Oct 28), so `nfl site` refused them; they were pulled down from the production bucket.
+
+**Findings.** Every row reads `noise`, and GB at NE's largest edge is 0.21 points a game (NE's screens against GB's defense). Game files grow about 16 KB each (17.3 MB for the season's files, from 11.7 MB).
+
+**Lesson.** A grid that shows every registered situation buries the few that are matchups: the ten context rows went behind a disclosure after the first screenshot.

@@ -1,6 +1,6 @@
 import { TeamLink } from '../../components/TeamLink'
 import { useState } from 'react'
-import { DivergingBars, Dumbbell, MatchupBand, ProbStrip } from '../../charts'
+import { DivergingBars, Dumbbell, MatchupBand, MatchupGrid, ProbStrip } from '../../charts'
 import { FormationKey, FormationMap } from '../../charts/FormationMap'
 import { Help } from '../../components/Help'
 import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
@@ -347,6 +347,27 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
                 </tbody>
               </table>
             </DataTable>
+          </Card>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+/** What each side's habits imply (ADR 0028): a grid per side, under the file's own one-sentence lede. Null when the file has none. */
+export function MatchupsSection({ g, meta }: { g: Game; meta: Meta }) {
+  const m = g.matchups
+  if (!m || m.sides.length === 0) return null
+  return (
+    <Section
+      title="Matchups: habits against results"
+      help="The unit that chooses a situation (the defense's blitz, the offense's motion) has a habit; the other unit has a result in that situation. The edge is what the habit implies, in points a game."
+    >
+      {m.lede && <p className="mb-4 max-w-3xl text-[13px] text-ink-2">{m.lede}</p>}
+      <div className="flex flex-col gap-8">
+        {m.sides.map((side) => (
+          <Card key={`${side.offense}-${side.defense}`}>
+            <MatchupGrid side={side} home={g.home} away={g.away} defs={meta.split_defs} />
           </Card>
         ))}
       </div>

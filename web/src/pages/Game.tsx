@@ -6,7 +6,7 @@ import { Tabs, type TabDef } from '../components/Tabs'
 import { Card, ErrorBox, Loaded, Loading, Page } from '../components/ui'
 import { useGame, useMeta, useRetro, isNotFound } from '../data/api'
 import type { Game, Meta, RetroGame } from '../data/contract'
-import { Injuries, ApproachesVsMarket, Tendencies, TaleOfTheTape, Why } from './game/Sections'
+import { Injuries, ApproachesVsMarket, MatchupsSection, Tendencies, TaleOfTheTape, Why } from './game/Sections'
 import { GameHeader, GameTitle, PinnedResult } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
 import { Differ, StrongCallsOutcome } from './game/Differ'
@@ -83,6 +83,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
           <Preview g={g} meta={meta} />
           <FinePrint>
             <p>The bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
+            {g.paths && <p>"How the underdog wins" lists what winning underdogs of this size did since 2006, and how often each team has done or allowed it this season. It is history, not a forecast: the chance at the top doesn't move.</p>}
             <p>Probabilities are the models' estimates, not advice.</p>
           </FinePrint>
         </TabBody>
@@ -134,11 +135,13 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
     },
     {
       id: 'tendencies',
-      label: 'Tendencies',
+      label: 'Matchups',
       content: (
         <TabBody>
+          <MatchupsSection g={g} meta={meta} />
           <Tendencies g={g} meta={meta} />
           <FinePrint>
+            {g.matchups && <p>Team results in a situation barely repeat from one half-season to the next; the opponent's habits do. Read the edges as what the habits imply, not as a forecast.</p>}
             <p>Tendencies are season-to-date rates, shrunk toward the league average when plays are few. Each chart has its own scale.</p>
           </FinePrint>
         </TabBody>
