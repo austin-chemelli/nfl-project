@@ -721,3 +721,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Findings.** The planning table reproduces within a point (37% base and 68% given the turnover battle for dogs of 3–6.5), with one correction in ADR 0028 Measured: winning the turnover battle happens in 35% of those games, not 29%. FTN charting covers 99.7% of 2022 plays and 100% since, not the 84% the old notes said. Example for GB at NE, Week 9 (NE −2.5 in our lines): "How GB wins: win the turnover battle (dogs of this size who did won 76%; GB has done it in 3 of 8 games; NE has allowed it in 4 of 8), …".
 
 **Lesson.** Building all SQL models in a test broke once a model read the feature store: the old tests now build `team_week` by name, and each model's test builds only its own.
+
+## 2026-11-11: M25 splits in the ledger (M25.2, data track)
+
+**Why.** Every split the Matchups tab shows needs a reliability badge from a ledger row (ADR 0026, ADR 0028).
+
+**What changed.** `candidates.py` generates one `split_<name>_gap` candidate per registered split (the unit that doesn't choose the situation), and `candidate_screen.py` screens them on their own frame from `team_split_week` (a new `frame` field; existing candidates screen exactly as before: old and new code give identical rows). Phase 0 merged first: #41 (the split model) and #42 (the upset conditions).
+
+**Findings.** No split repeats: the best split-half r is 0.14 (no-huddle), blitz −0.09, light box 0.03; all verdicts `none`. The blitz number depends on the minimum plays per half (−0.18 at 20, −0.09 at 40, −0.04 at 60); the conclusion doesn't. Screen and RPO are too rare to measure at 40 plays a half. The local `data/` has no ledger or `team_week` (production has them), so the rows were checked on a scratch copy.
+
+**Lesson.** A "reproduce within 0.05" acceptance invites tuning a free parameter until it matches; report the sensitivity next to the number.
