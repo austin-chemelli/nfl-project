@@ -180,6 +180,31 @@ describe('contract: checked-in fixtures', () => {
     expect(C.GameRow.parse({ ...bare, card: { injuries: [{ team: 'GB', player: 'A', pos: null, status: 'Out' }] } }).card?.injuries[0]).toMatchObject({ starter: false, new: false })
     expect(C.GameRow.parse({ ...bare, card: { injuries: null } }).card).toBeNull()
   })
+  it('player claims parse, and default to null on files written before them (ADR 0027)', () => {
+    const read = (rel: string) => JSON.parse(fs.readFileSync(path.join(FIX, rel), 'utf8'))
+    const kp = {
+      player: 'Baker Mayfield', pos: 'QB', grp: 'QB', status: 'Questionable', p_play: 0.5037, p_play_n: 270,
+      value_pts: 3.64, at_risk: 1.81,
+      sentence: 'Baker Mayfield is worth about 3.6 points to TB. Questionable: quarterbacks listed Questionable have played 50% of the time.',
+    }
+    const game = read('game/2026_08_CAR_GB.json')
+    expect(C.Game.parse(game).key_players).toBeNull()
+    expect(C.Game.parse({ ...game, key_players: { home: [], away: [kp] } }).key_players?.away[0]).toMatchObject({ p_play: 0.5037 })
+    const graded = {
+      game_id: '2026_08_CAR_GB', season: 2026, week: 8, team: 'CAR', opponent: 'GB', player: 'A', pos: 'WR', grp: 'WR',
+      status_before: 'Questionable', p_play: 0.73, value_pts: 1.2, expected: 0.88, moved: 1, hours: 48,
+      out_seen: '2026-10-29T22:00:00Z', margin_vs_line: null,
+    }
+    const pc = { first_pass: '2026-10-28T22:00:00Z', claims: 1, graded: 1, mean_expected: 0.88, mean_moved: 1, rows: [graded] }
+    const tracker = read('tracker.json')
+    expect(C.Tracker.parse(tracker).player_claims).toBeNull()
+    expect(C.Tracker.parse({ ...tracker, player_claims: pc }).player_claims?.rows[0]).toMatchObject({ moved: 1 })
+    const team = read('team/CAR.json')
+    expect(C.TeamFile.parse(team).availability).toBeNull()
+    const avail = { week: 8, players: [{ player: 'A', grp: 'WR', value_pts: 1.2, status: null, p_play: null, at_risk: null }], listed: [], reported: false, value_at_risk: null }
+    expect(C.TeamFile.parse({ ...team, availability: avail }).availability?.reported).toBe(false)
+    expect(C.TeamFile.safeParse({ ...team, availability: { ...avail, players: [{ player: 'A' }] } }).success).toBe(false)
+  })
   for (const rel of fx) it(rel, () => check(FIX, rel))
 })
 

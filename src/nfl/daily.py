@@ -3,7 +3,8 @@
 Between the Tuesday refresh and the locks, keep the week's games current: this season's ingest
 (injury reports, depth charts, schedules), one odds snapshot, curate, tendencies, features, then the
 site JSON. Nothing is graded and nothing is locked here; the Tuesday refresh still grades and settles.
-Preview scores (`nfl.previews`, never graded) run after the features; later steps of M20 join `STEPS` in order.
+Preview scores (`nfl.previews`, never graded) and player claims (`nfl.players.claims`, ADR 0027)
+run after the features; later steps of M20 join `STEPS` in order.
 """
 
 from __future__ import annotations
@@ -78,6 +79,14 @@ def _previews(paths: Paths, season: int, console: Console) -> None:
     console.print(f"previews: {previews.run(paths)} rows")
 
 
+def _claims(paths: Paths, season: int, console: Console) -> None:
+    from nfl.config import now_utc
+    from nfl.players import claims
+
+    added, graded = claims.run(paths, season, now_utc())
+    console.print(f"player claims: {added} new, {graded} graded")
+
+
 def _site(paths: Paths, season: int, console: Console) -> None:
     from nfl.site import build
 
@@ -92,6 +101,7 @@ STEPS: list[Step] = [
     Step("tendencies", _tendencies),
     Step("features", _features),
     Step("previews", _previews, optional=True),
+    Step("player claims", _claims, optional=True),
     Step("site", _site),
 ]
 

@@ -741,3 +741,12 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Findings.** k hits the 5000 cap for every FTN split: team gaps from 2022–2025 are barely above sampling noise, so the edges are almost entirely the opponent's habit times the league effect. GB at NE, Week 9 reproduces the brief: NE's offense 9th, GB's defense 7th, NE's schedule league-average; the largest edges are 0.1–0.2 points a game (screen, blitz, RPO, motion).
 
 **Lesson.** A formula that multiplies a habit by a league effect will rank whatever split has the biggest built-in league effect first; decide which splits are matchups before ranking them.
+
+## 2026-11-10: Claims about players, graded by the market (M24.4)
+
+**What changed.** `src/nfl/players/claims.py` and a `player claims` step in `nfl daily`: before each game, the three most valuable listed starters per side, each with his value in points and how often players listed that way have played, recorded append-only in `marts/player_claims.parquet`. When a later injury report shows one of them Out, the claim is graded once against the line's move across that window; the expected move is value x P(play), since the market had already priced the chance he sits. The site data gains `key_players` on games, `player_claims` on the tracker and `availability` on team files, all additive; the pages are M24.5. D33 decided: started after #34 merged.
+
+**Findings.** Wednesday's report has practice statuses only, so most claims come from the Friday and Saturday passes. Sunday's inactives arrive after the last pass, so the biggest late scratches go ungraded. That's a gap in the record, not a bias the grades hide.
+
+**Lesson.** Grade the part of a claim the market didn't already know: a Questionable player's absence was priced at its chance, so only the rest should move the line.
+

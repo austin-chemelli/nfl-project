@@ -283,6 +283,20 @@ def build_values(paths: Paths, seasons: tuple[int, int]) -> pl.DataFrame:
     )
 
 
+def week_values(paths: Paths, season: int, weeks: list[int]) -> pl.DataFrame:
+    """Values as of the start of each of `weeks` in `season`, computed now: the live path for weeks
+    that have no snap counts yet (the upcoming one), same numbers `build_values` gives a past week."""
+    pg = player_games(paths, lo=season - P.SEASONS_BACK)
+    prior = prior_scores(paths)
+    means = group_means(pg, season)
+    out = []
+    for week in sorted(set(weeks)):
+        sl = as_of(pg, season, week)
+        if not sl.is_empty():
+            out.append(score(sl, means, prior).select(COLUMNS))
+    return pl.concat(out) if out else pl.DataFrame()
+
+
 def out_path(paths: Paths) -> Path:
     return paths.marts / "derived" / "player_value.parquet"
 

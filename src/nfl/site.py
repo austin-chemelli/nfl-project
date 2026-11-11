@@ -775,7 +775,9 @@ def write_league(paths: Paths, season: int, snapshot: str | None) -> None:
         print(f"site: league.json failed, continuing: {e!r}")
 
 
-def write_team_files(paths: Paths, season: int, week: int, games: pl.DataFrame) -> None:
+def write_team_files(
+    paths: Paths, season: int, week: int, games: pl.DataFrame, claims: tuple | None = None
+) -> None:
     """ADR 0021: staff and tendency files for the team pages, one per team, for the current season
     only. Like the league's, a failure here never stops a site build; the last files stay.
 
@@ -796,7 +798,9 @@ def write_team_files(paths: Paths, season: int, week: int, games: pl.DataFrame) 
                 "hi": "more",
             }
 
+        avail = _safe(_availability, {}, paths, season, week, claims)
         for team, body in team_files(paths, season, week, games, label).items():
+            body["availability"] = avail.get(team)  # ADR 0027, M24.4: additive
             _write(paths.site / "team" / f"{team}.json", body, compact=True)
     except (Exception, pl.exceptions.PanicException) as e:  # noqa: BLE001
         print(f"site: team files failed, continuing: {e!r}")
@@ -828,6 +832,9 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     injuries = _injuries(paths, season)
     swing = _swings(paths, games, season, now, feats, injuries)
     calls_by_game, calls_record = _safe(_strong_calls, ({}, None), paths, season)
+    claims, claims_by_game, claims_record = _safe(
+        _player_claims, (None, {}, None), paths, games, season
+    )
     today = _safe(_today, {}, paths, now)
     totals_by_game, totals_record = _totals(paths, games)
     from nfl.llm.narrative import load_records
@@ -860,6 +867,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["books"] = _safe(_books_out, None, books.get(g["game_id"]))
             detail["swings"] = swing.get(g["game_id"], [])
             detail["strong_calls"] = calls_by_game.get(g["game_id"], [])
+            detail["key_players"] = claims_by_game.get(g["game_id"])  # ADR 0027: context, M24.4
             detail["today"] = today.get(g["game_id"])
             detail["expected_score"] = _safe(
                 _expected_score, None, totals_by_game.get(g["game_id"]), detail
@@ -906,7 +914,8 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     )
     _write(
         site / "tracker.json",
-        tracker(paths, season, reg) | {"strong_calls": calls_record, "totals": totals_record},
+        tracker(paths, season, reg)
+        | {"strong_calls": calls_record, "totals": totals_record, "player_claims": claims_record},
     )
     _write(site / "audit.json", audit(paths))
     try:  # additive page data (ADR 0019): a failure must never stop the site build
@@ -915,7 +924,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             _write(site / "teams.json", teams, compact=True)  # 236 KB at indent=1, 178 KB compact
     except Exception as e:  # noqa: BLE001
         print(f"site: teams.json failed, continuing: {e!r}")
-    write_team_files(paths, season, current_week, games)
+    write_team_files(paths, season, current_week, games, claims)
     try:
         write_retro(paths, season)
     except Exception as e:  # noqa: BLE001  retros must never break the site build
@@ -1347,6 +1356,34 @@ def _injuries(paths: Paths, season: int) -> list[dict]:
          "status": r["report_status"], "practice": r["practice_status"], "injury": r["report_primary_injury"]}
         for r in df.iter_rows(named=True)
     ]  # fmt: skip
+
+
+# --------------------------------------------------------------------------------- player claims
+
+
+def _player_claims(paths: Paths, games: pl.DataFrame, season: int):
+    """(claims, game_id -> key players, the tracker block) for the season (ADR 0027, M24.4)."""
+    from nfl.players import claims as pc
+
+    c = pc.load(paths).filter(pl.col("season") == season)
+    results = {
+        r["game_id"]: r["result"]
+        for r in games.filter(pl.col("result").is_not_null()).iter_rows(named=True)
+    }
+    passes = pc.load_passes(paths).filter(pl.col("season") == season)
+    return (c, passes), pc.key_players(c, passes), pc.record(c, pc.load_grades(paths), results)
+
+
+def _availability(paths: Paths, season: int, week: int, claims: tuple | None) -> dict:
+    """team -> its availability panel for `week` (ADR 0027): top starters by value and statuses."""
+    from nfl.players import claims as pc
+    from nfl.players.value import week_values
+
+    values = week_values(paths, season, [week])
+    if values.is_empty():
+        return {}
+    c, passes = claims or (pl.DataFrame(schema=pc.SCHEMA), pl.DataFrame(schema=pc.PASS_SCHEMA))
+    return {t: pc.availability(values, c, passes, t) for t in values["team"].unique().to_list()}
 
 
 # ---------------------------------------------------------------------------------------- tracker

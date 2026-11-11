@@ -175,6 +175,33 @@ export const Swing = z.looseObject({
   alternative: QbScenario.nullable().default(null),
 })
 // One approach 10+ points of win chance from the market at lock (ADR 0024), graded after the game.
+// Player impact claims (ADR 0027, M24.4): context, never a model input. Mirrors nfl.players.claims.
+export const KeyPlayer = z.looseObject({
+  player: z.string(),
+  pos: nstr, // the injury report's position
+  grp: z.string(), // the value model's group (QB, RB, WR, TE, OL, EDGE, CB, S)
+  status: z.string(), // Out, Doubtful or Questionable
+  p_play: nnum, // how often players listed so have played (2016+); 0 for Out
+  p_play_n: num,
+  value_pts: num, // what he's worth to his team in points of spread
+  at_risk: nnum, // value x (1 - p_play)
+  sentence: z.string(),
+})
+export const KeyPlayers = z.looseObject({ home: z.array(KeyPlayer), away: z.array(KeyPlayer) })
+export const PlayerClaimGrade = z.looseObject({
+  game_id: z.string(), season: num, week: num, team: z.string(), opponent: z.string(),
+  player: z.string(), pos: nstr, grp: z.string(), status_before: z.string(), p_play: nnum,
+  value_pts: num, expected: num, moved: num, hours: nnum, out_seen: z.string(),
+  margin_vs_line: nnum, // the team's margin minus its line before the change; null until played
+})
+export const TeamAvailability = z.looseObject({
+  week: num,
+  players: z.array(z.looseObject({ player: z.string(), grp: z.string(), value_pts: num, status: nstr, p_play: nnum, at_risk: nnum })),
+  listed: z.array(KeyPlayer),
+  reported: z.boolean(), // false before any pass has read this week's report
+  value_at_risk: nnum, // null when not reported: no report yet is not "nobody hurt"
+})
+
 export const StrongCall = z.looseObject({
   game_id: z.string(), week: num, model_id: z.string(), lock_ts: nstr.default(null), side: z.string(), team: z.string(),
   p_home: num, market_p: num, spread_home: nnum.default(null), market_spread: nnum.default(null),
@@ -317,6 +344,7 @@ export const Game = GameRow.extend({
   books: Books.nullable().default(null),
   swings: z.array(Swing).default([]),
   strong_calls: z.array(StrongCall).default([]),
+  key_players: KeyPlayers.nullable().default(null), // the latest claims before kickoff (ADR 0027)
   today: Today.nullable().default(null), // the latest preview score: not a lock, never graded
   expected_score: ExpectedScore.nullable().default(null), // the locked total split by the headline spread: context (ADR 0024)
 })
@@ -531,6 +559,11 @@ export const Tracker = z.looseObject({
     .nullable()
     .default(null),
   // student_total at live locks (ADR 0024): context, never in the headline scorecard
+  // player impact claims (ADR 0027): graded when the player is ruled Out, against the line's move
+  player_claims: z
+    .looseObject({ first_pass: z.string(), claims: num, graded: num, mean_expected: nnum, mean_moved: nnum, rows: z.array(PlayerClaimGrade) })
+    .nullable()
+    .default(null),
   totals: z
     .looseObject({ first_lock: nstr.default(null), weeks: num, n: num, mae: nnum.default(null), market_mae: nnum.default(null), side_right: num, side_n: num })
     .nullable()
@@ -961,6 +994,7 @@ export const TeamFile = z.looseObject({
   staff: z.looseObject({ current: z.array(TeamSpell), changes: z.array(TeamChange) }),
   other_starter_weeks: z.array(z.looseObject({ week: num, qb: z.string() })).default([]),
   units: z.looseObject({ off: TeamUnit, def: TeamUnit }),
+  availability: TeamAvailability.nullable().default(null), // ADR 0027: top starters by value, statuses
 })
 export type TeamFile = z.infer<typeof TeamFile>
 export type TeamUnit = z.infer<typeof TeamUnit>
