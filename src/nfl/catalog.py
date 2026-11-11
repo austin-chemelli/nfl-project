@@ -76,6 +76,7 @@ TABLES: tuple[Table, ...] = (
     Table("llm_calls", "mart", "one row per local-model request"),
     Table("candidates", "mart", "the candidates ledger: every second-level candidate's gates and verdict (append-only)"),
     Table("team_week", "derived", "SQL model: plays aggregated per season, week, game, team and side (off/def)"),
+    Table("team_split_week", "derived", "SQL model: team_week split by situation (blitz, box, play action, down, field zone, opponent tier ...), with and without, per unit"),
     Table("upset_conditions", "derived", "SQL model: per game and team, the role (dog/fav), size bucket and the five upset conditions met"),
 )  # fmt: skip
 
