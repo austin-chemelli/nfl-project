@@ -33,6 +33,9 @@ SCREEN_VERSION = "1"
 MIN_WEEK = 4
 BOOTSTRAPS = 400
 SEED = 7
+MIN_SPLIT_UNITS = (
+    30  # a split candidate needs this many team-seasons in the split-half, else 'none'
+)
 STABLE = 0.3  # split-half r at or above this: stable
 LUCK_BELOW = 0.1  # a luck-type measure under this split-half r is 'luck'
 ONE_SCORE = 8
@@ -249,18 +252,43 @@ def team_games(tw: pl.DataFrame, games: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def asof_frame(tg: pl.DataFrame) -> pl.DataFrame:
+def asof_frame(tg: pl.DataFrame, cols: list[str] | None = None) -> pl.DataFrame:
     """For every team-game (week w), the sums over that team's games of the same season with week < w.
 
     The only place the screen's as-of rule lives: `week_j < week`, strictly. Teams with no earlier
-    game (week 1, or after nothing played) have no row."""
-    past = tg.select("season", "team", pl.col("week").alias("wk"), *SUM_COLS)
+    game (week 1, or after nothing played) have no row. `cols` defaults to SUM_COLS."""
+    cols = cols or SUM_COLS
+    past = tg.select("season", "team", pl.col("week").alias("wk"), *cols)
     return (
         tg.select("game_id", "season", "week", "team")
         .join(past, on=["season", "team"])
         .filter(pl.col("wk") < pl.col("week"))
         .group_by("game_id", "season", "week", "team")
-        .agg(pl.col(c).sum() for c in SUM_COLS)
+        .agg(pl.col(c).sum() for c in cols)
+    )
+
+
+SPLIT_COLS = ["s_n", "s_epa", "r_n", "r_epa"]
+
+
+def split_team_games(tsw: pl.DataFrame, tg: pl.DataFrame, split: str, side: str) -> pl.DataFrame:
+    """`tg` (team_games, so the outcome columns of the future gate stay) plus, for one split's unit
+    (M25.2): `s_n`, `s_epa` the plays and EPA in the situation (flag true), `r_n`, `r_epa` outside it
+    (flag false).
+    `tsw` is the team_split_week model; a game with no row for the split (FTN not charted, an opponent
+    tier before Week 4) has zeros, so its gap is null."""
+    agg = (
+        tsw.filter((pl.col("split") == split) & (pl.col("side") == side))
+        .group_by("game_id", "team")
+        .agg(
+            pl.col("plays").filter(pl.col("flag")).sum().cast(pl.Float64).alias("s_n"),
+            pl.col("epa_sum").filter(pl.col("flag")).sum().cast(pl.Float64).alias("s_epa"),
+            pl.col("plays").filter(~pl.col("flag")).sum().cast(pl.Float64).alias("r_n"),
+            pl.col("epa_sum").filter(~pl.col("flag")).sum().cast(pl.Float64).alias("r_epa"),
+        )
+    )
+    return tg.join(agg, on=["game_id", "team"], how="left").with_columns(
+        pl.col(c).fill_null(0.0) for c in SPLIT_COLS
     )
 
 
@@ -289,11 +317,11 @@ def qb_sack_frame(con, season_from: int) -> pl.DataFrame:
     """).pl()
 
 
-def _agg_weeks(tg: pl.DataFrame, lo: int, hi: int) -> pl.DataFrame:
+def _agg_weeks(tg: pl.DataFrame, lo: int, hi: int, cols: list[str] | None = None) -> pl.DataFrame:
     return (
         tg.filter(pl.col("week").is_between(lo, hi))
         .group_by("season", "team")
-        .agg(pl.col(c).sum() for c in SUM_COLS)
+        .agg(pl.col(c).sum() for c in cols or SUM_COLS)
     )
 
 
@@ -313,16 +341,20 @@ _OUTCOME = {
 }
 
 
-def team_gates(c: cand.Candidate, tg: pl.DataFrame) -> dict:
-    """Gates 1 and 2 for a team-level candidate on the regular-season team-games `tg`."""
+def team_gates(c: cand.Candidate, tg: pl.DataFrame, cols: list[str] | None = None) -> dict:
+    """Gates 1 and 2 for a team-level candidate on the regular-season team-games `tg`.
+
+    A split candidate (M25.2) passes its own frame `tg` (`split_team_games`) and `cols`; the gap is
+    then computed per team-season over odd and over even weeks (and over the two halves), each needing
+    `MIN_SPLIT_PLAYS` plays on both sides or the unit drops out of that gate."""
     out: dict = {}
     sign = float(c.good)
     v = c.value() * sign
-    odd = _agg_weeks(tg.filter(pl.col("week") % 2 == 1), 1, 30)
-    even = _agg_weeks(tg.filter(pl.col("week") % 2 == 0), 1, 30)
+    odd = _agg_weeks(tg.filter(pl.col("week") % 2 == 1), 1, 30, cols)
+    even = _agg_weeks(tg.filter(pl.col("week") % 2 == 0), 1, 30, cols)
     out |= _split_half(*_aligned(odd, even, v, v))
     if c.outcome:
-        first, second = _agg_weeks(tg, *FIRST_HALF), _agg_weeks(tg, *SECOND_HALF)
+        first, second = _agg_weeks(tg, *FIRST_HALF, cols), _agg_weeks(tg, *SECOND_HALF, cols)
         x, y = _aligned(first, second, v, _OUTCOME[c.outcome]())
         ctrl = _aligned(first, second, cand.BASE[c.replaces](), v)[0] if c.replaces else x * 0
         out |= _future(x, y, ctrl, bool(c.replaces))
@@ -390,14 +422,37 @@ def screen(con, season_from: int = 2006, only: str | None = None) -> list[dict]:
     ).pl()
     tg = team_games(tw, games_all)
     asof = asof_frame(tg)
+    if "team_split_week" not in {d["name"] for d in catalog.describe(con)}:
+        if only:  # a full run without the split model still screens the rest
+            if cand.BY_ID[only].frame == "team_split_week":
+                raise ValueError("no team_split_week table: run `nfl models build` first")
+        else:
+            chosen = [c for c in chosen if c.frame != "team_split_week"]
+    need_split = any(c.frame == "team_split_week" for c in chosen)
+    tsw = (
+        con.sql(
+            f"select * from team_split_week where season >= {season_from} "
+            "and game_id in (select game_id from games where game_type = 'REG')"
+        ).pl()
+        if need_split
+        else None
+    )
+    split_cols = SUM_COLS + SPLIT_COLS
     games = game_sample(con, season_from)
     qb = qb_sack_frame(con, season_from) if any(c.id == "qb_sack_rate" for c in chosen) else None
     rows = []
     for c in chosen:
         g: dict = {k: None for k in GATE_COLS}
-        if c.level == "team" and c.halves:
+        c_asof = asof
+        if c.frame == "team_split_week":
+            ctg = split_team_games(tsw, tg, c.split, c.side)
+            g |= team_gates(c, ctg, split_cols)
+            if g["split_n"] < MIN_SPLIT_UNITS:  # too rare a situation: no r, and no verdict
+                g |= {"split_half": None, "split_half_lo": None, "split_half_hi": None}
+            c_asof = asof_frame(ctg, split_cols)
+        elif c.level == "team" and c.halves:
             g |= team_gates(c, tg)
-        g |= residual_gates(c, games, asof, qb if c.id == "qb_sack_rate" else None)
+        g |= residual_gates(c, games, c_asof, qb if c.id == "qb_sack_rate" else None)
         g = {k: _clean(v) if k not in _INT_COLS else v for k, v in g.items()}
         rows.append(
             {
@@ -405,7 +460,8 @@ def screen(con, season_from: int = 2006, only: str | None = None) -> list[dict]:
                 "kind": c.kind, "interesting": c.interesting, "note": c.note,
                 "pregame": c.pregame, "in_model": c.in_model, **g,
                 "verdict": verdict(
-                    g["split_half"] if c.halves and c.level == "team" else None,
+                    (0.0 if c.frame == "team_split_week" and g["split_half"] is None
+                     else g["split_half"]) if c.halves and c.level == "team" else None,
                     luck=c.luck, kind=c.kind, future_partial_lo=g["future_partial_lo"],
                     resid_st=_interval(g, "resid_st"), resid_mk=_interval(g, "resid_mk"),
                     pregame=c.pregame,

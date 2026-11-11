@@ -119,7 +119,10 @@ def test_slope_ci_recovers_a_planted_slope():
 def test_full_screen_runs_every_candidate_on_synthetic_data(tmp_path):
     paths, _, _ = prepare(tmp_path)
     rows = cs.screen(catalog.connect(paths), season_from=2020)
-    assert [r["candidate"] for r in rows] == [c.id for c in cand.CANDIDATES]
+    # without the team_split_week model a full run screens everything but the split candidates
+    assert [r["candidate"] for r in rows] == [
+        c.id for c in cand.CANDIDATES if c.frame == "team_week"
+    ]
     assert {r["verdict"] for r in rows} <= {"use", "context", "luck", "none"}
 
 
@@ -167,6 +170,8 @@ def test_registry_is_consistent():
         assert c.outcome in (None, "off", "def", "net")
     assert {c.id for c in cand.CANDIDATES if c.interesting} == {
         "net_epa_noto", "fum_luck", "success_off", "net_wepa", "wind_15", "one_score_luck",
+        "split_blitz_gap", "split_box_light_gap", "split_box_heavy_gap", "split_play_action_gap",
+        "split_vs_top10_def_gap", "split_vs_top10_off_gap",
     }  # fmt: skip
 
 
@@ -186,3 +191,92 @@ def test_postgame_candidates_never_reach_use():
         "sack_off",
         "sack_def",
     }
+
+
+# ---- split candidates (ADR 0028, M25.2)
+
+
+def test_every_split_has_a_candidate_on_the_unit_that_does_not_choose():
+    from nfl import splits
+
+    for sp in splits.SPLITS:
+        c = cand.BY_ID[f"split_{sp.id}_gap"]
+        assert c.frame == "team_split_week" and c.split == sp.id
+        assert (c.kind, c.level, c.pregame, c.halves) == ("spread", "team", True, True)
+        assert c.side == ("def" if sp.chooser == "offense" or sp.id == "vs_top10_off" else "off")
+        assert c.outcome == c.side and c.good == (1 if c.side == "off" else -1)
+    assert sum(c.frame == "team_split_week" for c in cand.CANDIDATES) == len(splits.SPLITS)
+
+
+def _planted(n_with=50, n_without=100):
+    """Two teams over weeks 1-8 of 2022; plays are per game so a half-season has 4 games of each."""
+    tg_rows, tsw_rows = [], []
+    for team, base in (("AAA", 0.0), ("BBB", 1.0)):
+        for week in range(1, 9):
+            gid = f"2022_{week:02d}_{team}"
+            tg_rows.append({"game_id": gid, "season": 2022, "week": week, "team": team,
+                            "games": 1.0, **{c: 0.0 for c in cs.SUM_COLS if c != "games"}})  # fmt: skip
+            # the gap is `base` in odd weeks and `base + 0.5 * base` in even weeks, so teams rank the same
+            gap = base * (1.0 if week % 2 else 1.5)
+            for flag, n, epa in ((True, n_with, 0.1 + gap), (False, n_without, 0.1)):
+                tsw_rows.append({"game_id": gid, "team": team, "side": "off", "split": "blitz",
+                                 "flag": flag, "plays": n, "epa_sum": n * epa})  # fmt: skip
+    return pl.DataFrame(tg_rows), pl.DataFrame(tsw_rows)
+
+
+def test_split_frame_gap_is_hand_computed_and_split_half_runs_per_unit():
+    tg, tsw = _planted()
+    ctg = cs.split_team_games(tsw, tg, "blitz", "off")
+    c = cand.BY_ID["split_blitz_gap"]
+    cols = cs.SUM_COLS + cs.SPLIT_COLS
+    odd = cs._agg_weeks(ctg.filter(pl.col("week") % 2 == 1), 1, 30, cols)
+    g = odd.select("team", c.value().alias("g")).sort("team")
+    # 4 odd games of 50 / 100 plays: sums 200 / 400, EPA (0.1 + base) * 200 and 0.1 * 400
+    assert g["g"].to_list() == pytest.approx([0.0, 1.0])
+    # the as-of frame carries the split columns and only earlier weeks
+    a = cs.asof_frame(ctg, cols).filter(pl.col("week") == 3).sort("team")
+    assert a["s_n"].to_list() == [100.0, 100.0] and a["games"].to_list() == [2.0, 2.0]
+    # too few plays: the gap is null, not a noisy number
+    thin = odd.with_columns(pl.lit(cand.MIN_SPLIT_PLAYS - 1.0).alias("s_n"))
+    assert thin.select(c.value()).to_series().null_count() == 2
+    # two teams are too few for a split-half r; the numbers come back as None, not an error
+    out = cs.team_gates(c, ctg, cols)
+    assert out["split_n"] == 2 and out["split_half"] is None
+
+
+def test_split_half_r_on_a_planted_frame_matches_numpy():
+    rng = np.random.default_rng(3)
+    tg_rows, tsw_rows, truth = [], [], {}
+    for k in range(40):
+        team = f"T{k:02d}"
+        gap = rng.normal()
+        truth[team] = gap
+        for week in range(1, 9):
+            gid = f"2022_{week:02d}_{team}"
+            tg_rows.append({"game_id": gid, "season": 2022, "week": week, "team": team,
+                            "games": 1.0, **{c: 0.0 for c in cs.SUM_COLS if c != "games"}})  # fmt: skip
+            noise = rng.normal(scale=0.3)
+            for flag, n, epa in ((True, 40, gap + noise), (False, 80, 0.0)):
+                tsw_rows.append({"game_id": gid, "team": team, "side": "off", "split": "blitz",
+                                 "flag": flag, "plays": n, "epa_sum": n * epa})  # fmt: skip
+    ctg = cs.split_team_games(pl.DataFrame(tsw_rows), pl.DataFrame(tg_rows), "blitz", "off")
+    cols = cs.SUM_COLS + cs.SPLIT_COLS
+    out = cs.team_gates(cand.BY_ID["split_blitz_gap"], ctg, cols)
+    by = {}
+    for r in ctg.iter_rows(named=True):
+        d = by.setdefault((r["team"], r["week"] % 2), [0.0])
+        d[0] += r["s_epa"] / r["s_n"] / 4
+    odd = np.array([by[(f"T{k:02d}", 1)][0] for k in range(40)])
+    even = np.array([by[(f"T{k:02d}", 0)][0] for k in range(40)])
+    assert out["split_n"] == 40
+    assert out["split_half"] == pytest.approx(np.corrcoef(odd, even)[0, 1], abs=1e-9)
+    assert out["split_half"] > 0.5  # the planted gap repeats
+
+
+def test_existing_candidates_are_screened_identically_with_split_candidates_registered(tmp_path):
+    """The split candidates add their own frame; every earlier candidate's row is unchanged."""
+    paths, _, _ = prepare(tmp_path)
+    rows = cs.screen(catalog.connect(paths), season_from=2020, only="net_epa")
+    assert len(rows) == 1 and rows[0]["split_n"] is not None
+    with pytest.raises(ValueError, match="team_split_week"):
+        cs.screen(catalog.connect(paths), season_from=2020, only="split_blitz_gap")

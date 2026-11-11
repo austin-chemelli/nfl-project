@@ -36,6 +36,8 @@ from dataclasses import dataclass
 
 import polars as pl
 
+from nfl import splits
+
 OUTDOOR = ("outdoors", "open")
 
 
@@ -71,6 +73,11 @@ class Candidate:
     level: str = "team"  # 'team' | 'game'
     pregame: bool = True
     in_model: bool = False
+    # Frame the value is an expression over: 'team_week' (the as-of sums above) or 'team_split_week'
+    # (M25.2: `split` and `side` pick one split's unit; see `candidate_screen.split_team_games`).
+    frame: str = "team_week"
+    split: str = ""
+    side: str = "off"
 
 
 def _wind(k: int) -> Callable[[], pl.Expr]:
@@ -215,5 +222,56 @@ CANDIDATES: tuple[Candidate, ...] = (
         outcome="net",
     ),
 )  # fmt: skip
+
+# ---- situation splits (ADR 0028, M25.2): generated from splits.SPLITS so the two can't drift.
+# One candidate per split: the raw with-minus-without EPA-per-play gap of the unit that does NOT choose
+# the situation (the offense when the defense chooses: blitz, box; the defense when the offense does:
+# play action, deep pass; the offense for neutral situations, except `vs_top10_off`, which only has
+# defense rows). The frame columns: `s_*` plays in the situation, `r_*` the rest (see
+# `candidate_screen.split_team_games`). A gap needs MIN_SPLIT_PLAYS plays on both sides of the unit's
+# sample (a half-season, an as-of window) or it is null.
+MIN_SPLIT_PLAYS = 40
+SPLIT_INTERESTING = frozenset(
+    {"blitz", "box_light", "box_heavy", "play_action", "vs_top10_def", "vs_top10_off"}
+)
+
+
+def split_unit_side(sp: splits.Split) -> str:
+    """'off' or 'def': the unit whose gap the split's candidate measures."""
+    if sp.id == "vs_top10_off":
+        return "def"
+    return "def" if sp.chooser == "offense" else "off"
+
+
+def _split_gap() -> pl.Expr:
+    enough = (pl.col("s_n") >= MIN_SPLIT_PLAYS) & (pl.col("r_n") >= MIN_SPLIT_PLAYS)
+    return pl.when(enough).then(ratio("s_epa", "s_n") - ratio("r_epa", "r_n")).otherwise(None)
+
+
+def _split_candidate(sp: splits.Split) -> Candidate:
+    side = split_unit_side(sp)
+    unit = "offense" if side == "off" else "defense"
+    what = "gains" if side == "off" else "allows"
+    return Candidate(
+        id=f"split_{sp.id}_gap",
+        label=f"{sp.label}: the {unit}'s EPA gap",
+        sentence=(
+            f"EPA per play the {unit} {what} in the situation minus outside it, season to date. "
+            f"{sp.definition}"
+        ),
+        kind="spread", source="plays" + (" + FTN charting" if sp.source == "ftn" else ""),
+        first_season=sp.first_season, replaces="",
+        interesting=sp.id in SPLIT_INTERESTING,
+        note=(
+            "A split's result: does a team's gap in a situation repeat? Read by "
+            "matchups.reliability (stable / some / noise)."
+        ),
+        value=_split_gap, good=1 if side == "off" else -1, outcome=side, pregame=True,
+        frame="team_split_week", split=sp.id, side=side,
+    )  # fmt: skip
+
+
+SPLIT_CANDIDATES: tuple[Candidate, ...] = tuple(_split_candidate(sp) for sp in splits.SPLITS)
+CANDIDATES = CANDIDATES + SPLIT_CANDIDATES
 
 BY_ID = {c.id: c for c in CANDIDATES}
