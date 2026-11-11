@@ -296,6 +296,46 @@ def _desktop_last(events: list[tuple[datetime, str, str]], now: datetime) -> dic
     }
 
 
+# The check runs half an hour before each lock (infra/jobs.tf): a pass that finishes later than
+# this after the check missed the lock, which the resolved detail says.
+CHECK_BEFORE_LOCK = timedelta(minutes=30)
+
+
+def resolve_narrative_check(item: dict, entries: list[dict]) -> dict:
+    """A failed nfl-narrative-check counts as resolved (state ok, the failure kept in the detail)
+    when a desktop pass in the same pass window logged "pass done" after the check ran. The pass
+    script logs "done" only when every upcoming game was stored, which is what the check tests.
+    Without this, a failure handled by a rerun stays red until the next scheduled check."""
+    from nfl.llm.narrative import last_pass
+
+    last = item.get("last") or {}
+    if last.get("state") != "failed" or "detail" not in last:
+        return item
+    if last["detail"].startswith("could not read") or last["detail"].startswith("cancelled"):
+        return item
+    checked = _ts(last["at"])
+
+    def window(t: datetime) -> datetime:
+        return last_pass(t.astimezone(UTC).replace(tzinfo=None))
+
+    done = sorted(
+        t
+        for e in entries
+        if "narrative pass done" in (e.get("textPayload") or "")
+        and (t := _ts(e["timestamp"])) > checked
+        and window(t) == window(checked)
+    )
+    if not done:
+        return item
+    fin = done[0].astimezone(ET)
+    late = " (after the lock)" if done[0] > checked + CHECK_BEFORE_LOCK else ""
+    detail = (
+        f"resolved: failed {checked.astimezone(ET):%a %H:%M} ({last['detail']}), then the "
+        f"desktop pass stored every game, done {fin:%a %H:%M}{late}"
+    )
+    return {**item, "last": {**last, "state": "ok", "detail": detail[:300]}}
+
+
 # ------------------------------------------------------------------ site, lock commit, credits
 
 
@@ -496,6 +536,13 @@ def collect(
                 res, err = exec_f[job].result()
                 items.append(cloud_item(job, crons, res, err, now, project, region))
             entries, err = desk_f.result()
+            if not err:
+                items = [
+                    resolve_narrative_check(it, entries)
+                    if it["id"] == "nfl-narrative-check"
+                    else it
+                    for it in items
+                ]
             if err:
                 items.append(
                     _failed(

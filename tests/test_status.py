@@ -222,7 +222,15 @@ def test_collect_end_to_end_with_recorded_output():
     items = status.collect(ROOT, now=NOW, run=run, fetch=lambda url: meta, have_gcloud=True)
     check_contract(items)
     by_id = {it["id"]: it for it in items}
-    assert by_id["nfl-narrative-check"]["last"]["state"] == "failed"
+    # Sat 11-07: the 11:30 check failed, the rerun pass finished at 16:02, so it shows resolved
+    check = by_id["nfl-narrative-check"]["last"]
+    assert check["state"] == "ok" and check["url"].endswith(
+        "nfl-narrative-check-z66h9/tasks?project=nfl-project-prod"
+    )
+    assert check["detail"] == (
+        "resolved: failed Sat 11:30 (exit code 1 after 1m 46s), then the desktop pass stored "
+        "every game, done Sat 16:02 (after the lock)"
+    )
     assert (
         by_id["nfl-retro"]["last"]["detail"]
         == "could not read executions: ERROR: (gcloud.run) permission denied"
@@ -268,3 +276,29 @@ def test_collect_gcloud_logged_out():
     cloud = [it for it in items if it["group"] == "Cloud jobs"]
     assert len(cloud) == 1 and "not logged in" in cloud[0]["last"]["detail"]
     assert "Reauthentication required" in cloud[0]["last"]["detail"]
+
+
+def test_narrative_check_resolution_needs_a_later_done_in_the_same_window():
+    def entry(ts, text):
+        return {"timestamp": ts, "severity": "INFO", "textPayload": text}
+
+    failed = {
+        "id": "nfl-narrative-check",
+        "label": "x",
+        "last": {"at": "2026-11-12T08:30:01-05:00", "state": "failed", "detail": "exit code 1"},
+    }
+    resolve = status.resolve_narrative_check
+    # done before the check (the Wed pass that left gaps), or in the next window: still failed
+    before = entry("2026-11-12T06:00:00Z", "desktop narrative pass done: 2026 week 10")
+    next_window = entry("2026-11-14T13:00:00Z", "desktop narrative pass done: 2026 week 10")
+    started = entry("2026-11-12T14:00:00Z", "desktop narrative pass started: 2026 week 10")
+    assert resolve(failed, [before, next_window, started]) is failed
+    # a rerun that finishes before the 09:00 lock
+    done = entry("2026-11-12T13:50:00Z", "desktop narrative pass done: 2026 week 10")
+    last = resolve(failed, [started, done])["last"]
+    assert last["state"] == "ok" and last["detail"].endswith("done Thu 08:50")
+    # an ok check, or one whose executions could not be read, is left alone
+    ok = {**failed, "last": {**failed["last"], "state": "ok"}}
+    assert resolve(ok, [done]) is ok
+    unread = {**failed, "last": {**failed["last"], "detail": "could not read executions: x"}}
+    assert resolve(unread, [done]) is unread
