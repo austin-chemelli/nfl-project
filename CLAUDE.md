@@ -56,6 +56,7 @@ uv run nfl grade             # scorecard (+ECE), reliability, summary with CIs, 
 uv run nfl odds snapshot     # Odds API lines now (3 credits) -> raw/odds_api + curated/lines
 uv run nfl daily             # the Wed/Fri/Sat pass (ADR 0024, M20.1): current-season ingest, odds snapshot, curate, features, forecast, preview scores, site
 uv run nfl odds status       # credits used, snapshots on disk (free)
+uv run nfl status [--json]   # did each scheduled job run: cloud executions, desktop passes, site freshness, credits (read-only; the hub's Status tab)
 uv run nfl ledger            # open paper bets at last lock, settle, CLV -> marts/bets*.parquet
 uv run nfl narrative slate 2026 8   # games to research; `ingest <file>` validates+stores a record; `example`, `list`
 uv run nfl narrative run 2026 8 [game_id...]   # local research on the desktop model -> producer 'local' (~13 min/game); without ids it skips games stored in this pass

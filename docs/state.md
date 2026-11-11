@@ -51,7 +51,7 @@ flowchart LR
 
 ### Schedule (ET)
 
-The cloud rows are checked against `infra/jobs.tf` by `scripts/state_check.py`; the desktop rows against `PASSES` in `src/nfl/llm/narrative.py`.
+The cloud rows are checked against `infra/jobs.tf` by `scripts/state_check.py`; the desktop rows against `PASSES` in `src/nfl/llm/narrative.py`. `uv run nfl status` shows the last run of every row at once (the hub's Status tab runs `nfl status --json`).
 
 | When | What | Where | Cron | Writes | Check it ran |
 |---|---|---|---|---|---|
@@ -87,6 +87,7 @@ Live view, with the areas each chat has claimed: `.notes/hub/tracks/` (uncommitt
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
+| status-feed | `status-feed` | `~/.t3-fork/worktrees/nfl-project/status-feed-53ba0ea4fc0afeda` | Hub v2 track N1 (plan in `~/dev/t3code/.notes/hub/plans/hub-v2.md`, Contract B): `nfl status --json` reports the last run of every cloud job, the desktop passes, site freshness, the last lock commit and Odds API credits for the hub's Status tab; `hub.toml` gains `[[status.source]]` | PR open 2026-11-11 | |
 | league | `league-teams`, `league-playoffs`, `league-context` | removed | M14 league page in three phases (ADR 0019): Teams tab with scatter charts and the `feature_bands` fix; standings, simulated playoff odds, leverage, slate stakes line; similar seasons, compare, ranks | merged 2026-11-06, all three phases live and checked in production. The first real snapshot lands with Saturday's lock: check the job log for `SNAPSHOT NOT SAVED` | #20, #23, #24 |
 | pop | `retro-wp`, `retro-drives`, `retro-story` | removed | M15 (ADR 0020): win-probability chart with turning points, motion tokens and kit motion, skeletons, touch tips; drives; pinned result | merged 2026-11-05, all three phases live; `nfl-retro` run by hand on d969ab3, retros on schema 6; worktree and branches removed. M15.10 route crossfades optional, not built | #19, #21, #22 |
 | ui | `ui-copy`, now `ui-next` (idle) | `~/dev/nfl-project-ui` | M21 copy pass: shorter ledes, explanations behind hover and fine print, parallel sentences as tables, team codes in sentences (ADR 0017 amendment); earlier: site walk fixes and the approach-free Preview (#30), Coaches and Build hidden (#25), M13 (#18), round 2 | merged 2026-11-09 (#31); worktree kept for the next UI round | #31 |
@@ -208,7 +209,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-09 |
 | [adr/](adr/) | before re-opening a decision; ADR 0028 is the newest (0026 second-level features, 0027 player value, 0028 matchups and paths to an upset) | 2026-11-09 |
 | [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-09 |
-| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-10 |
+| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-11 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-08 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-08 |
 | [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-09 |
