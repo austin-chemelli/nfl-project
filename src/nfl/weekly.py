@@ -61,6 +61,18 @@ def refresh(paths: Paths, console: Console, odds: bool = True) -> None:
 
     step("ledger", _ledger)
 
+    def _models():
+        # the site's matchups and paths read these (ADR 0028); a failure costs those sections only
+        from nfl.sql import runner
+
+        try:
+            for r in runner.build(paths):
+                console.print(f"models: {r.name} {r.rows} rows ({r.status})")
+        except Exception as e:  # noqa: BLE001
+            console.print(f"[yellow]models failed, continuing: {e!r}[/]")
+
+    step("models", _models)
+
     from nfl.site import build as build_site
 
     step("site", lambda: build_site(paths, league_snapshot="refresh"))

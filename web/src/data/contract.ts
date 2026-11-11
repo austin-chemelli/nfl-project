@@ -85,6 +85,8 @@ export const Meta = z.looseObject({
   // the league's spread per team-level feature (Details tab); older files lack it and the rows go plain
   feature_bands: z.record(z.string(), z.looseObject({ lo: num, q1: num, med: num, q3: num, hi: num })).default({}),
   last_lock: z.looseObject({ lock_ts: z.string(), season: num, week: num, slot: nstr }).nullable(),
+  // the situation registry (ADR 0028): labels and one-sentence definitions; older files lack it
+  split_defs: z.record(z.string(), z.looseObject({ label: z.string(), definition: z.string(), chooser: z.enum(['offense', 'defense', 'neither']), no_edge: z.string().default('') })).default({}),
 })
 
 // --------------------------------------------------------------------------------------- slate
@@ -356,6 +358,92 @@ export const Narrative = z.looseObject({
   ),
 })
 
+// Matchups and paths to an upset (ADR 0028, M25.3). Mirrors site.py's game_matchups / game_paths; both
+// are null when there is nothing to show (before Week 3, no split model, no line).
+export const MatchupRow = z.looseObject({
+  split: z.string(),
+  label: z.string(),
+  chooser: z.enum(['offense', 'defense', 'neither']),
+  has_edge: z.boolean(),
+  opp_rate: nnum, // how often the choosing unit puts the game in the situation
+  opp_rate_lo: nnum, // the league's spread of that habit across teams
+  opp_rate_q1: nnum,
+  opp_rate_med: nnum,
+  opp_rate_q3: nnum,
+  opp_rate_hi: nnum,
+  rate_faced: nnum, // the other unit's own rate so far
+  n_with: num,
+  n_without: num,
+  epa_with: nnum,
+  epa_without: nnum,
+  shrunk_gap: nnum,
+  league_gap: nnum,
+  edge_pts_pg: nnum, // > 0 favours the offense of the side
+  favours: z.enum(['offense', 'defense']).nullable(),
+  reliability: z.enum(['stable', 'some', 'noise']),
+  note: z.string(),
+})
+export type MatchupRow = z.infer<typeof MatchupRow>
+
+export const Matchups = z.looseObject({
+  as_of_week: num,
+  sides: z.array(z.looseObject({ offense: z.string(), defense: z.string(), rows: z.array(MatchupRow) })),
+  lede: nstr,
+})
+export type Matchups = z.infer<typeof Matchups>
+
+export const PathCondition = z.looseObject({
+  id: z.string(),
+  label: z.string(),
+  definition: z.string(),
+  win_rate_if: nnum,
+  win_rate_pct: nnum,
+  n: num,
+  happens: nnum,
+  happens_pct: nnum,
+  base_rate: nnum,
+  base_rate_pct: nnum,
+  dog_games: num,
+  dog_count: num,
+  fav_games: num,
+  fav_count: num,
+  plausibility: z.string(),
+  measured_r: nnum,
+  help: z.string(),
+})
+
+export const UpsetPaths = z.looseObject({
+  game_id: nstr,
+  season: num,
+  week: num,
+  as_of_week: num,
+  dog: z.string(),
+  favorite: z.string(),
+  size: num,
+  bucket: z.string(),
+  base_rate: nnum,
+  base_rate_pct: nnum,
+  conditions: z.array(PathCondition),
+  top: z.array(z.string()),
+  sentence: z.string(),
+})
+export type UpsetPaths = z.infer<typeof UpsetPaths>
+
+export const PathsOutcome = z.looseObject({
+  game_id: z.string(),
+  dog: z.string(),
+  favorite: z.string(),
+  size: num,
+  bucket: z.string(),
+  dog_won: z.boolean(),
+  tied: z.boolean(),
+  margin: num,
+  conditions: z.array(z.looseObject({ id: z.string(), label: z.string(), met: z.boolean() })),
+  met: z.array(z.string()),
+  sentence: z.string(),
+})
+export type PathsOutcome = z.infer<typeof PathsOutcome>
+
 export const Game = GameRow.extend({
   contributions: z.record(z.string(), Contribution),
   edges: z.record(z.string(), z.looseObject({ favors: nstr, strength_pct: nnum })),
@@ -372,6 +460,9 @@ export const Game = GameRow.extend({
   lineups: Lineups.nullable().default(null), // the formation map's starters (ADR 0027, M24.5)
   today: Today.nullable().default(null), // the latest preview score: not a lock, never graded
   expected_score: ExpectedScore.nullable().default(null), // the locked total split by the headline spread: context (ADR 0024)
+  matchups: Matchups.nullable().default(null), // what each side's habits imply, in points a game (ADR 0028)
+  paths: UpsetPaths.nullable().default(null), // how the underdog wins: conditions with history, never a probability
+  paths_outcome: PathsOutcome.nullable().default(null), // finished games: which conditions the dog met
 })
 
 // --------------------------------------------------------------------------- retrospective
