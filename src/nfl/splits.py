@@ -29,6 +29,10 @@ class Split:
     source: Source
     first_season: int
     definition: str
+    # Why the matchup engine shows no edge for this split ('' = it does). Edges are for scheme choices
+    # the other unit reacts to; a split whose league gap is built into the situation itself (a deep
+    # throw gains more by definition) would rank first in every game without saying anything.
+    no_edge: str = ""
 
 
 SPLITS: tuple[Split, ...] = (
@@ -47,9 +51,11 @@ SPLITS: tuple[Split, ...] = (
     Split("rpo", "Run-pass option", "offense", "ftn", 2022,
           "A play that was a run-pass option (FTN is_rpo)."),
     Split("shotgun", "Shotgun", "offense", "pbp", 1999,
-          "A play with the quarterback in shotgun rather than under center."),
+          "A play with the quarterback in shotgun rather than under center.",
+          no_edge="context only: shotgun goes with passing downs, so its league gap is the situation, not the matchup"),
     Split("no_huddle", "No huddle", "offense", "pbp", 1999,
-          "A play run without a huddle."),
+          "A play run without a huddle.",
+          no_edge="context only: no-huddle goes with the two-minute drill and trailing, so its league gap is the game state"),
     Split("early_down", "Early downs", "neither", "pbp", 1999,
           "A play on first or second down, against third and fourth."),
     Split("third_down", "Third down", "neither", "pbp", 1999,
@@ -61,7 +67,8 @@ SPLITS: tuple[Split, ...] = (
     Split("neutral_script", "Neutral game script", "neither", "pbp", 1999,
           "A play with the offense's win probability between 20% and 80%."),
     Split("deep_pass", "Deep pass", "offense", "pbp", 1999,
-          "A pass with at least 15 air yards, against shorter passes (sacks and throwaways without air yards are out)."),
+          "A pass with at least 15 air yards, against shorter passes (sacks and throwaways without air yards are out).",
+          no_edge="context only: a deep throw gains more by definition, so its league gap would top every game"),
     Split("vs_top10_def", "Against a top-ten defense", "neither", "pbp", 1999,
           "An offense's play against a defense in the top ten by our opponent-adjusted EPA allowed as of the week (null before Week 4)."),
     Split("vs_top10_off", "Against a top-ten offense", "neither", "pbp", 1999,
