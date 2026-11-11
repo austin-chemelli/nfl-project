@@ -199,6 +199,7 @@ Live view, with the areas each chat has claimed: `.notes/hub/tracks/` (uncommitt
 - The game page's injury table overflows a 375 px phone by 51 px (2026-11-08; D30 dropped, no fix planned).
 - Wednesday 2026-11-11 desktop pass tests whether Saturday's speed-up (about 15 min a game against 26.5) came from removing stale Docker containers rather than from feed pages.
 - README scorecard CIs change between `nfl readme` runs: on 2026-11-03 only the bootstrap CI digits moved (point estimates and counts identical), although `grade.py` seeds its RNG. Cause unverified; that run's README change was discarded.
+- `tests/test_ui.py` fails on the Streamlit Build page (`diy`): `KeyError: 'special_teams'` in `src/nfl/ui/pages/diy.py` `donut` (line 133), since wave 2 made special teams a group the page's heading map lacks. Local data only, so CI stays green. Build is hidden from the live site (M16); fix when Build comes back (Austin, 2026-11-11).
 - gcsfuse logs ERROR `BufferedWriteHandler.OutOfOrderError` on curated parquet writes in cloud jobs (seen in dry run `nfl-lock-thu-5mqhw`, 2026-11-04). The job succeeded; the effect on the written files wasn't checked.
 
 ## Docs map
