@@ -94,11 +94,11 @@ def test_idempotent_build_does_not_rewrite(tmp_path):
     assert r2.status == "unchanged" and target.stat().st_mtime_ns == before
     # different input -> rewritten
     write_plays(paths, planted() + [play(season=2022, game_id="g1", play_id=9, epa=0.4)])
-    (r3,) = runner.build(paths)
+    (r3,) = runner.build(paths, "team_week")
     assert r3.status == "written" and target.stat().st_mtime_ns != before
     # an edited SQL file with the same output updates the sidecar only
     runner.sidecar_path(paths, "team_week").write_text('{"sql_sha256": "old", "rows": 4}')
-    (r4,) = runner.build(paths)
+    (r4,) = runner.build(paths, "team_week")
     assert r4.status == "sql changed, output unchanged"
     assert json.loads(runner.sidecar_path(paths, "team_week").read_text())["sql_sha256"] == (
         runner.sql_hash("team_week")
@@ -117,7 +117,7 @@ def test_the_derived_table_is_a_catalog_view(tmp_path):
     write_participation(paths, [{"game_id": "g0", "play_id": 1.0, "was_pressure": None,
                                  "time_to_throw": None, "season": 2022}])  # fmt: skip
     assert "team_week" in catalog.missing(paths)
-    runner.build(paths)
+    runner.build(paths, "team_week")
     assert "team_week" not in catalog.missing(paths)
     con = catalog.connect(paths)
     assert con.sql("select sum(plays) from team_week where side = 'off'").fetchall()[0][0] == 5

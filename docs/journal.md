@@ -712,3 +712,12 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **What changed.** `nfl.status.resolve_narrative_check`: a failed check counts as ok, with the failure, the finish time and "(after the lock)" when relevant in the detail, once a desktop pass in the same pass window (`last_pass`) logs "pass done" after the check ran. The script logs "done" only when every upcoming game was stored, the same condition the check tests. Unread or cancelled executions stay failed. No hub change: Contract B has only ok, failed and running.
 **Finding.** The Saturday lock at 12:00 ran on Wednesday's records for those 14 games; the detail says so ("after the lock").
 
+## 2026-11-10: M25 phase 0: the split model and the upset conditions (data track)
+
+**Why.** The first data for the Matchups tab and the paths-to-an-upset card (ADR 0028): situation splits per team and week, and what winning underdogs did.
+
+**What changed.** Two PRs from `main`, built by two parallel implementer agents and reviewed here. M25.0 (`matchups-splits`): `src/nfl/splits.py` registers 18 splits, and the SQL model `team_split_week` holds with/without rows per team, side and week (543,540 rows, built in about a second); FTN splits start in 2022, the opponent tier (top-ten defense or offense by our adjusted EPA as of the week, stamped before kickoff) from Week 4. M25.4 (`matchups-paths`): the SQL model `upset_conditions` (one row per game and team, the five conditions from each side's view) and `src/nfl/paths.py` (the bucket table from earlier seasons only, each team's season-to-date rates before the week, a template sentence and a post-game outcome; never a probability). Neither touches lock code; models are still built by hand (`nfl models build`).
+
+**Findings.** The planning table reproduces within a point (37% base and 68% given the turnover battle for dogs of 3–6.5), with one correction in ADR 0028 Measured: winning the turnover battle happens in 35% of those games, not 29%. FTN charting covers 99.7% of 2022 plays and 100% since, not the 84% the old notes said. Example for GB at NE, Week 9 (NE −2.5 in our lines): "How GB wins: win the turnover battle (dogs of this size who did won 76%; GB has done it in 3 of 8 games; NE has allowed it in 4 of 8), …".
+
+**Lesson.** Building all SQL models in a test broke once a model read the feature store: the old tests now build `team_week` by name, and each model's test builds only its own.
