@@ -24,7 +24,7 @@ describe('Game page', () => {
     // tendencies have their own tab
     await userEvent.click(screen.getByRole('tab', { name: 'Matchups' }))
     expect(screen.getByText('CAR offense vs GB defense')).toBeInTheDocument()
-    expect(screen.getByText('Defensive habits')).toBeInTheDocument()
+    expect(screen.getByText(/When CAR has the ball/)).toBeInTheDocument()
     // narrative, on the news tab
     await userEvent.click(screen.getByRole('tab', { name: 'Injuries & news' }))
     expect(screen.getByText(/What people are saying about the matchup/)).toBeInTheDocument()
@@ -33,11 +33,14 @@ describe('Game page', () => {
     expect(screen.getByText(/Claims and sources/)).toBeInTheDocument()
   })
 
-  it('the Matchups tab leads with the lede, a grid per side, then the tendencies', async () => {
+  it('the Matchups tab leads with the lede, then per side of the ball the face-off and the habits', async () => {
     renderRoute('/game/2026_08_CAR_GB?tab=tendencies')
-    expect(await screen.findByText(/The matchup that matters most: GB's defense against CAR's run-pass option/)).toBeInTheDocument()
-    expect(screen.getAllByTestId('matchup-grid')).toHaveLength(2)
-    expect(screen.getAllByText(/barely repeat from one half-season/)).toHaveLength(1)
+    expect(await screen.findByText(/^The biggest mismatch: GB's pass defense \(4th\) against CAR's passing offense \(22nd\)\./)).toBeInTheDocument()
+    expect(screen.getAllByTestId('side-title').map((h) => h.textContent)).toEqual([expect.stringMatching(/^When GB has the ball/), expect.stringMatching(/^When CAR has the ball/)])
+    expect(screen.getAllByTestId('face-off')).toHaveLength(2)
+    expect(screen.getAllByTestId('habit-list')).toHaveLength(2)
+    expect(screen.queryByText('Defensive habits')).toBeNull() // the tendency charts are folded in
+    expect(screen.getAllByText(/at least eight places better/)).toHaveLength(1)
   })
 
   it('without matchups the tab shows the tendencies as before', async () => {
@@ -49,20 +52,17 @@ describe('Game page', () => {
     fs.writeFileSync(gp, JSON.stringify(game))
     renderRoute('/game/2026_08_CAR_GB?tab=tendencies', root)
     expect(await screen.findByText('Defensive habits')).toBeInTheDocument()
-    expect(screen.queryByTestId('matchup-grid')).toBeNull()
-    expect(screen.queryByText(/barely repeat/)).toBeNull()
+    expect(screen.queryByTestId('face-off')).toBeNull()
+    expect(screen.queryByText(/eight places/)).toBeNull()
     fs.rmSync(root, { recursive: true, force: true })
   })
 
-  it('switches approach and situation', async () => {
+  it('switches approach', async () => {
     renderRoute('/game/2026_08_CAR_GB')
     await screen.findByText(/Lambeau Field/)
     await userEvent.click(screen.getByRole('tab', { name: 'Approaches' }))
     await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Approach' })).getByRole('radio', { name: 'Analyst' }))
     expect(screen.getByText(/Analyst says: GB win chance 71.2%/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Matchups' }))
-    await userEvent.click(within(screen.getByRole('radiogroup', { name: 'Situation' })).getByRole('radio', { name: 'Third down' }))
-    expect(screen.getByRole('radio', { name: 'Third down' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('labels a game scored without a lock as not locked', async () => {

@@ -767,3 +767,14 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Findings.** Every row reads `noise`, and GB at NE's largest edge is 0.21 points a game (NE's screens against GB's defense). Game files grow about 16 KB each (17.3 MB for the season's files, from 11.7 MB).
 
 **Lesson.** A grid that shows every registered situation buries the few that are matchups: the ten context rows went behind a disclosure after the first screenshot.
+
+## 2026-11-12: Matchups and the upset card, redesigned (M25.5 rework on #48; data track)
+
+**Why.** Austin's review of the first version: the Matchups tab was hard to parse (what "other unit's result", "edge" and "reliability" meant, the band-and-tick chart, an empty "Context" dropdown) and repeated the Tendencies charts under it; the upset card listed generic conditions ("win the turnover battle") instead of what this underdog is good at. Plan and decisions: `.notes/hub/plans/m25-matchups-redesign.md` (all four recommendations accepted, then "add all six conditions, up to four levers, the three weaker ones last").
+
+**What changed.** `upset_conditions` gains six conditions with their values (pass game, big runs, third down, run game, deep passes, red zone); `paths.py` gains `team_ranks` (season-to-date ranks per condition stat, offense and defense, from Week 4), `levers_and_chips`, and a new sentence ("Where GB has the edge: …"); outcomes list the tier-1 conditions only. `site.py`: `face_off` rows per side, a lede from the biggest rank mismatch plus any strength-on-strength row, and only the splits with an edge. Web: `FaceOff` and `HabitList` replace `MatchupGrid`; the tab shows "When X has the ball" per side, the tendency charts only when a game has no matchups; `UpsetPaths` draws lever cards (two rank bars, all dogs vs dogs who did it) and grey chips. Contract additive (`face_off`, `levers`, `chips` default `[]`).
+
+**Findings.** GB at NE: levers are takeaways (GB 1st, NE's ball security 28th), passing (GB 2nd vs NE's pass defense 17th), early downs (8th vs 20th) and deep passes (2nd vs 18th); the lede is "The biggest mismatch: GB's takeaways (1st) against NE's ball security (28th). Strength on strength: NE's early-down offense (2nd) into GB's early-down defense (1st)." Every split edge is still `noise`, so habits carry an evidence label and words, not points in bold.
+
+**Lesson.** Regenerating every web fixture from today's shared data broke 56 unrelated tests (the data moved under them); patch only the sections a change touches.
+

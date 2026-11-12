@@ -83,7 +83,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
           <Preview g={g} meta={meta} />
           <FinePrint>
             <p>The bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
-            {g.paths && <p>"How the underdog wins" lists what winning underdogs of this size did since 2006, and how often each team has done or allowed it this season. It is history, not a forecast: the chance at the top doesn't move.</p>}
+            {g.paths && <p>"Where the underdog has the edge" picks the battles where the underdog's unit ranks in the top half and at least eight places above the favourite's matching unit this season, and shows how often underdogs of this size who won that battle won the game since 2006. It is history, not a forecast: the chance at the top doesn't move. Passing and early downs partly describe the result itself, so their win rates overstate what leaning on them buys.</p>}
             <p>Probabilities are the models' estimates, not advice.</p>
           </FinePrint>
         </TabBody>
@@ -138,11 +138,10 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Matchups',
       content: (
         <TabBody>
-          <MatchupsSection g={g} meta={meta} />
-          <Tendencies g={g} meta={meta} />
+          {g.matchups ? <MatchupsSection g={g} meta={meta} /> : <Tendencies g={g} meta={meta} />}
           <FinePrint>
-            {g.matchups && <p>Team results in a situation barely repeat from one half-season to the next; the opponent's habits do. Read the edges as what the habits imply, not as a forecast.</p>}
-            <p>Tendencies are season-to-date rates, shrunk toward the league average when plays are few. Each chart has its own scale.</p>
+            {g.matchups && <p>Ranks are this season's games before this one, 1st best of 32; a unit "has the edge" when it ranks at least eight places better than the one it meets. Habits (how often) repeat week to week; how a team did in a situation barely does, so the edges are words with an evidence label, not a forecast. Coverage (man or zone) arrives with the season's participation file after the season.</p>}
+            <p>Tendencies are season-to-date rates, shrunk toward the league average when plays are few.</p>
           </FinePrint>
         </TabBody>
       ),

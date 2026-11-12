@@ -385,9 +385,29 @@ export const MatchupRow = z.looseObject({
 })
 export type MatchupRow = z.infer<typeof MatchupRow>
 
+// The face-off (redesign, 2026-11-12): the offense's rank against the defense's on each stat, 1 = best.
+export const FaceOffRow = z.looseObject({
+  id: z.string(),
+  label: z.string(),
+  off_noun: z.string(),
+  def_noun: z.string(),
+  off_rank: num,
+  def_rank: num,
+  n_teams: num,
+  edge: z.enum(['offense', 'defense', 'even']),
+})
+export type FaceOffRow = z.infer<typeof FaceOffRow>
+
 export const Matchups = z.looseObject({
   as_of_week: num,
-  sides: z.array(z.looseObject({ offense: z.string(), defense: z.string(), rows: z.array(MatchupRow) })),
+  sides: z.array(
+    z.looseObject({
+      offense: z.string(),
+      defense: z.string(),
+      rows: z.array(MatchupRow),
+      face_off: z.array(FaceOffRow).default([]),
+    }),
+  ),
   lede: nstr,
 })
 export type Matchups = z.infer<typeof Matchups>
@@ -412,6 +432,37 @@ export const PathCondition = z.looseObject({
   help: z.string(),
 })
 
+// A lever: the dog's strong unit against the favorite's weak one (redesign, 2026-11-12).
+export const PathLever = z.looseObject({
+  id: z.string(),
+  label: z.string(),
+  side: z.enum(['offense', 'defense', 'net']),
+  dog_noun: z.string(),
+  fav_noun: z.string(),
+  dog_rank: num,
+  fav_rank: num,
+  n_teams: num,
+  gap: num,
+  win_rate_pct: nnum,
+  base_rate_pct: nnum,
+  plausibility: z.string(),
+  tier: num,
+  headline: z.string(),
+})
+export type PathLever = z.infer<typeof PathLever>
+
+export const PathChip = z.looseObject({
+  id: z.string(),
+  label: z.string(),
+  kind: z.enum(['even', 'favorite', 'weak']),
+  dog_noun: z.string(),
+  fav_noun: z.string(),
+  dog_rank: num,
+  fav_rank: num,
+  text: z.string(),
+})
+export type PathChip = z.infer<typeof PathChip>
+
 export const UpsetPaths = z.looseObject({
   game_id: nstr,
   season: num,
@@ -426,6 +477,8 @@ export const UpsetPaths = z.looseObject({
   conditions: z.array(PathCondition),
   top: z.array(z.string()),
   sentence: z.string(),
+  levers: z.array(PathLever).default([]),
+  chips: z.array(PathChip).default([]),
 })
 export type UpsetPaths = z.infer<typeof UpsetPaths>
 

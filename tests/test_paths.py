@@ -15,12 +15,21 @@ from nfl.sql import runner
 from .conftest import requires_data
 from .synth import PLAY, SCHEMA_PLAYS, write_games, write_table
 
-EXTRA = {"yards_gained": 5.0, "special_teams_play": 0.0}
+EXTRA = {
+    "yards_gained": 5.0, "special_teams_play": 0.0, "yardline_100": 50.0, "third_down_converted": 0.0,
+    "third_down_failed": 0.0, "touchdown": 0.0, "td_team": None, "drive": 1.0,
+}  # fmt: skip
 SCHEMA = {
     **SCHEMA_PLAYS,
     "season": pl.Int64,
     "yards_gained": pl.Float64,
     "special_teams_play": pl.Float64,
+    "yardline_100": pl.Float64,
+    "third_down_converted": pl.Float64,
+    "third_down_failed": pl.Float64,
+    "touchdown": pl.Float64,
+    "td_team": pl.String,
+    "drive": pl.Float64,
 }
 
 
@@ -82,9 +91,40 @@ def test_planted_game_grades_each_condition_from_both_views(tmp_path):
         -2.5 / 3
     )  # wp 0.99 play out
     assert b["st_epa_net"] == pytest.approx(3.5) and a["st_epa_net"] == pytest.approx(-3.5)
-    for c in P.CONDITIONS:
+    for c in P.CORE:
         assert b[c.column] is True, c.id
         assert a[c.column] is False, c.id
+
+
+def test_the_six_newer_conditions_from_both_views(tmp_path):
+    """B passes better, breaks a 10-yard run, converts its third down, runs more successfully, hits a
+    deep pass and scores on its red-zone trip; A does none of it."""
+    k = {"season": 2022, "game_id": "g1"}
+    a = {"posteam": "A", "defteam": "B"}
+    b = {"posteam": "B", "defteam": "A"}
+    run = {"pass": 0.0, "rush": 1.0}
+    plays = [
+        pl_(**k, **b, play_id=1, epa=0.5, yards_gained=25.0),  # deep pass
+        pl_(
+            **k, **b, play_id=2, epa=0.3, yards_gained=12.0, success=1.0, **run
+        ),  # big, successful run
+        pl_(**k, **b, play_id=3, down=3.0, third_down_converted=1.0),
+        pl_(**k, **b, play_id=4, yardline_100=10.0, touchdown=1.0, td_team="B", drive=1.0),
+        pl_(**k, **a, play_id=5, epa=-0.5, yards_gained=4.0),
+        pl_(**k, **a, play_id=6, epa=-0.2, yards_gained=3.0, success=0.0, **run),
+        pl_(**k, **a, play_id=7, down=3.0, third_down_failed=1.0),
+        pl_(**k, **a, play_id=8, yardline_100=15.0, drive=2.0),
+    ]
+    _, df = build(tmp_path, plays, [game("g1", 3, "A", "B", -4)])
+    b_, a_ = (df.filter(pl.col("team") == t).row(0, named=True) for t in ("B", "A"))
+    new = [c for c in P.CONDITIONS if c not in P.CORE]
+    assert len(new) == 6
+    for c in new:
+        assert b_[c.column] is True, c.id
+        assert a_[c.column] is False, c.id
+    assert (b_["third_down_rate"], a_["third_down_rate"]) == (1.0, 0.0)
+    assert (b_["rz_td_rate"], a_["rz_td_rate"]) == (1.0, 0.0)
+    assert (b_["big_runs"], b_["deep_passes"]) == (1, 1)
 
 
 def test_conditions_are_strict_and_ties_are_not_wins(tmp_path):
@@ -131,7 +171,9 @@ def test_paths_outcome_for_the_planted_dog(tmp_path):
     _, df = outcome_and_paths(tmp_path)
     o = P.paths_outcome("g1", df)
     assert o.dog == "B" and o.favorite == "A" and o.dog_won and not o.tied
-    assert o.met == [c.id for c in P.CONDITIONS]
+    # the five plus the passing game (B's deep pass); outcomes list tier-1 conditions only
+    assert o.met == [c.id for c in P.CORE] + ["pass_game"]
+    assert [c.id for c in o.conditions] == [c.id for c in P.CONDITIONS if c.tier == 1]
     assert o.sentence.startswith("B won the turnover battle, won early downs")
     assert o.sentence.endswith("; it won.")
     assert P.paths_outcome("nope", df) is None
@@ -142,8 +184,9 @@ def test_a_dog_that_met_nothing_and_lost(tmp_path):
     o = P.paths_outcome("g0", df)  # C is the home dog? B home, spread -1: B dog, lost by 10
     assert o.dog == "B" and not o.dog_won
     assert (
-        o.met == ["turnovers", "early_down"]
-        and o.sentence == "B won the turnover battle and won early downs; it lost."
+        o.met == ["turnovers", "early_down", "pass_game"]
+        and o.sentence
+        == "B won the turnover battle, won early downs and out-passed the other side; it lost."
     )
 
 
@@ -229,15 +272,11 @@ def test_no_sentence_number_that_is_not_in_the_record(spread, week):
     df = synth_frame()
     g = {"season": 2022, "week": week, "home_team": "A", "away_team": "B", "spread_line": spread}
     r = P.upset_paths(g, week, df)
-    assert r is not None and len(r.top) == 3 and r.sentence.startswith(f"How {r.dog} wins: ")
+    assert r is not None
     assert "probab" not in r.sentence and "chance" not in r.sentence
     have = numbers_in(r.to_dict())
     for n in re.findall(r"\d+(?:\.\d+)?", r.sentence):
         assert n in have, (n, r.sentence)
-    # the pct in each clause is the record's own
-    for cid in r.top:
-        c = next(c for c in r.conditions if c.id == cid)
-        assert f"won {c.win_rate_pct}%" in r.sentence
     assert [c.win_rate_if for c in r.conditions] == sorted(
         (c.win_rate_if for c in r.conditions), reverse=True
     )
@@ -260,7 +299,119 @@ def test_rates_count_the_dogs_production_and_the_favorites_allowance():
     assert (
         P.upset_paths(g, 1, df).conditions[0].dog_games == 0
     )  # nothing yet: the sentence still reads
-    assert "no games yet" in P.upset_paths(g, 1, df).sentence
+    assert "Too early" in P.upset_paths(g, 1, df).sentence
+
+
+def ranks_frame(n=20, weeks=6, season=2022, seed=3):
+    """Twenty teams with a fixed strength per condition stat, so the ranks are known."""
+    rng = np.random.default_rng(seed)
+    teams = [f"T{i:02d}" for i in range(n)]
+    strength = {t: {c.id: rng.normal() for c in P.CONDITIONS} for t in teams}
+    rows = []
+    for w in range(1, weeks + 1):
+        order = rng.permutation(teams)
+        for h, a in zip(order[::2], order[1::2], strict=True):
+            for team, opp in ((h, a), (a, h)):
+                row = {
+                    "season": season,
+                    "week": w,
+                    "game_id": f"{w}_{h}",
+                    "team": team,
+                    "opponent": opp,
+                }
+                for c in P.CONDITIONS:
+                    row[c.stat] = strength[team][c.id] + 0.1 * rng.normal()
+                    row[c.stat_opp] = strength[opp][c.id] + 0.1 * rng.normal()
+                rows.append(row)
+    return pl.DataFrame(rows), strength
+
+
+def test_team_ranks_are_point_in_time_and_best_is_first():
+    df, _ = ranks_frame()
+    base = P.team_ranks(df, 2022, 5)
+    assert P.team_ranks(df, 2022, 3) == {}  # before MIN_RANK_WEEK
+    # the as-of week and later change nothing
+    later = df.filter(pl.col("week") >= 5).with_columns(
+        [pl.lit(99.0).alias(c.stat) for c in P.CONDITIONS]
+    )
+    assert P.team_ranks(pl.concat([df.filter(pl.col("week") < 5), later]), 2022, 5) == base
+    # an earlier week does
+    moved = df.with_columns(
+        pl.when(pl.col("week") == 4).then(99.0).otherwise(pl.col("explosives")).alias("explosives")
+    )
+    assert P.team_ranks(moved, 2022, 5) != base
+    # rank 1 = best: most explosives, fewest giveaways; a defense is best when it allowed least
+    exp = {t: r["explosives"] for t, r in base.items()}
+    top = min(exp, key=lambda t: exp[t].off_rank)
+    assert exp[top].off_value == max(r.off_value for r in exp.values())
+    gv = {t: r["turnovers"] for t, r in base.items()}
+    assert gv[min(gv, key=lambda t: gv[t].off_rank)].off_value == min(
+        r.off_value for r in gv.values()
+    )
+    assert gv[min(gv, key=lambda t: gv[t].def_rank)].def_value == max(
+        r.def_value for r in gv.values()
+    )
+
+
+def _paths_with(dog_ranks: dict, fav_ranks: dict, n=32):
+    p = P.UpsetPaths("g", 2026, 9, 9, "DOG", "FAV", 3.0, "3-6.5", 0.37, 37)
+    p.conditions = [
+        P.ConditionPath(c.id, c.label, "", 0.6, 60, 100, 0.3, 30, 0.37, 37, 0, 0, 0, 0,
+                        c.plausibility, c.measured_r, "")
+        for c in P.CONDITIONS
+    ]  # fmt: skip
+
+    def rows(rk):
+        return {
+            c.id: P.RankRow(c.id, c.label, c.off_noun, c.def_noun, 0.0, rk.get(c.id, (16, 16))[0], 0.0,
+                            rk.get(c.id, (16, 16))[1], n, 8)
+            for c in P.CONDITIONS
+        }  # fmt: skip
+
+    return p, {"DOG": rows(dog_ranks), "FAV": rows(fav_ranks)}
+
+
+def test_levers_prefer_tier_one_cap_at_four_and_keep_one_per_family():
+    # (off_rank, def_rank). The dog's offense is strong on everything; the favorite's defense is weak.
+    strong = {c.id: (2, 16) for c in P.CONDITIONS}
+    weak = {c.id: (16, 30) for c in P.CONDITIONS}
+    p, ranks = _paths_with(strong, weak)
+    levers, chips = P.levers_and_chips(p, ranks)
+    assert len(levers) == P.MAX_LEVERS
+    assert all(lv.tier == 1 for lv in levers)  # tier 2 only after every tier-1 lever
+    fams = [P.BY_ID[lv.id].family for lv in levers if P.BY_ID[lv.id].family]
+    assert len(fams) == len(set(fams))
+    assert {lv.side for lv in levers} <= {"offense", "net"}
+    # a tier-2 lever shows when the tier-1 conditions aren't mismatches
+    only_rz = {"red_zone": (3, 16)}
+    p, ranks = _paths_with(only_rz, {"red_zone": (16, 25)})
+    levers, chips = P.levers_and_chips(p, ranks)
+    assert [lv.id for lv in levers] == ["red_zone"]
+    assert {c.kind for c in chips} == {"even"} and all(P.BY_ID[c.id].tier == 1 for c in chips)
+
+
+def test_a_lever_needs_a_strong_dog_unit_and_a_gap():
+    # gap 14 but the dog's unit is 18th: not a lever, a 'weak' chip
+    p, ranks = _paths_with({"turnovers": (16, 18)}, {"turnovers": (32, 16)})
+    levers, chips = P.levers_and_chips(p, ranks)
+    assert levers == [] and next(c for c in chips if c.id == "turnovers").kind == "weak"
+    # the favorite's unit is far better: a 'favorite' chip
+    p, ranks = _paths_with({"sacks": (25, 25)}, {"sacks": (5, 5)})
+    _, chips = P.levers_and_chips(p, ranks)
+    assert next(c for c in chips if c.id == "sacks").kind == "favorite"
+
+
+def test_lever_headlines_and_sentence_use_only_record_ranks():
+    p, ranks = _paths_with(
+        {"turnovers": (16, 1), "pass_game": (2, 16)}, {"turnovers": (28, 16), "pass_game": (16, 17)}
+    )
+    p.levers, p.chips = P.levers_and_chips(p, ranks)
+    p.sentence = P._paths_sentence(p)
+    assert [lv.id for lv in p.levers] == ["turnovers", "pass_game"]
+    assert p.levers[0].headline == "DOG's takeaways (1st) against FAV's ball security (28th)"
+    have = numbers_in(p.to_dict())
+    for n in re.findall(r"\d+", p.sentence):
+        assert n in have, (n, p.sentence)
 
 
 @requires_data

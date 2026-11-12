@@ -873,7 +873,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["key_players"] = claims_by_game.get(g["game_id"])  # ADR 0027: context, M24.4
             detail["lineups"] = lineups.get(g["game_id"])  # ADR 0027: the formation map, M24.5
             detail["today"] = today.get(g["game_id"])
-            detail["matchups"] = _safe(game_matchups, None, matchup_ctx, g)
+            detail["matchups"] = _safe(game_matchups, None, matchup_ctx, g, conditions)
             detail["paths"] = _safe(game_paths, None, conditions, g)
             detail["paths_outcome"] = _safe(game_paths_outcome, None, conditions, g)
             detail["expected_score"] = _safe(
@@ -1362,9 +1362,37 @@ def _matchup_row(r: dict) -> dict:
     }  # fmt: skip
 
 
+def face_off_lede(sides: list[dict]) -> str | None:
+    """The biggest rank mismatch across both sides' face-offs, plus a strength-on-strength row (both
+    units top five) when there is one. Every number is a rank in the record. None without ranks."""
+    from nfl.paths import ordinal
+
+    rows = [(sd, r) for sd in sides for r in sd.get("face_off") or []]
+    if not rows:
+        return None
+    parts = []
+    sd, r = max(rows, key=lambda x: abs(x[1]["def_rank"] - x[1]["off_rank"]))
+    if abs(r["def_rank"] - r["off_rank"]) >= FACE_OFF_GAP:
+        o = f"{sd['offense']}'s {r['off_noun']} ({ordinal(r['off_rank'])})"
+        d = f"{sd['defense']}'s {r['def_noun']} ({ordinal(r['def_rank'])})"
+        a, b = (o, d) if r["off_rank"] < r["def_rank"] else (d, o)
+        parts.append(f"The biggest mismatch: {a} against {b}.")
+    strong = [x for x in rows if x[1]["off_rank"] <= 5 and x[1]["def_rank"] <= 5]
+    if strong:
+        sd, r = min(strong, key=lambda x: x[1]["off_rank"] + x[1]["def_rank"])
+        parts.append(
+            f"Strength on strength: {sd['offense']}'s {r['off_noun']} ({ordinal(r['off_rank'])}) "
+            f"into {sd['defense']}'s {r['def_noun']} ({ordinal(r['def_rank'])})."
+        )
+    return " ".join(parts) or "No unit here ranks far above the one it meets."
+
+
 def matchups_lede(sides: list[dict]) -> str | None:
-    """A template naming the largest edge by absolute points among the rows that have one. Every
-    number in it is the record's own (`edge_pts_pg`, 2 dp)."""
+    """The face-off lede when the ranks are ready; before that, a template naming the largest edge
+    by absolute points (`edge_pts_pg`, 2 dp, the record's own)."""
+    fo = face_off_lede(sides)
+    if fo:
+        return fo
     best = None
     for sd in sides:
         for r in sd["rows"]:
@@ -1391,18 +1419,60 @@ def matchups_lede(sides: list[dict]) -> str | None:
     )
 
 
-def game_matchups(ctx, g: dict) -> dict | None:
+# The face-off on the Matchups tab (redesign, 2026-11-12): one row per condition stat, the offense's
+# rank against the defense's, in this order. Short labels; the units' nouns come from nfl.paths.
+FACE_OFF = (
+    ("early_down", "Early downs"), ("pass_game", "Passing"), ("run_game", "Running"),
+    ("explosives", "Explosive plays"), ("third_down", "Third down"), ("red_zone", "Red zone"),
+    ("turnovers", "Turnovers"), ("sacks", "Sacks"),
+)  # fmt: skip
+FACE_OFF_GAP = 8  # rank places for one side to "have the edge"; the same bar as the upset levers
+_RANKS_CACHE: dict[tuple[int, int], dict] = {}
+
+
+def face_off(cond: pl.DataFrame | None, season: int, week: int, offense: str, defense: str):
+    """Rows of (offense rank, defense rank) on each FACE_OFF stat, season to date before `week`.
+    [] when the ranks aren't ready (before Week 4) or a team is missing. Teams are site codes."""
+    from nfl import paths as upset
+
+    if cond is None:
+        return []
+    key = (season, week)
+    if key not in _RANKS_CACHE:
+        _RANKS_CACHE[key] = upset.team_ranks(cond, season, week)
+    ranks = _RANKS_CACHE[key]
+    o, d = ranks.get(upset._code(offense)), ranks.get(upset._code(defense))
+    if not o or not d:
+        return []
+    rows = []
+    for cid, label in FACE_OFF:
+        if cid not in o or cid not in d:
+            continue
+        a, b = o[cid], d[cid]
+        gap = b.def_rank - a.off_rank  # > 0: the offense ranks better than the defense it meets
+        edge = "offense" if gap >= FACE_OFF_GAP else "defense" if gap <= -FACE_OFF_GAP else "even"
+        rows.append({
+            "id": cid, "label": label, "off_noun": a.off_noun, "def_noun": b.def_noun,
+            "off_rank": a.off_rank, "def_rank": b.def_rank, "n_teams": a.n_teams, "edge": edge,
+        })  # fmt: skip
+    return rows
+
+
+def game_matchups(ctx, g: dict, cond: pl.DataFrame | None = None) -> dict | None:
     """The game's `matchups` section; None before Week 3. A past game and an upcoming one both read
-    the game's own week (the engine reads weeks before it)."""
+    the game's own week (the engine reads weeks before it). Only rows with an edge are kept (the
+    context rows went, Austin 2026-11-12); `face_off` ranks each side's units from Week 4."""
     if ctx is None or int(g["week"]) < MATCHUPS_MIN_WEEK:
         return None
     engine, ledger = ctx
-    edges = engine.matchup_edges(g, int(g["week"]), ledger).to_dict()
+    week = int(g["week"])
+    edges = engine.matchup_edges(g, week, ledger).to_dict()
     hide = OPPONENT_TIER_SPLITS if edges["as_of_week"] < OPPONENT_TIER_MIN_WEEK else ()
     sides = [
         {
             "offense": sd["offense"], "defense": sd["defense"],
-            "rows": [_matchup_row(r) for r in sd["rows"] if r["split"] not in hide],
+            "rows": [_matchup_row(r) for r in sd["rows"] if r["split"] not in hide and r["has_edge"]],
+            "face_off": face_off(cond, int(g["season"]), week, sd["offense"], sd["defense"]),
         }
         for sd in edges["sides"]
     ]  # fmt: skip

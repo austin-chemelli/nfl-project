@@ -4,6 +4,7 @@ import inspect
 import json
 import re
 
+import numpy as np
 import polars as pl
 import pytest
 
@@ -43,9 +44,10 @@ def test_shape_rounding_and_the_registry_rows():
     assert row["has_edge"] and row["reliability"] == "noise"  # no ledger: every badge is noise
     assert row["edge_pts_pg"] == round(row["edge_pts_pg"], 2)
     assert row["opp_rate"] == round(row["opp_rate"], 3)
-    # a split without an edge keeps its unit numbers, but no edge, no band
-    ctx_row = edge_rows(m)[("O1", "shotgun")]
-    assert not ctx_row["has_edge"] and ctx_row["edge_pts_pg"] is None and ctx_row["note"]
+    # rows without an edge are gone (Austin, 2026-11-12); without the conditions model, no face-off
+    assert ("O1", "shotgun") not in edge_rows(m)
+    assert all(r["has_edge"] for sd in m["sides"] for r in sd["rows"])
+    assert all(sd["face_off"] == [] for sd in m["sides"])
     json.dumps(m)
 
 
@@ -65,14 +67,77 @@ def test_missing_split_model_gives_a_null_section_through_the_build_guard(tmp_pa
     assert site.game_paths_outcome(None, game_dict(5, result=3)) is None
 
 
-def test_opponent_tier_rows_wait_for_week_4():
+def test_only_splits_with_an_edge_are_kept():
     def ids(week):
         m = site.game_matchups(ctx(), game_dict(week))
         return {r["split"] for sd in m["sides"] for r in sd["rows"]}
 
-    assert not ids(3) & set(site.OPPONENT_TIER_SPLITS)
-    assert set(site.OPPONENT_TIER_SPLITS) <= ids(4)
-    assert ids(3) == {s.id for s in splits.SPLITS} - set(site.OPPONENT_TIER_SPLITS)
+    edged = {s.id for s in splits.SPLITS if s.chooser != "neither" and not s.no_edge}
+    assert ids(3) == ids(4) == edged
+
+
+def fo_row(cid, label, off_noun, def_noun, off_rank, def_rank):
+    return {"id": cid, "label": label, "off_noun": off_noun, "def_noun": def_noun,
+            "off_rank": off_rank, "def_rank": def_rank, "n_teams": 32, "edge": "even"}  # fmt: skip
+
+
+def test_face_off_lede_names_the_biggest_mismatch_and_strength_on_strength():
+    sides = [
+        {"offense": "NE", "defense": "GB", "rows": [], "face_off": [
+            fo_row("early_down", "Early downs", "early-down offense", "early-down defense", 2, 1),
+            fo_row("turnovers", "Turnovers", "ball security", "takeaways", 28, 1),
+        ]},
+        {"offense": "GB", "defense": "NE", "rows": [], "face_off": [
+            fo_row("pass_game", "Passing", "passing offense", "pass defense", 2, 17),
+        ]},
+    ]  # fmt: skip
+    lede = site.matchups_lede(sides)
+    assert lede == (
+        "The biggest mismatch: GB's takeaways (1st) against NE's ball security (28th). "
+        "Strength on strength: NE's early-down offense (2nd) into GB's early-down defense (1st)."
+    )
+    record = {str(r[k]) for sd in sides for r in sd["face_off"] for k in ("off_rank", "def_rank")}
+    assert set(re.findall(r"\d+", lede)) <= record
+
+
+def test_face_off_lede_without_a_mismatch():
+    sides = [{"offense": "A", "defense": "B", "rows": [], "face_off": [
+        fo_row("sacks", "Sacks", "pass protection", "pass rush", 12, 15)]}]  # fmt: skip
+    assert site.matchups_lede(sides) == "No unit here ranks far above the one it meets."
+
+
+def test_face_off_rows_from_the_conditions_model():
+    from nfl import paths as P
+
+    rng = np.random.default_rng(5)
+    teams = [f"T{i:02d}" for i in range(20)]
+    rows = []
+    for w in range(1, 6):
+        order = rng.permutation(teams)
+        for h, a in zip(order[::2], order[1::2], strict=True):
+            for team, opp in ((h, a), (a, h)):
+                r = {
+                    "season": 2026,
+                    "week": w,
+                    "game_id": f"{w}_{h}",
+                    "team": team,
+                    "opponent": opp,
+                }
+                for c in P.CONDITIONS:
+                    r[c.stat], r[c.stat_opp] = rng.normal(), rng.normal()
+                rows.append(r)
+    cond = pl.DataFrame(rows)
+    site._RANKS_CACHE.clear()
+    fo = site.face_off(cond, 2026, 5, "T01", "T02")
+    assert [r["id"] for r in fo] == [cid for cid, _ in site.FACE_OFF]
+    ranks = P.team_ranks(cond, 2026, 5)
+    for r in fo:
+        assert r["off_rank"] == ranks["T01"][r["id"]].off_rank
+        assert r["def_rank"] == ranks["T02"][r["id"]].def_rank
+        gap = r["def_rank"] - r["off_rank"]
+        assert r["edge"] == ("offense" if gap >= 8 else "defense" if gap <= -8 else "even")
+    assert site.face_off(cond, 2026, 3, "T01", "T02") == []  # before MIN_RANK_WEEK
+    assert site.face_off(None, 2026, 5, "T01", "T02") == []
 
 
 def test_a_past_game_reads_only_earlier_weeks():
