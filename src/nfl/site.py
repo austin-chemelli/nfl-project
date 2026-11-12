@@ -839,6 +839,8 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     today = _safe(_today, {}, paths, now)
     matchup_ctx = _safe(_matchup_ctx, None, paths)  # ADR 0028: Engine and ledger, once per build
     conditions = _safe(_conditions_frame, None, paths)
+    leaner = _safe(_leaner, None, paths)  # ADR 0028, M25.6: market leans from the ledger
+    lean_rows: list[tuple[dict, dict | None]] = []
     totals_by_game, totals_record = _totals(paths, games)
     from nfl.llm.narrative import load_records
 
@@ -877,6 +879,8 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["paths"] = _safe(game_paths, None, conditions, g)
             detail["paths_outcome"] = _safe(game_paths_outcome, None, conditions, g)
             detail["edge_cards"] = _safe(game_edge_cards, None, conditions, g)
+            detail["lean"] = _safe(game_lean, None, leaner, g)
+            lean_rows.append((g, detail["lean"]))
             detail["expected_score"] = _safe(
                 _expected_score, None, totals_by_game.get(g["game_id"]), detail
             )
@@ -924,7 +928,8 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     _write(
         site / "tracker.json",
         tracker(paths, season, reg)
-        | {"strong_calls": calls_record, "totals": totals_record, "player_claims": claims_record},
+        | {"strong_calls": calls_record, "totals": totals_record, "player_claims": claims_record}
+        | {"leans": _safe(leans_record, None, lean_rows, current_week)},
     )
     _write(site / "audit.json", audit(paths))
     try:  # additive page data (ADR 0019): a failure must never stop the site build
@@ -1504,6 +1509,58 @@ def game_edge_cards(cond: pl.DataFrame | None, g: dict) -> list[dict] | None:
         for s in sides:
             s.met = None
     return [s.to_dict() for s in sides]
+
+
+def _leaner(paths: Paths):
+    from nfl import catalog, leans, matchups
+
+    return leans.Leaner(catalog.connect(paths), matchups.load_ledger(paths))
+
+
+def game_lean(leaner, g: dict) -> dict | None:
+    """`lean`: the ledger's `use` candidates against the market, in points toward the home team, with
+    its parts; for a finished game from the tracked week on, whether it landed on the right side of the
+    spread. None before Week 4, without a `use` candidate, or without the leaner."""
+    from nfl import leans
+
+    if leaner is None:
+        return None
+    lean = leaner.lean(g)
+    if lean is None:
+        return None
+    out = lean.to_dict()
+    out["tracked"] = leans.tracked(lean.season, lean.week)
+    out["grade"] = (
+        leans.grade(lean, g.get("result"), g.get("spread_line")) if out["tracked"] else None
+    )
+    return out
+
+
+def leans_record(
+    rows: list[tuple[dict, dict | None]], current_week: int | None = None
+) -> dict | None:
+    """`tracker.json.leans`: the live record of the leans from TRACK_FROM up to the current week:
+    weeks tracked (weeks with a lean), right / wrong / push over finished games, and the mean |lean|
+    in points. Later weeks' leans exist on their game pages but don't count yet."""
+    from nfl import leans
+
+    tracked = [
+        lean
+        for _, lean in rows
+        if lean is not None
+        and lean["tracked"]
+        and (current_week is None or lean["week"] <= current_week)
+    ]
+    if not tracked:
+        return None
+    graded = [lean["grade"] for lean in tracked if lean["grade"] is not None]
+    return {
+        "from_season": leans.TRACK_FROM[0], "from_week": leans.TRACK_FROM[1],
+        "weeks_tracked": len({lean["week"] for lean in tracked}),
+        "n": len(graded), "right": graded.count("right"), "wrong": graded.count("wrong"),
+        "push": graded.count("push"),
+        "mean_abs_pts": round(sum(abs(lean["pts"]) for lean in tracked) / len(tracked), 2),
+    }  # fmt: skip
 
 
 def game_paths_outcome(cond: pl.DataFrame | None, g: dict) -> dict | None:
