@@ -1,6 +1,6 @@
 # The public site (M7.4, M7.5; v2 layout M10)
 
-Status: current, verified 2026-11-09 against `web/` after the books section (M20.13); the ADR 0028 sections are planned.
+Status: current, verified 2026-11-12 for the player pages (M24.6), the rest 2026-11-09 against `web/` after the books section (M20.13); the ADR 0028 sections are planned.
 
 A static React app on Firebase Hosting that reads the published site JSON from the public bucket. Decisions: ADR 0009 (static site, no API), ADR 0015 (data from a public bucket, so data changes never need a deploy). The Streamlit app stays as the local explorer; this replaces it as the public face.
 
