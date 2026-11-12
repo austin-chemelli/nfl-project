@@ -1,29 +1,37 @@
 /**
- * The game's Preview as a preview of every tab (Austin, 2026-11-12; plan game-preview-hub): one card per
- * tab, in a fixed order, each with the tab's most notable item and a link into the tab for the rest. The
- * Preview alone should be enough; the tabs are for digging in. A card hides when its tab has nothing yet.
- * Every number is the tab's own, read from the same JSON; this file only picks and places.
+ * The game's Preview, meant to stand on its own (Austin, 2026-11-12; plan game-preview-hub): "Who has the
+ * edge" in full, where each team has the edge (both cards in full), the key news from the injury report and
+ * the week's research, then the line and the tale of the tape side by side. Each section links to its tab for
+ * the deeper view. A section hides when there is nothing for it yet. Every number is read from the JSON; this
+ * file only picks and places.
  */
 import type { ReactNode } from 'react'
 import { useSetTab } from '../../components/Tabs'
 import { EdgeCard } from '../../components/EdgeCard'
-import { DivergingBars } from '../../charts'
-import type { Game, Meta } from '../../data/contract'
-import { ptsFor, spreadLabel } from '../../lib/format'
-import { dayOf, previewRows, sortMatchupNotes, tape } from './helpers'
+import { Section } from '../../components/ui'
+import type { Game, Meta, Narrative } from '../../data/contract'
+import { spreadLabel } from '../../lib/format'
+import { dayOf, impactMarker, QB_STATUS, sortInjuries, sortMatchupNotes, sortNotes, tape } from './helpers'
 import { topAbsence } from './summary'
 import { hasLine } from './TheLine'
 import { disagrees } from './books'
+import { Preview } from './Preview'
 
-function Card({ title, tab, more, children, testid }: { title: string; tab: string; more: string; children: ReactNode; testid: string }) {
+function More({ tab, children }: { tab: string; children: ReactNode }) {
   const setTab = useSetTab()
   return (
-    <section data-testid={testid} className="rounded-lg border border-line bg-surface-1 px-4 py-3">
+    <button type="button" onClick={() => setTab(tab)} className="cursor-pointer whitespace-nowrap border-0 bg-transparent p-0 text-[13px] text-accent hover:underline">
+      {children} →
+    </button>
+  )
+}
+
+function Card({ title, tab, more, children, testid }: { title: string; tab: string; more: string; children: ReactNode; testid: string }) {
+  return (
+    <section data-testid={testid} className="flex min-w-0 flex-col rounded-lg border border-line bg-surface-1 px-4 py-3">
       <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h2 className="m-0 text-[15px] font-semibold">{title}</h2>
-        <button type="button" onClick={() => setTab(tab)} className="cursor-pointer whitespace-nowrap border-0 bg-transparent p-0 text-[12.5px] text-accent hover:underline">
-          {more} →
-        </button>
+        <h3 className="m-0 text-[15px] font-semibold">{title}</h3>
+        <More tab={tab}>{more}</More>
       </div>
       {children}
     </section>
@@ -32,55 +40,106 @@ function Card({ title, tab, more, children, testid }: { title: string; tab: stri
 
 const colorFor = (g: Game) => (team: string) => (team === g.home ? 'var(--team-home)' : team === g.away ? 'var(--team-away)' : 'var(--text-secondary)')
 
-export function MatchupTeaser({ g }: { g: Game }) {
+export function EdgeCardsSection({ g }: { g: Game }) {
   const sides = g.edge_cards ?? []
-  if (sides.length === 0 && !g.matchups?.lede) return null
+  if (sides.length === 0) return null
   return (
-    <Card title="The matchup" tab="tendencies" more="All matchups" testid="teaser-matchup">
-      {g.matchups?.lede && <p className="mb-3 mt-0 max-w-3xl text-[13px] text-ink">{g.matchups.lede}</p>}
-      {sides.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {sides.map((s) => (
-            <EdgeCard key={s.team} side={s} colorOf={colorFor(g)} compact />
-          ))}
-        </div>
-      )}
-      {sides.length > 0 && <p className="mb-0 mt-2 text-[11px] text-ink-3">Grey: how often teams in this spot won since 2006. Bold: when they won that battle.</p>}
-    </Card>
+    <Section
+      title="Where each team has the edge"
+      help="The battles where one team's unit ranks well and the other's matching unit ranks poorly, and how often teams in that spot won when they won that battle."
+      aside={<More tab="tendencies">Unit ranks and habits</More>}
+    >
+      {g.matchups?.lede && <p className="mb-4 mt-0 max-w-3xl text-[14px] text-ink">{g.matchups.lede}</p>}
+      <div className="flex flex-col gap-8" data-testid="edge-cards">
+        {sides.map((s) => (
+          <EdgeCard key={s.team} side={s} colorOf={colorFor(g)} />
+        ))}
+      </div>
+    </Section>
   )
 }
 
-const TOP_FACTORS = 3
+const firstSentences = (t: string, n: number) => (t.match(new RegExp(`^(?:.*?[.!?](?:\\s|$)){1,${n}}`))?.[0] ?? t).trim()
 
-export function EdgeTeaser({ g, meta }: { g: Game; meta: Meta }) {
-  if (!g.contributions.global) return null
-  const rows = previewRows(g, meta, null)
-    .filter((r) => r.pp != null)
-    .sort((a, b) => Math.abs(b.pp!) - Math.abs(a.pp!))
-    .slice(0, TOP_FACTORS)
-  if (rows.length === 0) return null
-  const domain = Math.max(1, ...rows.map((r) => Math.abs(r.pp ?? 0))) * 1.25
+const NOTES_PER_TEAM = 2
+const ABSENCES_PER_TEAM = 3
+
+function TeamNews({ g, team, t }: { g: Game; team: string; t: Narrative['home'] | null }) {
+  const out = sortInjuries(g.injuries.filter((i) => i.team === team && topAbsence([i]) != null))
+  const shown = out.slice(0, ABSENCES_PER_TEAM)
+  const notes = t ? sortNotes(t.notes).filter((n) => n.impact !== 0).slice(0, NOTES_PER_TEAM) : []
+  const qbFlag = t && t.qb_status > 0 ? `${t.qb_name ?? 'QB'}: ${QB_STATUS[t.qb_status] ?? t.qb_status}` : null
   return (
-    <Card title="Who has the edge" tab="approaches" more="Every factor and approach" testid="teaser-edge">
-      <p className="mb-2 mt-0 text-[13px] text-ink-2">The three parts of the game that lean furthest, priced by history.</p>
-      <DivergingBars
-        leftLabel={`toward ${g.away}`}
-        rightLabel={`toward ${g.home}`}
-        domain={domain}
-        format={ptsFor}
-        rowHeight={34}
-        leftColor="var(--team-away)"
-        rightColor="var(--team-home)"
-        ariaLabel={rows.map((r) => `${r.name}: ${ptsFor(r.pp!)}`).join('; ')}
-        rows={rows.map((r) => ({ key: r.id, label: <span className="truncate text-ink">{r.name}</span>, value: r.pp }))}
-      />
-    </Card>
+    <div data-testid={`news-${team}`} className="min-w-0">
+      <h4 className="m-0 mb-1.5 flex items-center gap-2 text-[14px] font-semibold">
+        <span className="inline-block h-3 w-3 rounded-sm" style={{ background: colorFor(g)(team) }} />
+        {team}
+      </h4>
+      {qbFlag && <p className="m-0 mb-1 text-[13px] font-medium text-[var(--warning)]">{qbFlag}</p>}
+      {shown.length > 0 ? (
+        <ul className="m-0 mb-2 flex list-none flex-wrap gap-1.5 p-0" aria-label={`${team} out or doubtful`}>
+          {shown.map((i) => (
+            <li key={i.player} className="rounded-full border border-line px-2 py-0.5 text-[12px]">
+              <b>{i.player}</b>
+              <span className="text-ink-2">
+                {i.pos ? ` ${i.pos}` : ''} · {i.status.toLowerCase()}
+              </span>
+            </li>
+          ))}
+          {out.length > shown.length && <li className="px-1 py-0.5 text-[12px] text-ink-3">+{out.length - shown.length} more</li>}
+        </ul>
+      ) : (
+        <p className="m-0 mb-2 text-[12.5px] text-ink-3">{g.injuries.length ? 'No one out or doubtful.' : 'No official report yet.'}</p>
+      )}
+      {notes.length > 0 && (
+        <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+          {notes.map((n) => {
+            const m = impactMarker(n.impact)
+            return (
+              <li key={n.text} className="text-[13px] leading-snug">
+                <span aria-label={m.words} className="mr-1 whitespace-nowrap font-medium" style={{ color: n.impact > 0 ? 'var(--good)' : 'var(--critical)' }}>
+                  {m.arrows}
+                </span>
+                {n.text}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+export function NewsSection({ g }: { g: Game }) {
+  const n = g.narrative
+  if (!n && g.injuries.length === 0) return null
+  const top = n ? sortMatchupNotes(n.matchup_notes)[0] : null
+  return (
+    <Section
+      title="Key news"
+      help="The biggest absences from the official injury report, and the notes from this week's research that matter most for each team (▲ helps, ▼ hurts). The full report, with every source, is on the Injuries & news tab."
+      aside={<More tab="news">Full report and sources</More>}
+    >
+      <div data-testid="teaser-news" className="flex flex-col gap-3">
+        {n?.consensus_narrative && <p className="m-0 max-w-3xl text-[14px]">{firstSentences(n.consensus_narrative, 2)}</p>}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <TeamNews g={g} team={g.away} t={n?.away ?? null} />
+          <TeamNews g={g} team={g.home} t={n?.home ?? null} />
+        </div>
+        {top && (
+          <p className="m-0 max-w-3xl border-l-[3px] border-line pl-3 text-[13px] text-ink-2">
+            <span className="font-medium text-ink">The most-cited matchup:</span> {top.text}
+          </p>
+        )}
+        {n && <p className="m-0 text-[11.5px] text-ink-3">From research as of {dayOf(n.known_as_of)}. It never feeds the probabilities.</p>}
+      </div>
+    </Section>
   )
 }
 
 function Spark({ values }: { values: number[] }) {
-  const w = 120
-  const h = 28
+  const w = 140
+  const h = 32
   const lo = Math.min(...values)
   const hi = Math.max(...values)
   const span = hi - lo || 1
@@ -100,44 +159,23 @@ export function LineTeaser({ g }: { g: Game }) {
   const now = spreadLabel(last.spread_home, g.home, g.away)
   const was = spreadLabel(first.spread_home, g.home, g.away)
   const moved = first.spread_home !== last.spread_home
-  const total = first.total != null && last.total != null ? (first.total === last.total ? `the total ${last.total}` : `the total ${first.total} → ${last.total}`) : null
+  const total = first.total != null && last.total != null ? (first.total === last.total ? `The total: ${last.total}.` : `The total: ${first.total} → ${last.total}.`) : null
   return (
     <Card title="The line" tab="line" more="Movement and every book" testid="teaser-line">
-      <div className="flex items-center gap-3 text-[13px]">
+      <div className="flex flex-wrap items-center gap-3 text-[13px]">
         <Spark values={h.map((p) => p.spread_home ?? 0)} />
-        <span>
-          {moved ? `${was} when first seen ${dayOf(first.ts)}, now ${now}` : `${now} since first seen ${dayOf(first.ts)}`}
-          {total ? `; ${total}` : ''}.{' '}
-          {disagrees(g.books) ? <span className="text-[var(--warning)]">The books disagree.</span> : last.n_books != null ? `${last.n_books} books.` : ''}
-        </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-[15px] font-semibold">{now}</span>
+          <span className="text-ink-2">{moved ? `${was} when first seen ${dayOf(first.ts)}` : `unchanged since first seen ${dayOf(first.ts)}`}</span>
+          {total && <span className="text-ink-2">{total}</span>}
+          {disagrees(g.books) ? <span className="text-[var(--warning)]">The books disagree.</span> : last.n_books != null ? <span className="text-ink-3">{last.n_books} books agree.</span> : null}
+        </div>
       </div>
     </Card>
   )
 }
 
-export function NewsTeaser({ g }: { g: Game }) {
-  const a = topAbsence(g.injuries)
-  const n = g.narrative
-  const note = n ? sortMatchupNotes(n.matchup_notes)[0] : null
-  if (!a && !n) return null
-  const firstSentence = (t: string) => (t.match(/^.*?[.!?](\s|$)/)?.[0] ?? t).trim()
-  return (
-    <Card title="Injuries & news" tab="news" more="Full report and sources" testid="teaser-news">
-      <ul className="m-0 flex list-disc flex-col gap-1 pl-5 text-[13px]">
-        {a && (
-          <li>
-            <b>Key absence:</b> {a.top.player} ({a.top.team}
-            {a.top.pos ? ` ${a.top.pos}` : ''}, {a.top.status.toLowerCase()}){a.count > 1 ? `, and ${a.count - 1} more` : ''}
-          </li>
-        )}
-        {n?.consensus_narrative && <li>{firstSentence(n.consensus_narrative)}</li>}
-        {note && <li>{firstSentence(note.text)}</li>}
-      </ul>
-    </Card>
-  )
-}
-
-const TOP_GAPS = 3
+const TOP_GAPS = 4
 
 export function TapeTeaser({ g, meta }: { g: Game; meta: Meta }) {
   const rows = tape(g.features, meta)
@@ -148,8 +186,8 @@ export function TapeTeaser({ g, meta }: { g: Game; meta: Meta }) {
     .slice(0, TOP_GAPS)
   if (rows.length === 0) return null
   return (
-    <Card title="Tale of the tape" tab="details" more="Every stat on the league band" testid="teaser-tape">
-      <p className="mb-1 mt-0 text-[13px] text-ink-2">Where the two teams sit furthest apart:</p>
+    <Card title="Tale of the tape" tab="details" more="Every stat" testid="teaser-tape">
+      <p className="mb-1 mt-0 text-[12.5px] text-ink-2">Where the two teams sit furthest apart (bold is better):</p>
       <ul className="m-0 list-none p-0 text-[13px]">
         {rows.map(({ r }) => {
           const b = r.band!
@@ -177,13 +215,16 @@ export function TapeTeaser({ g, meta }: { g: Game; meta: Meta }) {
 }
 
 export function PreviewHub({ g, meta }: { g: Game; meta: Meta }) {
+  const line = hasLine(g)
   return (
-    <div className="flex flex-col gap-4" data-testid="preview-hub">
-      <MatchupTeaser g={g} />
-      <EdgeTeaser g={g} meta={meta} />
-      <LineTeaser g={g} />
-      <NewsTeaser g={g} />
-      <TapeTeaser g={g} meta={meta} />
+    <div className="flex flex-col gap-10" data-testid="preview-hub">
+      <Preview g={g} meta={meta} />
+      <EdgeCardsSection g={g} />
+      <NewsSection g={g} />
+      <div className={`grid grid-cols-1 gap-4 ${line ? 'md:grid-cols-2' : ''}`}>
+        <LineTeaser g={g} />
+        <TapeTeaser g={g} meta={meta} />
+      </div>
     </div>
   )
 }

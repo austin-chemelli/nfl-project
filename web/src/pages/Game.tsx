@@ -6,7 +6,7 @@ import { Tabs, type TabDef } from '../components/Tabs'
 import { Card, ErrorBox, Loaded, Loading, Page } from '../components/ui'
 import { useGame, useMeta, useRetro, isNotFound } from '../data/api'
 import type { Game, Meta, RetroGame } from '../data/contract'
-import { EdgeCards, Injuries, ApproachesVsMarket, MatchupsSection, Tendencies, TaleOfTheTape, Why } from './game/Sections'
+import { Injuries, ApproachesVsMarket, MatchupsSection, Tendencies, TaleOfTheTape, Why } from './game/Sections'
 import { GameHeader, GameTitle, PinnedResult } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
 import { Differ, StrongCallsOutcome } from './game/Differ'
@@ -14,7 +14,6 @@ import { TheLine, hasLine } from './game/TheLine'
 import { PreviewHub } from './game/PreviewHub'
 import { Books } from './game/Books'
 import { disagrees, hasBooks } from './game/books'
-import { Preview } from './game/Preview'
 import { Retro } from './game/Retro'
 import { summaryTiles } from './game/summary'
 import { gameStatus } from './slate/helpers'
@@ -84,7 +83,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
           <PreviewHub g={g} meta={meta} />
           <FinePrint>
             {g.edge_cards && <p>{EDGE_NOTE}</p>}
-            <p>"Who has the edge" bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. Each card is the most notable part of its tab; the link opens the rest.</p>
+            <p>"Who has the edge" bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
             <p>Probabilities are the models' estimates, not advice.</p>
           </FinePrint>
         </TabBody>
@@ -123,13 +122,11 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Approaches',
       content: (
         <TabBody>
-          <Preview g={g} meta={meta} />
           <Differ g={g} meta={meta} />
           <ApproachesVsMarket g={g} meta={meta} />
           <Why g={g} meta={meta} />
           <FinePrint>
             <p>{STATUS_TEXT[status] ?? status}</p>
-            <p>"Who has the edge" bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
             <p>Probabilities are the models' estimates, not advice. The market is the reference every approach is compared with, never an input.</p>
             <p>The pieces in "why they lean" add up only approximately to the total: the effects overlap and the final probability is also calibrated.</p>
           </FinePrint>
@@ -141,10 +138,8 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Matchups',
       content: (
         <TabBody>
-          <EdgeCards g={g} />
           {g.matchups ? <MatchupsSection g={g} meta={meta} /> : <Tendencies g={g} meta={meta} />}
           <FinePrint>
-            {g.edge_cards && <p>{EDGE_NOTE}</p>}
             {g.matchups && <p>Ranks are this season's games before this one, 1st best of 32; a unit "has the edge" when it ranks at least eight places better than the one it meets. Habits (how often) repeat week to week; how a team did in a situation barely does, so the edges are words with an evidence label, not a forecast. Coverage (man or zone) arrives with the season's participation file after the season.</p>}
             <p>Tendencies are season-to-date rates, shrunk toward the league average when plays are few.</p>
           </FinePrint>

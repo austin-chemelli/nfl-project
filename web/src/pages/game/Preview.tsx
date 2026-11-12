@@ -1,11 +1,11 @@
 /**
- * "Who has the edge" in full, at the top of the Approaches tab since the Preview became a preview of every
- * tab (2026-11-12; the Preview shows its top three bars). Approach-free. One bar per part of
+ * The game page's default tab before kickoff: the matchup itself, approach-free. One bar per part of
  * the game, as long as history says that edge is worth, then the live-only parts history can't price
  * (Market behavior, Buzz) as their raw readings. How each approach reads the same parts is on the
  * Approaches tab. The bars come from the Global fit, a diagnostic, so the name never appears here.
  */
 import { Help } from '../../components/Help'
+import { useSetTab } from '../../components/Tabs'
 import { DivergingBars, TipNote, TipRow, TipTitle } from '../../charts'
 import { DataTable, Section, td, th } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
@@ -15,6 +15,7 @@ import { liveBars, liveOnlyGroups, liveReady, previewRows, type LiveBar } from '
 import { Edges } from './Sections'
 
 export function Preview({ g, meta }: { g: Game; meta: Meta }) {
+  const setTab = useSetTab() // before the early return: hooks keep their order
   if (!g.contributions.global) return <Edges g={g} meta={meta} />
   const rows = previewRows(g, meta, null)
   const live = liveOnlyGroups(g, meta)
@@ -27,7 +28,8 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
       help="Each bar is what that edge was worth in past games, in points (percentage points of win chance). The label under each name compares this matchup with every game since 2005."
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        How much each part of the game favors {g.away} or {g.home}, priced by history. Each approach's own reading is below.
+        How much each part of the game favors {g.away} or {g.home}, priced by history.{' '}
+        <button type="button" onClick={() => setTab('approaches')} className="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-accent hover:underline">Each approach's reading →</button>
       </p>
       <DivergingBars
         leftLabel={`toward ${g.away}`}
