@@ -800,3 +800,12 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** A guard that greps writer modules for a word catches English too ("the model leans"); grep for the import instead, with a control that the pattern finds a real reader.
 
+## 2026-11-12: Your picks on the slate (M26.1; picks track)
+
+**Why.** Austin picked idea (d) of `.notes/hub/plans/ideas-2026-11-10.md` (your picks and the playoff what-if driven by one set of picks), staged so the picks ship first. ADR 0029.
+
+**Research behind the call.** `league.json` already carries every remaining game's `p_student` and `p_market`, so the per-game half of the what-if is mostly there. The browser simulation is a port of about 820 lines of Python (`simulate.py`, `tiebreak.py`, `standings.py`, `divisions.py`) plus the played scores the tiebreaks need, which `league.json` doesn't publish yet; the Python's 2002-2025 seed validation gives the parity fixtures. Picks are web-only and can ship in a day, so they go first (M26.1), the what-if after (M26.2-M26.4). M24.2 and M24.4 have merged, so the value boards (idea c) are no longer blocked.
+
+**What changed.** `web/src/lib/picks.ts`: one store in `localStorage` (`nfl-picks-v1`, `{game_id: {team, at}}`), synced across tabs, safe when storage is blocked; a pick opens until kickoff and a pick stamped at or after kickoff is never scored. Each pregame card gets a "Who wins?" row with the two teams (outside the card link, so no button nests in it); after kickoff it shows your pick with ✓/✗. A "Your picks" strip above the week: open games picked, your season record against the Student and the market's favorite on exactly the games you picked (it fetches the slates of every week you picked), and a clear button for this week's open picks. No data contract change. After Austin's first look: the pick buttons got a pointer cursor, a hover tint in the team's color, a filled team-colored state with a check (the other team dimmed) and a short pop; the same control sits on the game page under the header, shared with the slate through the store.
+
+**Lesson.** Scoring a visitor against the models only on the games the visitor picked keeps the comparison fair without any server: the record is computed from the same public slates the page already reads.
