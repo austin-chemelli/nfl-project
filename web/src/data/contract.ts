@@ -188,6 +188,30 @@ export const KeyPlayer = z.looseObject({
   sentence: z.string(),
 })
 export const KeyPlayers = z.looseObject({ home: z.array(KeyPlayer), away: z.array(KeyPlayer) })
+export type KeyPlayer = z.infer<typeof KeyPlayer>
+// The formation map (ADR 0027, M24.5): each side's eleven starters on offense and defense from the
+// latest depth chart before the site build; value null for groups the model doesn't value yet
+// (linebackers, interior linemen); status only for a player on this week's report.
+export const LineupSpot = z.looseObject({
+  slot: z.string(), // LT, LG, C, RG, RT, TE, WR1-3, QB, RB; LDE, LDT, NT, RDT, RDE, SLB, LILB, MLB, RILB, WLB, LCB, RCB, SS, FS
+  player: z.string(),
+  grp: nstr,
+  value_pts: nnum,
+  status: nstr,
+  p_play: nnum,
+  at_risk: nnum,
+})
+export const SideLineup = z.looseObject({
+  chart_ts: z.string(),
+  reported: z.boolean().default(false), // any game status on the week's report yet; before it, a full ring is no report, not healthy
+  offense: z.array(LineupSpot),
+  defense: z.array(LineupSpot),
+  offense_formation: nstr.default(null),
+  defense_formation: nstr.default(null),
+})
+export const Lineups = z.looseObject({ home: SideLineup.nullable().default(null), away: SideLineup.nullable().default(null) })
+export type LineupSpot = z.infer<typeof LineupSpot>
+export type SideLineup = z.infer<typeof SideLineup>
 export const PlayerClaimGrade = z.looseObject({
   game_id: z.string(), season: num, week: num, team: z.string(), opponent: z.string(),
   player: z.string(), pos: nstr, grp: z.string(), status_before: z.string(), p_play: nnum,
@@ -345,6 +369,7 @@ export const Game = GameRow.extend({
   swings: z.array(Swing).default([]),
   strong_calls: z.array(StrongCall).default([]),
   key_players: KeyPlayers.nullable().default(null), // the latest claims before kickoff (ADR 0027)
+  lineups: Lineups.nullable().default(null), // the formation map's starters (ADR 0027, M24.5)
   today: Today.nullable().default(null), // the latest preview score: not a lock, never graded
   expected_score: ExpectedScore.nullable().default(null), // the locked total split by the headline spread: context (ADR 0024)
 })
