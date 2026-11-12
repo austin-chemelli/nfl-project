@@ -86,6 +86,21 @@ def test_standings_rows_are_consistent():
             assert r["div_rank"] == 1
 
 
+def test_played_and_ratings_rebuild_the_standings_in_the_browser():
+    """M26.2: the played games in the file give the file's own standings; ratings price playoff games."""
+    from nfl.league.standings import GameResult, Results
+
+    obj, _ = _file()
+    assert len(obj["played"]) == 96 and obj["played"][0]["week"] == 1
+    r = Results(GameResult.from_scores(g["home"], g["away"], g["home_score"], g["away_score"]) for g in obj["played"])  # fmt: skip
+    for row in obj["teams"]:
+        assert r.record(row["team"]) == (row["w"], row["l"], row["t"])
+        assert r.points(row["team"]) == (row["pf"], row["pa"])
+    for v in lb.VARIANTS:
+        assert set(obj["odds"][v]["ratings"]) == set(CODES)
+        assert obj["odds"][v]["home_term"] == pytest.approx(0.2)
+
+
 def test_same_inputs_same_numbers_and_new_inputs_a_new_seed():
     a, b = _file()[0], _file()[0]
     assert a["seed"] == b["seed"] and a["odds"] == b["odds"] and a["games"] == b["games"]

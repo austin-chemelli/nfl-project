@@ -169,7 +169,7 @@ describe('League page, playoff tabs', () => {
   })
 
   it('Odds: says so plainly once the regular season is over, and Games has nothing to list', () => {
-    const over = { ...league, games: [], odds: { student: { sources: {}, teams: {} }, market: { sources: {}, teams: {} } } }
+    const over = { ...league, games: [], odds: { student: { sources: {}, teams: {}, ratings: {}, home_term: 0 }, market: { sources: {}, teams: {}, ratings: {}, home_term: 0 } } }
     render(<MemoryRouter><Odds file={over} /></MemoryRouter>)
     expect(screen.getByText(/regular season is over/)).toBeInTheDocument()
     render(<MemoryRouter><Games file={over} /></MemoryRouter>)

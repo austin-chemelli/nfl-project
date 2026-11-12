@@ -788,3 +788,15 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** A deploy job that reads a derived table should build it, or the feature ships empty until an unrelated job runs. And a "preview" that only points elsewhere isn't one: Austin wanted the default tab to carry the substance.
 
+
+## 2026-11-12: The league engine in the browser (M26.2, M26.3; picks track)
+
+**Why.** Stage 2 of idea (d): decide games on the League page and watch the playoff odds move (plan `m26-playoff-whatif`: a mode of the Playoff odds tab, your slate picks applied with a switch, Student and market only for now). Re-simulating on every click needs the engine in the browser.
+
+**What changed.** `league.json` gains `played[]` and each variant's `ratings` and `home_term` (additive, about 12 KB on today's file). `simulate_season` takes an `on_run` hook. `web/src/lib/league/`: `standings.ts`, `tiebreak.ts`, `simulate.ts` (no leverage; a decided game takes the visitor's winner; draws come per run in a fixed amount whether a game is decided or not, so "now" and "what if" on one seed share their random numbers; coin flips on their own stream), `input.ts` (the engine's input from the file, null for a pre-M26.2 file), `worker.ts` and `client.ts` (a Web Worker, with a main-thread fallback). `scripts/league_parity.py` writes the parity fixtures.
+
+**Parity.** The TypeScript gives the Python's seeds on all 48 real conference-seasons 2002-2025 (with and without the points steps) and on 240 perturbed seasons without scores (30% of results flipped: every step through strength of schedule, including the three-club sweep and the four-common-games minimum); replaying the Python's random draws gives the same seeds and champion on all 60 runs; 4,000 runs on its own generator land within Monte Carlo error of the Python's odds. On today's real file, the TypeScript's 10,000 runs and the published 2,000 differ by at most 2.1 points of playoff chance (NE, HOU), as expected for samples that size. A Python test fails when the committed `sim.json` no longer matches the engine.
+
+**Measured.** 10,000 runs take 1.1-1.3 s on the laptop (2,000 take 0.3 s), so the page will compute "now" once per source and run the what-if at 2,000 first, then refine to 10,000.
+
+**Lesson.** Porting arithmetic operation for operation (integer sums, then one division) made float equality in the tiebreak steps hold across languages without any tolerance.

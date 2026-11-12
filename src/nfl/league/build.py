@@ -77,6 +77,20 @@ class Odds(BaseModel):
 class Variant(BaseModel):
     sources: dict[str, int]
     teams: dict[str, Odds]
+    # M26.2: what the browser's what-if needs to price playoff games like the engine does
+    ratings: dict[str, float] = {}
+    home_term: float = 0.0
+
+
+class PlayedGame(BaseModel):
+    """A finished regular-season game (M26.2): the browser's tiebreaks need every result."""
+
+    model_config = ConfigDict(extra="forbid")
+    week: int
+    home: str
+    away: str
+    home_score: int
+    away_score: int
 
 
 class SwingRow(BaseModel):
@@ -197,6 +211,7 @@ class LeagueFile(BaseModel):
     teams: list[Standing]
     odds: dict[str, Variant]
     games: list[GameRow]
+    played: list[PlayedGame] = []
     history: dict[str, list[HistoryPoint]]
 
 
@@ -235,6 +250,20 @@ def through_week(played: pl.DataFrame, remaining: pl.DataFrame) -> int:
 def played_results(played: pl.DataFrame) -> list[GameResult]:
     cols = ("home_team", "away_team", "home_score", "away_score")
     return [GameResult.from_scores(h, a, int(hs), int(s)) for h, a, hs, s in played.select(cols).iter_rows()]  # fmt: skip
+
+
+def played_rows(played: pl.DataFrame) -> list[dict]:
+    """Finished regular-season games in kickoff order, canonical codes (M26.2)."""
+    cols = ("week", "home_team", "away_team", "home_score", "away_score")
+    rows = (
+        played.sort("kickoff_utc", "game_id")
+        if "game_id" in played.columns
+        else played.sort("kickoff_utc")
+    )
+    return [
+        {"week": int(w), "home": canon(h), "away": canon(a), "home_score": int(hs), "away_score": int(s)}
+        for w, h, a, hs, s in rows.select(cols).iter_rows()
+    ]  # fmt: skip
 
 
 def seed_of(season: int, played: pl.DataFrame, inputs: dict[str, VariantInputs] | None) -> int:
@@ -341,12 +370,18 @@ def league_file(
         "tiebreak": TIEBREAK,
         "teams": standings(Results(base), remaining, seed),
         "odds": {
-            v: {"sources": inputs[v].source_counts, "teams": _odds(sims[v])}
+            v: {
+                "sources": inputs[v].source_counts,
+                "teams": _odds(sims[v]),
+                "ratings": {t: round(float(x), 6) for t, x in sorted(inputs[v].ratings.items())},
+                "home_term": round(float(inputs[v].home_term), 6),
+            }
             if sims
             else {"sources": {}, "teams": {}}
             for v in VARIANTS
         },
         "games": _games(sims["student"], inputs["market"], remaining) if sims else [],
+        "played": played_rows(played),
         "history": {},
     }
     return obj, sims
