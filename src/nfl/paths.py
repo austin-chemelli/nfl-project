@@ -25,6 +25,10 @@ WEAK = "weakly predictable"
 
 BUCKETS = ("0-2.5", "3-6.5", "7-9.5", "10+")
 TOP_N = 3
+MAX_LEVERS = 4  # Austin, 2026-11-12: up to four when four are worth showing
+MIN_GAP = 8  # rank places between the dog's unit and the favorite's matching unit
+MAX_DOG_RANK = 16  # the dog's unit is in the top half
+MIN_RANK_WEEK = 4  # ranks need three games
 
 
 @dataclass(frozen=True)
@@ -38,6 +42,17 @@ class Condition:
     plausibility: str
     measured_r: float | None  # pre-game r of both teams' season rates with the realized margin
     help: str
+    # For the levers and the face-off (ranks): the per-game value of this team's offense (`stat`) and
+    # of the opponent's offense against it (`stat_opp`, what this team's defense allowed), and whether
+    # more is better for the offense. `net`: one ranking of stat - stat_opp (special teams).
+    stat: str = ""
+    stat_opp: str = ""
+    higher_better: bool = True
+    off_noun: str = ""  # "GB's <off_noun> (7th)"
+    def_noun: str = ""
+    tier: int = 1  # 2 = weaker conditions, picked as levers only after every tier-1 one
+    family: str = ""  # at most one lever per family (explosives, big runs and deep passes overlap)
+    net: bool = False
 
 
 CONDITIONS: tuple[Condition, ...] = (
@@ -52,6 +67,11 @@ CONDITIONS: tuple[Condition, ...] = (
         0.005,
         "Before a game, both teams' turnover rates to date predict its turnover margin with r +0.005 "
         "(2006-2025): a coin flip for every team.",
+        "giveaways",
+        "takeaways",
+        False,
+        "ball security",
+        "takeaways",
     ),
     Condition(
         "early_down",
@@ -63,6 +83,11 @@ CONDITIONS: tuple[Condition, ...] = (
         WEAK,
         0.17,
         "Season-to-date early-down EPA predicts the game's with r +0.17 (2006-2025): weakly predictable.",
+        "early_down_epa",
+        "early_down_epa_opp",
+        True,
+        "early-down offense",
+        "early-down defense",
     ),
     Condition(
         "explosives",
@@ -74,6 +99,12 @@ CONDITIONS: tuple[Condition, ...] = (
         WEAK,
         0.16,
         "Season-to-date explosive plays predict the game's with r +0.16 (2006-2025): weakly predictable.",
+        "explosives",
+        "explosives_opp",
+        True,
+        "explosive plays",
+        "explosive-play defense",
+        family="explosive",
     ),
     Condition(
         "sacks",
@@ -86,6 +117,11 @@ CONDITIONS: tuple[Condition, ...] = (
         0.15,
         "Season-to-date sack rates predict the game's sack margin with r +0.15 (2006-2025): weakly "
         "predictable.",
+        "sacks_taken",
+        "sacks_made",
+        False,
+        "pass protection",
+        "pass rush",
     ),
     Condition(
         "special_teams",
@@ -98,8 +134,125 @@ CONDITIONS: tuple[Condition, ...] = (
         None,
         "Not measured before the game; the history says what winning dogs did, nothing about whether "
         "either team tends to produce it.",
+        "st_epa",
+        "st_epa_opp",
+        True,
+        "special teams",
+        "special teams",
+        net=True,
+    ),
+    # Six more (Austin, 2026-11-12). r: both teams' season-to-date rates (week 4 on) against the
+    # game's difference, 2006-2025, measured the way the five above were.
+    Condition(
+        "pass_game",
+        "pass_game",
+        "Pass better",
+        "More EPA per dropback than the opponent (sacks and scrambles count; win probability 20-80%).",
+        "out-pass the other side",
+        "out-passed the other side",
+        WEAK,
+        0.20,
+        "Season-to-date EPA per dropback predicts the game's difference with r +0.20 (2006-2025): "
+        "weakly predictable. It is also close to the result itself: a team that passes well scores.",
+        "pass_epa",
+        "pass_epa_opp",
+        True,
+        "passing offense",
+        "pass defense",
+    ),
+    Condition(
+        "big_runs",
+        "big_runs_more",
+        "More big runs",
+        "More runs of 10+ yards than the opponent.",
+        "break more big runs",
+        "broke more big runs",
+        WEAK,
+        0.22,
+        "Season-to-date 10-yard runs predict the game's difference with r +0.22 (2006-2025): weakly "
+        "predictable.",
+        "big_runs",
+        "big_runs_opp",
+        True,
+        "big-play run game",
+        "run defense on big plays",
+        family="explosive",
+    ),
+    Condition(
+        "third_down",
+        "third_down",
+        "Win third down",
+        "A higher third-down conversion rate than the opponent.",
+        "convert more third downs",
+        "converted more third downs",
+        WEAK,
+        0.15,
+        "Season-to-date third-down rates predict the game's difference with r +0.15 (2006-2025): weakly "
+        "predictable.",
+        "third_down_rate",
+        "third_down_rate_opp",
+        True,
+        "third-down offense",
+        "third-down defense",
+    ),
+    Condition(
+        "run_game",
+        "run_game",
+        "Run more efficiently",
+        "A higher rush success rate than the opponent (win probability 20-80%).",
+        "run more efficiently",
+        "ran more efficiently",
+        WEAK,
+        0.13,
+        "Season-to-date rush success predicts the game's difference with r +0.13 (2006-2025): weakly "
+        "predictable.",
+        "rush_sr",
+        "rush_sr_opp",
+        True,
+        "run game",
+        "run defense",
+        tier=2,
+    ),
+    Condition(
+        "deep_passes",
+        "deep_passes_more",
+        "More deep completions",
+        "More completions of 20+ yards than the opponent.",
+        "hit more deep passes",
+        "hit more deep passes",
+        WEAK,
+        0.14,
+        "Season-to-date 20-yard completions predict the game's difference with r +0.14 (2006-2025): "
+        "weakly predictable.",
+        "deep_passes",
+        "deep_passes_opp",
+        True,
+        "deep passing",
+        "deep-pass defense",
+        tier=2,
+        family="explosive",
+    ),
+    Condition(
+        "red_zone",
+        "red_zone",
+        "Finish in the red zone",
+        "A higher touchdown rate on drives that reach the opponent's 20.",
+        "finish drives in the red zone",
+        "finished more red-zone drives",
+        COIN_FLIP,
+        0.04,
+        "Season-to-date red-zone touchdown rates predict the game's difference with r +0.04 "
+        "(2006-2025): a coin flip for every team.",
+        "rz_td_rate",
+        "rz_td_rate_opp",
+        True,
+        "red-zone offense",
+        "red-zone defense",
+        tier=2,
     ),
 )
+CORE = tuple(c for c in CONDITIONS if c.tier == 1 and c.id in (
+    "turnovers", "early_down", "explosives", "sacks", "special_teams"))  # fmt: skip
 BY_ID = {c.id: c for c in CONDITIONS}
 
 TAIL = " None of this is in the odds we show; it is what winning underdogs did."
@@ -143,6 +296,56 @@ class ConditionPath:
 
 
 @dataclass
+class RankRow:
+    """One team's season-to-date rank on one condition's stat, 1 = best, before the as-of week."""
+
+    id: str
+    label: str
+    off_noun: str
+    def_noun: str
+    off_value: float | None  # per game: the offense's value (or the net, for special teams)
+    off_rank: int | None
+    def_value: float | None  # per game: what the defense allowed (the net again for special teams)
+    def_rank: int | None
+    n_teams: int
+    games: int
+
+
+@dataclass
+class Lever:
+    """A condition where the dog's unit is strong and the favorite's matching unit is weak."""
+
+    id: str
+    label: str
+    side: str  # offense | defense | net: which of the dog's units
+    dog_noun: str
+    fav_noun: str
+    dog_rank: int
+    fav_rank: int
+    n_teams: int
+    gap: int  # fav_rank - dog_rank
+    win_rate_pct: int | None  # dogs of this size who met the condition
+    base_rate_pct: int | None  # all dogs of this size
+    plausibility: str
+    tier: int
+    headline: str
+
+
+@dataclass
+class Chip:
+    """A tier-1 condition that isn't a lever, said in one line."""
+
+    id: str
+    label: str
+    kind: str  # even | favorite | weak (the dog ranks better, but its unit is not good)
+    dog_noun: str
+    fav_noun: str
+    dog_rank: int
+    fav_rank: int
+    text: str
+
+
+@dataclass
 class UpsetPaths:
     game_id: str | None
     season: int
@@ -155,8 +358,10 @@ class UpsetPaths:
     base_rate: float | None
     base_rate_pct: int | None
     conditions: list[ConditionPath] = field(default_factory=list)  # all five, best win rate first
-    top: list[str] = field(default_factory=list)  # ids of the conditions the sentence names
+    top: list[str] = field(default_factory=list)  # ids of the levers, in order
     sentence: str = ""
+    levers: list[Lever] = field(default_factory=list)
+    chips: list[Chip] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -289,47 +494,146 @@ def upset_paths(game: Any, as_of_week: int, con_or_df) -> UpsetPaths | None:
             )
         )  # fmt: skip
     conds.sort(key=lambda x: -(x.win_rate_if if x.win_rate_if is not None else -1.0))
-    top = [x.id for x in conds if x.win_rate_if is not None][:TOP_N]
     out = UpsetPaths(
         _gv0(game, "game_id"), season, week, int(as_of_week), dog, fav, abs(float(spread)), bucket,
-        base, _pct(base), conds, top,
+        base, _pct(base), conds,
     )  # fmt: skip
+    out.levers, out.chips = levers_and_chips(out, team_ranks(df, season, int(as_of_week)))
+    out.top = [lv.id for lv in out.levers]
     out.sentence = _paths_sentence(out)
     return out
 
 
-def _clause(p: UpsetPaths, c: ConditionPath) -> str:
-    bits = [f"dogs of this size who did won {c.win_rate_pct}%"]
-    if c.dog_games:
-        bits.append(f"{p.dog} has done it in {c.dog_count} of {c.dog_games} games")
-    else:
-        bits.append(f"{p.dog} has no games yet to go on")
-    if c.fav_games:
-        bits.append(f"{p.favorite} has allowed it in {c.fav_count} of {c.fav_games}")
-    return f"{BY_ID[c.id].plan.format(dog=p.dog, fav=p.favorite)} ({'; '.join(bits)})"
-
-
 def _paths_sentence(p: UpsetPaths) -> str:
+    if p.levers:
+        heads = [lv.headline for lv in p.levers]
+        return f"Where {p.dog} has the edge: {'; '.join(heads)}.{TAIL}"
+    if p.chips:
+        return (
+            f"No clear mismatch for {p.dog}: none of its strong units meets a weak {p.favorite} unit."
+            f"{TAIL}"
+        )
+    return f"Too early in the season to rank {p.dog}'s units against {p.favorite}'s.{TAIL}"
+
+
+# ---- ranks and levers -----------------------------------------------------------------------
+
+
+def ordinal(n: int) -> str:
+    suf = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suf}"
+
+
+def _rank(values: dict[str, float], best_high: bool) -> dict[str, int]:
+    """1 = best; ties share the better rank ('min')."""
+    order = sorted(values.values(), reverse=best_high)
+    return {t: order.index(v) + 1 for t, v in values.items()}
+
+
+def team_ranks(con_or_df, season: int, as_of_week: int) -> dict[str, dict[str, RankRow]]:
+    """Every team's rank on every condition's stat, this season, games with week < as_of_week (point
+    in time). Empty before MIN_RANK_WEEK. Teams are play codes (LA, LAC, LV)."""
+    if as_of_week < MIN_RANK_WEEK:
+        return {}
+    df = _frame(con_or_df).filter((pl.col("season") == season) & (pl.col("week") < as_of_week))
+    if df.is_empty():
+        return {}
+    out: dict[str, dict[str, RankRow]] = {}
+    games = dict(df.group_by("team").len().iter_rows())
+    for c in CONDITIONS:
+        if not c.stat or c.stat not in df.columns:
+            continue
+        if c.net:
+            agg = df.group_by("team").agg((pl.col(c.stat) - pl.col(c.stat_opp)).mean().alias("o"))
+            agg = agg.with_columns(pl.col("o").alias("d"))
+        else:
+            agg = df.group_by("team").agg(
+                pl.col(c.stat).mean().alias("o"), pl.col(c.stat_opp).mean().alias("d")
+            )
+        agg = agg.drop_nulls(["o", "d"])
+        off = dict(zip(agg["team"], agg["o"], strict=True))
+        dfn = dict(zip(agg["team"], agg["d"], strict=True))
+        ro = _rank(off, c.higher_better)
+        # a defense is best when the offenses it faced did worst
+        rd = ro if c.net else _rank(dfn, not c.higher_better)
+        for t, v in off.items():
+            out.setdefault(t, {})[c.id] = RankRow(
+                c.id, c.label, c.off_noun, c.def_noun, round(v, 3), ro[t], round(dfn[t], 3),
+                rd[t], len(off), games[t],
+            )  # fmt: skip
+    return out
+
+
+def _angles(c: Condition, d: RankRow, f: RankRow):
+    """(side, dog_noun, fav_noun, dog_rank, fav_rank) for each way the dog's units meet the
+    favorite's on this condition."""
+    if c.net:
+        return [("net", c.off_noun, c.off_noun, d.off_rank, f.off_rank)]
+    return [
+        ("offense", c.off_noun, c.def_noun, d.off_rank, f.def_rank),
+        ("defense", c.def_noun, c.off_noun, d.def_rank, f.off_rank),
+    ]
+
+
+def levers_and_chips(p: UpsetPaths, ranks: dict[str, dict[str, RankRow]]):
+    """The dog's levers (strong unit against a weak one, at most MAX_LEVERS, tier-1 conditions
+    first, then by gap x lift, one per family) and a chip for each tier-1 condition left over."""
+    d, f = ranks.get(_code(p.dog)), ranks.get(_code(p.favorite))
+    if not d or not f:
+        return [], []
     by_id = {c.id: c for c in p.conditions}
-    parts = [_clause(p, by_id[i]) for i in p.top]
-    if not parts:
-        return f"No history yet for how {p.dog} wins.{TAIL}"
-    joined = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
-    return f"How {p.dog} wins: {joined}.{TAIL}"
+    cands, best = [], {}
+    for c in CONDITIONS:
+        if c.id not in d or c.id not in f:
+            continue
+        cp = by_id[c.id]
+        lift = (cp.win_rate_if or 0) - (cp.base_rate or 0)
+        angs = sorted(_angles(c, d[c.id], f[c.id]), key=lambda a: -(a[4] - a[3]))
+        best[c.id] = angs[0]
+        side, dn, fn, dr, fr = angs[0]
+        if dr <= MAX_DOG_RANK and fr - dr >= MIN_GAP and lift > 0:
+            cands.append((c.tier, -(fr - dr) * lift, c, angs[0], cp))
+    cands.sort(key=lambda x: (x[0], x[1]))
+    levers, families = [], set()
+    for _, _, c, (side, dn, fn, dr, fr), cp in cands:
+        if c.family and c.family in families:
+            continue
+        if c.family:
+            families.add(c.family)
+        head = f"{p.dog}'s {dn} ({ordinal(dr)}) against {p.favorite}'s {fn} ({ordinal(fr)})"
+        levers.append(
+            Lever(
+                c.id, c.label, side, dn, fn, dr, fr, d[c.id].n_teams, fr - dr, cp.win_rate_pct,
+                cp.base_rate_pct, c.plausibility, c.tier, head,
+            )
+        )  # fmt: skip
+        if len(levers) == MAX_LEVERS:
+            break
+    taken = {lv.id for lv in levers}
+    chips = []
+    for c in CONDITIONS:
+        if c.tier != 1 or c.id in taken or c.id not in best or (c.family and c.family in families):
+            continue
+        side, dn, fn, dr, fr = best[c.id]
+        gap = fr - dr
+        kind = "favorite" if gap <= -MIN_GAP else "weak" if gap >= MIN_GAP else "even"
+        text = f"{p.dog}'s {dn} {ordinal(dr)}, {p.favorite}'s {fn} {ordinal(fr)}"
+        chips.append(Chip(c.id, c.label, kind, dn, fn, dr, fr, text))
+    return levers, chips
 
 
 # ---- after the game --------------------------------------------------------------------------
 
 
 def paths_outcome(game_id: str, con_or_df) -> PathsOutcome | None:
-    """For a finished game: which of the five conditions the underdog met, and whether it won. None
+    """For a finished game: which of the tier-1 conditions the underdog met, and whether it won. None
     for a pick'em or a game the model doesn't hold (unplayed, postseason, no line)."""
     df = _frame(con_or_df).filter(pl.col("game_id") == game_id)
     dog = df.filter(pl.col("role") == "dog")
     if dog.height != 1:
         return None
     r = dog.row(0, named=True)
-    conds = [OutcomeCondition(c.id, c.label, bool(r[c.column])) for c in CONDITIONS]
+    conds = [OutcomeCondition(c.id, c.label, bool(r[c.column])) for c in CONDITIONS if c.tier == 1]
     met = [c.id for c in conds if c.met]
     tied = r["margin"] == 0
     won = bool(r["won"])

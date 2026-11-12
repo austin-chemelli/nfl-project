@@ -36,4 +36,15 @@ def test_an_optional_step_failing_never_stops_the_site(monkeypatch):
 
 
 def test_only_context_steps_are_optional():
-    assert {s.name for s in daily.STEPS if s.optional} == {"forecast", "previews", "player claims"}
+    assert {s.name for s in daily.STEPS if s.optional} == {
+        "forecast",
+        "previews",
+        "player claims",
+        "models",
+    }
+
+
+def test_models_are_built_before_the_site_and_a_failure_never_stops_it():
+    steps = daily.plan()
+    assert steps.index("features") < steps.index("models") < steps.index("site")
+    assert next(s for s in daily.STEPS if s.name == "models").optional

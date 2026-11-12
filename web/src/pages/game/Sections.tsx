@@ -1,6 +1,6 @@
 import { TeamLink } from '../../components/TeamLink'
 import { useState } from 'react'
-import { DivergingBars, Dumbbell, MatchupBand, ProbStrip } from '../../charts'
+import { DivergingBars, Dumbbell, FaceOff, HabitList, MatchupBand, ProbStrip } from '../../charts'
 import { FormationKey, FormationMap } from '../../charts/FormationMap'
 import { Help } from '../../components/Help'
 import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
@@ -347,6 +347,46 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
                 </tbody>
               </table>
             </DataTable>
+          </Card>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+/** What each side's habits imply (ADR 0028): a grid per side, under the file's own one-sentence lede. Null when the file has none. */
+export function MatchupsSection({ g }: { g: Game; meta: Meta }) {
+  const m = g.matchups
+  if (!m || m.sides.length === 0) return null
+  const colorOf = (team: string) => (team === g.home ? 'var(--team-home)' : team === g.away ? 'var(--team-away)' : 'var(--text-secondary)')
+  const passOf = (team: string) => {
+    const t = g.tendencies.find((x) => x.team_side === (team === g.home ? 'home' : 'away') && x.side === 'off' && x.situation === 'all' && x.metric === 'pass_rate')
+    return t && t.rate != null && t.league_rate != null ? { team, rate: t.rate, league: t.league_rate } : null
+  }
+  return (
+    <Section
+      title="Matchups"
+      help="Each side of the ball: where each unit ranks this season (1st is best of 32), then the habits you'll likely see and how the other side has handled them."
+    >
+      {m.lede && <p className="mb-4 max-w-3xl text-[14px] text-ink">{m.lede}</p>}
+      <div className="flex flex-col gap-6">
+        {m.sides.map((side) => (
+          <Card key={`${side.offense}-${side.defense}`}>
+            <h3 className="m-0 flex items-center gap-2 text-[15px] font-semibold" data-testid="side-title">
+              <span className="inline-block h-3 w-3 rounded-sm" style={{ background: colorOf(side.offense) }} />
+              When {side.offense} has the ball
+              <span className="text-[12px] font-normal text-ink-3">
+                {side.offense} offense vs {side.defense} defense
+              </span>
+            </h3>
+            {side.face_off.length > 0 && (
+              <>
+                <h4 className="mb-1 mt-4 text-[12px] font-semibold text-ink-2">Who's stronger where</h4>
+                <FaceOff rows={side.face_off} offense={side.offense} defense={side.defense} colorOf={colorOf} />
+              </>
+            )}
+            <h4 className="mb-1 mt-4 text-[12px] font-semibold text-ink-2">What you'll see, and how it has gone</h4>
+            <HabitList rows={side.rows} offense={side.offense} defense={side.defense} colorOf={colorOf} pass={passOf(side.offense)} />
           </Card>
         ))}
       </div>

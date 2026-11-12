@@ -31,7 +31,7 @@ export function useChartTip() {
     onClick: (e: MouseEvent) => place(key, e.clientX, e.clientY),
     onPointerMove: (e: PointerEvent) => place(key, e.clientX, e.clientY),
     onPointerLeave: () => setAt(null),
-    onFocus: (e: FocusEvent<SVGGElement>) => {
+    onFocus: (e: FocusEvent<Element>) => {
       const b = e.currentTarget.getBoundingClientRect()
       place(key, b.left + b.width / 2, b.top)
     },

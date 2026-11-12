@@ -13,3 +13,5 @@ export { Scatter, type ScatterAxis, type ScatterPoint, type ScatterProps, type S
 export { PossessionStrip, isScore, type DriveTip } from './PossessionStrip'
 export { DriveField, driveGlyph } from './DriveField'
 export { TendencyRow, type TendencyRowData } from './TendencyRow'
+export { FaceOff } from './FaceOff'
+export { HabitList, type PassHabit } from './HabitList'

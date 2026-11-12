@@ -837,6 +837,8 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     )
     lineups = _safe(_lineups, {}, paths, games, season, injuries, now)
     today = _safe(_today, {}, paths, now)
+    matchup_ctx = _safe(_matchup_ctx, None, paths)  # ADR 0028: Engine and ledger, once per build
+    conditions = _safe(_conditions_frame, None, paths)
     totals_by_game, totals_record = _totals(paths, games)
     from nfl.llm.narrative import load_records
 
@@ -871,6 +873,9 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["key_players"] = claims_by_game.get(g["game_id"])  # ADR 0027: context, M24.4
             detail["lineups"] = lineups.get(g["game_id"])  # ADR 0027: the formation map, M24.5
             detail["today"] = today.get(g["game_id"])
+            detail["matchups"] = _safe(game_matchups, None, matchup_ctx, g, conditions)
+            detail["paths"] = _safe(game_paths, None, conditions, g)
+            detail["paths_outcome"] = _safe(game_paths_outcome, None, conditions, g)
             detail["expected_score"] = _safe(
                 _expected_score, None, totals_by_game.get(g["game_id"]), detail
             )
@@ -910,6 +915,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             "groups": groups_meta(),
             "tendency_metrics": TENDENCY_METRICS,
             "tendency_situations": TENDENCY_SITUATION_LABELS,
+            "split_defs": split_defs(),
             "feature_bands": feature_bands(feats, games, now),
             "last_lock": _last_lock(paths),
         },
@@ -1303,6 +1309,194 @@ def _game_detail(g, allrows, feats, tend, injuries, narr, now, edges=None) -> di
         ],
         "narrative": json.loads(narr[gid].model_dump_json()) if gid in narr else None,
     }
+
+
+# ------------------------------------------------------------------ matchups and paths (ADR 0028, M25.3)
+
+MATCHUPS_MIN_WEEK = 3  # fewer than two earlier weeks: nothing worth showing
+OPPONENT_TIER_MIN_WEEK = 4  # the opponent-tier flag is null before Week 4 (team_split_week)
+OPPONENT_TIER_SPLITS = ("vs_top10_def", "vs_top10_off")
+LEDE_BADGE = {
+    "stable": "one of the more reliable kinds of number we show",
+    "some": "a moderately reliable kind of number we show",
+    "noise": "the least reliable kind of number we show",
+}
+
+
+def split_defs() -> dict[str, dict]:
+    """meta.json `split_defs`: id -> label, definition, chooser, no_edge (a reason, '' when the split
+    gets an edge), from the registry in splits.py."""
+    from nfl import splits
+
+    return {
+        s.id: {"label": s.label, "definition": s.definition, "chooser": s.chooser, "no_edge": s.no_edge}
+        for s in splits.SPLITS
+    }  # fmt: skip
+
+
+def _matchup_ctx(paths: Paths):
+    """The matchup engine (it caches per season and week) and the candidates ledger, once per build."""
+    from nfl import catalog, matchups
+
+    return matchups.Engine(catalog.connect(paths)), matchups.load_ledger(paths)
+
+
+def _conditions_frame(paths: Paths) -> pl.DataFrame:
+    from nfl import catalog
+    from nfl import paths as upset
+
+    return upset.load_conditions(catalog.connect(paths))
+
+
+def _matchup_row(r: dict) -> dict:
+    return {
+        "split": r["split"], "label": r["label"], "chooser": r["chooser"], "has_edge": r["has_edge"],
+        "opp_rate": _r(r["opp_rate"], 3), "opp_rate_lo": _r(r["opp_rate_lo"], 3),
+        "opp_rate_q1": _r(r["opp_rate_q1"], 3), "opp_rate_med": _r(r["opp_rate_med"], 3),
+        "opp_rate_q3": _r(r["opp_rate_q3"], 3), "opp_rate_hi": _r(r["opp_rate_hi"], 3),
+        "rate_faced": _r(r["rate_faced"], 3), "n_with": r["n_with"], "n_without": r["n_without"],
+        "epa_with": _r(r["epa_with"], 3), "epa_without": _r(r["epa_without"], 3),
+        "shrunk_gap": _r(r["shrunk_gap"], 3), "league_gap": _r(r["league_gap"], 3),
+        "edge_pts_pg": _r(r["edge_pts_pg"], 2), "favours": r["favours"],
+        "reliability": r["reliability"], "note": r["note"],
+    }  # fmt: skip
+
+
+def face_off_lede(sides: list[dict]) -> str | None:
+    """The biggest rank mismatch across both sides' face-offs, plus a strength-on-strength row (both
+    units top five) when there is one. Every number is a rank in the record. None without ranks."""
+    from nfl.paths import ordinal
+
+    rows = [(sd, r) for sd in sides for r in sd.get("face_off") or []]
+    if not rows:
+        return None
+    parts = []
+    sd, r = max(rows, key=lambda x: abs(x[1]["def_rank"] - x[1]["off_rank"]))
+    if abs(r["def_rank"] - r["off_rank"]) >= FACE_OFF_GAP:
+        o = f"{sd['offense']}'s {r['off_noun']} ({ordinal(r['off_rank'])})"
+        d = f"{sd['defense']}'s {r['def_noun']} ({ordinal(r['def_rank'])})"
+        a, b = (o, d) if r["off_rank"] < r["def_rank"] else (d, o)
+        parts.append(f"The biggest mismatch: {a} against {b}.")
+    strong = [x for x in rows if x[1]["off_rank"] <= 5 and x[1]["def_rank"] <= 5]
+    if strong:
+        sd, r = min(strong, key=lambda x: x[1]["off_rank"] + x[1]["def_rank"])
+        parts.append(
+            f"Strength on strength: {sd['offense']}'s {r['off_noun']} ({ordinal(r['off_rank'])}) "
+            f"into {sd['defense']}'s {r['def_noun']} ({ordinal(r['def_rank'])})."
+        )
+    return " ".join(parts) or "No unit here ranks far above the one it meets."
+
+
+def matchups_lede(sides: list[dict]) -> str | None:
+    """The face-off lede when the ranks are ready; before that, a template naming the largest edge
+    by absolute points (`edge_pts_pg`, 2 dp, the record's own)."""
+    fo = face_off_lede(sides)
+    if fo:
+        return fo
+    best = None
+    for sd in sides:
+        for r in sd["rows"]:
+            e = r["edge_pts_pg"]
+            if (
+                r["has_edge"]
+                and e is not None
+                and (best is None or abs(e) > abs(best[1]["edge_pts_pg"]))
+            ):
+                best = (sd, r)
+    if best is None:
+        return None
+    sd, r = best
+    # positive edge = favours the offense (matchups.py)
+    fav = r.get("favours") or ("offense" if r["edge_pts_pg"] > 0 else "defense")
+    if r["chooser"] == "offense":  # the offense's habit against the defense's matchup
+        who = f"{sd['defense']}'s defense against {sd['offense']}'s {r['label'].lower()}"
+    else:
+        who = f"{sd['defense']}'s {r['label'].lower()} against {sd['offense']}'s offense"
+    return (
+        f"The matchup that matters most: {who}, worth {abs(r['edge_pts_pg'])} points a game "
+        f"to {sd['offense'] if fav == 'offense' else sd['defense']}, "
+        f"and {LEDE_BADGE[r['reliability']]}."
+    )
+
+
+# The face-off on the Matchups tab (redesign, 2026-11-12): one row per condition stat, the offense's
+# rank against the defense's, in this order. Short labels; the units' nouns come from nfl.paths.
+FACE_OFF = (
+    ("early_down", "Early downs"), ("pass_game", "Passing"), ("run_game", "Running"),
+    ("explosives", "Explosive plays"), ("third_down", "Third down"), ("red_zone", "Red zone"),
+    ("turnovers", "Turnovers"), ("sacks", "Sacks"),
+)  # fmt: skip
+FACE_OFF_GAP = 8  # rank places for one side to "have the edge"; the same bar as the upset levers
+_RANKS_CACHE: dict[tuple[int, int], dict] = {}
+
+
+def face_off(cond: pl.DataFrame | None, season: int, week: int, offense: str, defense: str):
+    """Rows of (offense rank, defense rank) on each FACE_OFF stat, season to date before `week`.
+    [] when the ranks aren't ready (before Week 4) or a team is missing. Teams are site codes."""
+    from nfl import paths as upset
+
+    if cond is None:
+        return []
+    key = (season, week)
+    if key not in _RANKS_CACHE:
+        _RANKS_CACHE[key] = upset.team_ranks(cond, season, week)
+    ranks = _RANKS_CACHE[key]
+    o, d = ranks.get(upset._code(offense)), ranks.get(upset._code(defense))
+    if not o or not d:
+        return []
+    rows = []
+    for cid, label in FACE_OFF:
+        if cid not in o or cid not in d:
+            continue
+        a, b = o[cid], d[cid]
+        gap = b.def_rank - a.off_rank  # > 0: the offense ranks better than the defense it meets
+        edge = "offense" if gap >= FACE_OFF_GAP else "defense" if gap <= -FACE_OFF_GAP else "even"
+        rows.append({
+            "id": cid, "label": label, "off_noun": a.off_noun, "def_noun": b.def_noun,
+            "off_rank": a.off_rank, "def_rank": b.def_rank, "n_teams": a.n_teams, "edge": edge,
+        })  # fmt: skip
+    return rows
+
+
+def game_matchups(ctx, g: dict, cond: pl.DataFrame | None = None) -> dict | None:
+    """The game's `matchups` section; None before Week 3. A past game and an upcoming one both read
+    the game's own week (the engine reads weeks before it). Only rows with an edge are kept (the
+    context rows went, Austin 2026-11-12); `face_off` ranks each side's units from Week 4."""
+    if ctx is None or int(g["week"]) < MATCHUPS_MIN_WEEK:
+        return None
+    engine, ledger = ctx
+    week = int(g["week"])
+    edges = engine.matchup_edges(g, week, ledger).to_dict()
+    hide = OPPONENT_TIER_SPLITS if edges["as_of_week"] < OPPONENT_TIER_MIN_WEEK else ()
+    sides = [
+        {
+            "offense": sd["offense"], "defense": sd["defense"],
+            "rows": [_matchup_row(r) for r in sd["rows"] if r["split"] not in hide and r["has_edge"]],
+            "face_off": face_off(cond, int(g["season"]), week, sd["offense"], sd["defense"]),
+        }
+        for sd in edges["sides"]
+    ]  # fmt: skip
+    return {"as_of_week": edges["as_of_week"], "sides": sides, "lede": matchups_lede(sides)}
+
+
+def game_paths(cond: pl.DataFrame | None, g: dict) -> dict | None:
+    """`paths`: how the underdog wins, as of the game's week; None without a line or a dog."""
+    from nfl import paths as upset
+
+    if cond is None:
+        return None
+    p = upset.upset_paths(g, int(g["week"]), cond)
+    return None if p is None else p.to_dict()
+
+
+def game_paths_outcome(cond: pl.DataFrame | None, g: dict) -> dict | None:
+    """`paths_outcome`: for a finished game, which conditions the dog met and how it ended."""
+    from nfl import paths as upset
+
+    if cond is None or g.get("result") is None:
+        return None
+    o = upset.paths_outcome(g["game_id"], cond)
+    return None if o is None else o.to_dict()
 
 
 _LEAGUE_CACHE: dict[int, dict] = {}

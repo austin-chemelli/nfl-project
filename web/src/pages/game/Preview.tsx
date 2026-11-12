@@ -5,6 +5,7 @@
  * Approaches tab. The bars come from the Global fit, a diagnostic, so the name never appears here.
  */
 import { Help } from '../../components/Help'
+import { UpsetPaths } from '../../components/UpsetPaths'
 import { useSetTab } from '../../components/Tabs'
 import { DivergingBars, TipNote, TipRow, TipTitle } from '../../charts'
 import { DataTable, Section, td, th } from '../../components/ui'
@@ -79,6 +80,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
         </table>
       </DataTable>
       {liveReady(live) && <LiveBars bars={bars} />}
+      <UpsetPaths paths={g.paths} outcome={g.paths_outcome} />
     </Section>
   )
 }
