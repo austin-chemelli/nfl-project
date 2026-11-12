@@ -593,3 +593,13 @@ Brief and measurements: `.notes/matchup-insights-direction.md` (Austin's directi
 - **M25.12 Point-in-time `tendencies` on past game pages** (from M23.13): `site.py` reads tendencies as of the game's week through `tendencies.rates_asof`. Small separate PR, any time.
 
 **Closing:** `docs/architecture.md` §3.9, `docs/site.md` (the Matchups tab, `MatchupGrid`, `UpsetPaths`, the lean), `docs/feature-groups.md`, the hub, the journal, the brief's decisions; `reviewer` before each PR; production checks after each merge (the Matchups tab on a live game, the paths card on a finished one, the lean on the tracker).
+
+## M26: Your picks and the playoff what-if (decided 2026-11-12 by Austin; ADR 0029)
+
+Idea (d) of `.notes/hub/plans/ideas-2026-11-10.md`, staged: picks first, then the what-if fed by the same picks. Web only until M26.2. Track `picks` (hub `tracks/picks.md`), branch `m26-picks`.
+
+- **M26.1 Your picks on the slate.** *Built 2026-11-12.* Files: `web/src/lib/picks.ts` (store, `usePicks`, `setPick`, `pickOpen`, `scorePicks`), `web/src/data/api.ts` (`useSlates`), `web/src/pages/slate/PickRow.tsx` (two team buttons under each pregame card, outside the card link; after kickoff the pick with ✓/✗), `YourPicks.tsx` (this week's progress, the season record against the Student and the market's favorite on the same games, clear this week's open picks), `GameCard.tsx`, `WeekView.tsx`, tests. Acceptance: no pick after kickoff; a pick stamped at or after kickoff is never scored; nothing nests inside the card link; no data contract change.
+- **M26.2 Played results for the browser.** `league.json` gains the played regular-season games with scores (additive) so the browser can compute standings and tiebreaks; `contract.ts`, fixtures. Half a day.
+- **M26.3 Simulation in TypeScript.** Port `standings.py`, `tiebreak.py` and `simulate.py` to `web/src/lib/league/` (seeds, bye, the bracket; no leverage), in a Web Worker if 2,000+ runs take over ~200 ms. Parity: a script writes fixtures from the Python (the 2002-2025 seeds of `tests/test_league_tiebreak`, plus a fixed-seed run's playoff odds within Monte Carlo error). A day or two; tiebreaks are the risk.
+- **M26.4 What-if on the League page.** Per remaining game: the Student's and the market's chance, and "decide it" (either team, or the source). Your slate picks start as decisions; odds re-run on each change and show from → to. Fine print: beyond a week out the market's numbers are our estimate of the market, not a quote (ADR 0019). A day.
+- **M26.5 Docs and review.** `docs/site.md`, the journal, `reviewer` before each PR, a `/site-walk` with the goal "make your picks for the week and see what they mean for the playoffs".

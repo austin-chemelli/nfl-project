@@ -1,12 +1,13 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LeagueFile } from '../../data/contract'
 import { renderRoute } from '../../test/render'
 import { stakesLine } from './helpers'
+import { PICKS_KEY, resetPicksCache } from '../../lib/picks'
 
 /** A copy of the fixtures where the listed weeks' slates have a finished game, so their recap is requested. */
 export function fixturesWithResults(weeks: number[]): string {
@@ -215,5 +216,49 @@ describe('Slate loading', () => {
     expect(container.querySelectorAll('[data-skeleton="tile"]')).toHaveLength(5)
     expect(container.querySelectorAll('[data-skeleton="card"]').length).toBeGreaterThan(1)
     await screen.findByRole('link', { name: /^CAR\s*@\s*GB\s*\S/ })
+  })
+
+  describe('your picks (M26.1)', () => {
+    const CARD = /^CAR\s*@\s*GB\s*\S/
+    const freeze = (iso: string) => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date(iso))
+    }
+    afterEach(() => {
+      vi.useRealTimers()
+      localStorage.clear()
+      resetPicksCache()
+    })
+
+    it('picks a winner before kickoff, outside the card link, and counts it', async () => {
+      freeze('2026-10-29T12:00:00Z') // before every week-8 kickoff
+      renderRoute('/')
+      await screen.findByRole('link', { name: CARD })
+      const row = screen.getByRole('group', { name: 'Your pick: CAR at GB' })
+      expect(screen.getByLabelText('Your picks')).toHaveTextContent('0 of 14 open games picked')
+      await userEvent.click(within(row).getByRole('button', { name: 'GB' }))
+      expect(within(row).getByRole('button', { name: 'GB' })).toHaveAttribute('aria-pressed', 'true')
+      expect(JSON.parse(localStorage.getItem(PICKS_KEY)!)['2026_08_CAR_GB'].team).toBe('GB')
+      expect(screen.getByLabelText('Your picks')).toHaveTextContent('1 of 14 open games picked')
+      await userEvent.click(within(row).getByRole('button', { name: 'GB' }))
+      expect(within(row).getByRole('button', { name: 'GB' })).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('closes at kickoff and scores a pick made before it against the Student and the market', async () => {
+      freeze('2026-11-05T12:00:00Z') // after every week-8 kickoff
+      const root = fixturesWithResults([])
+      const f = path.join(root, 'site/slate_2026_08.json')
+      const d = JSON.parse(fs.readFileSync(f, 'utf8'))
+      d.games[0].result = { home_score: 17, away_score: 20, margin: -3 } // CAR won at GB
+      fs.writeFileSync(f, JSON.stringify(d))
+      localStorage.setItem(PICKS_KEY, JSON.stringify({ '2026_08_CAR_GB': { team: 'CAR', at: '2026-10-29T12:00:00Z' } }))
+      renderRoute('/', root)
+      await screen.findByRole('link', { name: CARD })
+      expect(screen.queryByRole('group', { name: /Your pick:/ })).toBeNull()
+      expect(screen.getByText(/Your pick:/)).toHaveTextContent('Your pick: CAR')
+      expect(screen.getByLabelText('right')).toBeInTheDocument()
+      // fixture: the Student and the market both had GB
+      expect(await screen.findByText(/Season: you/)).toHaveTextContent('Season: you 1–0 · Student 0–1 · market 0–1')
+    })
   })
 })
