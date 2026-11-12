@@ -12,7 +12,6 @@ import { NarrativeSection } from './game/Narrative'
 import { Differ, StrongCallsOutcome } from './game/Differ'
 import { TheLine, hasLine } from './game/TheLine'
 import { PreviewHub } from './game/PreviewHub'
-import { LeanBlock } from './game/LeanBlock'
 import { Books } from './game/Books'
 import { disagrees, hasBooks } from './game/books'
 import { Retro } from './game/Retro'
@@ -124,7 +123,6 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       content: (
         <TabBody>
           <Differ g={g} meta={meta} />
-          <LeanBlock g={g} />
           <ApproachesVsMarket g={g} meta={meta} />
           <Why g={g} meta={meta} />
           <FinePrint>

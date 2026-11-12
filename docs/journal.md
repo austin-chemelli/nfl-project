@@ -796,5 +796,7 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Findings.** On the 2026 slate (weeks 4–10, 102 games) the mean |lean| is 0.88 points and the largest is 2.84, under the spec's 1.5-point typical bound. Over weeks 4–9, before tracking starts, the lean landed on the right side of the spread in 41 games and the wrong side in 44 (3 pushes): no sign of an edge, as the market's efficiency would predict. The three `use` candidates are all net-EPA variants, so their parts move together.
 
+**Pulled from the page before merge (Austin).** Looking at the block, Austin asked what it adds. Honest answer: a lean of about a point whose 90% range nearly always crosses zero, a coin-flip record so far, and a question the Approaches tab already answers better. `LeanBlock` is removed; the lean stays in the game JSON and the tracker so the live record from Week 10 builds quietly, and it comes back (likely as a History-page row) only if that record earns it.
+
 **Lesson.** A guard that greps writer modules for a word catches English too ("the model leans"); grep for the import instead, with a control that the pattern finds a real reader.
 
