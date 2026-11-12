@@ -482,6 +482,20 @@ export const UpsetPaths = z.looseObject({
 })
 export type UpsetPaths = z.infer<typeof UpsetPaths>
 
+// Both teams' edge cards (game-preview-hub, 2026-11-12): the underdog first, each against its role's history.
+export const EdgeSide = z.looseObject({
+  team: z.string(),
+  opponent: z.string(),
+  role: z.enum(['underdog', 'favorite', 'pick']),
+  size: num,
+  bucket: z.string(),
+  base_rate_pct: nnum,
+  levers: z.array(PathLever).default([]),
+  chips: z.array(PathChip).default([]),
+  met: z.array(z.string()).nullable().default(null), // after the game: the levers the team won
+})
+export type EdgeSide = z.infer<typeof EdgeSide>
+
 export const PathsOutcome = z.looseObject({
   game_id: z.string(),
   dog: z.string(),
@@ -516,6 +530,7 @@ export const Game = GameRow.extend({
   matchups: Matchups.nullable().default(null), // what each side's habits imply, in points a game (ADR 0028)
   paths: UpsetPaths.nullable().default(null), // how the underdog wins: conditions with history, never a probability
   paths_outcome: PathsOutcome.nullable().default(null), // finished games: which conditions the dog met
+  edge_cards: z.array(EdgeSide).nullable().default(null), // both teams' levers; null without a line
 })
 
 // --------------------------------------------------------------------------- retrospective

@@ -5,7 +5,6 @@
  * Approaches tab. The bars come from the Global fit, a diagnostic, so the name never appears here.
  */
 import { Help } from '../../components/Help'
-import { UpsetPaths } from '../../components/UpsetPaths'
 import { useSetTab } from '../../components/Tabs'
 import { DivergingBars, TipNote, TipRow, TipTitle } from '../../charts'
 import { DataTable, Section, td, th } from '../../components/ui'
@@ -30,7 +29,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
         How much each part of the game favors {g.away} or {g.home}, priced by history.{' '}
-        <button type="button" onClick={() => setTab('approaches')} className="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-accent hover:underline">By approach →</button>
+        <button type="button" onClick={() => setTab('approaches')} className="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-accent hover:underline">Each approach's reading →</button>
       </p>
       <DivergingBars
         leftLabel={`toward ${g.away}`}
@@ -80,7 +79,6 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
         </table>
       </DataTable>
       {liveReady(live) && <LiveBars bars={bars} />}
-      <UpsetPaths paths={g.paths} outcome={g.paths_outcome} />
     </Section>
   )
 }

@@ -3737,5 +3737,255 @@
    }
   ]
  },
- "paths_outcome": null
+ "paths_outcome": null,
+ "edge_cards": [
+  {
+   "team": "CAR",
+   "opponent": "GB",
+   "role": "underdog",
+   "size": 3.5,
+   "bucket": "3-6.5",
+   "base_rate_pct": 37,
+   "levers": [
+    {
+     "id": "third_down",
+     "label": "Win third down",
+     "side": "offense",
+     "dog_noun": "third-down offense",
+     "fav_noun": "third-down defense",
+     "dog_rank": 10,
+     "fav_rank": 26,
+     "n_teams": 32,
+     "gap": 16,
+     "win_rate_pct": 54,
+     "base_rate_pct": 37,
+     "plausibility": "weakly predictable",
+     "tier": 1,
+     "headline": "CAR's third-down offense (10th) against GB's third-down defense (26th)"
+    },
+    {
+     "id": "run_game",
+     "label": "Run more efficiently",
+     "side": "defense",
+     "dog_noun": "run defense",
+     "fav_noun": "run game",
+     "dog_rank": 12,
+     "fav_rank": 26,
+     "n_teams": 32,
+     "gap": 14,
+     "win_rate_pct": 47,
+     "base_rate_pct": 37,
+     "plausibility": "weakly predictable",
+     "tier": 2,
+     "headline": "CAR's run defense (12th) against GB's run game (26th)"
+    },
+    {
+     "id": "red_zone",
+     "label": "Finish in the red zone",
+     "side": "offense",
+     "dog_noun": "red-zone offense",
+     "fav_noun": "red-zone defense",
+     "dog_rank": 10,
+     "fav_rank": 25,
+     "n_teams": 32,
+     "gap": 15,
+     "win_rate_pct": 43,
+     "base_rate_pct": 37,
+     "plausibility": "coin flip for every team",
+     "tier": 2,
+     "headline": "CAR's red-zone offense (10th) against GB's red-zone defense (25th)"
+    }
+   ],
+   "chips": [
+    {
+     "id": "turnovers",
+     "label": "Win the turnover battle",
+     "kind": "even",
+     "dog_noun": "takeaways",
+     "fav_noun": "ball security",
+     "dog_rank": 9,
+     "fav_rank": 15,
+     "text": "CAR's takeaways 9th, GB's ball security 15th"
+    },
+    {
+     "id": "early_down",
+     "label": "Win early downs",
+     "kind": "even",
+     "dog_noun": "early-down offense",
+     "fav_noun": "early-down defense",
+     "dog_rank": 8,
+     "fav_rank": 1,
+     "text": "CAR's early-down offense 8th, GB's early-down defense 1st"
+    },
+    {
+     "id": "explosives",
+     "label": "More explosive plays",
+     "kind": "even",
+     "dog_noun": "explosive plays",
+     "fav_noun": "explosive-play defense",
+     "dog_rank": 4,
+     "fav_rank": 5,
+     "text": "CAR's explosive plays 4th, GB's explosive-play defense 5th"
+    },
+    {
+     "id": "sacks",
+     "label": "Sack the quarterback more",
+     "kind": "favorite",
+     "dog_noun": "pass protection",
+     "fav_noun": "pass rush",
+     "dog_rank": 25,
+     "fav_rank": 15,
+     "text": "CAR's pass protection 25th, GB's pass rush 15th"
+    },
+    {
+     "id": "special_teams",
+     "label": "Win special teams",
+     "kind": "favorite",
+     "dog_noun": "special teams",
+     "fav_noun": "special teams",
+     "dog_rank": 29,
+     "fav_rank": 12,
+     "text": "CAR's special teams 29th, GB's special teams 12th"
+    },
+    {
+     "id": "pass_game",
+     "label": "Pass better",
+     "kind": "favorite",
+     "dog_noun": "pass defense",
+     "fav_noun": "passing offense",
+     "dog_rank": 16,
+     "fav_rank": 3,
+     "text": "CAR's pass defense 16th, GB's passing offense 3rd"
+    },
+    {
+     "id": "big_runs",
+     "label": "More big runs",
+     "kind": "even",
+     "dog_noun": "big-play run game",
+     "fav_noun": "run defense on big plays",
+     "dog_rank": 13,
+     "fav_rank": 14,
+     "text": "CAR's big-play run game 13th, GB's run defense on big plays 14th"
+    }
+   ],
+   "met": null
+  },
+  {
+   "team": "GB",
+   "opponent": "CAR",
+   "role": "favorite",
+   "size": 3.5,
+   "bucket": "3-6.5",
+   "base_rate_pct": 63,
+   "levers": [
+    {
+     "id": "pass_game",
+     "label": "Pass better",
+     "side": "defense",
+     "dog_noun": "pass defense",
+     "fav_noun": "passing offense",
+     "dog_rank": 4,
+     "fav_rank": 22,
+     "n_teams": 32,
+     "gap": 18,
+     "win_rate_pct": 88,
+     "base_rate_pct": 63,
+     "plausibility": "weakly predictable",
+     "tier": 1,
+     "headline": "GB's pass defense (4th) against CAR's passing offense (22nd)"
+    },
+    {
+     "id": "early_down",
+     "label": "Win early downs",
+     "side": "offense",
+     "dog_noun": "early-down offense",
+     "fav_noun": "early-down defense",
+     "dog_rank": 5,
+     "fav_rank": 19,
+     "n_teams": 32,
+     "gap": 14,
+     "win_rate_pct": 83,
+     "base_rate_pct": 63,
+     "plausibility": "weakly predictable",
+     "tier": 1,
+     "headline": "GB's early-down offense (5th) against CAR's early-down defense (19th)"
+    },
+    {
+     "id": "turnovers",
+     "label": "Win the turnover battle",
+     "side": "defense",
+     "dog_noun": "takeaways",
+     "fav_noun": "ball security",
+     "dog_rank": 1,
+     "fav_rank": 12,
+     "n_teams": 32,
+     "gap": 11,
+     "win_rate_pct": 87,
+     "base_rate_pct": 63,
+     "plausibility": "coin flip for every team",
+     "tier": 1,
+     "headline": "GB's takeaways (1st) against CAR's ball security (12th)"
+    },
+    {
+     "id": "sacks",
+     "label": "Sack the quarterback more",
+     "side": "offense",
+     "dog_noun": "pass protection",
+     "fav_noun": "pass rush",
+     "dog_rank": 11,
+     "fav_rank": 22,
+     "n_teams": 32,
+     "gap": 11,
+     "win_rate_pct": 84,
+     "base_rate_pct": 63,
+     "plausibility": "weakly predictable",
+     "tier": 1,
+     "headline": "GB's pass protection (11th) against CAR's pass rush (22nd)"
+    }
+   ],
+   "chips": [
+    {
+     "id": "explosives",
+     "label": "More explosive plays",
+     "kind": "even",
+     "dog_noun": "explosive plays",
+     "fav_noun": "explosive-play defense",
+     "dog_rank": 9,
+     "fav_rank": 11,
+     "text": "GB's explosive plays 9th, CAR's explosive-play defense 11th"
+    },
+    {
+     "id": "special_teams",
+     "label": "Win special teams",
+     "kind": "weak",
+     "dog_noun": "special teams",
+     "fav_noun": "special teams",
+     "dog_rank": 12,
+     "fav_rank": 29,
+     "text": "GB's special teams 12th, CAR's special teams 29th"
+    },
+    {
+     "id": "big_runs",
+     "label": "More big runs",
+     "kind": "even",
+     "dog_noun": "big-play run game",
+     "fav_noun": "run defense on big plays",
+     "dog_rank": 28,
+     "fav_rank": 29,
+     "text": "GB's big-play run game 28th, CAR's run defense on big plays 29th"
+    },
+    {
+     "id": "third_down",
+     "label": "Win third down",
+     "kind": "even",
+     "dog_noun": "third-down offense",
+     "fav_noun": "third-down defense",
+     "dog_rank": 30,
+     "fav_rank": 24,
+     "text": "GB's third-down offense 30th, CAR's third-down defense 24th"
+    }
+   ],
+   "met": null
+  }
+ ]
 }

@@ -778,3 +778,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** Regenerating every web fixture from today's shared data broke 56 unrelated tests (the data moved under them); patch only the sections a change touches.
 
+## 2026-11-12: Both teams' edges, and the Preview as a preview of every tab (M25.5 follow-up; data track)
+
+**Why.** Austin liked the redesigned upset card enough to want one for the favorite too, and asked for the Preview to be a real preview: the most notable item from each tab, with a way into the tab for the rest (plan `game-preview-hub`, all five recommendations accepted).
+
+**What changed.** `paths.edge_sides`: both teams' levers, each against the history of its role (underdogs, favorites, or both sides of 0-2.5 games for a pick'em; `bucket_table(role=...)`), with `met` from the game's own row once played (the site keeps it null until the game is final). Game files gain `edge_cards`. Web: `EdgeCard` replaces `UpsetPaths`. The Preview (`PreviewHub`) is meant to stand on its own: the full "Who has the edge" bars with the live readings, both teams' full edge cards under the mismatch lede, a "Key news" section (the research's storyline, each team's out or doubtful players from the report and its two highest-impact research notes, the most-cited matchup), then the line and the tale of the tape's four widest gaps side by side; each section links to its tab. A first version with one small teaser card per tab read as thin to Austin ("more info on the preview page, not less"), so it became this. `cloud-job.sh`: the `site` and `retro` jobs run `nfl models build` first (optional), so a site rebuild after a merge doesn't wait for the next daily pass to fill the matchup sections.
+
+**Findings.** GB at NE: NE as a 2.5-point favorite has big runs (13th vs GB's 29th; favorites who won that battle won 73% against 54% overall), third down, special teams and red zone (a coin flip). The site job alone never built the SQL models, so #48's live sections were empty until a daily pass.
+
+**Lesson.** A deploy job that reads a derived table should build it, or the feature ships empty until an unrelated job runs. And a "preview" that only points elsewhere isn't one: Austin wanted the default tab to carry the substance.
+

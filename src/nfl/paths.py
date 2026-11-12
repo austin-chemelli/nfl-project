@@ -368,6 +368,26 @@ class UpsetPaths:
 
 
 @dataclass
+class EdgeSide:
+    """One team's edge card (both teams, Austin 2026-11-12): its levers against the other team,
+    measured against the history of its role (underdogs, favourites, or both sides of close games
+    for a pick'em). `met` is set only after the game: the ids of the levers it won."""
+
+    team: str
+    opponent: str
+    role: str  # underdog | favorite | pick
+    size: float
+    bucket: str
+    base_rate_pct: int | None  # teams in this role and size bucket, 2006 to last season
+    levers: list[Lever] = field(default_factory=list)
+    chips: list[Chip] = field(default_factory=list)
+    met: list[str] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class OutcomeCondition:
     id: str
     label: str
@@ -420,10 +440,13 @@ def _pct(x: float | None) -> int | None:
 # ---- the bucket table ------------------------------------------------------------------------
 
 
-def bucket_table(con_or_df, before_season: int) -> list[BucketCell]:
-    """Dogs' win rate by size bucket x condition over seasons < `before_season` (point in time)."""
+def bucket_table(con_or_df, before_season: int, role: str = "dog") -> list[BucketCell]:
+    """Win rate by size bucket x condition over seasons < `before_season` (point in time), for
+    underdogs (`role` 'dog'), favourites ('fav'), or every team in a close game ('pick': both sides
+    of the 0-2.5 bucket, since true pick'ems are too few). The fields keep the dog names."""
     df = _frame(con_or_df)
-    dogs = df.filter((pl.col("role") == "dog") & (pl.col("season") < before_season))
+    who = pl.col("role") == role if role != "pick" else pl.col("size_bucket") == "0-2.5"
+    dogs = df.filter(who & (pl.col("season") < before_season))
     out = []
     for b in BUCKETS:
         d = dogs.filter(pl.col("size_bucket") == b)
@@ -504,6 +527,67 @@ def upset_paths(game: Any, as_of_week: int, con_or_df) -> UpsetPaths | None:
     return out
 
 
+ROLE_OF = {"dog": "underdog", "fav": "favorite", "pick": "pick"}
+
+
+def edge_sides(game: Any, as_of_week: int, con_or_df) -> list[EdgeSide] | None:
+    """Both teams' edge cards, the underdog first (away first in a pick'em). None without a line.
+    Ranks read this season's weeks before `as_of_week`; the history reads seasons before this one;
+    `met` reads the game's own row, which exists only once it has been played."""
+    spread = _gv0(game, "spread_line")
+    if spread is None or np.isnan(spread):
+        return None
+    season = int(_gv(game, "season"))
+    home, away = _gv(game, "home_team"), _gv(game, "away_team")
+    df = _frame(con_or_df)
+    bucket = bucket_of(spread)
+    ranks = team_ranks(df, season, int(as_of_week))
+    if spread == 0:
+        teams = [(away, home, "pick"), (home, away, "pick")]
+    else:
+        dog, fav = (away, home) if spread > 0 else (home, away)
+        teams = [(dog, fav, "dog"), (fav, dog, "fav")]
+    gid = _gv0(game, "game_id")
+    row = (
+        df.filter((pl.col("game_id") == gid) & (pl.col("season") == season))
+        if gid is not None
+        else df.clear()
+    )
+    tables: dict[str, dict[str, BucketCell]] = {}
+    out = []
+    for team, opp, role in teams:
+        if role not in tables:
+            cells = bucket_table(df, season, role)
+            tables[role] = {c.condition: c for c in cells if c.bucket == bucket}
+        cells = tables[role]
+        base = next(iter(cells.values())).base_rate if cells else None
+        conds = [
+            _Hist(c.id, cells[c.id].win_rate_if, _pct(cells[c.id].win_rate_if), base, _pct(base))
+            for c in CONDITIONS
+        ]
+        levers, chips = levers_for(team, opp, conds, ranks)
+        me = row.filter(pl.col("team") == _code(team))
+        met = None
+        if me.height == 1:
+            r = me.row(0, named=True)
+            met = [lv.id for lv in levers if r[BY_ID[lv.id].column]]
+        out.append(
+            EdgeSide(
+                team, opp, ROLE_OF[role], abs(float(spread)), bucket, _pct(base), levers, chips, met
+            )
+        )
+    return out
+
+
+@dataclass
+class _Hist:
+    id: str
+    win_rate_if: float | None
+    win_rate_pct: int | None
+    base_rate: float | None
+    base_rate_pct: int | None
+
+
 def _paths_sentence(p: UpsetPaths) -> str:
     if p.levers:
         heads = [lv.headline for lv in p.levers]
@@ -514,6 +598,12 @@ def _paths_sentence(p: UpsetPaths) -> str:
             f"{TAIL}"
         )
     return f"Too early in the season to rank {p.dog}'s units against {p.favorite}'s.{TAIL}"
+
+
+@dataclass
+class _Who:
+    dog: str  # the team the levers are for
+    favorite: str  # its opponent
 
 
 # ---- ranks and levers -----------------------------------------------------------------------
@@ -578,10 +668,17 @@ def _angles(c: Condition, d: RankRow, f: RankRow):
 def levers_and_chips(p: UpsetPaths, ranks: dict[str, dict[str, RankRow]]):
     """The dog's levers (strong unit against a weak one, at most MAX_LEVERS, tier-1 conditions
     first, then by gap x lift, one per family) and a chip for each tier-1 condition left over."""
+    return levers_for(p.dog, p.favorite, p.conditions, ranks)
+
+
+def levers_for(team: str, opp: str, conditions: list, ranks: dict[str, dict[str, RankRow]]):
+    """`levers_and_chips` for any team against any opponent: `conditions` carry the history
+    (win_rate_if, base_rate and their pcts) of the role `team` plays in this game."""
+    p = _Who(team, opp)
     d, f = ranks.get(_code(p.dog)), ranks.get(_code(p.favorite))
     if not d or not f:
         return [], []
-    by_id = {c.id: c for c in p.conditions}
+    by_id = {c.id: c for c in conditions}
     cands, best = [], {}
     for c in CONDITIONS:
         if c.id not in d or c.id not in f:

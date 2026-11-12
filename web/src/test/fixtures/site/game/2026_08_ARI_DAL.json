@@ -3238,5 +3238,229 @@
    }
   ]
  },
- "paths_outcome": null
+ "paths_outcome": null,
+ "edge_cards": [
+  {
+   "team": "ARI",
+   "opponent": "DAL",
+   "role": "underdog",
+   "size": 7.0,
+   "bucket": "7-9.5",
+   "base_rate_pct": 23,
+   "levers": [
+    {
+     "id": "turnovers",
+     "label": "Win the turnover battle",
+     "side": "offense",
+     "dog_noun": "ball security",
+     "fav_noun": "takeaways",
+     "dog_rank": 12,
+     "fav_rank": 30,
+     "n_teams": 32,
+     "gap": 18,
+     "win_rate_pct": 46,
+     "base_rate_pct": 23,
+     "plausibility": "coin flip for every team",
+     "tier": 1,
+     "headline": "ARI's ball security (12th) against DAL's takeaways (30th)"
+    },
+    {
+     "id": "sacks",
+     "label": "Sack the quarterback more",
+     "side": "offense",
+     "dog_noun": "pass protection",
+     "fav_noun": "pass rush",
+     "dog_rank": 14,
+     "fav_rank": 27,
+     "n_teams": 32,
+     "gap": 13,
+     "win_rate_pct": 48,
+     "base_rate_pct": 23,
+     "plausibility": "weakly predictable",
+     "tier": 1,
+     "headline": "ARI's pass protection (14th) against DAL's pass rush (27th)"
+    }
+   ],
+   "chips": [
+    {
+     "id": "early_down",
+     "label": "Win early downs",
+     "kind": "weak",
+     "dog_noun": "early-down offense",
+     "fav_noun": "early-down defense",
+     "dog_rank": 20,
+     "fav_rank": 29,
+     "text": "ARI's early-down offense 20th, DAL's early-down defense 29th"
+    },
+    {
+     "id": "explosives",
+     "label": "More explosive plays",
+     "kind": "even",
+     "dog_noun": "explosive-play defense",
+     "fav_noun": "explosive plays",
+     "dog_rank": 24,
+     "fav_rank": 26,
+     "text": "ARI's explosive-play defense 24th, DAL's explosive plays 26th"
+    },
+    {
+     "id": "special_teams",
+     "label": "Win special teams",
+     "kind": "even",
+     "dog_noun": "special teams",
+     "fav_noun": "special teams",
+     "dog_rank": 17,
+     "fav_rank": 10,
+     "text": "ARI's special teams 17th, DAL's special teams 10th"
+    },
+    {
+     "id": "pass_game",
+     "label": "Pass better",
+     "kind": "even",
+     "dog_noun": "passing offense",
+     "fav_noun": "pass defense",
+     "dog_rank": 26,
+     "fav_rank": 31,
+     "text": "ARI's passing offense 26th, DAL's pass defense 31st"
+    },
+    {
+     "id": "big_runs",
+     "label": "More big runs",
+     "kind": "even",
+     "dog_noun": "run defense on big plays",
+     "fav_noun": "big-play run game",
+     "dog_rank": 23,
+     "fav_rank": 23,
+     "text": "ARI's run defense on big plays 23rd, DAL's big-play run game 23rd"
+    },
+    {
+     "id": "third_down",
+     "label": "Win third down",
+     "kind": "weak",
+     "dog_noun": "third-down offense",
+     "fav_noun": "third-down defense",
+     "dog_rank": 22,
+     "fav_rank": 31,
+     "text": "ARI's third-down offense 22nd, DAL's third-down defense 31st"
+    }
+   ],
+   "met": null
+  },
+  {
+   "team": "DAL",
+   "opponent": "ARI",
+   "role": "favorite",
+   "size": 7.0,
+   "bucket": "7-9.5",
+   "base_rate_pct": 77,
+   "levers": [
+    {
+     "id": "pass_game",
+     "label": "Pass better",
+     "side": "offense",
+     "dog_noun": "passing offense",
+     "fav_noun": "pass defense",
+     "dog_rank": 12,
+     "fav_rank": 32,
+     "n_teams": 32,
+     "gap": 20,
+     "win_rate_pct": 93,
+     "base_rate_pct": 77,
+     "plausibility": "weakly predictable",
+     "tier": 1,
+     "headline": "DAL's passing offense (12th) against ARI's pass defense (32nd)"
+    },
+    {
+     "id": "sacks",
+     "label": "Sack the quarterback more",
+     "side": "offense",
+     "dog_noun": "pass protection",
+     "fav_noun": "pass rush",
+     "dog_rank": 1,
+     "fav_rank": 19,
+     "n_teams": 32,
+     "gap": 18,
+     "win_rate_pct": 90,
+     "base_rate_pct": 77,
+     "plausibility": "weakly predictable",
+     "tier": 1,
+     "headline": "DAL's pass protection (1st) against ARI's pass rush (19th)"
+    },
+    {
+     "id": "early_down",
+     "label": "Win early downs",
+     "side": "offense",
+     "dog_noun": "early-down offense",
+     "fav_noun": "early-down defense",
+     "dog_rank": 12,
+     "fav_rank": 23,
+     "n_teams": 32,
+     "gap": 11,
+     "win_rate_pct": 90,
+     "base_rate_pct": 77,
+     "plausibility": "weakly predictable",
+     "tier": 1,
+     "headline": "DAL's early-down offense (12th) against ARI's early-down defense (23rd)"
+    },
+    {
+     "id": "turnovers",
+     "label": "Win the turnover battle",
+     "side": "offense",
+     "dog_noun": "ball security",
+     "fav_noun": "takeaways",
+     "dog_rank": 12,
+     "fav_rank": 21,
+     "n_teams": 32,
+     "gap": 9,
+     "win_rate_pct": 93,
+     "base_rate_pct": 77,
+     "plausibility": "coin flip for every team",
+     "tier": 1,
+     "headline": "DAL's ball security (12th) against ARI's takeaways (21st)"
+    }
+   ],
+   "chips": [
+    {
+     "id": "explosives",
+     "label": "More explosive plays",
+     "kind": "even",
+     "dog_noun": "explosive-play defense",
+     "fav_noun": "explosive plays",
+     "dog_rank": 24,
+     "fav_rank": 31,
+     "text": "DAL's explosive-play defense 24th, ARI's explosive plays 31st"
+    },
+    {
+     "id": "special_teams",
+     "label": "Win special teams",
+     "kind": "even",
+     "dog_noun": "special teams",
+     "fav_noun": "special teams",
+     "dog_rank": 10,
+     "fav_rank": 17,
+     "text": "DAL's special teams 10th, ARI's special teams 17th"
+    },
+    {
+     "id": "big_runs",
+     "label": "More big runs",
+     "kind": "even",
+     "dog_noun": "run defense on big plays",
+     "fav_noun": "big-play run game",
+     "dog_rank": 26,
+     "fav_rank": 30,
+     "text": "DAL's run defense on big plays 26th, ARI's big-play run game 30th"
+    },
+    {
+     "id": "third_down",
+     "label": "Win third down",
+     "kind": "weak",
+     "dog_noun": "third-down offense",
+     "fav_noun": "third-down defense",
+     "dog_rank": 3,
+     "fav_rank": 15,
+     "text": "DAL's third-down offense 3rd, ARI's third-down defense 15th"
+    }
+   ],
+   "met": null
+  }
+ ]
 }

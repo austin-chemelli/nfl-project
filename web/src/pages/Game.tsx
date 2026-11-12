@@ -11,9 +11,9 @@ import { GameHeader, GameTitle, PinnedResult } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
 import { Differ, StrongCallsOutcome } from './game/Differ'
 import { TheLine, hasLine } from './game/TheLine'
+import { PreviewHub } from './game/PreviewHub'
 import { Books } from './game/Books'
 import { disagrees, hasBooks } from './game/books'
-import { Preview } from './game/Preview'
 import { Retro } from './game/Retro'
 import { summaryTiles } from './game/summary'
 import { gameStatus } from './slate/helpers'
@@ -80,10 +80,10 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Preview',
       content: (
         <TabBody>
-          <Preview g={g} meta={meta} />
+          <PreviewHub g={g} meta={meta} />
           <FinePrint>
-            <p>The bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
-            {g.paths && <p>"Where the underdog has the edge" picks the battles where the underdog's unit ranks in the top half and at least eight places above the favourite's matching unit this season, and shows how often underdogs of this size who won that battle won the game since 2006. It is history, not a forecast: the chance at the top doesn't move. Passing and early downs partly describe the result itself, so their win rates overstate what leaning on them buys.</p>}
+            {g.edge_cards && <p>{EDGE_NOTE}</p>}
+            <p>"Who has the edge" bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
             <p>Probabilities are the models' estimates, not advice.</p>
           </FinePrint>
         </TabBody>
@@ -190,6 +190,8 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
     </>
   )
 }
+
+const EDGE_NOTE = '"Where each team has the edge" picks the battles where a team\'s unit ranks in the top half and at least eight places above the other team\'s matching unit this season, and shows how often teams in its spot (underdogs, favorites, or both sides of close games) won since 2006, overall and when they won that battle. It is history, not a forecast: the chance at the top doesn\'t move. Passing and early downs partly describe the result itself, so their win rates overstate what leaning on them buys. Hover a battle\'s name for how well it repeats from week to week: turnovers and red-zone finishing barely do.'
 
 function TabBody({ children }: { children: ReactNode }) {
   return <div className="flex flex-col gap-8">{children}</div>

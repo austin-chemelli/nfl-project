@@ -53,7 +53,7 @@ describe('Game page', () => {
     renderRoute('/game/2026_08_CAR_GB?tab=tendencies', root)
     expect(await screen.findByText('Defensive habits')).toBeInTheDocument()
     expect(screen.queryByTestId('face-off')).toBeNull()
-    expect(screen.queryByText(/eight places/)).toBeNull()
+    expect(screen.queryByText(/Ranks are this season's games/)).toBeNull()
     fs.rmSync(root, { recursive: true, force: true })
   })
 
@@ -70,12 +70,54 @@ describe('Game page', () => {
     expect(await screen.findByText(/Not locked: no lock was recorded/)).toBeInTheDocument()
   })
 
-  it('the Preview is approach-free: no picker, no outline, the fit unnamed, and the live-only parts as bars of their own', async () => {
+  it('the Preview stands on its own: the edge bars, both edge cards, key news, the line and the tape, each linking to its tab', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB')
     await screen.findByRole('heading', { name: /^Who has the edge/ })
     expect(screen.queryByRole('radiogroup', { name: 'Overlay an approach' })).toBeNull()
     expect(container.querySelector('[data-testid="overlay"]')).toBeNull()
     expect(container.textContent).not.toMatch(/Global/)
+    const hub = screen.getByTestId('preview-hub')
+    const order = [...hub.querySelectorAll('h2, section[data-testid^="teaser-"] h3')].map((h) => h.textContent)
+    expect(order).toEqual([
+      expect.stringMatching(/^Who has the edge/),
+      expect.stringMatching(/^Where each team has the edge/),
+      expect.stringMatching(/^Key news/),
+      'The line',
+      'Tale of the tape',
+    ])
+    // both edge cards in full, the underdog first, with the mismatch lede above them
+    const cards = within(screen.getByTestId('edge-cards')).getAllByRole('heading', { name: /^Where \w+ has the edge/ })
+    expect(cards.map((h) => h.textContent)).toEqual([expect.stringMatching(/^Where CAR has the edge/), expect.stringMatching(/^Where GB has the edge/)])
+    expect(within(screen.getByTestId('edge-cards')).getAllByTestId(/^lever-/).length).toBeGreaterThan(2)
+    // key news: the storyline, each team's top research notes, the most-cited matchup
+    const news = screen.getByTestId('teaser-news')
+    expect(news).toHaveTextContent(/^Both teams are coming off losses/)
+    expect(within(screen.getByTestId('news-CAR')).getByText(/Moton \(RT\) broke his fibula/)).toBeInTheDocument()
+    expect(within(screen.getByTestId('news-GB')).getAllByRole('listitem').length).toBeGreaterThan(0)
+    expect(news).toHaveTextContent(/The most-cited matchup: Carolina's run defense/)
+    const line = screen.getByTestId('teaser-line')
+    expect(within(line).getByText(/books disagree/i)).toBeInTheDocument()
+    // the spread and the total as from -> now strips, labelled from the record
+    expect(within(line).getByRole('img', { name: /^Spread: (GB|CAR) −[\d.]+(, unchanged| when first seen, (GB|CAR) −[\d.]+ now)$/ })).toBeInTheDocument()
+    expect(within(line).getByRole('img', { name: /^Total: [\d.]+/ })).toBeInTheDocument()
+    expect(within(screen.getByTestId('teaser-tape')).getAllByRole('listitem')).toHaveLength(4)
+    expect(within(hub).getByTestId('live-only')).toBeInTheDocument() // the live readings stay with the bars
+    for (const [name, tab] of [
+      ["Each approach's reading →", 'Approaches'],
+      ['Unit ranks and habits →', 'Matchups'],
+      ['Full report and sources →', 'Injuries & news'],
+      ['Movement and every book →', /^The line/],
+      ['Every stat →', 'Details'],
+    ] as const) {
+      await userEvent.click(screen.getByRole('button', { name }))
+      expect(screen.getByRole('tab', { name: tab })).toHaveAttribute('aria-selected', 'true')
+      await userEvent.click(screen.getByRole('tab', { name: 'Preview' }))
+    }
+  })
+
+  it('"Who has the edge" shows the live-only parts as bars of their own', async () => {
+    renderRoute('/game/2026_08_CAR_GB')
+    await screen.findByRole('heading', { name: /^Who has the edge/ })
     const live = screen.getByTestId('live-only')
     expect(within(live).getByText('This week only')).toBeInTheDocument()
     for (const name of ['Market behavior', 'Buzz', 'Line movement', 'Public betting on the home team', 'Media sentiment', 'Hype']) expect(within(live).getAllByText(name).length).toBeGreaterThan(0) // the fixture has every reading
@@ -98,7 +140,7 @@ describe('Game page', () => {
   it('names each QB under its team, links the Preview to the Approaches tab, and builds the narrative help from the record', async () => {
     renderRoute('/game/2026_08_CAR_GB')
     expect(await screen.findByText(/CAR Bryce Young · GB /)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'By approach →' }))
+    await userEvent.click(screen.getByRole('button', { name: "Each approach's reading →" }))
     expect(screen.getByRole('tab', { name: 'Approaches' })).toHaveAttribute('aria-selected', 'true')
     await userEvent.click(screen.getByRole('tab', { name: 'Injuries & news' }))
     expect(screen.getByText(/This week's coverage, as of \w{3}, \w{3} \d+\. It never feeds the probabilities\./)).toBeInTheDocument()
