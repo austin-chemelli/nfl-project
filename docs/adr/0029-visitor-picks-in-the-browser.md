@@ -1,6 +1,6 @@
 # ADR 0029: Visitor picks live in the browser, and one set of picks drives the slate and the playoff what-if
 
-Status: accepted 2026-11-12 (Austin: idea (d) of `.notes/hub/plans/ideas-2026-11-10.md`, staged picks first; browser-only storage is the default taken for v1, decision 2 of that plan). Extends ADR 0015 (data published independently of the site), ADR 0019 (the league simulation).
+Status: accepted 2026-11-12 (Austin: idea (d) of `.notes/hub/plans/ideas-2026-11-10.md`, staged picks first; browser-only storage for now, decision 2 of that plan). Extends ADR 0015 (data published independently of the site), ADR 0019 (the league simulation).
 
 ## Context
 Austin wants visitors to pick games next to the approaches (a reason to come back weekly) and, later, to decide games on the League page and watch playoff odds move. The site is static: Firebase Hosting plus JSON in a public bucket, no server and no accounts. Both features need the same thing, a winner per game chosen by the visitor, so they should share one store.
@@ -19,6 +19,6 @@ Austin wants visitors to pick games next to the approaches (a reason to come bac
 
 ## Consequences
 - No personal data, cost or moderation. Picks don't move between devices; the page says so.
-- Accounts can come later without throwing this away: the stored shape can be uploaded once.
+- Accounts are wanted later (Austin, 2026-11-12: a login, picks saved across devices, a leaderboard), as their own milestone and ADR after the what-if. This store isn't thrown away: its shape can be uploaded once at first sign-in.
 - Against the spread is left out: it needs a line frozen at the moment of the pick, and the what-if needs winners anyway.
 - The what-if commits us to a TypeScript copy of `simulate.py`, `tiebreak.py` and `standings.py` (about 820 lines of Python) kept in parity by fixtures generated from the Python.
