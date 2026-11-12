@@ -191,7 +191,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
   )
 }
 
-const EDGE_NOTE = '"Where each team has the edge" picks the battles where a team\'s unit ranks in the top half and at least eight places above the other team\'s matching unit this season, and shows how often teams in its spot (underdogs, favorites, or both sides of close games) won since 2006, overall and when they won that battle. It is history, not a forecast: the chance at the top doesn\'t move. Passing and early downs partly describe the result itself, so their win rates overstate what leaning on them buys.'
+const EDGE_NOTE = '"Where each team has the edge" picks the battles where a team\'s unit ranks in the top half and at least eight places above the other team\'s matching unit this season, and shows how often teams in its spot (underdogs, favorites, or both sides of close games) won since 2006, overall and when they won that battle. It is history, not a forecast: the chance at the top doesn\'t move. Passing and early downs partly describe the result itself, so their win rates overstate what leaning on them buys. Hover a battle\'s name for how well it repeats from week to week: turnovers and red-zone finishing barely do.'
 
 function TabBody({ children }: { children: ReactNode }) {
   return <div className="flex flex-col gap-8">{children}</div>

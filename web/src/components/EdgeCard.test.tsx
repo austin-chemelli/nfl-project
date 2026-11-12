@@ -32,7 +32,9 @@ describe('EdgeCard', () => {
         expect(card.textContent).toContain(`${lv.win_rate_pct}%`)
         expect(card.textContent).toContain(`${lv.base_rate_pct}%`)
         expect(card.textContent).toContain(s.role === 'underdog' ? "Underdogs' win rate" : "Favorites' win rate")
-        expect(within(card).getByTestId('lever-plausibility').textContent?.includes('luck')).toBe(lv.plausibility.startsWith('coin flip'))
+        expect(card.textContent).toContain('won the battle')
+        expect(card.textContent).not.toMatch(/predictable|luck/) // repeatability is hover text only
+        expect(within(card).getByText(lv.label).getAttribute('title')?.includes('luck')).toBe(lv.plausibility.startsWith('coin flip'))
       }
       for (const c of s.chips) expect(screen.getByTestId(`chip-${c.id}`)).toHaveAttribute('data-kind', c.kind)
       expect(document.querySelector('[data-met]')).toBeNull()

@@ -38,18 +38,18 @@ function Lift({ base, did, who, color }: { base: number | null; did: number | nu
   if (base == null || did == null) return null
   const h = (p: number) => `${Math.max(4, (p / 100) * 52)}px`
   return (
-    <div className="flex flex-col gap-1 text-[11px] text-ink-2" role="img" aria-label={`${who} won ${base}% of games, and ${did}% when they won this battle`}>
+    <div className="flex flex-col gap-1 text-[11px] text-ink-2" role="img" aria-label={`${who} won ${base}% of all games, and ${did}% when they won this battle`}>
       <span>{who}' win rate</span>
       <div className="flex items-end gap-3">
         <div className="flex flex-col items-center gap-0.5">
           <span className="tabular font-semibold text-ink">{base}%</span>
           <i className="block w-8 rounded-t-sm" style={{ height: h(base), background: 'var(--band-strong)' }} />
-          <span>overall</span>
+          <span>all games</span>
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <span className="tabular font-semibold text-ink">{did}%</span>
           <i className="block w-8 rounded-t-sm" style={{ height: h(did), background: color }} />
-          <span>winning this</span>
+          <span>won the battle</span>
         </div>
       </div>
     </div>
@@ -57,6 +57,8 @@ function Lift({ base, did, who, color }: { base: number | null; did: number | nu
 }
 
 const isCoin = (lv: PathLever) => lv.plausibility.startsWith('coin flip')
+/** How well it repeats, in the hover text only (Austin, 2026-11-12: the win-rate bars carry the point). */
+const plausibilityText = (lv: PathLever) => (isCoin(lv) ? 'More luck than skill: it barely repeats week to week.' : `${lv.plausibility[0].toUpperCase()}${lv.plausibility.slice(1)} from week to week.`)
 
 function Mark({ met }: { met: boolean }) {
   return (
@@ -67,23 +69,17 @@ function Mark({ met }: { met: boolean }) {
 }
 
 function LeverCard({ lv, s, colorOf }: { lv: PathLever; s: EdgeSide; colorOf: (t: string) => string }) {
-  const coin = isCoin(lv)
   return (
     <li data-testid={`lever-${lv.id}`} className="flex flex-col gap-2 rounded-lg border border-line p-3">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[14px] font-semibold">{lv.label}</span>
+        <span className="text-[14px] font-semibold" title={plausibilityText(lv)}>
+          {lv.label}
+        </span>
         {s.met && <Mark met={s.met.includes(lv.id)} />}
       </div>
       <RankBar team={s.team} noun={lv.dog_noun} rank={lv.dog_rank} n={lv.n_teams} color={colorOf(s.team)} />
       <RankBar team={s.opponent} noun={lv.fav_noun} rank={lv.fav_rank} n={lv.n_teams} color={colorOf(s.opponent)} />
       <Lift base={lv.base_rate_pct} did={lv.win_rate_pct} who={ROLE_PLURAL[s.role]} color={colorOf(s.team)} />
-      <span
-        data-testid="lever-plausibility"
-        className="self-start rounded-full border px-1.5 text-[10.5px]"
-        style={{ borderColor: coin ? 'var(--warning)' : 'var(--border)', color: coin ? 'var(--warning)' : 'var(--text-muted)' }}
-      >
-        {coin ? 'more luck than skill: it barely repeats week to week' : lv.plausibility}
-      </span>
     </li>
   )
 }
@@ -92,10 +88,9 @@ function LeverCard({ lv, s, colorOf }: { lv: PathLever; s: EdgeSide; colorOf: (t
 function LeverRow({ lv, s, colorOf }: { lv: PathLever; s: EdgeSide; colorOf: (t: string) => string }) {
   return (
     <li data-testid={`lever-${lv.id}`} className="grid grid-cols-[minmax(0,1fr)_5.5rem_4.5rem] items-center gap-2 border-b border-line py-1.5 text-[12.5px]">
-      <span className="min-w-0 truncate">
+      <span className="min-w-0 truncate" title={plausibilityText(lv)}>
         {lv.label}
-        {isCoin(lv) && <span className="ml-1 text-[10.5px] text-[var(--warning)]" title="more luck than skill: it barely repeats week to week">luck</span>}
-        {s.met && <span className="ml-1">{s.met.includes(lv.id) ? '✓' : ''}</span>}
+                {s.met && <span className="ml-1">{s.met.includes(lv.id) ? '✓' : ''}</span>}
       </span>
       <span className="flex flex-col gap-[2px]" title={`${s.team}'s ${lv.dog_noun} ${ordinal(lv.dog_rank)}; ${s.opponent}'s ${lv.fav_noun} ${ordinal(lv.fav_rank)}`}>
         <span className="block h-[5px] rounded-sm" style={{ width: `${100 * share(lv.dog_rank, lv.n_teams)}%`, background: colorOf(s.team) }} />
@@ -104,7 +99,7 @@ function LeverRow({ lv, s, colorOf }: { lv: PathLever; s: EdgeSide; colorOf: (t:
           {ordinal(lv.dog_rank)} vs {ordinal(lv.fav_rank)}
         </span>
       </span>
-      <span className="tabular text-right" title={`${ROLE_PLURAL[s.role]} won ${lv.base_rate_pct}% overall, ${lv.win_rate_pct}% when they won this`}>
+      <span className="tabular text-right" title={`${ROLE_PLURAL[s.role]} won ${lv.base_rate_pct}% of all games, ${lv.win_rate_pct}% when they won this battle`}>
         <span className="text-ink-3">{lv.base_rate_pct}%</span> → <b>{lv.win_rate_pct}%</b>
       </span>
     </li>
