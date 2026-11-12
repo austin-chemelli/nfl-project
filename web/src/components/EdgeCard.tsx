@@ -49,7 +49,7 @@ function Lift({ base, did, who, color }: { base: number | null; did: number | nu
         <div className="flex flex-col items-center gap-0.5">
           <span className="tabular font-semibold text-ink">{did}%</span>
           <i className="block w-8 rounded-t-sm" style={{ height: h(did), background: color }} />
-          <span>won the battle</span>
+          <span>had the edge</span>
         </div>
       </div>
     </div>

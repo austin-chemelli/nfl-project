@@ -32,7 +32,7 @@ describe('EdgeCard', () => {
         expect(card.textContent).toContain(`${lv.win_rate_pct}%`)
         expect(card.textContent).toContain(`${lv.base_rate_pct}%`)
         expect(card.textContent).toContain(s.role === 'underdog' ? "Underdogs' win rate" : "Favorites' win rate")
-        expect(card.textContent).toContain('won the battle')
+        expect(card.textContent).toContain('had the edge')
         expect(card.textContent).not.toMatch(/predictable|luck/) // repeatability is hover text only
         expect(within(card).getByText(lv.label).getAttribute('title')?.includes('luck')).toBe(lv.plausibility.startsWith('coin flip'))
       }
