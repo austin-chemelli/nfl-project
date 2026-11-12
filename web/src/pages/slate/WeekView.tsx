@@ -10,6 +10,7 @@ import { APPROACHES, colorVar } from '../../lib/models'
 import { GameCard } from './GameCard'
 import { LastWeek } from './LastWeek'
 import { Recap } from './Recap'
+import { YourPicks } from './YourPicks'
 import { correct, divergenceText, DIVERGE, gameStatus, neighbours, parseSort, pickOf, scoreText, SORTS, sortGames, weekHref, type SortKey } from './helpers'
 
 export function WeekView({ meta, season, week }: { meta: Meta; season: number; week: number }) {
@@ -31,7 +32,12 @@ export function WeekView({ meta, season, week }: { meta: Meta; season: number; w
         </Card>
       ) : (
         <Loaded q={q} what="slate" shape="cards">
-          {(s) => <Games meta={meta} games={s.games} week={week} league={league.data} />}
+          {(s) => (
+            <>
+              {season === meta.season && <YourPicks season={season} games={s.games} />}
+              <Games meta={meta} games={s.games} week={week} league={league.data} />
+            </>
+          )}
         </Loaded>
       )}
     </>

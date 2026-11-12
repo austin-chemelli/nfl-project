@@ -197,3 +197,11 @@ a { color: var(--accent); }
 .tile-flash { animation: tile-flash calc(var(--dur-base) * 3) var(--ease-out); }
 @keyframes tile-flash { from { background-color: color-mix(in srgb, var(--accent) 16%, transparent); } }
 .tab-panel-in.tile-flash { animation: motion-fade var(--dur-base) var(--ease-out), tile-flash calc(var(--dur-base) * 3) var(--ease-out); }
+
+/* Your pick (M26.1): the hovered team's tint before a pick, a short pop when one is made. */
+.pick-btn[aria-pressed='false']:hover {
+  background-color: color-mix(in srgb, var(--pick-c) 12%, transparent);
+  border-color: color-mix(in srgb, var(--pick-c) 60%, var(--border));
+}
+.pick-pop { animation: pick-pop var(--dur-base) var(--ease-out); }
+@keyframes pick-pop { 0% { transform: scale(0.94); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
