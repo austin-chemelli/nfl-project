@@ -2,6 +2,7 @@ import { TeamLink } from '../../components/TeamLink'
 import { useState } from 'react'
 import { DivergingBars, Dumbbell, FaceOff, HabitList, MatchupBand, ProbStrip } from '../../charts'
 import { FormationKey, FormationMap } from '../../charts/FormationMap'
+import { EdgeCard } from '../../components/EdgeCard'
 import { Help } from '../../components/Help'
 import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Game, KeyPlayer, Meta } from '../../data/contract'
@@ -355,6 +356,21 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
 }
 
 /** What each side's habits imply (ADR 0028): a grid per side, under the file's own one-sentence lede. Null when the file has none. */
+export function EdgeCards({ g }: { g: Game }) {
+  const sides = g.edge_cards ?? []
+  if (sides.length === 0) return null
+  const colorOf = (team: string) => (team === g.home ? 'var(--team-home)' : team === g.away ? 'var(--team-away)' : 'var(--text-secondary)')
+  return (
+    <Section title="Where each team has the edge" help="The battles where one team's unit is strong and the other's matching unit is weak, and how often teams in that spot won when they won that battle.">
+      <div className="flex flex-col gap-8" data-testid="edge-cards">
+        {sides.map((s) => (
+          <EdgeCard key={s.team} side={s} colorOf={colorOf} />
+        ))}
+      </div>
+    </Section>
+  )
+}
+
 export function MatchupsSection({ g }: { g: Game; meta: Meta }) {
   const m = g.matchups
   if (!m || m.sides.length === 0) return null

@@ -431,3 +431,79 @@ def test_bucket_table_reproduces_the_adr_numbers_on_real_data():
     ):
         assert abs(100 * cells[("3-6.5", cond)].win_rate_if - want) <= 1, cond
     # NOTE: 'happens' for turnovers is 35% here against the ADR's 29%; see the M25.4 hand-back.
+
+
+def test_edge_sides_both_teams_each_against_its_role_history():
+    df = synth_frame()
+    g = {
+        "game_id": "none",
+        "season": 2022,
+        "week": 6,
+        "home_team": "A",
+        "away_team": "B",
+        "spread_line": 3.0,
+    }
+    sides = P.edge_sides(g, 6, df)
+    assert [(s.team, s.opponent, s.role) for s in sides] == [
+        ("B", "A", "underdog"),
+        ("A", "B", "favorite"),
+    ]
+    dogs = df.filter(
+        (pl.col("role") == "dog") & (pl.col("season") < 2022) & (pl.col("size_bucket") == "3-6.5")
+    )
+    favs = df.filter(
+        (pl.col("role") == "fav") & (pl.col("season") < 2022) & (pl.col("size_bucket") == "3-6.5")
+    )
+    assert sides[0].base_rate_pct == round(100 * dogs["won"].mean())
+    assert sides[1].base_rate_pct == round(100 * favs["won"].mean())
+    assert all(s.met is None for s in sides)  # the game isn't in the frame: not played
+    # a pick'em: both sides of close games, away first; no line: None
+    pk = P.edge_sides(g | {"spread_line": 0.0}, 6, df)
+    close = df.filter((pl.col("season") < 2022) & (pl.col("size_bucket") == "0-2.5"))
+    assert [s.role for s in pk] == ["pick", "pick"] and pk[0].team == "B"
+    assert pk[0].base_rate_pct == round(100 * close["won"].mean())
+    assert P.edge_sides(g | {"spread_line": None}, 6, df) is None
+
+
+def test_edge_sides_levers_use_the_role_history_and_met_reads_only_the_game_row():
+    df, _ = ranks_frame()
+    rng = np.random.default_rng(9)
+    n = df.height
+    df = df.with_columns(
+        season=pl.lit(2022),
+        spread=pl.lit(-3.0),
+        role=pl.lit("dog"),
+        size_bucket=pl.lit("3-6.5"),
+        won=pl.Series(rng.random(n) < 0.4),
+        **{c.column: pl.Series(rng.random(n) < 0.5) for c in P.CONDITIONS},
+    )
+    hist = df.with_columns(season=pl.lit(2021))
+    hist = pl.concat([hist, hist.with_columns(role=pl.lit("fav"), won=~pl.col("won"))])
+    frame = pl.concat([hist, df])
+    t0, t1 = df["team"][0], df["opponent"][0]
+    gid = df["game_id"][0]
+    g = {
+        "game_id": gid,
+        "season": 2022,
+        "week": 7,
+        "home_team": t1,
+        "away_team": t0,
+        "spread_line": 3.0,
+    }
+    sides = P.edge_sides(g, 7, frame)
+    ranks = P.team_ranks(frame, 2022, 7)
+    for s in sides:
+        cells = {
+            c.condition: c
+            for c in P.bucket_table(frame, 2022, "dog" if s.role == "underdog" else "fav")
+            if c.bucket == "3-6.5"
+        }
+        conds = [P._Hist(c.id, cells[c.id].win_rate_if, P._pct(cells[c.id].win_rate_if),
+                         cells[c.id].base_rate, P._pct(cells[c.id].base_rate)) for c in P.CONDITIONS]  # fmt: skip
+        want, _ = P.levers_for(s.team, s.opponent, conds, ranks)
+        assert [lv.id for lv in s.levers] == [lv.id for lv in want]
+        # `met` comes from the game's own row (week 1 here, the game_id we passed)
+        row = frame.filter((pl.col("game_id") == gid) & (pl.col("team") == s.team)).row(
+            0, named=True
+        )
+        assert s.met == [lv.id for lv in s.levers if row[P.BY_ID[lv.id].column]]

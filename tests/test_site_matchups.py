@@ -224,3 +224,21 @@ def test_weekly_builds_the_models_before_the_site():
     src = inspect.getsource(weekly.refresh)
     assert src.index('step("models"') < src.index('step("site"')
     assert src.index('step("features"') < src.index('step("models"')
+
+
+def test_edge_cards_for_both_teams_and_null_without_a_line(tmp_path):
+    _, cond = build_conditions(tmp_path, planted_plays(), [paths_game("g1", 3, "A", "B", -4)])
+    g = paths_game("g9", 5, "A", "B", None, spread=3.0)
+    cards = site.game_edge_cards(cond, g)
+    assert [(c["team"], c["role"]) for c in cards] == [("B", "underdog"), ("A", "favorite")]
+    assert set(cards[0]) >= {"levers", "chips", "base_rate_pct", "met"}
+    assert [
+        c["role"]
+        for c in site.game_edge_cards(cond, paths_game("g9", 5, "A", "B", None, spread=0.0))
+    ] == [
+        "pick",
+        "pick",
+    ]
+    assert site.game_edge_cards(cond, paths_game("g9", 5, "A", "B", None, spread=None)) is None
+    assert site.game_edge_cards(None, g) is None
+    json.dumps(cards)

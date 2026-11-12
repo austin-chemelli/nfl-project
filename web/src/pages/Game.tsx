@@ -6,11 +6,12 @@ import { Tabs, type TabDef } from '../components/Tabs'
 import { Card, ErrorBox, Loaded, Loading, Page } from '../components/ui'
 import { useGame, useMeta, useRetro, isNotFound } from '../data/api'
 import type { Game, Meta, RetroGame } from '../data/contract'
-import { Injuries, ApproachesVsMarket, MatchupsSection, Tendencies, TaleOfTheTape, Why } from './game/Sections'
+import { EdgeCards, Injuries, ApproachesVsMarket, MatchupsSection, Tendencies, TaleOfTheTape, Why } from './game/Sections'
 import { GameHeader, GameTitle, PinnedResult } from './game/Header'
 import { NarrativeSection } from './game/Narrative'
 import { Differ, StrongCallsOutcome } from './game/Differ'
 import { TheLine, hasLine } from './game/TheLine'
+import { PreviewHub } from './game/PreviewHub'
 import { Books } from './game/Books'
 import { disagrees, hasBooks } from './game/books'
 import { Preview } from './game/Preview'
@@ -80,10 +81,10 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Preview',
       content: (
         <TabBody>
-          <Preview g={g} meta={meta} />
+          <PreviewHub g={g} meta={meta} />
           <FinePrint>
-            <p>The bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
-            {g.paths && <p>"Where the underdog has the edge" picks the battles where the underdog's unit ranks in the top half and at least eight places above the favourite's matching unit this season, and shows how often underdogs of this size who won that battle won the game since 2006. It is history, not a forecast: the chance at the top doesn't move. Passing and early downs partly describe the result itself, so their win rates overstate what leaning on them buys.</p>}
+            {g.edge_cards && <p>{EDGE_NOTE}</p>}
+            <p>"Who has the edge" bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. Each card is the most notable part of its tab; the link opens the rest.</p>
             <p>Probabilities are the models' estimates, not advice.</p>
           </FinePrint>
         </TabBody>
@@ -122,11 +123,13 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Approaches',
       content: (
         <TabBody>
+          <Preview g={g} meta={meta} />
           <Differ g={g} meta={meta} />
           <ApproachesVsMarket g={g} meta={meta} />
           <Why g={g} meta={meta} />
           <FinePrint>
             <p>{STATUS_TEXT[status] ?? status}</p>
+            <p>"Who has the edge" bars come from a fit on past seasons, not from any approach, so they are context rather than a forecast. They add up only approximately: the effects overlap.</p>
             <p>Probabilities are the models' estimates, not advice. The market is the reference every approach is compared with, never an input.</p>
             <p>The pieces in "why they lean" add up only approximately to the total: the effects overlap and the final probability is also calibrated.</p>
           </FinePrint>
@@ -138,8 +141,10 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       label: 'Matchups',
       content: (
         <TabBody>
+          <EdgeCards g={g} />
           {g.matchups ? <MatchupsSection g={g} meta={meta} /> : <Tendencies g={g} meta={meta} />}
           <FinePrint>
+            {g.edge_cards && <p>{EDGE_NOTE}</p>}
             {g.matchups && <p>Ranks are this season's games before this one, 1st best of 32; a unit "has the edge" when it ranks at least eight places better than the one it meets. Habits (how often) repeat week to week; how a team did in a situation barely does, so the edges are words with an evidence label, not a forecast. Coverage (man or zone) arrives with the season's participation file after the season.</p>}
             <p>Tendencies are season-to-date rates, shrunk toward the league average when plays are few.</p>
           </FinePrint>
@@ -190,6 +195,8 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
     </>
   )
 }
+
+const EDGE_NOTE = '"Where each team has the edge" picks the battles where a team\'s unit ranks in the top half and at least eight places above the other team\'s matching unit this season, and shows how often teams in its spot (underdogs, favorites, or both sides of close games) won since 2006, overall and when they won that battle. It is history, not a forecast: the chance at the top doesn\'t move. Passing and early downs partly describe the result itself, so their win rates overstate what leaning on them buys.'
 
 function TabBody({ children }: { children: ReactNode }) {
   return <div className="flex flex-col gap-8">{children}</div>

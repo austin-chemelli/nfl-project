@@ -4,7 +4,7 @@
 #   lock <slot>      clone the repo, nfl lock --slot <slot> --commit --push, publish site + lock files
 #   odds             nfl odds snapshot, rebuild site JSON, publish
 #   daily            nfl daily (ingest, odds, curate, features, site), publish (ADR 0024)
-#   site             rebuild site JSON and publish (after the desktop uploads narrative records)
+#   site             SQL models, rebuild site JSON and publish (after the desktop uploads narrative records)
 #   narrative-check  fail (and so alert) if an upcoming game has no record from the last desktop pass
 #   retro            nfl retro daily (current-season ingest, curate, game retros + recaps), then grade
 #                    and rebuild the site JSON so the tracker counts last night's games, publish
@@ -88,6 +88,8 @@ case "$job" in
     publish
     ;;
   site)
+    # the SQL models the game files' matchups and edge cards read (ADR 0028); optional, as in nfl daily
+    nfl models build || echo "models: build failed; the site builds without those sections" >&2
     nfl site
     publish
     ;;
@@ -100,6 +102,8 @@ case "$job" in
     # without it the tracker waited for Tuesday's refresh while the slate already scored the week
     # (site walk 2026-11-07). Paper bets still settle on Tuesday (ledger).
     nfl grade
+    # last night's games into the SQL models, so the edge cards can mark the battles each team won
+    nfl models build || echo "models: build failed; the site builds without those sections" >&2
     nfl site
     publish
     ;;

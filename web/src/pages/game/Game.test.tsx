@@ -53,7 +53,7 @@ describe('Game page', () => {
     renderRoute('/game/2026_08_CAR_GB?tab=tendencies', root)
     expect(await screen.findByText('Defensive habits')).toBeInTheDocument()
     expect(screen.queryByTestId('face-off')).toBeNull()
-    expect(screen.queryByText(/eight places/)).toBeNull()
+    expect(screen.queryByText(/Ranks are this season's games/)).toBeNull()
     fs.rmSync(root, { recursive: true, force: true })
   })
 
@@ -70,12 +70,33 @@ describe('Game page', () => {
     expect(await screen.findByText(/Not locked: no lock was recorded/)).toBeInTheDocument()
   })
 
-  it('the Preview is approach-free: no picker, no outline, the fit unnamed, and the live-only parts as bars of their own', async () => {
+  it('the Preview is a card per tab, approach-free, each card linking to its tab', async () => {
     const { container } = renderRoute('/game/2026_08_CAR_GB')
     await screen.findByRole('heading', { name: /^Who has the edge/ })
     expect(screen.queryByRole('radiogroup', { name: 'Overlay an approach' })).toBeNull()
     expect(container.querySelector('[data-testid="overlay"]')).toBeNull()
     expect(container.textContent).not.toMatch(/Global/)
+    const hub = screen.getByTestId('preview-hub')
+    const cards = [...hub.querySelectorAll('section[data-testid^="teaser-"]')].map((s) => s.getAttribute('data-testid'))
+    expect(cards).toEqual(['teaser-matchup', 'teaser-edge', 'teaser-line', 'teaser-news', 'teaser-tape'])
+    // both teams' edge cards, compact, the underdog first
+    expect(within(screen.getByTestId('teaser-matchup')).getAllByRole('heading', { name: /^Where \w+ has the edge/ }).map((h) => h.textContent)).toEqual([
+      expect.stringMatching(/^Where CAR has the edge/),
+      expect.stringMatching(/^Where GB has the edge/),
+    ])
+    expect(within(screen.getByTestId('teaser-line')).getByText(/books disagree/i)).toBeInTheDocument()
+    expect(within(screen.getByTestId('teaser-tape')).getAllByRole('listitem')).toHaveLength(3)
+    for (const [card, tab] of [['teaser-matchup', 'Matchups'], ['teaser-edge', 'Approaches'], ['teaser-line', /^The line/], ['teaser-news', 'Injuries & news'], ['teaser-tape', 'Details']] as const) {
+      await userEvent.click(within(screen.getByTestId(card)).getByRole('button', { name: /→$/ }))
+      expect(screen.getByRole('tab', { name: tab })).toHaveAttribute('aria-selected', 'true')
+      await userEvent.click(screen.getByRole('tab', { name: 'Preview' }))
+    }
+  })
+
+  it('"Who has the edge" in full, with the live-only parts as bars of their own, opens the Approaches tab', async () => {
+    renderRoute('/game/2026_08_CAR_GB?tab=approaches')
+    await screen.findByRole('heading', { name: /^Who has the edge/ })
+    expect(screen.queryByRole('button', { name: 'By approach →' })).toBeNull() // it is this tab now
     const live = screen.getByTestId('live-only')
     expect(within(live).getByText('This week only')).toBeInTheDocument()
     for (const name of ['Market behavior', 'Buzz', 'Line movement', 'Public betting on the home team', 'Media sentiment', 'Hype']) expect(within(live).getAllByText(name).length).toBeGreaterThan(0) // the fixture has every reading
@@ -98,7 +119,7 @@ describe('Game page', () => {
   it('names each QB under its team, links the Preview to the Approaches tab, and builds the narrative help from the record', async () => {
     renderRoute('/game/2026_08_CAR_GB')
     expect(await screen.findByText(/CAR Bryce Young · GB /)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'By approach →' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Every factor and approach →' }))
     expect(screen.getByRole('tab', { name: 'Approaches' })).toHaveAttribute('aria-selected', 'true')
     await userEvent.click(screen.getByRole('tab', { name: 'Injuries & news' }))
     expect(screen.getByText(/This week's coverage, as of \w{3}, \w{3} \d+\. It never feeds the probabilities\./)).toBeInTheDocument()

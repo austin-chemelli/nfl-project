@@ -876,6 +876,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["matchups"] = _safe(game_matchups, None, matchup_ctx, g, conditions)
             detail["paths"] = _safe(game_paths, None, conditions, g)
             detail["paths_outcome"] = _safe(game_paths_outcome, None, conditions, g)
+            detail["edge_cards"] = _safe(game_edge_cards, None, conditions, g)
             detail["expected_score"] = _safe(
                 _expected_score, None, totals_by_game.get(g["game_id"]), detail
             )
@@ -1487,6 +1488,22 @@ def game_paths(cond: pl.DataFrame | None, g: dict) -> dict | None:
         return None
     p = upset.upset_paths(g, int(g["week"]), cond)
     return None if p is None else p.to_dict()
+
+
+def game_edge_cards(cond: pl.DataFrame | None, g: dict) -> list[dict] | None:
+    """`edge_cards`: both teams' levers as of the game's week, the underdog first; None without a
+    line. After the game each card says which of its levers the team won (`met`)."""
+    from nfl import paths as upset
+
+    if cond is None:
+        return None
+    sides = upset.edge_sides(g, int(g["week"]), cond)
+    if sides is None:
+        return None
+    if g.get("result") is None:  # not final here: no checks, even if the model already has the game
+        for s in sides:
+            s.met = None
+    return [s.to_dict() for s in sides]
 
 
 def game_paths_outcome(cond: pl.DataFrame | None, g: dict) -> dict | None:
