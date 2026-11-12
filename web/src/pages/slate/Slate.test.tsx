@@ -244,6 +244,17 @@ describe('Slate loading', () => {
       expect(within(row).getByRole('button', { name: 'GB' })).toHaveAttribute('aria-pressed', 'false')
     })
 
+    it('the game page has the same pick, shared with the slate', async () => {
+      freeze('2026-10-29T12:00:00Z')
+      renderRoute('/game/2026_08_CAR_GB')
+      const row = await screen.findByRole('group', { name: 'Your pick: CAR at GB' })
+      expect(within(row).getByText('Who wins? Make your pick')).toBeInTheDocument()
+      await userEvent.click(within(row).getByRole('button', { name: /CAR/ }))
+      expect(within(row).getByRole('button', { name: /CAR/ })).toHaveAttribute('aria-pressed', 'true')
+      expect(within(row).getByRole('button', { name: /GB/ })).toHaveAttribute('aria-pressed', 'false')
+      expect(JSON.parse(localStorage.getItem(PICKS_KEY)!)['2026_08_CAR_GB'].team).toBe('CAR')
+    })
+
     it('closes at kickoff and scores a pick made before it against the Student and the market', async () => {
       freeze('2026-11-05T12:00:00Z') // after every week-8 kickoff
       const root = fixturesWithResults([])
@@ -255,7 +266,7 @@ describe('Slate loading', () => {
       renderRoute('/', root)
       await screen.findByRole('link', { name: CARD })
       expect(screen.queryByRole('group', { name: /Your pick:/ })).toBeNull()
-      expect(screen.getByText(/Your pick:/)).toHaveTextContent('Your pick: CAR')
+      expect(screen.getByText(/Your pick:/).parentElement).toHaveTextContent(/Your pick:\s*CAR/)
       expect(screen.getByLabelText('right')).toBeInTheDocument()
       // fixture: the Student and the market both had GB
       expect(await screen.findByText(/Season: you/)).toHaveTextContent('Season: you 1–0 · Student 0–1 · market 0–1')

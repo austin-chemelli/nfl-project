@@ -10,7 +10,7 @@ import { kickoffEt, pct, spreadLabel } from '../../lib/format'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { matchupVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
-import { PickRow } from './PickRow'
+import { YourPick } from '../../components/YourPick'
 import { cardSentence, contrastLine, gameStatus, pickOf, stakesLine, whyLine } from './helpers'
 
 function TeamCode({ team, color }: { team: string; color: string }) {
@@ -97,7 +97,7 @@ export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Me
         </div>
         <div className={pregame ? 'text-[12px] text-ink-3' : 'text-[14px] text-ink'}>{cardSentence(g)}</div>
       </Link>
-      <PickRow g={g} />
+      <YourPick g={g} />
     </div>
   )
 }

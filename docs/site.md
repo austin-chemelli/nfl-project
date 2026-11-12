@@ -34,7 +34,7 @@ flowchart LR
 
 | Route | Page | Reads |
 |---|---|---|
-| `/` | Slate: one plain sentence on what the site is, last week's record, the week's games × approaches with the Student's pick on each card, divergence markers, statuses, disagreement strip; **your picks** (M26.1, ADR 0029): a pick row under each card until kickoff and a strip with your record against the Student and the market's favorite on the same games, stored in `localStorage` (`lib/picks.ts`) | meta, slate (and the slates of every week you picked), last week's recap |
+| `/` | Slate: one plain sentence on what the site is, last week's record, the week's games × approaches with the Student's pick on each card, divergence markers, statuses, disagreement strip; **your picks** (M26.1, ADR 0029): a pick row under each card and a larger one under the game page's header until kickoff (`components/YourPick.tsx`: team-colored fill with a check when picked, the other team dimmed, a hover tint and a short pop zeroed under reduced motion) and a strip with your record against the Student and the market's favorite on the same games, stored in `localStorage` (`lib/picks.ts`) | meta, slate (and the slates of every week you picked), last week's recap |
 | `/game/:id` | Game: approaches vs market, why (group contributions in win-probability points), edges by group, tale of the tape, tendency dumbbells vs league, injuries, narrative v2 | game |
 | `/tracker` | Season tracker: gap to the market by week, backtest Δ with CIs, log loss by season, disagreements, calibration, paper bets (bankroll, return per bet, season grid), persona vs history | tracker, meta |
 | `/hypotheses` | What history says per feature; one feature or group over time | hypotheses |

@@ -8,6 +8,7 @@ import { useGame, useMeta, useRetro, isNotFound } from '../data/api'
 import type { Game, Meta, RetroGame } from '../data/contract'
 import { Injuries, ApproachesVsMarket, MatchupsSection, Tendencies, TaleOfTheTape, Why } from './game/Sections'
 import { GameHeader, GameTitle, PinnedResult } from './game/Header'
+import { YourPick } from '../components/YourPick'
 import { NarrativeSection } from './game/Narrative'
 import { Differ, StrongCallsOutcome } from './game/Differ'
 import { TheLine, hasLine } from './game/TheLine'
@@ -180,6 +181,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
         </Condensed>
       )}
       <GameHeader g={g} />
+      <YourPick g={g} size="page" />
       <SummaryStrip ref={setStrip} label="Game summary">
         {tiles.map((t) => (
           <Tile key={t.id} label={t.label} value={t.value} sub={t.sub} tab={tabs.some((x) => x.id === t.tab) ? t.tab : undefined} modelId={t.modelId} accent={t.team === g.home ? 'var(--team-home)' : t.team === g.away ? 'var(--team-away)' : undefined} />
