@@ -137,17 +137,40 @@ export function NewsSection({ g }: { g: Game }) {
   )
 }
 
-function Spark({ values }: { values: number[] }) {
-  const w = 140
-  const h = 32
-  const lo = Math.min(...values)
-  const hi = Math.max(...values)
-  const span = hi - lo || 1
-  const pts = values.map((v, i) => `${(i / Math.max(1, values.length - 1)) * w},${h - 4 - ((v - lo) / span) * (h - 8)}`).join(' ')
+/**
+ * One number's move as a strip: a hollow dot where it was first seen, a filled dot where it is now, an arrow
+ * between, each labelled. Unchanged is one dot. The strip spans the two values plus a point either side.
+ */
+function MoveRow({ label, from, to, fmt, color, testid }: { label: string; from: number; to: number; fmt: (v: number) => string; color: string; testid: string }) {
+  const lo = Math.min(from, to) - 1
+  const hi = Math.max(from, to) + 1
+  const at = (v: number) => `${((v - lo) / (hi - lo)) * 100}%`
+  const moved = from !== to
   return (
-    <svg width={w} height={h} aria-hidden className="shrink-0 text-ink-2">
-      <polyline fill="none" stroke="currentColor" strokeWidth={1.5} points={pts} />
-    </svg>
+    <div data-testid={testid} data-moved={moved ? 'yes' : 'no'} className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3">
+      <span className="text-[12px] text-ink-2">{label}</span>
+      <div className="relative h-11" role="img" aria-label={moved ? `${label}: ${fmt(from)} when first seen, ${fmt(to)} now` : `${label}: ${fmt(to)}, unchanged`}>
+        <span className="absolute left-0 right-0 top-[21px] h-[2px] rounded" style={{ background: 'var(--band)' }} />
+        {moved && (
+          <span
+            className="absolute top-[21px] h-[2px]"
+            style={{ left: at(Math.min(from, to)), width: `calc(${at(Math.max(from, to))} - ${at(Math.min(from, to))})`, background: color, opacity: 0.6 }}
+          />
+        )}
+        {moved && (
+          <>
+            <span className="absolute top-[16px] h-3 w-3 -translate-x-1/2 rounded-full border-2 bg-surface-1" style={{ left: at(from), borderColor: 'var(--text-muted)' }} />
+            <span className="tabular absolute top-[30px] -translate-x-1/2 whitespace-nowrap text-[11px] text-ink-3" style={{ left: at(from) }}>
+              {fmt(from)}
+            </span>
+          </>
+        )}
+        <span className="absolute top-[15px] h-[14px] w-[14px] -translate-x-1/2 rounded-full" style={{ left: at(to), background: color }} />
+        <span className="tabular absolute top-0 -translate-x-1/2 whitespace-nowrap text-[12.5px] font-semibold" style={{ left: at(to) }}>
+          {fmt(to)}
+        </span>
+      </div>
+    </div>
   )
 }
 
@@ -156,21 +179,22 @@ export function LineTeaser({ g }: { g: Game }) {
   const h = g.market_history
   const first = h[0]
   const last = h[h.length - 1]
-  const now = spreadLabel(last.spread_home, g.home, g.away)
-  const was = spreadLabel(first.spread_home, g.home, g.away)
-  const moved = first.spread_home !== last.spread_home
-  const total = first.total != null && last.total != null ? (first.total === last.total ? `The total: ${last.total}.` : `The total: ${first.total} → ${last.total}.`) : null
+  const favColor = (s: number | null) => (s == null || Math.abs(s) < 0.25 ? 'var(--text-secondary)' : s > 0 ? 'var(--team-home)' : 'var(--team-away)')
+  const spreadMoved = first.spread_home !== last.spread_home
+  const totalMoved = first.total !== last.total
   return (
     <Card title="The line" tab="line" more="Movement and every book" testid="teaser-line">
-      <div className="flex flex-wrap items-center gap-3 text-[13px]">
-        <Spark values={h.map((p) => p.spread_home ?? 0)} />
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-[15px] font-semibold">{now}</span>
-          <span className="text-ink-2">{moved ? `${was} when first seen ${dayOf(first.ts)}` : `unchanged since first seen ${dayOf(first.ts)}`}</span>
-          {total && <span className="text-ink-2">{total}</span>}
-          {disagrees(g.books) ? <span className="text-[var(--warning)]">The books disagree.</span> : last.n_books != null ? <span className="text-ink-3">{last.n_books} books agree.</span> : null}
-        </div>
+      <div className="flex flex-col gap-1">
+        {first.spread_home != null && last.spread_home != null && (
+          <MoveRow label="Spread" from={first.spread_home} to={last.spread_home} fmt={(v) => spreadLabel(v, g.home, g.away)} color={favColor(last.spread_home)} testid="move-spread" />
+        )}
+        {first.total != null && last.total != null && <MoveRow label="Total" from={first.total} to={last.total} fmt={(v) => String(v)} color="var(--text-secondary)" testid="move-total" />}
       </div>
+      <p className="m-0 mt-2 text-[12.5px] text-ink-2">
+        {spreadMoved || totalMoved ? `Moved since first seen ${dayOf(first.ts)}` : `Unchanged since first seen ${dayOf(first.ts)}`}
+        {' · '}
+        {disagrees(g.books) ? <span className="text-[var(--warning)]">the books disagree</span> : last.n_books != null ? `${last.n_books} books agree` : ''}
+      </p>
     </Card>
   )
 }

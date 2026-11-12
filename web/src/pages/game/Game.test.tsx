@@ -95,7 +95,11 @@ describe('Game page', () => {
     expect(within(screen.getByTestId('news-CAR')).getByText(/Moton \(RT\) broke his fibula/)).toBeInTheDocument()
     expect(within(screen.getByTestId('news-GB')).getAllByRole('listitem').length).toBeGreaterThan(0)
     expect(news).toHaveTextContent(/The most-cited matchup: Carolina's run defense/)
-    expect(within(screen.getByTestId('teaser-line')).getByText(/books disagree/i)).toBeInTheDocument()
+    const line = screen.getByTestId('teaser-line')
+    expect(within(line).getByText(/books disagree/i)).toBeInTheDocument()
+    // the spread and the total as from -> now strips, labelled from the record
+    expect(within(line).getByRole('img', { name: /^Spread: (GB|CAR) −[\d.]+(, unchanged| when first seen, (GB|CAR) −[\d.]+ now)$/ })).toBeInTheDocument()
+    expect(within(line).getByRole('img', { name: /^Total: [\d.]+/ })).toBeInTheDocument()
     expect(within(screen.getByTestId('teaser-tape')).getAllByRole('listitem')).toHaveLength(4)
     expect(within(hub).getByTestId('live-only')).toBeInTheDocument() // the live readings stay with the bars
     for (const [name, tab] of [
