@@ -835,6 +835,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     claims, claims_by_game, claims_record = _safe(
         _player_claims, (None, {}, None), paths, games, season
     )
+    lineups = _safe(_lineups, {}, paths, games, season, injuries, now)
     today = _safe(_today, {}, paths, now)
     totals_by_game, totals_record = _totals(paths, games)
     from nfl.llm.narrative import load_records
@@ -868,6 +869,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["swings"] = swing.get(g["game_id"], [])
             detail["strong_calls"] = calls_by_game.get(g["game_id"], [])
             detail["key_players"] = claims_by_game.get(g["game_id"])  # ADR 0027: context, M24.4
+            detail["lineups"] = lineups.get(g["game_id"])  # ADR 0027: the formation map, M24.5
             detail["today"] = today.get(g["game_id"])
             detail["expected_score"] = _safe(
                 _expected_score, None, totals_by_game.get(g["game_id"]), detail
@@ -1384,6 +1386,35 @@ def _availability(paths: Paths, season: int, week: int, claims: tuple | None) ->
         return {}
     c, passes = claims or (pl.DataFrame(schema=pc.SCHEMA), pl.DataFrame(schema=pc.PASS_SCHEMA))
     return {t: pc.availability(values, c, passes, t) for t in values["team"].unique().to_list()}
+
+
+def _lineups(paths: Paths, games: pl.DataFrame, season: int, injuries: list[dict], now) -> dict:
+    """game_id -> {home, away} formation-map lineups for the unplayed games of the next two weeks
+    (ADR 0027, M24.5; two so Monday, before the last game of a week, already maps the next): the
+    latest depth chart before now, values, the game week's statuses. Context, never a lock."""
+    import duckdb
+
+    from nfl.players import claims as pc
+    from nfl.players import lineup
+    from nfl.players.value import week_values
+
+    upcoming = games.filter(pl.col("kickoff_utc") > now)
+    chart_dir = paths.curated_table("depth_charts") / f"season={season}"
+    if upcoming.is_empty() or not any(chart_dir.glob("*.parquet")):
+        return {}
+    weeks = sorted(upcoming["week"].unique().to_list())[:2]
+    depth = duckdb.sql(
+        "select team, dt, pos_grp, pos_abb, cast(pos_slot as bigint) as pos_slot, "
+        "cast(pos_rank as bigint) as pos_rank, gsis_id, player_name "
+        f"from read_parquet('{chart_dir.as_posix()}/*.parquet', union_by_name=true) "
+        "where dt is not null"
+    ).pl()
+    values = week_values(paths, season, weeks)
+    if values.is_empty():
+        return {}
+    rates = pc.play_rates(pc.rate_table(paths))
+    wk = upcoming.filter(pl.col("week").is_in(weeks))
+    return lineup.lineups(wk, depth, values, injuries, rates, now)
 
 
 # ---------------------------------------------------------------------------------------- tracker

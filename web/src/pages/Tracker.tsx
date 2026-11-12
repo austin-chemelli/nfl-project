@@ -8,6 +8,7 @@ import { useMeta, useTracker } from '../data/api'
 import { CurrentSeason } from './tracker/CurrentSeason'
 import { Backtest } from './tracker/Backtest'
 import { Calibration } from './tracker/Calibration'
+import { PlayerClaims } from './tracker/PlayerClaims'
 import { StrongCalls } from './tracker/StrongCalls'
 import { Totals } from './tracker/Totals'
 import { Divergence } from './tracker/Divergence'
@@ -102,8 +103,10 @@ export default function TrackerPage() {
                         <TabBody>
                           <StrongCalls t={t} />
                           <Totals t={t} />
+                          <PlayerClaims t={t} />
                           <FinePrint>
                             <p>Strong calls are recorded at each live lock since this record started (the date above); earlier locks have none. The sentence is built from the stored numbers: the chances, the groups that pulled the approach&apos;s way, and the quarterback its line assumed.</p>
+                            {t.player_claims && <p>One line move is noisy and has many causes; the average over many claims is what counts.</p>}
                             <p>The what-if in a sentence is our own model rescored with the other quarterback, not the market&apos;s view.</p>
                             <p>The total learned from the weather recorded at kickoff in past seasons, while a lock only has the forecast, so its weather reads a little sharper in the backtest than it can live.</p>
                           </FinePrint>

@@ -1,9 +1,10 @@
 import { TeamLink } from '../../components/TeamLink'
 import { useState } from 'react'
 import { DivergingBars, Dumbbell, MatchupBand, ProbStrip } from '../../charts'
+import { FormationKey, FormationMap } from '../../charts/FormationMap'
 import { Help } from '../../components/Help'
 import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
-import type { Game, Meta } from '../../data/contract'
+import type { Game, KeyPlayer, Meta } from '../../data/contract'
 import { fmtUnit, pct, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from '../../lib/format'
 import { approachOf, groupOf } from '../../lib/meta'
 import { isReference, SHORT } from '../../lib/models'
@@ -356,20 +357,35 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
 // -------------------------------------------------------------------------------- injuries
 
 export function Injuries({ g }: { g: Game }) {
-  if (g.injuries.length === 0) return <Section title="Injuries"><p className="text-ink-2">No official report in our data yet.</p></Section>
+  const sides = [['away', g.away], ['home', g.home]] as const
+  const hasMap = Boolean(g.lineups?.home || g.lineups?.away)
+  const hasKeys = sides.some(([side]) => (g.key_players?.[side].length ?? 0) > 0)
+  if (g.injuries.length === 0 && !hasMap && !hasKeys) return <Section title="Injuries"><p className="text-ink-2">No official report in our data yet.</p></Section>
   return (
     <Section title="Injuries">
-      <div className="grid gap-4 md:grid-cols-2">
-        {[g.away, g.home].map((team) => {
+      {hasMap && (
+        <p className="mb-3 text-ink-2">
+          Each team's starters from its latest depth chart, sized by what each is worth in points; the empty part of a ring is the value at risk from this week's report.
+        </p>
+      )}
+      <div className="grid gap-6 md:grid-cols-2">
+        {sides.map(([side, team]) => {
           const rows = sortInjuries(g.injuries.filter((i) => i.team === team))
+          const lineup = g.lineups?.[side]
+          const key = g.key_players?.[side] ?? []
           return (
-            <div key={team}>
+            <div key={team} className="min-w-0">
               <h3 className="mb-1 text-[15px] font-semibold">{team}</h3>
+              {lineup && <FormationMap lineup={lineup} side={side} />}
+              {lineup && !lineup.reported && (
+                <p className="mt-2 text-[13px] text-ink-2">No game statuses on this week&apos;s report yet, so every ring is drawn full: that means no report, not a healthy team.</p>
+              )}
+              {key.length > 0 && <KeyPlayers players={key} />}
               {rows.length === 0 ? (
-                <p className="text-ink-2">None listed.</p>
+                <p className="mt-3 text-ink-2">{g.injuries.length === 0 ? 'No official report in our data yet.' : 'None listed.'}</p>
               ) : (
                 <TableScroll>
-                  <table className="w-full border-collapse text-[14px]">
+                  <table className="mt-3 w-full border-collapse text-[14px]">
                     <thead>
                       <tr><th className={th}>Player</th><th className={th}>Pos</th><th className={th}>Status</th><th className={th}>Injury</th><th className={th}>Practice</th></tr>
                     </thead>
@@ -391,6 +407,35 @@ export function Injuries({ g }: { g: Game }) {
           )
         })}
       </div>
+      {hasMap && <div className="mt-4"><FormationKey /></div>}
     </Section>
+  )
+}
+
+/** The scored claims for one side: the most valuable listed starters (ADR 0027). */
+function KeyPlayers({ players }: { players: KeyPlayer[] }) {
+  return (
+    <div className="mt-3">
+      <h4 className="mb-1 text-[13px] font-medium text-ink-2">Key players listed</h4>
+      <table className="w-full border-collapse text-[14px]" data-testid="key-players">
+        <thead>
+          <tr>
+            <th className={th}>Player</th><th className={`${th} text-right`}>Worth</th><th className={th}>Status</th>
+            <th className={`${th} hidden text-right sm:table-cell`}>Listed so, played</th><th className={`${th} text-right`}>At risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          {players.map((k) => (
+            <tr key={k.player} title={k.sentence}>
+              <td className={td}>{k.player}{k.pos ? <span className="text-ink-3"> {k.pos}</span> : null}</td>
+              <td className={`${td} tabular text-right`}>{k.value_pts.toFixed(1)}</td>
+              <td className={`${td} font-semibold`}>{k.status}</td>
+              <td className={`${td} tabular hidden text-right sm:table-cell`}>{k.p_play === null ? '–' : pct(k.p_play)}</td>
+              <td className={`${td} tabular text-right`}>{k.at_risk === null ? '–' : k.at_risk.toFixed(1)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }

@@ -10,6 +10,7 @@ import { TEAM_CODES, canonicalTeam, isTeam, teamInfo } from '../lib/teams'
 import { recordText } from './league/helpers'
 import { recordOf } from './league/playoffs'
 import NotFoundPage from './NotFound'
+import { Availability } from './team/Availability'
 import { Games } from './team/Games'
 import { Overview } from './team/Overview'
 import { Staff } from './team/Staff'
@@ -82,6 +83,7 @@ function Body({ code }: { code: string }) {
             tabs={[
               { id: 'overview', label: 'Overview', content: teams.data || league.data ? <Overview code={code} teams={teams.data} league={league.data} similar={similar.data} /> : noNumbers },
               { id: 'staff', label: 'Staff', content: <Part q={file} what="Staff details">{(f) => <Staff file={f} />}</Part> },
+              ...(file.data?.availability ? [{ id: 'availability', label: 'Availability', content: <Availability file={file.data} /> }] : []),
               { id: 'tendencies', label: 'Tendencies', content: <Part q={file} what="Tendencies">{(f) => <Tendencies file={f} />}</Part> },
               { id: 'games', label: 'Games', content: <Games code={code} teams={teams.data} league={league.data} file={file.data} /> },
             ]}

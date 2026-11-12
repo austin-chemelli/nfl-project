@@ -750,3 +750,10 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** Grade the part of a claim the market didn't already know: a Questionable player's absence was priced at its chance, so only the rest should move the line.
 
+## 2026-11-12: Who is missing, on a field (M24.5)
+
+**What changed.** The player pages: the Injuries tab leads with a formation map per team (each starter from the latest depth chart, a ring sized by what he's worth in points, the empty part of the ring the value at risk from this week's report), then the scored claims as a table, then the report. The team page has an Availability tab, the tracker a Player claims section. Built in two halves: an implementer agent (Sonnet) took the team panel and tracker section from the existing contract while this chat built the lineup data, the map and the tab; reviewed here (three text fixes: a duplicated line, fine print that said values come from last season's data, a 0-at-risk sentence) and by `reviewer` (Opus), whose findings are fixed and tested: before Wednesday's report a full map read as a healthy team (now a `reported` flag and a note), the map's lede showed on finished games that have claims but no map, an Out player kept the rate table's 0.1% chance to play, a chart starter without an id promoted his backup, a player traded since his last game showed unvalued, and Monday had no maps for the next week (now the next two weeks).
+
+**Findings.** The depth chart lists three receivers as one position with ranks interleaved across three slots, so "rank 1" alone finds one receiver: a starter is the top rank per formation slot. The lock's own chart lookup keeps rank 1 per position, which is right for its features and wrong for a picture of the eleven, so the map has its own reader and the lock code is untouched. Linebackers and interior linemen have no value yet; the map shows them dashed rather than leaving holes.
+
+**Lesson.** Render the chart and look at it before calling it done: the first map put offense and defense side by side inside each team's column, four panels across on a laptop, too small to read; tests passed either way.
