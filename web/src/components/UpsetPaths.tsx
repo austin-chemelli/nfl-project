@@ -29,20 +29,23 @@ function RankBar({ team, noun, rank, n, color }: { team: string; noun: string; r
   )
 }
 
-function Lift({ base, did }: { base: number | null; did: number | null }) {
+function Lift({ base, did, label }: { base: number | null; did: number | null; label: string }) {
   if (base == null || did == null) return null
   const h = (p: number) => `${Math.max(4, (p / 100) * 52)}px`
   return (
-    <div className="flex items-end gap-3 text-[11px] text-ink-2" aria-label={`all dogs of this size won ${base}%, dogs who did this won ${did}%`} role="img">
-      <div className="flex flex-col items-center gap-0.5">
-        <span className="tabular font-semibold text-ink">{base}%</span>
-        <i className="block w-8 rounded-t-sm" style={{ height: h(base), background: 'var(--band-strong)' }} />
-        <span>all dogs</span>
-      </div>
-      <div className="flex flex-col items-center gap-0.5">
-        <span className="tabular font-semibold text-ink">{did}%</span>
-        <i className="block w-8 rounded-t-sm" style={{ height: h(did), background: DOG }} />
-        <span>did this</span>
+    <div className="flex flex-col gap-1 text-[11px] text-ink-2" role="img" aria-label={`underdogs of this size won ${base}% of games, and ${did}% when they won this battle`}>
+      <span>Underdogs' win rate</span>
+      <div className="flex items-end gap-3">
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="tabular font-semibold text-ink">{base}%</span>
+          <i className="block w-8 rounded-t-sm" style={{ height: h(base), background: 'var(--band-strong)' }} />
+          <span>overall</span>
+        </div>
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="tabular font-semibold text-ink">{did}%</span>
+          <i className="block w-8 rounded-t-sm" style={{ height: h(did), background: DOG }} />
+          <span title={label}>winning this</span>
+        </div>
       </div>
     </div>
   )
@@ -62,7 +65,7 @@ function LeverCard({ lv, dog, fav, met }: { lv: PathLever; dog: string; fav: str
       </div>
       <RankBar team={dog} noun={lv.dog_noun} rank={lv.dog_rank} n={lv.n_teams} color={DOG} />
       <RankBar team={fav} noun={lv.fav_noun} rank={lv.fav_rank} n={lv.n_teams} color={FAV} />
-      <Lift base={lv.base_rate_pct} did={lv.win_rate_pct} />
+      <Lift base={lv.base_rate_pct} did={lv.win_rate_pct} label={lv.label} />
       <span
         data-testid="lever-plausibility"
         className="self-start rounded-full border px-1.5 text-[10.5px]"

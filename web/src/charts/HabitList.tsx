@@ -1,10 +1,12 @@
 /**
- * What you'll see (Matchups redesign, 2026-11-12): the choosing unit's habits in words, a four-step meter of
- * where the habit sits among the league's teams (by quartile), and one soft line on how the other unit has
- * done with and without it. Habits repeat week to week; results in a situation barely do, so the verdict is a
+ * What you'll see (Matchups redesign, 2026-11-12): one light line per habit (who does it, a four-step meter of
+ * where it sits among the league's teams by quartile, and a pill for which side the habit has favoured); the
+ * rate, how the other unit did with and without it, the points and the evidence label are in the hover card
+ * (Austin: too wordy as text). Habits repeat week to week; results in a situation barely do, so the verdict is a
  * word and the evidence label stays visible. Every number is read from the JSON (`matchups.sides[].rows`, and
  * the offense's pass rate from `tendencies`); this file only words and places them.
  */
+import { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'
 import type { MatchupRow } from '../data/contract'
 import { pct } from '../lib/format'
 import { quartile } from '../lib/rank'
@@ -43,6 +45,18 @@ function Meter({ q, color }: { q: number | null; color: string }) {
 
 export type PassHabit = { team: string; rate: number; league: number }
 
+function Pill({ team, color }: { team: string | null; color: string | null }) {
+  return team && color ? (
+    <span data-testid="habit-verdict" data-team={team} className="shrink-0 rounded-full border px-1.5 text-[11px] font-medium text-ink" style={{ borderColor: color }}>
+      {team} edge
+    </span>
+  ) : (
+    <span data-testid="habit-verdict" className="shrink-0 rounded-full border border-line px-1.5 text-[11px] text-ink-3">
+      even
+    </span>
+  )
+}
+
 export function HabitList({
   rows,
   offense,
@@ -56,59 +70,72 @@ export function HabitList({
   colorOf: (team: string) => string
   pass?: PassHabit | null
 }) {
+  const { box, at, bind, card } = useChartTip()
   const habits = rows.filter((r) => r.has_edge && r.chooser !== 'neither' && r.opp_rate != null)
   // the defense's habits first (they choose against this offense), then the offense's
   habits.sort((a, b) => (a.chooser === b.chooser ? 0 : a.chooser === 'defense' ? -1 : 1))
   if (habits.length === 0 && !pass) return null
+  const hovered = habits.find((r) => r.split === at?.key)
+  const who = (r: MatchupRow) => ({
+    chooser: r.chooser === 'defense' ? defense : offense,
+    other: r.chooser === 'defense' ? offense : defense,
+    otherUnit: r.chooser === 'defense' ? 'offense' : 'defense',
+    fav: r.favours === 'offense' ? offense : r.favours === 'defense' ? defense : null,
+  })
+  const even = (r: MatchupRow) => r.edge_pts_pg == null || Math.abs(r.edge_pts_pg) < EVEN
   return (
-    <ul data-testid="habit-list" className="m-0 list-none p-0">
-      {pass && (
-        <li data-testid="habit-pass" className="flex items-baseline justify-between gap-3 border-b border-line py-2 text-[13px]">
-          <span>
-            <span className="font-semibold">
-              {pass.team} passes on {pct(pass.rate)} of plays
-            </span>{' '}
-            <span className="text-ink-2">(the league: {pct(pass.league)})</span>
-          </span>
-        </li>
-      )}
-      {habits.map((r) => {
-        const chooser = r.chooser === 'defense' ? defense : offense
-        const other = r.chooser === 'defense' ? offense : defense
-        const otherUnit = r.chooser === 'defense' ? 'offense' : 'defense'
-        const q = quartile(r)
-        const fav = r.favours === 'offense' ? offense : r.favours === 'defense' ? defense : null
-        const e = r.edge_pts_pg
-        const verdict = e == null || !fav || Math.abs(e) < EVEN ? 'about even' : `edge ${fav}, ${Math.abs(e).toFixed(2)} pts a game`
-        const result =
-          r.epa_with != null && r.epa_without != null
-            ? `${other}'s ${otherUnit}: ${signed(r.epa_with)} EPA a play with it, ${signed(r.epa_without)} without (${r.n_with} plays)`
-            : `${other}'s ${otherUnit}: ${r.n_with} plays with it so far`
-        return (
-          <li key={r.split} data-testid={`habit-${r.split}`} className="border-b border-line py-2 text-[13px]">
-            <div className="flex items-baseline justify-between gap-3">
-              <span>
-                <span className="font-semibold">
-                  {chooser} {VERB[r.split] ?? r.label.toLowerCase()}
-                </span>{' '}
-                <span className="text-ink-2">
-                  · {pct(r.opp_rate)} {OF[r.split] ?? 'of plays'}, {q ? WORD[q] : ''}
-                </span>
-              </span>
-              <Meter q={q} color={colorOf(chooser)} />
-            </div>
-            <div className="mt-0.5 text-[12px] text-ink-2">
-              {result}.{' '}
-              <span data-testid="habit-verdict" className="font-medium text-ink">
-                {verdict[0].toUpperCase() + verdict.slice(1)}
-              </span>{' '}
-              <span data-reliability={r.reliability} className="ml-1 inline-block rounded-full border border-line px-1.5 text-[10.5px] text-ink-3">
-                {EVIDENCE[r.reliability]}
-              </span>
-            </div>
+    <div ref={box} className="relative">
+      <ul data-testid="habit-list" className="m-0 list-none p-0">
+        {pass && (
+          <li data-testid="habit-pass" className="flex items-center justify-between gap-3 border-b border-line py-1.5 text-[13px]">
+            <span>
+              {pass.team} passes <span className="tabular text-ink-2">{pct(pass.rate)}</span>
+              <span className="text-ink-3"> · league {pct(pass.league)}</span>
+            </span>
           </li>
-        )
-      })}
-    </ul>
+        )}
+        {habits.map((r) => {
+          const w = who(r)
+          const fav = even(r) ? null : w.fav
+          return (
+            <li
+              key={r.split}
+              data-testid={`habit-${r.split}`}
+              className={`flex cursor-default items-center gap-3 rounded border-b border-line px-1 py-1.5 text-[13px] ${hovered?.split === r.split ? 'bg-surface-2' : ''}`}
+              {...bind(r.split)}
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {w.chooser} {VERB[r.split] ?? r.label.toLowerCase()}
+              </span>
+              <Meter q={quartile(r)} color={colorOf(w.chooser)} />
+              <Pill team={fav} color={fav ? colorOf(fav) : null} />
+            </li>
+          )
+        })}
+      </ul>
+      {card(
+        hovered &&
+          (() => {
+            const w = who(hovered)
+            const q = quartile(hovered)
+            return (
+              <>
+                <TipTitle note={`${w.chooser}'s ${hovered.chooser}`}>{hovered.label}</TipTitle>
+                <TipRow color={colorOf(w.chooser)} value={pct(hovered.opp_rate)} label={`${OF[hovered.split] ?? 'of plays'}${q ? `, ${WORD[q]}` : ''}`} />
+                {hovered.epa_with != null && hovered.epa_without != null && (
+                  <TipRow value={`${signed(hovered.epa_with)} / ${signed(hovered.epa_without)}`} label={`${w.other}'s ${w.otherUnit}, EPA a play with it / without (${hovered.n_with} plays with)`} />
+                )}
+                <TipRow
+                  value={even(hovered) || !w.fav ? 'about even' : `${Math.abs(hovered.edge_pts_pg!).toFixed(2)} pts`}
+                  label={even(hovered) || !w.fav ? 'between the two' : `a game toward ${w.fav}`}
+                />
+                <TipNote>
+                  <span data-reliability={hovered.reliability}>{EVIDENCE[hovered.reliability]}</span>: how a team did in a situation barely repeats week to week.
+                </TipNote>
+              </>
+            )
+          })(),
+      )}
+    </div>
   )
 }
