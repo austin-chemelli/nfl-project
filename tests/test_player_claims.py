@@ -209,4 +209,7 @@ def test_availability_reads_the_report_itself_before_any_claims_pass():
     assert by[0.3]["status"] is None  # last week's Out is gone
     assert a["value_at_risk"] == round(0.6 + 1.2 * 0.27, 2)
     practice = [{**report[0], "status": None}]
-    assert C.availability(VALUES, *empty, "HHH", injuries=practice, rates=RATES)["value_at_risk"] is None
+    assert (
+        C.availability(VALUES, *empty, "HHH", injuries=practice, rates=RATES)["value_at_risk"]
+        is None
+    )

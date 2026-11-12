@@ -86,7 +86,9 @@ def test_values_and_a_status_only_for_a_listed_player_this_week():
 
 def test_a_listed_starter_the_chart_moved_down_is_still_shown():
     side = L.side(DEPTH, "HHH", 11, NOW, VALUES, INJ, RATES)
-    assert [(x["player"], x["status"], x["at_risk"]) for x in side["off_chart"]] == [("Moved Down", "Out", 0.6)]
+    assert [(x["player"], x["status"], x["at_risk"]) for x in side["off_chart"]] == [
+        ("Moved Down", "Out", 0.6)
+    ]
 
 
 def test_before_any_game_status_the_side_is_not_reported():
