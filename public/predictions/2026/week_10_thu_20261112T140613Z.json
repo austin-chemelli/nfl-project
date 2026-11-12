@@ -1,0 +1,68 @@
+{
+ "code_version": "8f7a222",
+ "conventions": "p_home = home win probability; spread_home > 0 = home favored (points)",
+ "data_snapshot": "20261112T140128Z",
+ "games": [
+  {
+   "away": "WAS",
+   "game_id": "2026_10_WAS_NYG",
+   "home": "NYG",
+   "kickoff_utc": "2026-11-13T01:15:00Z",
+   "market": {
+    "as_of": "2026-11-12T14:01:47Z",
+    "p_home_vigfree": 0.5467,
+    "source": "odds_api",
+    "spread_home": 2.0,
+    "total": 41.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.5511,
+     "spread_home": 1.7336
+    },
+    "elo_v0": {
+     "p_home": 0.6482,
+     "spread_home": 4.2462
+    },
+    "global": {
+     "p_home": 0.5782,
+     "spread_home": 2.6624
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.5467,
+     "spread_home": 2.0
+    },
+    "sharp": {
+     "p_home": 0.5101,
+     "spread_home": 0.3418
+    },
+    "student": {
+     "p_home": 0.5637,
+     "spread_home": 2.1651
+    },
+    "student_v2": {
+     "p_home": 0.5463,
+     "spread_home": 1.5695
+    },
+    "traditionalist": {
+     "p_home": 0.595,
+     "spread_home": 3.2442
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 43.57
+   }
+  }
+ ],
+ "lock_ts": "2026-11-12T14:06:13Z",
+ "odds_snapshot": "20261112T140147Z",
+ "schema_version": "1",
+ "season": 2026,
+ "slot": "thu",
+ "week": 10
+}
