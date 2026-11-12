@@ -36,4 +36,4 @@ def test_an_optional_step_failing_never_stops_the_site(monkeypatch):
 
 
 def test_only_context_steps_are_optional():
-    assert {s.name for s in daily.STEPS if s.optional} == {"forecast", "previews"}
+    assert {s.name for s in daily.STEPS if s.optional} == {"forecast", "previews", "player claims"}
