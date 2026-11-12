@@ -3462,5 +3462,41 @@
    ],
    "met": null
   }
- ]
+ ],
+ "lean": {
+  "game_id": "2026_08_ARI_DAL",
+  "season": 2026,
+  "week": 8,
+  "home": "DAL",
+  "away": "ARI",
+  "pts": 0.93,
+  "lo": 0.2,
+  "hi": 1.8,
+  "side": "DAL",
+  "parts": [
+   {
+    "candidate": "net_epa_noto",
+    "label": "Net EPA without turnovers",
+    "pts": 0.15,
+    "lo": -0.08,
+    "hi": 0.44
+   },
+   {
+    "candidate": "net_def_half",
+    "label": "Net EPA with the defense at half weight",
+    "pts": 0.32,
+    "lo": 0.06,
+    "hi": 0.64
+   },
+   {
+    "candidate": "success_off",
+    "label": "Offensive success rate",
+    "pts": 0.46,
+    "lo": 0.22,
+    "hi": 0.72
+   }
+  ],
+  "tracked": false,
+  "grade": null
+ }
 }

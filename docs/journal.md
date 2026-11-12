@@ -788,6 +788,17 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** A deploy job that reads a derived table should build it, or the feature ships empty until an unrelated job runs. And a "preview" that only points elsewhere isn't one: Austin wanted the default tab to carry the substance.
 
+## 2026-11-12: Market leans from the ledger (M25.6, M25.5c; data track)
+
+**Why.** The last in-season piece of M25's phase 2: what the candidates ledger says the market tends to miss in a game, shown as context beside the approaches.
+
+**What changed.** `src/nfl/leans.py`: for every `use`, pregame, spread candidate (today `net_epa_noto`, `net_def_half`, `success_off`, all team-level), the lean is its `resid_mk` slope (points per SD) times this game's standardized home-minus-away gap. Team values come from that season's games before the game's week (the screen's `asof_frame` rule), and the gap's mean and SD from earlier seasons. The CI sums each slope's CI times the gap, conservative because the three overlap. `grade` says whether the margin landed on the lean's side of the spread. `site.py`: the game's `lean` (with `tracked` and `grade` from 2026 Week 10) and `tracker.json.leans` (weeks tracked up to the current week, right / wrong / push, mean |lean|). Web: `LeanBlock` on the Approaches tab, "What the market tends to miss here": the lean toward a team with its 90% range on a bar around the market's line, the candidates behind it, the live record.
+
+**Findings.** On the 2026 slate (weeks 4–10, 102 games) the mean |lean| is 0.88 points and the largest is 2.84, under the spec's 1.5-point typical bound. Over weeks 4–9, before tracking starts, the lean landed on the right side of the spread in 41 games and the wrong side in 44 (3 pushes): no sign of an edge, as the market's efficiency would predict. The three `use` candidates are all net-EPA variants, so their parts move together.
+
+**Pulled from the page before merge (Austin).** Looking at the block, Austin asked what it adds. Honest answer: a lean of about a point whose 90% range nearly always crosses zero, a coin-flip record so far, and a question the Approaches tab already answers better. `LeanBlock` is removed; the lean stays in the game JSON and the tracker so the live record from Week 10 builds quietly, and it comes back (likely as a History-page row) only if that record earns it.
+
+**Lesson.** A guard that greps writer modules for a word catches English too ("the model leans"); grep for the import instead, with a control that the pattern finds a real reader.
 
 ## 2026-11-12: Your picks on the slate (M26.1; picks track)
 
