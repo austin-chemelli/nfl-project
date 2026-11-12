@@ -809,3 +809,12 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **What changed.** `web/src/lib/picks.ts`: one store in `localStorage` (`nfl-picks-v1`, `{game_id: {team, at}}`), synced across tabs, safe when storage is blocked; a pick opens until kickoff and a pick stamped at or after kickoff is never scored. Each pregame card gets a "Who wins?" row with the two teams (outside the card link, so no button nests in it); after kickoff it shows your pick with ✓/✗. A "Your picks" strip above the week: open games picked, your season record against the Student and the market's favorite on exactly the games you picked (it fetches the slates of every week you picked), and a clear button for this week's open picks. No data contract change. After Austin's first look: the pick buttons got a pointer cursor, a hover tint in the team's color, a filled team-colored state with a check (the other team dimmed) and a short pop; the same control sits on the game page under the header, shared with the slate through the store.
 
 **Lesson.** Scoring a visitor against the models only on the games the visitor picked keeps the comparison fair without any server: the record is computed from the same public slates the page already reads.
+
+## 2026-11-12: M25 closed (data track)
+
+**What changed.** Austin called M25 done after the live Preview checked out (a stale browser tab had shown the old page; a hard reload fixed it). M25.0-M25.6 are merged (#41, #42, #46, #47, #48, #51, #52). M25.7 is dropped and M25.8-M25.12 parked, with their plans kept in tasks.md.
+
+**Findings.** Before building M25.7a, the shrunk situation gaps on 2026 through Week 9: k hits its 5,000 ceiling on 13 of 17 splits per side (history says a team's with-minus-without gap barely repeats), so every team sits within 0.01 EPA/play of the league there; only early downs, third down and deep passes move (up to about 0.07). A team-page section of those gaps would have been flat.
+
+**Lesson.** Measure how much a section will vary before designing it: the same check would have caught the market lean's emptiness before it was built.
+
