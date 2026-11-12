@@ -33,7 +33,7 @@ export default function MethodPage() {
           <Tabs
             label="Method sections"
             tabs={[
-              { id: 'how', label: 'How it works', content: <Stack><HowItWorks meta={m} /><Approaches meta={m} /><Locks /><Retrospective /><TeamPages /></Stack> },
+              { id: 'how', label: 'How it works', content: <Stack><HowItWorks meta={m} /><Approaches meta={m} /><Locks /><Retrospective /><TeamPages /><PlayerValue /></Stack> },
               { id: 'limits', label: 'Limits and mistakes', content: <Stack><Limits /><Leaks /></Stack> },
               {
                 id: 'data',
@@ -190,6 +190,19 @@ function TeamPages() {
         <li><strong>What to watch for.</strong> Personnel, coverage, time to throw and pressure are charted once a year, so in season the page shows only the past.</li>
         <li><strong>Tags.</strong> A short tag says which past predicted better in past cases like this one (a study of 2017 to 2025). No tag means no confirmed past, too few similar cases, or neither did much better than a guess.</li>
         <li><strong>Coach profiles.</strong> Known for and coaching tree come from reporting, each checked against the page it cites and linked. In the numbers comes from our data, over seasons a source confirms the coach called plays: a habit shows only if every one sat on the same side of the league&apos;s middle team.</li>
+      </ul>
+    </Section>
+  )
+}
+
+function PlayerValue() {
+  return (
+    <Section title="Players and injuries" help="What a missing player is worth, and how we check it.">
+      <ul className="max-w-3xl list-disc space-y-1 pl-5 text-[15px] leading-relaxed">
+        <li><strong>Value.</strong> Each regular starter at quarterback, running back, receiver, tight end, offensive line, edge, cornerback and safety gets a value in points on the spread over a typical replacement, from his production, contract or draft slot, and share of snaps in games before the week. A top quarterback is worth about 6 points; a top player elsewhere about 0.5 to 1.2. Linebackers and interior linemen have no value yet.</li>
+        <li><strong>At risk.</strong> A player listed Questionable or Doubtful plays as often as players with that status have played since 2016, by position; Out never plays. The value at risk is his value times the chance he sits.</li>
+        <li><strong>The map.</strong> The Injuries tab draws each team&apos;s starters from its latest depth chart: the ring is his value, the empty part what is at risk. A starter the chart has already moved down is listed under the map. Before the week&apos;s report has game statuses, every ring is full, which means no report, not a healthy team.</li>
+        <li><strong>Graded claims.</strong> Each daily pass records the most valuable listed starters per game. If one is later ruled out before kickoff, we compare the move we said the line should make with how far it did move; the tracker shows both. Player value is context: no approach uses it yet.</li>
       </ul>
     </Section>
   )

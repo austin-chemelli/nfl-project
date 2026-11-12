@@ -106,6 +106,20 @@ def side(
         "chart_ts": s["chart_dt"].max().isoformat() + "Z",
         "reported": any(i["status"] in C.GAME_STATUSES for i in week_rows),
     }
+    # a regular starter on the report whom the chart has already moved down: the map would show his
+    # replacement full, hiding the very absence it is for
+    on_map = set(s["gsis_id"].to_list())
+    out["off_chart"] = sorted(
+        (
+            {**_spot({"slot": v["grp"], "player": v["player"], "gsis_id": g}, vals, listed, rates)}
+            for g, v in vals.items()
+            if g in listed
+            and g not in on_map
+            and v.get("role", 0) >= C.STARTER_ROLE
+            and v["value_pts"] >= C.MIN_VALUE  # as in the claims: below it, nothing to say
+        ),
+        key=lambda x: -(x["value_pts"] or 0),
+    )
     for unit, order in (("offense", OFFENSE_ORDER), ("defense", DEFENSE_ORDER)):
         u = s.filter(pl.col("unit") == unit)
         rank = {k: i for i, k in enumerate(order)}

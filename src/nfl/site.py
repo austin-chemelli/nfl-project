@@ -776,7 +776,12 @@ def write_league(paths: Paths, season: int, snapshot: str | None) -> None:
 
 
 def write_team_files(
-    paths: Paths, season: int, week: int, games: pl.DataFrame, claims: tuple | None = None
+    paths: Paths,
+    season: int,
+    week: int,
+    games: pl.DataFrame,
+    claims: tuple | None = None,
+    injuries: list[dict] | None = None,
 ) -> None:
     """ADR 0021: staff and tendency files for the team pages, one per team, for the current season
     only. Like the league's, a failure here never stops a site build; the last files stay.
@@ -798,7 +803,7 @@ def write_team_files(
                 "hi": "more",
             }
 
-        avail = _safe(_availability, {}, paths, season, week, claims)
+        avail = _safe(_availability, {}, paths, season, week, claims, injuries)
         for team, body in team_files(paths, season, week, games, label).items():
             body["availability"] = avail.get(team)  # ADR 0027, M24.4: additive
             _write(paths.site / "team" / f"{team}.json", body, compact=True)
@@ -938,7 +943,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             _write(site / "teams.json", teams, compact=True)  # 236 KB at indent=1, 178 KB compact
     except Exception as e:  # noqa: BLE001
         print(f"site: teams.json failed, continuing: {e!r}")
-    write_team_files(paths, season, current_week, games, claims)
+    write_team_files(paths, season, current_week, games, claims, injuries)
     try:
         write_retro(paths, season)
     except Exception as e:  # noqa: BLE001  retros must never break the site build
@@ -1644,7 +1649,9 @@ def _player_claims(paths: Paths, games: pl.DataFrame, season: int):
     return (c, passes), pc.key_players(c, passes), pc.record(c, pc.load_grades(paths), results)
 
 
-def _availability(paths: Paths, season: int, week: int, claims: tuple | None) -> dict:
+def _availability(
+    paths: Paths, season: int, week: int, claims: tuple | None, injuries: list[dict] | None = None
+) -> dict:
     """team -> its availability panel for `week` (ADR 0027): top starters by value and statuses."""
     from nfl.players import claims as pc
     from nfl.players.value import week_values
@@ -1653,7 +1660,11 @@ def _availability(paths: Paths, season: int, week: int, claims: tuple | None) ->
     if values.is_empty():
         return {}
     c, passes = claims or (pl.DataFrame(schema=pc.SCHEMA), pl.DataFrame(schema=pc.PASS_SCHEMA))
-    return {t: pc.availability(values, c, passes, t) for t in values["team"].unique().to_list()}
+    rates = pc.play_rates(pc.rate_table(paths))
+    return {
+        t: pc.availability(values, c, passes, t, injuries=injuries, rates=rates)
+        for t in values["team"].unique().to_list()
+    }
 
 
 def _lineups(paths: Paths, games: pl.DataFrame, season: int, injuries: list[dict], now) -> dict:

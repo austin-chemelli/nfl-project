@@ -208,6 +208,7 @@ export const SideLineup = z.looseObject({
   reported: z.boolean().default(false), // any game status on the week's report yet; before it, a full ring is no report, not healthy
   offense: z.array(LineupSpot),
   defense: z.array(LineupSpot),
+  off_chart: z.array(LineupSpot).default([]), // regular starters on the report the chart has moved down (slot = his group)
   offense_formation: nstr.default(null),
   defense_formation: nstr.default(null),
 })

@@ -191,3 +191,22 @@ def test_availability_lists_top_starters_with_status_only_when_listed():
 def test_the_lock_never_reads_the_claims():
     src = inspect.getsource(lock)
     assert "claims" not in src.replace("strong_calls", "")
+
+
+def test_availability_reads_the_report_itself_before_any_claims_pass():
+    # no pass has looked yet, but the report has a game status: the panel agrees with the game page
+    report = [
+        {"team": "HHH", "week": 11, "gsis_id": "h2", "pos": "CB", "status": "Out"},
+        {"team": "HHH", "week": 11, "gsis_id": "h1", "pos": "WR", "status": "Questionable"},
+        {"team": "HHH", "week": 10, "gsis_id": "h3", "pos": "T", "status": "Out"},  # last week
+    ]
+    empty = (pl.DataFrame(schema=C.SCHEMA), pl.DataFrame(schema=C.PASS_SCHEMA))
+    a = C.availability(VALUES, *empty, "HHH", injuries=report, rates=RATES)
+    assert a["reported"] and a["listed"] == []
+    by = {p["value_pts"]: p for p in a["players"]}
+    assert (by[0.6]["status"], by[0.6]["at_risk"]) == ("Out", 0.6)
+    assert (by[1.2]["p_play"], by[1.2]["at_risk"]) == (0.73, round(1.2 * 0.27, 2))
+    assert by[0.3]["status"] is None  # last week's Out is gone
+    assert a["value_at_risk"] == round(0.6 + 1.2 * 0.27, 2)
+    practice = [{**report[0], "status": None}]
+    assert C.availability(VALUES, *empty, "HHH", injuries=practice, rates=RATES)["value_at_risk"] is None

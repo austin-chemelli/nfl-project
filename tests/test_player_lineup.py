@@ -39,6 +39,8 @@ DEPTH = pl.DataFrame(
     + _chart(LATE, [(O, "QB", 9, 1, "future", "Future QB")])
 )  # fmt: skip
 VALUES = pl.DataFrame([
+    {"gsis_id": "rb", "team": "HHH", "grp": "RB", "value_pts": 0.6, "player": "Moved Down", "role": 0.8},
+    {"gsis_id": "bk", "team": "HHH", "grp": "RB", "value_pts": 0.2, "player": "Backup Back", "role": 0.2},
     {"gsis_id": "qb", "team": "HHH", "grp": "QB", "value_pts": 3.0},
     {"gsis_id": "w1", "team": "HHH", "grp": "WR", "value_pts": 1.0},
     {"gsis_id": "cb", "team": "HHH", "grp": "CB", "value_pts": 0.5},
@@ -51,6 +53,8 @@ INJ = [
     {"team": "HHH", "week": 10, "gsis_id": "qb", "pos": "QB", "status": "Out"},  # last week
     {"team": "HHH", "week": 11, "gsis_id": "w2", "pos": "WR", "status": None},  # practice only
     {"team": "HHH", "week": 11, "gsis_id": "w3", "pos": "WR", "status": "Out"},
+    {"team": "HHH", "week": 11, "gsis_id": "rb", "pos": "RB", "status": "Out"},  # off the chart now
+    {"team": "HHH", "week": 11, "gsis_id": "bk", "pos": "RB", "status": "Out"},  # not a regular
 ]
 
 
@@ -78,6 +82,11 @@ def test_values_and_a_status_only_for_a_listed_player_this_week():
     )  # Out never plays, as in claims
     assert side["reported"] and side["chart_ts"] == "2026-11-10T15:00:00Z"
     assert (side["offense_formation"], side["defense_formation"]) == (O, D)
+
+
+def test_a_listed_starter_the_chart_moved_down_is_still_shown():
+    side = L.side(DEPTH, "HHH", 11, NOW, VALUES, INJ, RATES)
+    assert [(x["player"], x["status"], x["at_risk"]) for x in side["off_chart"]] == [("Moved Down", "Out", 0.6)]
 
 
 def test_before_any_game_status_the_side_is_not_reported():

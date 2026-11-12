@@ -81,7 +81,7 @@ function Tip({ s }: { s: LineupSpot }) {
       {s.value_pts === null ? (
         <TipNote>No value yet: the model doesn&apos;t cover linebackers or interior linemen, or a player without enough games.</TipNote>
       ) : (
-        <TipRow value={`${pts(s.value_pts)} pts`} label="worth to his team" />
+        <TipRow value={`${pts(s.value_pts)} pts`} label="on the spread, his worth to the team" />
       )}
       {s.status && <TipRow value={s.status} label="on this week's report" />}
       {s.status && s.p_play !== null && s.status !== 'Out' && <TipRow value={pct(s.p_play)} label={`of players listed ${s.status} have played`} />}
@@ -118,6 +118,18 @@ export function FormationMap({ lineup, side }: { lineup: SideLineup; side: 'home
       <p className="m-0 text-[12px] text-ink-3">Depth chart of {kickoffEt(lineup.chart_ts)}</p>
       <Unit title="Offense" formation={lineup.offense_formation} spots={lineup.offense} color={color} />
       <Unit title="Defense" formation={lineup.defense_formation} spots={lineup.defense} color={color} />
+      {lineup.off_chart.length > 0 && (
+        <p className="m-0 text-[13px] text-ink-2" data-testid={`off-chart-${side}`}>
+          Also on the report, moved off the depth chart:{' '}
+          {lineup.off_chart.map((s, i) => (
+            <span key={s.player}>
+              {i > 0 && '; '}
+              <span className="font-medium text-ink">{s.player}</span> ({s.slot}, {s.status}
+              {s.at_risk !== null && <>, {pts(s.at_risk)} pts at risk</>})
+            </span>
+          ))}
+        </p>
+      )}
     </div>
   )
 }

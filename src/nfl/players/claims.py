@@ -353,12 +353,15 @@ def record(claims: pl.DataFrame, grades: pl.DataFrame, results: dict[str, float 
 
 
 def availability(
-    values: pl.DataFrame, claims: pl.DataFrame, passes: pl.DataFrame, team: str, n: int = 6
-) -> dict | None:
-    """A team's most valuable regular starters for the week, each with his status from the last
-    snapshot a pass looked at for its game (none if not listed then), and the value at risk summed
-    over the listed ones. `reported` is false, and the value at risk null, before any pass looked at
-    the week's report: no report yet is not "nobody hurt"."""
+    values: pl.DataFrame, claims: pl.DataFrame, passes: pl.DataFrame, team: str, n: int = 6,
+    injuries: list[dict] | None = None, rates: dict | None = None,
+) -> dict | None:  # fmt: skip
+    """A team's most valuable regular starters for the week, each with his status, and the value at
+    risk summed over its listed starters. With `injuries` (the site's report rows) and `rates`, the
+    statuses come from the week's report itself, so the panel agrees with the game page and the map;
+    without, from the last snapshot a claims pass looked at. `reported` is false, and the value at
+    risk null, before the week's report has any game status: no report yet is not "nobody hurt".
+    `listed` is the scored claims (their sentences), from the last pass."""
     v = values.filter((pl.col("team") == team) & (pl.col("role") >= STARTER_ROLE))
     if v.is_empty():
         return None
@@ -369,22 +372,52 @@ def availability(
     looked, latest = _latest(claims, games)
     c = latest.filter(pl.col("team") == team)
     by_id = {r["gsis_id"]: r for r in c.iter_rows(named=True)}
-    top = v.sort("value_pts", descending=True).head(n)
+    if injuries is not None:
+        report = {
+            i["gsis_id"]: i
+            for i in injuries
+            if i["team"] == team and i["week"] == week and i["status"] in GAME_STATUSES
+        }
+
+        def status(r: dict) -> dict | None:
+            i = report.get(r["gsis_id"])
+            if not i:
+                return None
+            p = 0.0 if i["status"] == "Out" else _rate(rates or {}, i["status"], i.get("pos"))[0]
+            risk = round(float(r["value_pts"]) * (1 - p), 2) if p is not None else None
+            return {
+                "status": i["status"],
+                "p_play": round(p, 4) if p is not None else None,
+                "at_risk": risk,
+            }
+
+        reported = bool(report) or bool(looked)
+        risks = [
+            x["at_risk"]
+            for x in map(status, v.iter_rows(named=True))
+            if x and x["at_risk"] is not None
+        ]
+    else:
+
+        def status(r: dict) -> dict | None:
+            return by_id.get(r["gsis_id"])
+
+        reported = bool(looked)
+        risks = [x["at_risk"] for x in by_id.values() if x["at_risk"] is not None]
     players = []
-    for r in top.iter_rows(named=True):
-        cl = by_id.get(r["gsis_id"])
+    for r in v.sort("value_pts", descending=True).head(n).iter_rows(named=True):
+        st = status(r)
         players.append({
             "player": r["player"], "grp": r["grp"], "value_pts": round(float(r["value_pts"]), 2),
-            "status": cl["status"] if cl else None, "p_play": cl["p_play"] if cl else None,
-            "at_risk": cl["at_risk"] if cl else None,
+            "status": st["status"] if st else None, "p_play": st["p_play"] if st else None,
+            "at_risk": st["at_risk"] if st else None,
         })  # fmt: skip
-    listed = [x["at_risk"] for x in by_id.values() if x["at_risk"] is not None]
     return {
         "week": week,
-        "reported": bool(looked),
+        "reported": reported,
         "players": players,
         "listed": [
             {k: x[k] for k in _PUBLIC} for x in sorted(by_id.values(), key=lambda x: x["rank"])
         ],
-        "value_at_risk": (round(sum(listed), 2) if listed else 0.0) if looked else None,
+        "value_at_risk": (round(sum(risks), 2) if risks else 0.0) if reported else None,
     }

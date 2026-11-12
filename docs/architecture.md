@@ -370,18 +370,28 @@ flowchart LR
 
 ## Players (ADR 0027, M24)
 
-Free nflverse player tables (weekly stats 1999+, snap counts 2013+, PFR advanced stats 2018+, contracts, draft picks, the id crosswalk `players`) are curated beside the team tables (`curate_players`, optional: a failure never stops a job) and queried through the catalog; the plays table keeps who caught, ran, sacked and defended each play. A SQL model, `derived/player_value`, gives every listed starter a value in points of spread per (season, week), point-in-time by week; `availability.value_lost` sums the value of who's missing, weighted by our own status-to-play rates, and enters the ledger as a candidate (ADR 0026) before any approach may use it. Claims about a player's value are recorded daily and graded against the market's move when he's ruled out.
+As built through M24.5 (2026-11-12). Free nflverse player tables (weekly stats 1999+, snap counts 2013+, PFR advanced stats 2018+, contracts, draft picks, the id crosswalk `players`) are curated beside the team tables (`curate_players`, optional: a failure never stops a job) and queried through the catalog; the plays table keeps who caught, ran, sacked and defended each play.
+
+- **Status to play** (`players/status.py`, M24.1): how often players listed Out, Doubtful or Questionable have played, by report position, 2016+, from our own history.
+- **Value** (`players/value.py`, M24.2): every regular starter's worth in points of spread over a replacement, per (season, week), as of the start of the week (games before it only). A Python model through the catalog until M23's SQL runner takes it; output at `marts/derived/player_value.parquet`; `week_values` computes the upcoming week live.
+- **Claims** (`players/claims.py`, M24.4): the daily pass records, per upcoming game and side, the three most valuable listed starters with value, P(play) and value at risk (`marts/player_claims*.parquet`, append-only); a change to Out before kickoff grades the last claim against the consensus line's move. Never read by a lock (tested).
+- **Lineups** (`players/lineup.py`, M24.5): at each `nfl site`, each side's base-formation starters from the latest timestamped depth chart, with values and the game week's statuses, for the next two weeks' unplayed games. Its own chart reader (the top rank per formation slot), separate from `features/availability.py`'s lock lookup. Regular starters on the report whom the chart has moved down are listed beside it (`off_chart`); the team panel's statuses come from the same report rows.
+- **Pages** (M24.5): the game's Injuries tab (formation map, key players, the report), the team's Availability tab, the tracker's Player claims. Site JSON fields `Game.lineups`, `Game.key_players`, `TeamFile.availability`, `Tracker.player_claims`, all nullable.
+- **Not yet** (M24.3, waits on M23's ledger): `availability.value_lost`, the value of who's missing weighted by status-to-play, as a ledger candidate before any approach may use it.
 
 ```mermaid
 %%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%
 flowchart LR
-    PS[(player weeks, snaps,\nPFR adv, contracts, draft)] --> PV[derived/player_value\npoints per player-week]
+    PS[(player weeks, snaps,\nPFR adv, contracts, draft)] --> PV[players/value\npoints per player-week]
     INJ[(injuries, daily snapshots)] --> STP[status_to_play rates]
-    PV --> VL[availability.value_lost\ncandidate, context only]
-    STP --> VL
+    DC[(depth charts)] --> LU[players/lineup\nformation starters]
     PV --> CL[player_claims\ngraded by market moves]
     STP --> CL
-    VL --> LEDGER[candidates ledger]
-    CL --> TRK[tracker, Injuries tab,\nteam availability panel]
+    PV --> LU
+    STP --> LU
+    PV -.M24.3.-> VL[availability.value_lost\ncandidate]
+    VL -.-> LEDGER[candidates ledger]
+    CL --> SITE[Injuries tab, team Availability,\ntracker Player claims]
+    LU --> SITE
 ```
 
