@@ -276,7 +276,7 @@ describe('contrastLine', () => {
 describe('stakesLine', () => {
   const league = (swings: { team: string; if_home_win: number; if_away_win: number }[], runs: [number, number] = [5000, 5000]) =>
     ({
-      odds: { student: { sources: {}, teams: { CHI: { playoffs: 0.55 }, BUF: { playoffs: 0.4 } } }, market: { sources: {}, teams: {} } },
+      odds: { market: { sources: {}, teams: { CHI: { playoffs: 0.55 }, BUF: { playoffs: 0.4 } } }, student: { sources: {}, teams: {} } },
       games: [{ game_id: 'g', week: 9, home: 'MIN', away: 'CHI', swings, n_home_wins: runs[0], n_away_wins: runs[1] }],
     }) as unknown as LeagueFile
   const chi = (up: number, down: number) => [{ team: 'CHI', if_home_win: down, if_away_win: up }]

@@ -39,7 +39,7 @@ export type Standing = {
   divRank: number
   /** Null after the regular season, when the odds entry is gone. */
   odds: LeagueOddsTeam | null
-  /** True when the Student has no odds for any team: the season is over. */
+  /** True when the market has no odds for any team: the season is over. */
   over: boolean
   total: number
   spark: SparkPoint[]
@@ -49,7 +49,7 @@ export type Standing = {
 export function standing(league: LeagueFile, code: string): Standing | null {
   const t = league.teams.find((o) => o.team === code)
   if (!t) return null
-  const teams = league.odds.student.teams
+  const teams = league.odds.market.teams
   const odds = Object.hasOwn(teams, code) ? teams[code] : null
   return {
     record: recordOf(t),
@@ -58,7 +58,7 @@ export function standing(league: LeagueFile, code: string): Standing | null {
     odds,
     over: Object.keys(teams).length === 0,
     total: t.w + t.l + t.t + t.left,
-    spark: odds ? sparkSeries(league, code, 'student') : [],
+    spark: odds ? sparkSeries(league, code, 'market') : [],
   }
 }
 

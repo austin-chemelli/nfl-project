@@ -1,4 +1,4 @@
-import type { HTMLAttributes } from 'react'
+import { useMemo, type HTMLAttributes } from 'react'
 import { useSearchParams } from 'react-router'
 import { TipNote, TipRow, TipTitle, useChartTip } from '../../charts'
 import { FinePrint } from '../../components/FinePrint'
@@ -9,8 +9,19 @@ import { teamDotVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
 import { hasSpark, sparkSeries } from './context'
 import { Spark } from './Spark'
-import { barWidth, fmtProb, oddsRows, parseConf, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
+import { barWidth, fmtProb, oddsRows, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
 import { TeamLink } from '../../components/TeamLink'
+import { simInputFrom } from '../../lib/league/input'
+import { usePicks } from '../../lib/picks'
+import { decide, movers, parseScenario, picksInPlay, toOddsTeam, winners, writeScenario, type Scenario } from './whatif'
+import { RUNS, useWhatIf } from './useWhatIf'
+import type { TeamOdds } from '../../lib/league/simulate'
+import { WhatIfPanel } from './WhatIf'
+import { Move } from './Move'
+import { Bracket } from './Bracket'
+import type { LeagueOddsTeam, LeagueTeam } from '../../data/contract'
+
+const CONFS: Conf[] = ['AFC', 'NFC']
 
 const MAX_WINS = 17
 const ROUNDS = [
@@ -21,9 +32,16 @@ const ROUNDS = [
 ] as const
 
 /** The fine print for the playoff tabs: what each variant used and what the simulation leaves out. */
-export function SimFinePrint({ file }: { file: LeagueFile }) {
+export function SimFinePrint({ file, whatIf = false }: { file: LeagueFile; whatIf?: boolean }) {
   return (
     <FinePrint label="How these odds are made">
+      {whatIf && (
+        <p>
+          What if: your browser reruns the same simulation with the games you decided fixed, and "now" with nothing fixed, on the same random draws, so the difference is your decisions and not noise. Its "now" can
+          differ from the published odds by a point or so, because they are separate samples. Your saved picks count as decisions while "Use my picks" is on; a game you set in the link beats your pick. Beyond the next
+          week or so, the market's chances are our estimate of the market, not a quote.
+        </p>
+      )}
       <p>
         Each team's odds come from {file.n_sims.toLocaleString('en-US')} simulations of the rest of the season, run twice. The Student's run used {sourcesText(file.odds.student)}. The market's run used{' '}
         {sourcesText(file.odds.market)}.
@@ -57,32 +75,21 @@ function WinsRange({ w }: { w: { mean: number; lo: number; hi: number } }) {
   )
 }
 
-/** The Playoff odds tab: P(playoffs) for one conference, Student or market (ADR 0019). */
-export function Odds({ file }: { file: LeagueFile }) {
-  const [params, setParams] = useSearchParams()
-  const conf = parseConf(params.get('conf'))
-  const view = parseView(params.get('view'))
-  const set = (k: string, v: string, fallback: string) =>
-    setParams((prev) => { const n = new URLSearchParams(prev); if (v === fallback) n.delete(k); else n.set(k, v); return n }, { replace: true, preventScrollReset: true })
-  const rows = oddsRows(file, conf, view)
+type Row = { team: LeagueTeam; odds: LeagueOddsTeam; was?: LeagueOddsTeam }
+
+/** One conference's table: the playoff bar, seed, division, bye and wins, with what-if arrows when `on`. */
+function ConfTable({ file, conf, rows, view, on, anySpark }: { file: LeagueFile; conf: Conf; rows: Row[]; view: View; on: boolean; anySpark: boolean }) {
   const { box, at, bind, card } = useChartTip()
-  const anySpark = rows.some((r) => hasSpark(sparkSeries(file, r.team.team, view)))
   const tipRow = rows.find((r) => r.team.team === at?.key)
-  if (Object.keys(file.odds.student.teams).length === 0) return <p className="text-ink-2">The regular season is over. The final records are on the Standings tab.</p>
-
+  const cols = on ? 'md:grid-cols-[5.5rem_2.5rem_minmax(0,1fr)_4.75rem_4.75rem_13rem]' : 'md:grid-cols-[6.5rem_2.5rem_minmax(0,1fr)_4rem_4rem_13rem]'
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <p className="text-ink-2">Each team's chance of reaching the playoffs, the top seven in its conference.</p>
-      <p className="text-[13px] text-ink-3">Simulated {kickoffEt(file.as_of)}.</p>
-      <div className="flex flex-wrap items-center gap-3">
-        <Segmented<Conf> label="Conference" value={conf} onChange={(v) => set('conf', v, 'AFC')} options={[{ value: 'AFC', label: 'AFC' }, { value: 'NFC', label: 'NFC' }]} />
-        <Segmented<View> label="Odds from" value={view} onChange={(v) => set('view', v, 'student')} options={[{ value: 'student', label: 'Student' }, { value: 'market', label: 'Market' }]} />
-      </div>
-
-      {view === 'market' && marketNote(file.odds.market) && <p className="text-[13px] text-ink-3">{marketNote(file.odds.market)}</p>}
-
+    <section className="flex min-w-0 flex-col gap-1">
+      <h3 className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+        <span aria-hidden className="inline-block h-3 w-1 rounded-sm" style={{ background: `var(--conf-${conf.toLowerCase()})` }} />
+        {conf}
+      </h3>
       <div ref={box} className="relative">
-        <div aria-hidden className="hidden grid-cols-[6.5rem_2.5rem_minmax(0,1fr)_4rem_4rem_13rem] gap-x-3 border-b border-line px-2 pb-1 text-[12px] uppercase tracking-wide text-ink-3 md:grid">
+        <div aria-hidden className={`hidden ${cols.replace('md:', '')} gap-x-3 border-b border-line px-2 pb-1 text-[12px] uppercase tracking-wide text-ink-3 md:grid`}>
           <span>Team</span>
           <span>Seed</span>
           <span>Playoffs</span>
@@ -91,20 +98,22 @@ export function Odds({ file }: { file: LeagueFile }) {
           <span>Wins, p10 to p90</span>
         </div>
         <ol aria-label={`${conf} playoff odds`} className="m-0 list-none p-0">
-          {rows.map(({ team, odds }, i) => (
+          {rows.map(({ team, odds, was: rowWas }, i) => (
             <li
               key={team.team}
               data-team={team.team}
               {...(bind(team.team) as unknown as HTMLAttributes<HTMLLIElement>)}
               data-matchup
               style={{ ...teamDotVars(team.team), cursor: 'pointer' }}
-              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line px-2 py-2 text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)] md:grid-cols-[6.5rem_2.5rem_minmax(0,1fr)_4rem_4rem_13rem] md:py-1.5 ${i === 7 ? 'border-t-2 border-t-[var(--text-muted)]' : ''}`}
+              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line px-2 py-2 text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${cols} md:py-1.5 ${i === 7 ? 'border-t-2 border-t-[var(--text-muted)]' : ''}`}
             >
               <span className="order-1 col-span-2 flex items-center gap-2 md:order-3 md:col-span-1">
                 <span className="relative h-3 min-w-0 flex-1 rounded-sm bg-surface-2">
-                  <span className="bar-grow absolute inset-y-0 left-0 origin-left rounded-sm" style={{ width: barWidth(odds.playoffs), background: 'var(--team-home)', ['--i' as string]: Math.min(i, 7) }} />
+                  <span className="absolute inset-y-0 left-0 origin-left rounded-sm transition-[width] duration-[var(--dur-slow)] ease-[var(--ease-out)]" style={{ width: barWidth(odds.playoffs), background: 'var(--team-home)' }} />
+                  {rowWas && <span aria-hidden title={`${fmtProb(rowWas.playoffs)} now`} className="absolute -inset-y-0.5 w-0.5 bg-[var(--text-muted)]" style={{ left: barWidth(rowWas.playoffs) }} />}
                 </span>
                 <span className="tabular w-14 shrink-0 text-right text-[15px] font-semibold text-ink">{fmtProb(odds.playoffs)}</span>
+                {on && (rowWas ? <Move from={rowWas.playoffs} to={odds.playoffs} big /> : <span aria-hidden className="w-9 shrink-0" />)}
                 {/* when any team has a line, the rest keep its width so every bar stays on one scale */}
                 {anySpark && (hasSpark(sparkSeries(file, team.team, view)) ? <Spark points={sparkSeries(file, team.team, view)} /> : <span aria-hidden className="w-16 shrink-0" />)}
               </span>
@@ -119,10 +128,12 @@ export function Odds({ file }: { file: LeagueFile }) {
               <span className="tabular order-4 text-ink-2 md:order-4 md:text-right">
                 <span className="text-ink-3 md:hidden">Division </span>
                 {fmtProb(odds.division)}
+                {rowWas && <Move from={rowWas.division} to={odds.division} />}
               </span>
               <span className="tabular order-5 text-right text-ink-2 md:text-right">
                 <span className="text-ink-3 md:hidden">Bye </span>
                 {fmtProb(odds.bye)}
+                {rowWas && <Move from={rowWas.bye} to={odds.bye} />}
               </span>
               <span className="order-6 col-span-2 md:col-span-1">
                 <WinsRange w={odds.wins} />
@@ -137,12 +148,108 @@ export function Odds({ file }: { file: LeagueFile }) {
               {ROUNDS.map(([k, label]) => (
                 <TipRow key={k} value={fmtProb(tipRow.odds.rounds[k])} label={label} />
               ))}
-              <TipNote>{view === 'student' ? 'The Student' : 'The market'}'s simulations</TipNote>
+              <TipNote>{on ? 'Your scenario' : `${view === 'student' ? 'The Student' : 'The market'}'s simulations`}</TipNote>
             </>
           ),
         )}
       </div>
-      <p className="text-[13px] text-ink-3">The line marks the seven highest chances, not today's seeds. Tap a team for each round.{anySpark && ' Small line: chance at each Tuesday refresh.'}</p>
+    </section>
+  )
+}
+
+/** The Playoff odds tab: P(playoffs) for both conferences, market (default) or Student (ADR 0019); with `?whatif=1`, your scenario against now (M26.4). */
+export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: number; full: number } }) {
+  const [params, setParams] = useSearchParams()
+  const view = parseView(params.get('view'))
+  const set = (k: string, v: string, fallback: string) =>
+    setParams((prev) => { const n = new URLSearchParams(prev); if (v === fallback) n.delete(k); else n.set(k, v); return n }, { replace: true, preventScrollReset: true })
+  const scenario = parseScenario(params)
+  const canWhatIf = useMemo(() => simInputFrom(file, view) != null, [file, view])
+  const on = scenario.on && canWhatIf
+  const picks = usePicks()
+  const decided = useMemo(() => (on ? decide(file, scenario, picks, view) : new Map()), [on, file, params, picks, view]) // eslint-disable-line react-hooks/exhaustive-deps
+  const wi = useWhatIf(file, view, winners(decided), on, runs)
+  const setScenario = (sc: Scenario) => setParams((prev) => writeScenario(prev, sc), { replace: true, preventScrollReset: true })
+
+  const live = on && wi.now && wi.next
+  const rowsOf = (conf: Conf): Row[] => {
+    const base = oddsRows(file, conf, view)
+    return live
+      ? base.map((r) => ({ team: r.team, odds: toOddsTeam(wi.next![r.team.team]), was: toOddsTeam(wi.now![r.team.team]) })).sort((a, b) => b.odds.playoffs - a.odds.playoffs || a.team.team.localeCompare(b.team.team))
+      : base
+  }
+  const unordered = CONFS.map((c) => [c, rowsOf(c)] as const)
+  const all = unordered.flatMap(([, r]) => r)
+  const moved = live ? movers(wi.now!, wi.next!, all.map((r) => r.team.team)).slice(0, 5) : []
+  // in a scenario, the conference of the biggest mover comes first
+  const lead = moved[0] && all.find((r) => r.team.team === moved[0].team)?.team.conf
+  const tables = lead === 'NFC' ? [...unordered].reverse() : unordered
+  const anySpark = !on && all.some((r) => hasSpark(sparkSeries(file, r.team.team, view)))
+  const layout: 'bracket' | 'table' = params.get('layout') === 'table' ? 'table' : 'bracket'
+  const toMap = (o: Record<string, TeamOdds>) => Object.fromEntries(Object.entries(o).map(([t, x]) => [t, toOddsTeam(x)]))
+  const shownOdds = live ? toMap(wi.next!) : file.odds[view].teams
+  const wasOdds = live ? toMap(wi.now!) : undefined
+  const decidedGames = live
+    ? file.games.flatMap((g) => {
+        const d = decided.get(g.game_id)
+        return d ? [{ home: g.home, away: g.away, winner: d.winner }] : []
+      })
+    : []
+  if (Object.keys(file.odds[view].teams).length === 0) return <p className="text-ink-2">The regular season is over. The final records are on the Standings tab.</p>
+
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <p className="text-ink-2">Each team's chance of reaching the playoffs, the top seven in its conference.</p>
+      <p className="text-[13px] text-ink-3">Simulated {kickoffEt(file.as_of)}.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Segmented<View> label="Odds from" value={view} onChange={(v) => set('view', v, 'market')} options={[{ value: 'market', label: 'Market' }, { value: 'student', label: 'Student' }]} />
+        <Segmented<'bracket' | 'table'> label="Layout" value={layout} onChange={(v) => set('layout', v, 'bracket')} options={[{ value: 'bracket', label: 'Bracket' }, { value: 'table', label: 'Table' }]} />
+        {canWhatIf && (
+          <Segmented<'off' | 'on'> label="What if" value={on ? 'on' : 'off'} onChange={(v) => setScenario({ ...scenario, on: v === 'on' })} options={[{ value: 'off', label: 'Published' }, { value: 'on', label: 'What if…' }]} />
+        )}
+      </div>
+
+      <div className="contents">
+        {on && <WhatIfPanel file={file} scenario={scenario} decided={decided} source={view} nPicks={picksInPlay(file, picks)} onChange={setScenario} />}
+        <div className="contents">
+          {on && (
+            <div className="sticky top-12 z-10 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-md border-l-4 border-[var(--accent)] bg-surface-2 px-3 py-1.5 text-[13px] shadow-sm" aria-live="polite">
+              <span className="font-medium text-ink">
+                Your scenario, not the published odds{wi.busy ? ' · simulating…' : wi.runs ? ` · ${wi.runs.toLocaleString('en-US')} simulated seasons` : ''}
+              </span>
+              {live && (moved.length ? (
+                <span className="tabular text-ink-2">
+                  Biggest movers: {moved.map((m) => `${m.team} ${fmtProb(m.from)} → ${fmtProb(m.to)}`).join(' · ')}
+                </span>
+              ) : (
+                <span className="text-ink-3">{decided.size ? 'No team moves 3 points or more.' : 'Decide a game to see who it moves.'}</span>
+              ))}
+            </div>
+          )}
+
+          {view === 'market' && marketNote(file.odds.market) && <p className="text-[13px] text-ink-3">{marketNote(file.odds.market)}</p>}
+
+          {layout === 'bracket' ? (
+            <>
+              <Bracket file={file} odds={shownOdds} was={wasOdds} decided={decidedGames} first={lead === 'NFC' ? 'NFC' : 'AFC'} />
+              <p className="text-[13px] text-ink-3">
+                One likely bracket, not a prediction of it: each seed goes to the team most likely to hold it, and each game to the team more likely to win it. Every number is that team's chance to win that round
+                (for the Super Bowl, the title), with its seed on the left; under it, its record and its projected final record (expected wins, rounded), across all {on && wi.runs ? wi.runs.toLocaleString('en-US') : file.n_sims.toLocaleString('en-US')} simulated seasons, whoever it plays.{on && ' Arrows and colors: the change from now, before your decisions; the record counts the games you decided, wins in green and losses in red.'} The table has every team's odds of making the playoffs.
+              </p>
+            </>
+          ) : (
+            <>
+              {tables.map(([conf, rows]) => (
+                <ConfTable key={conf} file={file} conf={conf} rows={rows} view={view} on={on} anySpark={anySpark} />
+              ))}
+              <p className="text-[13px] text-ink-3">
+                The line marks the seven highest chances in each conference, not today's seeds. Tap a team for each round.{anySpark && ' Small line: chance at each Tuesday refresh.'}
+                {on && ' Gray tick and arrows: the chance now, before your decisions.'}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
 
       <DataTable>
         <table className="w-full border-collapse text-[13px]">
@@ -158,7 +265,7 @@ export function Odds({ file }: { file: LeagueFile }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ team, odds }) => (
+            {all.map(({ team, odds }) => (
               <tr key={team.team}>
                 <td className={td}>{teamInfo(team.team).name}</td>
                 <td className={`${td} tabular text-right`}>{fmtProb(odds.playoffs)}</td>
@@ -172,7 +279,7 @@ export function Odds({ file }: { file: LeagueFile }) {
           </tbody>
         </table>
       </DataTable>
-      <SimFinePrint file={file} />
+      <SimFinePrint file={file} whatIf={on} />
     </div>
   )
 }

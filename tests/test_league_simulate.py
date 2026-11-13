@@ -300,3 +300,22 @@ def test_backtest_student_rows_are_frozen_at_the_cut():
     )
     # (filtered out by the cut, so the fit simply loses that row rather than using it)
     assert bt.student_inputs(games, bad, cut).n_rows == 1
+
+
+def test_web_parity_fixture_is_current():
+    """M26.3: the browser engine is checked against sim.json; a change to the Python engine must
+    regenerate it (`uv run python scripts/league_parity.py --sim-only`)."""
+    import importlib.util
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location(
+        "league_parity", root / "scripts" / "league_parity.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    committed = json.loads((mod.OUT / "sim.json").read_text())
+    assert json.loads(mod.dump(mod.sim_fixture())) == committed, (
+        "rerun scripts/league_parity.py --sim-only"
+    )

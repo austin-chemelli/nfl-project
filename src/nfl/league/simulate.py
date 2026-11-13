@@ -99,6 +99,7 @@ def simulate_season(
     rng: np.random.Generator | int | None = None,
     seeder: Seeder | None = None,
     n_seeds: int = N_SEEDS,
+    on_run: Callable[[int, dict[str, list[str]], str], None] | None = None,
 ) -> SimResult:
     """Simulate the rest of the regular season and the playoffs `n_runs` times.
 
@@ -108,6 +109,7 @@ def simulate_season(
     `sigma` is the std of the per-run team logit shock, applied to every game of a team.
     `n_seeds` is 7 (from 2020) or 6 (to 2019: two byes, wild card 3v6 and 4v5). With 6 seeds
     `TeamOdds.bye` is still P(seed 1) only, not P(seed 1 or 2).
+    `on_run(run, seeds by conference, champion)` sees every run (the web parity fixture, M26.3).
     """
     if n_seeds not in (6, 7):
         raise ValueError(f"n_seeds must be 6 or 7, got {n_seeds}")
@@ -167,8 +169,10 @@ def simulate_season(
         u = u_bracket[run]
         k = 0
         champs: dict[str, int] = {}
+        seeded: dict[str, list[str]] = {}
         for conf in CONFS:
-            seeds = [ix[t] for t in seeder(results, conf, gen, n_seeds=n_seeds)]
+            seeded[conf] = list(seeder(results, conf, gen, n_seeds=n_seeds))
+            seeds = [ix[t] for t in seeded[conf]]
             if len(seeds) != n_seeds:
                 raise ValueError(f"seeder returned {len(seeds)} {conf} seeds, expected {n_seeds}")
             for s, t in enumerate(seeds):
@@ -196,6 +200,8 @@ def simulate_season(
             round_n["sb"][t] += 1
         x = u[k] < win_prob(a_team, n_team, True, d)  # AFC is the nominal "home"
         round_n["champ"][a_team if x else n_team] += 1
+        if on_run is not None:
+            on_run(run, seeded, teams[a_team if x else n_team])
 
     r = float(n_runs)
     out: dict[str, TeamOdds] = {}

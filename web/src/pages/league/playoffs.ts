@@ -6,7 +6,8 @@ export type Conf = 'AFC' | 'NFC'
 export type View = 'student' | 'market'
 
 export const parseConf = (raw: string | null): Conf => (raw === 'NFC' ? 'NFC' : 'AFC')
-export const parseView = (raw: string | null): View => (raw === 'market' ? 'market' : 'student')
+/** The market is the default view (Austin, 2026-11-12); `?view=student` picks the Student. */
+export const parseView = (raw: string | null): View => (raw === 'student' ? 'student' : 'market')
 
 /**
  * A simulated probability as text. Never "0%" or "100%": under 0.1% reads "<0.1%", over 99.9% reads
@@ -56,7 +57,9 @@ export function marketNote(v: Pick<LeagueVariant, 'sources'>): string | null {
   const line = v.sources.line ?? 0
   const total = Object.values(v.sources).reduce((a, b) => a + b, 0)
   if (line === total) return null
-  return `Only ${line} of the ${total} games left have a betting line yet. The rest are estimated from this season's lines, so read this as a rough market view.`
+  return line === 0
+    ? `None of the ${total} games left has a betting line yet. They are estimated from this season's lines, so read this as a rough market view.`
+    : `Only ${line} of the ${total} games left have a betting line yet. The rest are estimated from this season's lines, so read this as a rough market view.`
 }
 
 /** Scores reach the file up to a day after a game ends, so kickoff decides what is still to come. */
@@ -68,18 +71,18 @@ export function nextWeek(games: LeagueGame[], now: number = Date.now()): number 
   return ahead.length ? Math.min(...ahead.map((g) => g.week)) : null
 }
 
-/** Both branches need this many Student runs before a swing is believed (ADR 0019). */
+/** Both branches need this many of the market's runs before a swing is believed (ADR 0019; swings come from the market's runs since M26). */
 export const MIN_BRANCH_RUNS = 1000
 
 export const swingSize = (s: LeagueSwing) => Math.abs(s.if_home_win - s.if_away_win)
 
 /**
- * One swing as a sentence part: the team's chance now (the Student's), then its chance on the branch that
+ * One swing as a sentence part: the team's chance now (the market's), then its chance on the branch that
  * helps it. For a team in the game that branch is its own win: "CHI 55% → 80% with a win". For another team
- * it is whichever side's win helps: "CHI 55% → 80% if MIN wins". Null when the Student has no odds for the team.
+ * it is whichever side's win helps: "CHI 55% → 80% if MIN wins". Null when the market has no odds for the team.
  */
 export function swingText(g: Pick<LeagueGame, 'home' | 'away'>, s: LeagueSwing, file: Pick<LeagueFile, 'odds'>): string | null {
-  const now = file.odds.student.teams[s.team]?.playoffs
+  const now = file.odds.market.teams[s.team]?.playoffs
   if (now == null) return null
   const homeHelps = s.if_home_win >= s.if_away_win
   const to = homeHelps ? s.if_home_win : s.if_away_win

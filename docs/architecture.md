@@ -213,7 +213,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 
 - `site/similar.json`: each team's 25 nearest past team-seasons, its seven-measure profile and its flag cards (ADR 0019).
 - `site/teams.json`: every team's latest season-to-date value, league percentile and rank for every team-level feature, from each team's next-game row as of the last feature build (`nfl.league.teams.team_latest`), plus conference, division, record and games. `feature_bands` reads the same table.
-- `site/league.json`: standings with "seed today", playoff odds per team for two variants (Student, market), game leverage and odds history (ADR 0019).
+- `site/league.json`: standings with "seed today", playoff odds per team for two variants (Student, market), game leverage and odds history (ADR 0019); since M26.2 also the played results and each variant's playoff ratings, so the browser can rerun the simulation for the playoff what-if (ADR 0029; engine in `web/src/lib/league/`, kept in parity with the Python by fixtures from `scripts/league_parity.py`).
 - `marts/league/season=YYYY/snapshots.parquet`: append-only odds snapshots (as_of, kind refresh|lock, variant, team, outputs, model_version, n_sims, seed), written on the Tuesday refresh and after each real lock, never backfilled.
 
 ### 3.7 Site JSON (the UI contract)

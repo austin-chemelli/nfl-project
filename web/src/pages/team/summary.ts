@@ -7,7 +7,7 @@ import { biggestChange } from './tendencies'
 export type TileText = { label: string; value: string; sub: string; tab: string }
 
 export function playoffTile(league: LeagueFile | undefined, code: string): TileText | null {
-  const odds = league?.odds.student.teams[code]
+  const odds = league?.odds.market.teams[code]
   if (!odds) return null
   const seed = league?.teams.find((t) => t.team === code)?.seed_today
   return { label: 'Playoff chance', value: fmtProb(odds.playoffs), sub: seed ? `Seed ${seed} today` : 'Outside the seeds today', tab: 'overview' }

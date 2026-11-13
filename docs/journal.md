@@ -818,3 +818,48 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Lesson.** Measure how much a section will vary before designing it: the same check would have caught the market lean's emptiness before it was built.
 
+## 2026-11-12: The league engine in the browser (M26.2, M26.3; picks track)
+
+**Why.** Stage 2 of idea (d): decide games on the League page and watch the playoff odds move (plan `m26-playoff-whatif`: a mode of the Playoff odds tab, your slate picks applied with a switch, Student and market only for now). Re-simulating on every click needs the engine in the browser.
+
+**What changed.** `league.json` gains `played[]` and each variant's `ratings` and `home_term` (additive, about 12 KB on today's file). `simulate_season` takes an `on_run` hook. `web/src/lib/league/`: `standings.ts`, `tiebreak.ts`, `simulate.ts` (no leverage; a decided game takes the visitor's winner; draws come per run in a fixed amount whether a game is decided or not, so "now" and "what if" on one seed share their random numbers; coin flips on their own stream), `input.ts` (the engine's input from the file, null for a pre-M26.2 file), `worker.ts` and `client.ts` (a Web Worker, with a main-thread fallback). `scripts/league_parity.py` writes the parity fixtures.
+
+**Parity.** The TypeScript gives the Python's seeds on all 48 real conference-seasons 2002-2025 (with and without the points steps) and on 240 perturbed seasons without scores (30% of results flipped: every step through strength of schedule, including the three-club sweep and the four-common-games minimum); replaying the Python's random draws gives the same seeds and champion on all 60 runs; 4,000 runs on its own generator land within Monte Carlo error of the Python's odds. On today's real file, the TypeScript's 10,000 runs and the published 2,000 differ by at most 2.1 points of playoff chance (NE, HOU), as expected for samples that size. A Python test fails when the committed `sim.json` no longer matches the engine.
+
+**Measured.** 10,000 runs take 1.1-1.3 s on the laptop (2,000 take 0.3 s), so the page will compute "now" once per source and run the what-if at 2,000 first, then refine to 10,000.
+
+**Lesson.** Porting arithmetic operation for operation (integer sums, then one division) made float equality in the tiebreak steps hold across languages without any tolerance.
+
+## 2026-11-12: The What if mode (M26.4; picks track)
+
+**Why.** Austin asked to see the playoff what-if rather than review the engine on its own. Decisions from the plan: a mode inside the Playoff odds tab, your slate picks applied with a visible switch, Student and market only.
+
+**What changed.** A Published / What if… switch on Playoff odds. On: a game list (this week open, later weeks folded) beside the table on wide screens, stacked on a phone; each game's two team buttons decide it, clicking again leaves it to the source; "Use my N picks", "Favorites win out", "Reset", "Copy link"; the scenario lives in the URL (`d`, `fav`, `mypicks`). The table shows the what-if chance with an arrow from now and a gray tick at now on the bar, Division and Bye arrows, and a "Biggest movers" line. "Now" and the scenario run on one seed in the Web Worker, 2,000 runs first, then 10,000. The slate's "Your picks" strip links to it. #54 merged #53's branch in to use the picks store.
+
+**Measured.** On today's real file, deciding a game shows a first answer in about 0.4 s and the 10,000-run answer in about 1.5 s; the page stays responsive. WAS over NYG, PIT over PHI and DAL over SF move NYG 59% → 41%, DAL 33% → 49%, WAS 13% → 17%.
+
+**Lesson.** The first layout stacked a 14-game list above the table, so nothing moved on screen while you clicked; putting the list beside the table is what makes it feel like a what-if.
+
+## 2026-11-12: What if, after Austin's look: both conferences, by team, the market first (M26.4; picks track)
+
+**Why.** Austin's review of the What if mode: switching between AFC and NFC was annoying; a way to take one team (the Cowboys) and decide its next few games; and the market, not the Student, as the default for every playoff view.
+
+**What changed.** Playoff odds shows both conferences, AFC then NFC, with no conference switch (in a scenario the biggest mover's conference comes first, and the movers line spans both). The decide panel gains "By week / By team": pick a team, see its remaining games with their week, decide them one by one or with "wins out", "loses out" and "Clear". The market is the default view (`?view=student` for the Student) on the Odds tab, the summary tiles, the team page's playoff tile and odds; `league.json`'s `games[].swings` and leverage now come from the market's runs (`_games` takes the market sim, `p_student` from the Student's inputs), so "Games that matter" and the slate's "Playoff stakes" line follow it. The market note reads "None of the N games left has a betting line yet" instead of "Only 0".
+
+**Measured.** On today's file, DAL winning its next three (SF, TEN, PHI) moves DAL 47% → 66% and NYG 53% → 41% in the market's view.
+
+## 2026-11-12: A projected bracket as the Playoff odds default (M26.4 follow-up; picks track)
+
+**Why.** Austin wanted the playoff picture as a bracket, not only a table of odds, with the table a toggle away for detail.
+
+**What changed.** `pages/league/bracket.ts` projects one bracket from the simulated odds: the seeds are the assignment of teams to seeds 1-7 that maximizes the summed P(team holds that seed), solved exactly by a DP over which seeds are filled (picking the top team per seed can give one team two seeds, or a weak 2 seed when the 1 seed's leader also leads the 2); each game goes to the team more likely to win its round; the 1 seed meets the lowest seed left. `Bracket.tsx` draws wild card, divisional and conference columns per conference (side by side on wide screens, stacked in What if mode and on phones), the Super Bowl and the projected champion below, and "Next in line" under each conference. Every number is the team's chance to win that round, so the advancing team always shows the higher number; What if mode adds the ▲/▼ from now and puts the biggest mover's conference first. A Bracket | Table switch (`?layout=table`).
+
+**Lesson.** The first draft showed each team's chance to reach the round it was in while advancing teams on the next round's chance, so a box could bold the lower number (BUF 40%, JAX 39%, JAX advances). Showing the number the decision is made on fixed it.
+
+## 2026-11-12: The bracket faces off, with lines and records (M26.4 follow-up; picks track)
+
+**Why.** Austin: lines that join the rounds, each team's projected record next to its current one (in a scenario, the record with the decided games, wins in green and losses in red), and the two conferences facing each other with the Super Bowl in the middle; the decide panel could go horizontal to make room.
+
+**What changed.** `Bracket.tsx`: with at least about 1,040 px, a seven-column face-off (AFC wild card, divisional, title game, Super Bowl, then the NFC mirrored); narrower (phones), each conference left to right with the Super Bowl below. Lines are an SVG overlay measured from the rendered rows after layout (and on resize), because the NFL reseeds after the wild card, so the divisional pairings aren't a fixed tree. Each team row has a second line, "7–5 · proj 10–7": in a scenario the record counts the decided games, the added wins in green and losses in red, and the projected record turns green or red when it moves a win (`bracket.ts` `projected`, `recordView`; expected wins rounded, never below the wins already banked). On phones the ▲/▼ doesn't fit, so the number itself turns green or red. `WhatIf.tsx` is now a strip across the top: one control row, week chips with how many games are decided, and that week's games one line each (each team's chance inside its button). The scenario banner is sticky under the header.
+
+**Measured.** With WAS over NYG and DAL over SF, TEN and PHI, DAL goes 47% → 73% to make the playoffs and into the bracket as the NFC 3 seed at 7–5, projected 10–7.

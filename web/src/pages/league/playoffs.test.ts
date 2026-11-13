@@ -32,12 +32,13 @@ describe('fmtProb', () => {
 })
 
 describe('params', () => {
-  it('fall back to AFC and the Student', () => {
+  it('fall back to AFC and the market', () => {
     expect(parseConf(null)).toBe('AFC')
     expect(parseConf('NFC')).toBe('NFC')
     expect(parseConf('x')).toBe('AFC')
     expect(parseView('market')).toBe('market')
-    expect(parseView('x')).toBe('student')
+    expect(parseView('x')).toBe('market')
+    expect(parseView('student')).toBe('student')
   })
 })
 
@@ -69,7 +70,7 @@ describe('text', () => {
 })
 
 describe('swings', () => {
-  const f = { odds: { student: { sources: {}, teams: { CHI: { playoffs: 0.55 }, BUF: { playoffs: 0.3 } } } } } as unknown as LeagueFile
+  const f = { odds: { market: { sources: {}, teams: { CHI: { playoffs: 0.55 }, BUF: { playoffs: 0.3 } } } } } as unknown as LeagueFile
   const g = { home: 'MIN', away: 'BUF' }
   it('reads the winning branch for the team in the game', () => {
     expect(swingText(g, { team: 'BUF', if_home_win: 0.2, if_away_win: 0.5 }, f)).toBe('BUF 30% → 50% with a win')
@@ -110,6 +111,7 @@ describe('gamesByLeverage', () => {
   it('notes the estimate only while some games lack a line', () => {
     expect(marketNote({ sources: { line: 29, ratings: 122 } })).toContain('Only 29 of the 151 games')
     expect(marketNote({ sources: { line: 151 } })).toBeNull()
+    expect(marketNote({ sources: { ratings: 136 } })).toContain('None of the 136 games left has a betting line')
   })
   it('handles no games', () => expect(gamesByLeverage([], 0)).toEqual({ week: null, next: [], rest: [] }))
 })

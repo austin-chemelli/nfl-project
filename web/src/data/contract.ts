@@ -1047,7 +1047,13 @@ export const LeagueOddsTeam = z.looseObject({
 export const LeagueVariant = z.looseObject({
   sources: z.record(z.string(), num).default({}),
   teams: z.record(z.string(), LeagueOddsTeam),
+  /** M26.2: logit ratings and home term that price playoff games in the browser's what-if. */
+  ratings: z.record(z.string(), num).default({}),
+  home_term: num.default(0),
 })
+
+/** M26.2: a finished regular-season game; the browser's tiebreaks need every result. */
+export const LeaguePlayed = z.looseObject({ week: num, home: z.string(), away: z.string(), home_score: num, away_score: num })
 
 export const LeagueSwing = z.looseObject({ team: z.string(), if_home_win: num, if_away_win: num })
 
@@ -1132,11 +1138,13 @@ export const LeagueFile = z.looseObject({
   teams: z.array(LeagueTeam),
   odds: z.looseObject({ student: LeagueVariant, market: LeagueVariant }),
   games: z.array(LeagueGame).default([]),
+  played: z.array(LeaguePlayed).default([]),
   history: z.record(z.string(), z.array(LeagueHistoryPoint)).default({}),
 })
 
 export type LeagueTeam = z.infer<typeof LeagueTeam>
 export type LeagueOddsTeam = z.infer<typeof LeagueOddsTeam>
+export type LeaguePlayed = z.infer<typeof LeaguePlayed>
 export type LeagueVariant = z.infer<typeof LeagueVariant>
 export type LeagueSwing = z.infer<typeof LeagueSwing>
 export type LeagueGame = z.infer<typeof LeagueGame>
