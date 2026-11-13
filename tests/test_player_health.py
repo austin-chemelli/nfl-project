@@ -160,3 +160,33 @@ def test_wr_replacements_only_name_a_receiver_who_was_left_out():
     w = _week()
     wr = {s["player"]: s["replaced_by"] for s in w["starters"] if s["slot"].startswith("WR")}
     assert wr == {"Star WR": "W Four", "W Two": None, "W Three": None}
+
+
+def test_before_friday_a_hurt_practice_is_a_doubt_not_a_loss():
+    prac = [
+        {"team": "HHH", "week": 11, "gsis_id": "qb", "pos": "QB", "status": None,
+         "practice": "Did Not Participate In Practice"},
+        {"team": "HHH", "week": 11, "gsis_id": "w3", "pos": "WR", "status": None,
+         "practice": "Limited Participation in Practice"},
+    ]  # fmt: skip
+    # no game statuses yet: practice-only rows
+    w = H.team_week(DEPTH, "HHH", 2026, 11, NOW, ROSTERS, prac, VALS, RATES)
+    s = {x["player"]: x for x in w["starters"]}
+    assert not w["reported"]
+    assert (s["Q B"]["status"], s["Q B"]["doubt"], s["Q B"]["missing_pts"]) == ("Did not practice", True, 0.0)  # fmt: skip
+    assert s["W Three"]["status"] == "Limited in practice"
+    assert (
+        w["doubt_pts"] == 4.3
+        and next(g for g in w["groups"] if g["grp"] == "WR")["doubt_pts"] == 0.3
+    )
+    # once game statuses are posted, a practice row with none means he plays
+    w = H.team_week(DEPTH, "HHH", 2026, 11, NOW, ROSTERS, INJ + prac, VALS, RATES)
+    s = {x["player"]: x for x in w["starters"]}
+    assert s["Q B"]["status"] is None and not s["Q B"]["doubt"] and w["doubt_pts"] == 0
+
+
+def test_each_spot_carries_the_chart_behind_it():
+    s = {x["slot"]: x for x in _week()["starters"]}
+    assert [d["player"] for d in s["LT"]["depth"]] == ["Backup LT"]  # the camp injury's spot
+    assert s["QB"]["depth"] == []
+    assert [x["slot"] for x in _week()["starters"]][:3] == ["LT", "TE", "WR1"]  # offense, in order

@@ -1,6 +1,7 @@
 /**
  * How far the team is from full strength (M24.7): the share of its full-strength starters' value
- * expected on the field this week, by position group, who is missing and when they can be back, and
+ * expected on the field this week, by position group, a depth chart of each spot (the full-strength
+ * starter, his status and window, who is behind him), the scored claims' sentences, and
  * the same share for every game so far with an outlook that brings players back when eligible.
  * Context only (ADR 0027).
  */
@@ -31,21 +32,29 @@ export function whenBack(s: HealthStarter, week: number): string {
 
 function Groups({ h }: { h: TeamHealth['now'] }) {
   const outBy = (grp: string) => h.starters.filter((s) => s.grp === grp && (s.missing_pts ?? 0) > 0).map((s) => s.player)
+  const doubtBy = (grp: string) => h.starters.filter((s) => s.grp === grp && s.doubt).map((s) => s.player)
   return (
     <ul className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="health-groups">
       {h.groups.map((g) => {
         const share = g.health ?? 1
         const out = outBy(g.grp)
+        const doubt = doubtBy(g.grp)
+        const doubtShare = g.full_pts ? Math.min(share, g.doubt_pts / g.full_pts) : 0
         return (
           <li key={g.grp} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_3rem] items-center gap-x-3 gap-y-0.5 text-[14px]">
             <span className="truncate text-ink-2">{GROUP[g.grp] ?? g.grp}</span>
             <span className="relative h-3 overflow-hidden rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]" role="img" aria-label={`${GROUP[g.grp] ?? g.grp} at ${pct(share)} of full strength`}>
               <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent)]" style={{ width: `${Math.max(0, Math.min(1, share)) * 100}%` }} />
+              {doubtShare > 0 && (
+                <span data-doubt className="absolute inset-y-0" style={{ left: `${(share - doubtShare) * 100}%`, width: `${doubtShare * 100}%`, background: 'repeating-linear-gradient(135deg, var(--accent) 0 3px, var(--surface-2) 3px 6px)' }} />
+              )}
             </span>
             <span className={`tabular text-right ${share < 1 ? 'font-medium text-ink' : 'text-ink-3'}`}>{pct(share)}</span>
-            {out.length > 0 && (
+            {(out.length > 0 || doubt.length > 0) && (
               <span className="col-start-2 col-end-4 text-[12px] text-ink-3">
-                missing {out.join(', ')} · {pts(g.missing_pts)} of {pts(g.full_pts)} pts
+                {out.length > 0 && <>missing {out.join(', ')} · {pts(g.missing_pts)} of {pts(g.full_pts)} pts</>}
+                {out.length > 0 && doubt.length > 0 && '; '}
+                {doubt.length > 0 && <>in doubt (practice) {doubt.join(', ')}</>}
               </span>
             )}
           </li>
@@ -55,34 +64,65 @@ function Groups({ h }: { h: TeamHealth['now'] }) {
   )
 }
 
-function Missing({ h }: { h: TeamHealth['now'] }) {
-  const rows = h.starters.filter((s) => s.status != null).sort((a, b) => (b.missing_pts ?? 0) - (a.missing_pts ?? 0))
-  if (rows.length === 0) return <p className="m-0 text-ink-2">Every full-strength starter is available.</p>
+const tone = (s: { status: string | null; p_play?: number; doubt?: boolean }) =>
+  s.status == null ? '' : s.doubt || (s.p_play ?? 1) >= 0.5 ? 'text-ink-2 italic' : 'text-[var(--critical)]'
+
+function DepthRows({ rows, week }: { rows: HealthStarter[]; week: number }) {
   return (
     <TableScroll>
-      <table className="w-full border-collapse text-[14px]" data-testid="health-missing">
+      <table className="w-full table-fixed border-collapse text-[14px]">
+        <colgroup><col className="w-12" /><col /><col /></colgroup>
         <thead>
           <tr>
-            <th className={th}>Player</th>
             <th className={th}>Spot</th>
-            <th className={th}>Status</th>
-            <th className={th}>Worth, pts</th>
-            <th className={`${th} hidden sm:table-cell`}>Playing instead</th>
+            <th className={th}>Full strength</th>
+            <th className={th}>Behind him on the chart</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((s) => (
-            <tr key={s.slot}>
-              <td className={`${td} break-words font-medium`}>{s.player}</td>
-              <td className={td}>{s.slot.replace(/[123]$/, '')}</td>
-              <td className={td}>{whenBack(s, h.week)}</td>
-              <td className={`${td} tabular`}>{s.value_pts == null ? '–' : pts(s.value_pts)}</td>
-              <td className={`${td} hidden sm:table-cell text-ink-2`}>{s.replaced_by ?? '–'}</td>
-            </tr>
-          ))}
+          {rows.map((s) => {
+            const out = (s.missing_pts ?? 0) > 0
+            return (
+              <tr key={s.slot} data-slot={s.slot} className={out ? 'bg-[var(--surface-2)]' : ''}>
+                <td className={`${td} text-ink-3`}>{s.slot.replace(/[123]$/, '')}</td>
+                <td className={`${td} break-words`}>
+                  <span className="font-medium text-ink">{s.player}</span>
+                  {s.value_pts != null && <span className="tabular text-ink-3"> · {pts(s.value_pts)}</span>}
+                  {s.status && <span className={`block text-[13px] ${tone(s)}`}>{whenBack(s, week)}{!s.reserve && !s.doubt && s.status !== 'Out' ? ` · plays ${pct(s.p_play)}` : ''}</span>}
+                </td>
+                <td className={`${td} break-words text-ink-2`}>
+                  {s.depth.length === 0 && (s.replaced_by ? <span>{s.replaced_by}</span> : <span className="text-ink-3">–</span>)}
+                  {s.depth.map((d, i) => (
+                    <span key={d.player} className={i === 0 && out ? 'font-medium text-ink' : ''}>
+                      {i > 0 && <span className="text-ink-3">, then </span>}
+                      {d.player}
+                      {d.value_pts != null && <span className="tabular text-ink-3"> · {pts(d.value_pts)}</span>}
+                      {d.status && <span className={`text-[13px] ${tone(d)}`}> ({d.status})</span>}
+                    </span>
+                  ))}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </TableScroll>
+  )
+}
+
+function DepthChart({ h }: { h: TeamHealth['now'] }) {
+  return (
+    <div className="flex flex-col gap-5" data-testid="health-depth">
+      {(['offense', 'defense'] as const).map((u) => {
+        const rows = h.starters.filter((s) => s.unit === u)
+        return rows.length > 0 && (
+          <div key={u} className="flex flex-col gap-1">
+            <h4 className="m-0 text-[13px] font-medium uppercase tracking-wide text-ink-3">{u === 'offense' ? 'Offense' : 'Defense'}</h4>
+            <DepthRows rows={rows} week={h.week} />
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -156,18 +196,34 @@ export function Health({ file }: { file: TeamFile }) {
     : h.missing_pts > 0
       ? `At ${pct(h.health)} of full strength going into Week ${h.week}: ${pts(h.missing_pts)} of ${pts(h.full_pts)} points of starter value expected to miss.`
       : `At full strength going into Week ${h.week}: every full-strength starter is available.`
+  const doubtNames = h.starters.filter((s) => s.doubt).map((s) => s.player)
+  const listed = file.availability?.reported ? file.availability.listed : []
   const back = health.outlook.find((o) => o.health != null && o.health >= 0.995)
   return (
     <div className="flex flex-col gap-8">
       <Block title={`Health, Week ${h.week}`} line={lede}>
         {!h.reported && (
-          <p className="m-0 text-[13px] text-ink-3">This week&apos;s injury report has no game statuses yet, so only players on a reserve list (IR, PUP) count so far.</p>
+          <p className="m-0 text-[13px] text-ink-3" data-testid="health-doubt">
+            No game statuses yet this week (teams post them Friday), so the share counts only reserve lists.
+            {doubtNames.length > 0
+              ? <> In doubt from practice: {doubtNames.join(', ')} ({pts(h.doubt_pts)} pts, striped in the bars).</>
+              : ' No full-strength starter missed practice.'}
+          </p>
         )}
         <Groups h={h} />
       </Block>
-      <Block title="Who's missing">
-        <Missing h={h} />
+      <Block title="Depth chart" line="Each spot's full-strength starter, this week's status, and who is behind him on the latest chart (in bold where he plays instead).">
+        <DepthChart h={h} />
       </Block>
+      {listed.length > 0 && (
+        <Block title="What we said about this week">
+          <ul className="m-0 flex list-none flex-col gap-2 p-0" data-testid="health-claims">
+            {listed.map((k) => (
+              <li key={`${k.player}-${k.grp}`} className="border-b border-line pb-2 text-ink">{k.sentence}</li>
+            ))}
+          </ul>
+        </Block>
+      )}
       <Block
         title="By week"
         line={back && h.health != null && h.health < 0.995
@@ -177,7 +233,7 @@ export function Health({ file }: { file: TeamFile }) {
         <HealthChart health={health} />
       </Block>
       <FinePrint>
-        <p>Full strength is the team&apos;s best lineup this season: at each spot, the most valuable player the depth chart has had as the starter since March who is still on the roster and is out now (a healthy player the chart moved down lost the job; he doesn&apos;t count). Each is valued as he was going into his last game. A player on IR may return after missing four of his team&apos;s games; IR from before Week 1 usually means the season, so it gets no window. Questionable and Doubtful count by how often players with that status have played. Context only: no prediction uses it.</p>
+        <p>Full strength is the team&apos;s best lineup this season: at each spot, the most valuable player the depth chart has had as the starter since March who is still on the roster and is out now (a healthy player the chart moved down lost the job; he doesn&apos;t count). Each is valued as he was going into his last game. A player on IR may return after missing four of his team&apos;s games; IR from before Week 1 usually means the season, so it gets no window. Questionable and Doubtful count by how often players with that status have played since 2016. Before Friday's statuses, a starter who missed or was limited in practice is shown as in doubt but not counted: a Wednesday absence is often a rest day, and the play rates we can measure (23% after a missed last practice, 74% after a limited one) are for the week's last practice. Context only: no prediction uses it.</p>
       </FinePrint>
     </div>
   )

@@ -1732,7 +1732,31 @@ def _health(paths: Paths, games: pl.DataFrame, season: int, injuries: list[dict]
     pg = pv.player_games(paths, lo=season - 1 - pv.P.SEASONS_BACK)
     values = ph.HealthyValues(pg, pv.prior_scores(paths))
     rates = pc.play_rates(pc.rate_table(paths))
-    return ph.season(games, depth, rosters, injuries, values, rates, now, season)
+    report = injuries + _practice_rows(paths, season)
+    return ph.season(games, depth, rosters, report, values, rates, now, season)
+
+
+def _practice_rows(paths: Paths, season: int) -> list[dict]:
+    """This season's report rows with no game status but a practice status that says hurt (did not
+    practice, limited): the midweek signal before Friday (M24.7)."""
+    import duckdb
+
+    from nfl.players import status as ps
+
+    d = paths.curated_table("injuries") / f"season={season}"
+    if not d.exists():
+        return []
+    keep = ", ".join(f"'{p}'" for p in ps.PRACTICE)
+    df = duckdb.sql(
+        f"select week, team, gsis_id, position, practice_status "
+        f"from read_parquet('{d.as_posix()}/*.parquet') "
+        f"where report_status is null and practice_status in ({keep}) and gsis_id is not null"
+    ).pl()
+    return [
+        {"week": r["week"], "team": r["team"], "gsis_id": r["gsis_id"], "pos": r["position"],
+         "status": None, "practice": r["practice_status"]}
+        for r in df.iter_rows(named=True)
+    ]  # fmt: skip
 
 
 def _game_health(health: dict, g: dict) -> dict | None:

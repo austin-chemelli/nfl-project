@@ -7,10 +7,14 @@ starters is valued **as he was going into his last game** (his role from the gam
 a player out for weeks keeps the value he had rather than decaying with the injury game.
 
 Each full-strength starter then has this week's status: on a reserve list (IR, PUP, from the weekly
-roster), listed Out, Doubtful or Questionable on the report, inactive, or available. What he's
-expected to miss is value × (1 − P(plays)); the team's health is the share of its full-strength
-value expected on the field. The outlook assumes a player on IR returns the week he's eligible
-(four games after he went on it) and a player on the report the next week: a window, never a date.
+roster), listed Out, Doubtful or Questionable on the report, before Friday's game statuses the
+latest practice report (did not practice, limited) as a doubt that doesn't count against health
+(a Wednesday DNP is often rest, and the rates we can measure are for the week's last practice),
+inactive, or available. What he's expected to miss is value × (1 − P(plays)); the team's health is the share
+of its full-strength value expected on the field. Each spot also carries the chart's next two men
+there (who plays if he can't). The outlook assumes a player on IR returns the week he's eligible
+(four team games after he went on it) and a player on the report the next week: a window, never a
+date.
 
 Context only: nothing here reaches a lock or a feature.
 """
@@ -23,6 +27,7 @@ import polars as pl
 
 from nfl.players import claims as C
 from nfl.players import lineup as L
+from nfl.players import status as S
 from nfl.players import value as V
 
 SEASON_CHARTS_FROM = "03-01"  # the offseason chart: a player hurt in camp was the starter here
@@ -167,18 +172,42 @@ def roster_at(rosters: pl.DataFrame, team: str, week: int) -> dict[str, dict]:
     return out
 
 
+def _report(g: str, team: str, week: int, injuries: list[dict]) -> tuple[dict | None, dict | None]:
+    """His row on this week's report with a game status, and (when none) one with a practice status
+    that says he's hurt (did not practice, or limited)."""
+    game = prac = None
+    for i in injuries:
+        if i["gsis_id"] != g or i["team"] != team or i["week"] != week:
+            continue
+        if i.get("status") in C.GAME_STATUSES:
+            game = i
+        elif i.get("practice") in S.PRACTICE:
+            prac = i
+    return game, (None if game else prac)
+
+
 def absent(g: str, team: str, week: int, roster: dict, injuries: list[dict]) -> bool:
-    """Not expected to play this week: a reserve list, a game status on the report, or inactive."""
+    """Not expected to play this week: a reserve list, a game status, did not practice, inactive."""
     ro = roster.get(g)
     if ro and (ro["status"] == "RES" or (ro["status"] == "INA" and ro["roster_week"] == week)):
         return True
-    return any(
-        i["gsis_id"] == g
-        and i["team"] == team
-        and i["week"] == week
-        and i["status"] in C.GAME_STATUSES
-        for i in injuries
-    )
+    game, _ = _report(g, team, week, injuries)
+    return game is not None
+
+
+def chart_depth(depth: pl.DataFrame, team: str, cutoff: datetime) -> dict[tuple, list[tuple]]:
+    """(pos_abb, pos_slot) -> [(gsis_id, player)] in rank order on the latest chart before the
+    cutoff: the depth at each spot."""
+    d = L.with_chart_dt(
+        depth.filter((pl.col("team") == team) & pl.col("gsis_id").is_not_null())
+    ).filter(pl.col("chart_dt") < cutoff)
+    if d.is_empty():
+        return {}
+    d = d.filter(pl.col("chart_dt") == d["chart_dt"].max()).sort("pos_rank")
+    out: dict[tuple, list[tuple]] = {}
+    for r in d.iter_rows(named=True):
+        out.setdefault((r["pos_abb"], r["pos_slot"]), []).append((r["gsis_id"], r["player_name"]))
+    return out
 
 
 def full_strength(
@@ -268,7 +297,7 @@ def eligible_week(since: int | None, team_weeks: list[int] | None) -> int | None
 
 def _status(
     g: str, team: str, week: int, roster: dict, injuries: list[dict], rates: dict,
-    team_weeks: list[int] | None = None,
+    team_weeks: list[int] | None = None, reported: bool = True,
 ) -> dict:  # fmt: skip
     ro = roster.get(g)
     if ro and ro["status"] == "RES":
@@ -277,25 +306,24 @@ def _status(
         eligible = eligible_week(since, team_weeks) if code == "R01" else None
         return {"status": RESERVE.get(code, "Reserve list"), "reserve": True, "p_play": 0.0,
                 "since_week": since, "eligible_week": eligible}  # fmt: skip
-    rep = next(
-        (
-            i
-            for i in injuries
-            if i["gsis_id"] == g
-            and i["team"] == team
-            and i["week"] == week
-            and i["status"] in C.GAME_STATUSES
-        ),
-        None,
-    )
+    rep, prac = _report(g, team, week, injuries)
     if rep:
         p = 0.0 if rep["status"] == "Out" else C._rate(rates, rep["status"], rep.get("pos"))[0]
         return {"status": rep["status"], "reserve": False, "p_play": round(p, 4),
                 "since_week": None, "eligible_week": None}  # fmt: skip
+    # before Friday's game statuses a hurt practice is a doubt, not a number: the rates we can
+    # measure are for the week's last practice, and a Wednesday DNP is often a rest day
+    if prac and not reported:
+        return {"status": S.PRACTICE[prac["practice"]], "reserve": False, "p_play": 1.0,
+                "since_week": None, "eligible_week": None, "doubt": True}  # fmt: skip
     if ro and ro["status"] == "INA" and ro["roster_week"] == week:
         return {"status": "Inactive", "reserve": False, "p_play": 0.0, "since_week": None,
                 "eligible_week": None}  # fmt: skip
     return {"status": None, "reserve": False, "p_play": 1.0, "since_week": None, "eligible_week": None}  # fmt: skip
+
+
+def _no_doubt(st: dict) -> dict:
+    return {"doubt": False, **st}
 
 
 def team_week(
@@ -317,21 +345,46 @@ def team_week(
         return None
     cands = candidates(depth, team, season, cutoff)
     roster = roster_at(rosters, team, week)
-    ids = list({*cands["gsis_id"].to_list(), *spots["gsis_id"].to_list()})
+    behind = chart_depth(depth, team, cutoff)
+    slot_key = {r["slot"]: (r["pos_abb"], r["pos_slot"]) for r in spots.iter_rows(named=True)}
+    ids = list({
+        *cands["gsis_id"].to_list(), *spots["gsis_id"].to_list(),
+        *(g for d in behind.values() for g, _ in d),
+    })  # fmt: skip
     vals = values.at(season, week, ids)
-    starters = []
-    out_now = lambda g: absent(g, team, week, roster, injuries)
-    for s in full_strength(spots, cands, vals, roster, out_now):
-        v = vals.get(s["gsis_id"])
-        value = round(float(v["value_pts"]), 2) if v and v["value_pts"] is not None else None
-        st = _status(s["gsis_id"], team, week, roster, injuries, rates, team_weeks)
-        missing = round(value * (1 - st["p_play"]), 2) if value is not None else None
-        starters.append({**s, "grp": v["grp"] if v else None, "value_pts": value, **st,
-                         "missing_pts": missing})  # fmt: skip
+
+    def val(g: str) -> float | None:
+        v = vals.get(g)
+        return round(float(v["value_pts"]), 2) if v and v["value_pts"] is not None else None
+
     # before the week's report has game statuses, a starter hurt this week still counts as healthy
     reported = any(
-        i["team"] == team and i["week"] == week and i["status"] in C.GAME_STATUSES for i in injuries
+        i["team"] == team and i["week"] == week and i.get("status") in C.GAME_STATUSES
+        for i in injuries
     )
+
+    def status(g: str) -> dict:
+        return _no_doubt(_status(g, team, week, roster, injuries, rates, team_weeks, reported))
+
+    starters = []
+    out_now = lambda g: absent(g, team, week, roster, injuries)
+    lineup = full_strength(spots, cands, vals, roster, out_now)
+    full_ids = {s["gsis_id"] for s in lineup}
+    for s in lineup:
+        v = vals.get(s["gsis_id"])
+        value = val(s["gsis_id"])
+        st = status(s["gsis_id"])
+        missing = round(value * (1 - st["p_play"]), 2) if value is not None else None
+        # the chart at this spot after him: who plays if he can't, and the next man up
+        chain = [
+            {"player": n, "value_pts": val(g), "status": status(g)["status"]}
+            for g, n in behind.get(slot_key[s["slot"]], [])
+            if g not in full_ids  # a full-strength starter elsewhere isn't depth here
+        ][:2]
+        starters.append({**s, "grp": v["grp"] if v else None, "value_pts": value, **st,
+                         "missing_pts": missing, "depth": chain})  # fmt: skip
+    order = {k: i for i, k in enumerate((*L.OFFENSE_ORDER, *L.DEFENSE_ORDER))}
+    starters.sort(key=lambda s: (s["unit"] != "offense", order.get(s["slot"], 99)))
     return {"week": week, "reported": reported, **summarize(starters), "starters": starters}
 
 
@@ -342,17 +395,23 @@ def summarize(starters: list[dict]) -> dict:
     for s in starters:
         if s["value_pts"] is None:
             continue
-        g = groups.setdefault(s["grp"], {"grp": s["grp"], "full_pts": 0.0, "missing_pts": 0.0})
+        g = groups.setdefault(
+            s["grp"], {"grp": s["grp"], "full_pts": 0.0, "missing_pts": 0.0, "doubt_pts": 0.0}
+        )
         g["full_pts"] += s["value_pts"]
         g["missing_pts"] += s["missing_pts"] or 0
+        g["doubt_pts"] += s["value_pts"] if s.get("doubt") else 0
     rows = [
         {**g, "full_pts": round(g["full_pts"], 2), "missing_pts": round(g["missing_pts"], 2),
+         "doubt_pts": round(g["doubt_pts"], 2),
          "health": round(1 - g["missing_pts"] / g["full_pts"], 3) if g["full_pts"] else None}
         for g in groups.values()
     ]  # fmt: skip
     return {
         "full_pts": round(full, 2),
         "missing_pts": round(miss, 2),
+        # starters who missed or were limited in practice before game statuses: value in doubt
+        "doubt_pts": round(sum(s["value_pts"] or 0 for s in starters if s.get("doubt")), 2),
         "health": round(1 - miss / full, 3) if full else None,
         "groups": sorted(rows, key=lambda g: -g["full_pts"]),
     }

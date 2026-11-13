@@ -20,15 +20,16 @@ describe('Health tab', () => {
     expect(screen.getByText(/At 80% of full strength going into Week 11/)).toBeInTheDocument()
     const groups = within(screen.getByTestId('health-groups'))
     expect(groups.getByText(/missing Terry McLaurin/)).toBeInTheDocument()
-    const missing = within(screen.getByTestId('health-missing'))
-    expect(missing.getByText('IR since camp · no return window')).toBeInTheDocument()
-    expect(missing.getByText('IR since Wk 8 · eligible Wk 12')).toBeInTheDocument()
+    const depth = within(screen.getByTestId('health-depth'))
+    expect(depth.getByText(/IR since camp · no return window/)).toBeInTheDocument()
+    expect(depth.getByText(/IR since Wk 8 · eligible Wk 12/)).toBeInTheDocument()
+    expect(screen.getByTestId('health-depth').querySelector('[data-slot="QB"]')).not.toBeNull()
     expect(screen.getByTestId('health-chart').querySelectorAll('[data-kind="outlook"]').length).toBe(health.outlook.length)
   })
 
   it('notes when the week has no game statuses yet', () => {
     ui(file)
-    expect(screen.getByText(/no game statuses yet/)).toBeInTheDocument()
+    expect(screen.getByText(/No game statuses yet this week/)).toBeInTheDocument()
   })
 
   it('renders nothing without health, and the tile reads the share', () => {
@@ -36,6 +37,25 @@ describe('Health tab', () => {
     expect(container.innerHTML).toBe('')
     expect(healthTile(file)).toMatchObject({ label: 'Health', value: '80%', tab: 'health' })
     expect(healthTile(undefined)).toBeNull()
+  })
+
+  it('shows the claims sentences only once the report is in', () => {
+    const kp = { player: 'Sam Star', pos: 'WR', grp: 'WR', status: 'Out', p_play: 0, p_play_n: 1, value_pts: 1, at_risk: 1, sentence: 'Sam Star is Out.' }
+    ui({ health, availability: { week: 11, players: [], listed: [kp], reported: true, value_at_risk: 1 } } as unknown as TeamFile)
+    expect(screen.getByTestId('health-claims').textContent).toBe('Sam Star is Out.')
+    cleanup()
+    ui({ health, availability: { week: 11, players: [], listed: [kp], reported: false, value_at_risk: null } } as unknown as TeamFile)
+    expect(screen.queryByTestId('health-claims')).toBeNull()
+  })
+
+  it('stripes and names practice doubts before Friday, without counting them', () => {
+    const now = { ...health.now, reported: false, doubt_pts: 0.9,
+      groups: health.now.groups.map((g) => (g.grp === 'CB' ? { ...g, doubt_pts: 0.9 } : g)),
+      starters: health.now.starters.map((s) => (s.grp === 'CB' ? { ...s, status: 'Did not practice', doubt: true } : s)) }
+    const { container } = ui({ health: { ...health, now } } as unknown as TeamFile)
+    expect(screen.getByTestId('health-doubt').textContent).toMatch(/In doubt from practice: .+ \(0\.9 pts/)
+    expect(container.querySelector('[data-doubt]')).not.toBeNull()
+    expect(screen.getByText(/At 80% of full strength/)).toBeInTheDocument()
   })
 
   it('says when a player can be back', () => {

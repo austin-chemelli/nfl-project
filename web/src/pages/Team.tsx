@@ -10,7 +10,6 @@ import { TEAM_CODES, canonicalTeam, isTeam, teamInfo } from '../lib/teams'
 import { recordText } from './league/helpers'
 import { recordOf } from './league/playoffs'
 import NotFoundPage from './NotFound'
-import { Availability } from './team/Availability'
 import { Health } from './team/Health'
 import { Games } from './team/Games'
 import { Overview } from './team/Overview'
@@ -86,7 +85,6 @@ function Body({ code }: { code: string }) {
               { id: 'overview', label: 'Overview', content: teams.data || league.data ? <Overview code={code} teams={teams.data} league={league.data} similar={similar.data} /> : noNumbers },
               { id: 'staff', label: 'Staff', content: <Part q={file} what="Staff details">{(f) => <Staff file={f} />}</Part> },
               ...(file.data?.health ? [{ id: 'health', label: 'Health', content: <Health file={file.data} /> }] : []),
-              ...(file.data?.availability ? [{ id: 'availability', label: 'Availability', content: <Availability file={file.data} /> }] : []),
               { id: 'tendencies', label: 'Tendencies', content: <Part q={file} what="Tendencies">{(f) => <Tendencies file={f} />}</Part> },
               { id: 'games', label: 'Games', content: <Games code={code} teams={teams.data} league={league.data} file={file.data} /> },
             ]}
@@ -104,5 +102,7 @@ export default function TeamPage() {
   if (!isTeam(code)) return <NotFoundPage />
   const canon = canonicalTeam(code)
   if (canon !== code) return <Navigate to={`/team/${canon}${search}`} replace />
+  // Availability merged into Health (M24.7): old links open Health
+  if (new URLSearchParams(search).get('tab') === 'availability') return <Navigate to={`/team/${canon}?tab=health`} replace />
   return <Body key={canon} code={canon} />
 }
