@@ -1,9 +1,10 @@
 {
  "now": {
   "week": 11,
-  "full_pts": 11.98,
+  "reported": false,
+  "full_pts": 11.77,
   "missing_pts": 2.34,
-  "health": 0.805,
+  "health": 0.801,
   "groups": [
    {
     "grp": "QB",
@@ -25,7 +26,7 @@
    },
    {
     "grp": "EDGE",
-    "full_pts": 1.16,
+    "full_pts": 1.02,
     "missing_pts": 0.0,
     "health": 1.0
    },
@@ -37,7 +38,7 @@
    },
    {
     "grp": "CB",
-    "full_pts": 0.63,
+    "full_pts": 0.56,
     "missing_pts": 0.0,
     "health": 1.0
    },
@@ -72,7 +73,7 @@
     "unit": "offense",
     "gsis_id": "00-0035659",
     "player": "Terry McLaurin",
-    "replaced_by": "Stefon Diggs",
+    "replaced_by": "Treylon Burks",
     "grp": "WR",
     "value_pts": 1.14,
     "status": "IR",
@@ -87,7 +88,7 @@
     "unit": "offense",
     "gsis_id": "00-0031588",
     "player": "Stefon Diggs",
-    "replaced_by": "Antonio Williams",
+    "replaced_by": null,
     "grp": "WR",
     "value_pts": 1.02,
     "status": null,
@@ -102,7 +103,7 @@
     "unit": "offense",
     "gsis_id": "00-0041040",
     "player": "Antonio Williams",
-    "replaced_by": "Treylon Burks",
+    "replaced_by": null,
     "grp": "WR",
     "value_pts": 0.46,
     "status": null,
@@ -205,11 +206,11 @@
    {
     "slot": "SLB",
     "unit": "defense",
-    "gsis_id": "00-0036286",
-    "player": "K'Lavon Chaisson",
-    "replaced_by": "Dorance Armstrong",
+    "gsis_id": "00-0034373",
+    "player": "Dorance Armstrong",
+    "replaced_by": null,
     "grp": "EDGE",
-    "value_pts": 0.47,
+    "value_pts": 0.33,
     "status": null,
     "reserve": false,
     "p_play": 1.0,
@@ -265,11 +266,11 @@
    {
     "slot": "RCB",
     "unit": "defense",
-    "gsis_id": "00-0039898",
-    "player": "Mike Sainristil",
-    "replaced_by": "Trey Amos",
+    "gsis_id": "00-0040731",
+    "player": "Trey Amos",
+    "replaced_by": null,
     "grp": "CB",
-    "value_pts": 0.15,
+    "value_pts": 0.08,
     "status": null,
     "reserve": false,
     "p_play": 1.0,
@@ -289,7 +290,7 @@
     "reserve": true,
     "p_play": 0.0,
     "since_week": 1,
-    "eligible_week": 5,
+    "eligible_week": null,
     "missing_pts": 0.58
    },
    {
@@ -310,9 +311,9 @@
    {
     "slot": "C",
     "unit": "offense",
-    "gsis_id": "00-0035149",
-    "player": "Nick Allegretti",
-    "replaced_by": "Lucas Patrick",
+    "gsis_id": "00-0033082",
+    "player": "Lucas Patrick",
+    "replaced_by": null,
     "grp": "OL",
     "value_pts": 0.0,
     "status": null,
@@ -402,78 +403,78 @@
  "by_week": [
   {
    "week": 1,
-   "health": 0.949,
-   "missing_pts": 0.58,
-   "full_pts": 11.29
+   "health": 0.921,
+   "missing_pts": 0.88,
+   "full_pts": 11.13
   },
   {
    "week": 2,
-   "health": 0.925,
+   "health": 0.924,
    "missing_pts": 0.88,
-   "full_pts": 11.71
+   "full_pts": 11.64
   },
   {
    "week": 3,
-   "health": 0.512,
+   "health": 0.502,
    "missing_pts": 5.73,
-   "full_pts": 11.73
+   "full_pts": 11.51
   },
   {
    "week": 4,
-   "health": 0.497,
+   "health": 0.448,
    "missing_pts": 5.71,
-   "full_pts": 11.35
+   "full_pts": 10.35
   },
   {
    "week": 5,
-   "health": 0.818,
+   "health": 0.797,
    "missing_pts": 1.97,
-   "full_pts": 10.84
+   "full_pts": 9.72
   },
   {
    "week": 6,
-   "health": 0.919,
+   "health": 0.916,
    "missing_pts": 0.9,
-   "full_pts": 11.18
+   "full_pts": 10.68
   },
   {
    "week": 8,
-   "health": 0.828,
+   "health": 0.823,
    "missing_pts": 1.99,
-   "full_pts": 11.54
+   "full_pts": 11.26
   },
   {
    "week": 9,
-   "health": 0.803,
+   "health": 0.799,
    "missing_pts": 2.34,
-   "full_pts": 11.87
+   "full_pts": 11.65
   },
   {
    "week": 10,
-   "health": 0.805,
+   "health": 0.801,
    "missing_pts": 2.34,
-   "full_pts": 11.98
+   "full_pts": 11.77
   }
  ],
  "outlook": [
   {
    "week": 12,
-   "health": 0.9,
+   "health": 0.898,
    "missing_pts": 1.2
   },
   {
    "week": 13,
-   "health": 0.952,
+   "health": 0.951,
    "missing_pts": 0.58
   },
   {
    "week": 14,
-   "health": 0.952,
+   "health": 0.951,
    "missing_pts": 0.58
   },
   {
    "week": 15,
-   "health": 0.952,
+   "health": 0.951,
    "missing_pts": 0.58
   }
  ]

@@ -4,8 +4,8 @@ and his status this week: the data behind the Injuries tab's formation map (ADR 
 Starters come from the team's latest depth chart taken before the cutoff (the 2026 charts are
 timestamped): the top-ranked player at each formation spot of the base offense (3WR 1TE) and base
 defense (4-3 or 3-4). The fullback and the nickel back are extra spots, not part of the eleven.
-Values come from the M24.2 model; linebackers and interior linemen have none yet (not a v1 group), so
-they carry no number. A status shows only for a player listed Out, Doubtful or Questionable on the
+Values come from the M24.2 model (interior DL and linebackers since M24.7); a player without enough
+recent games carries no number. A status shows only for a player listed Out, Doubtful or Questionable on the
 game week's report; everyone else is unlisted, never "healthy" by inference.
 
 Context only: nothing here reaches a lock or a feature.

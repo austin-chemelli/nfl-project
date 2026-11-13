@@ -133,3 +133,30 @@ def test_healthy_values_use_the_week_of_his_last_game():
     v = Slices(pg, pl.DataFrame()).at(2026, 11, ["hurt", "fit"])
     assert v["hurt"]["value_pts"] == 1.0 and v["hurt"]["valued_week"] == (2026, 7)
     assert v["fit"]["value_pts"] == 0.8  # played the team's last game: the current value
+
+
+def test_a_healthy_player_the_chart_moved_down_lost_the_job_and_isnt_missing():
+    """The benched former QB1 is on the roster and active: the current starter keeps full strength,
+    so the starter's own injury shows."""
+    depth = pl.concat([DEPTH, pl.DataFrame(_chart(MARCH, [(O, "QB", 9, 1, "vet", "Benched Vet")]))])  # fmt: skip
+    ros = pl.concat([ROSTERS, pl.DataFrame([{"team": "HHH", "week": 10, "gsis_id": "vet", "status": "ACT", "status_description_abbr": "A01"}])])  # fmt: skip
+    vals = Values({**VALS.vals, "vet": {"value_pts": 5.0, "grp": "QB"}})
+    inj = [*INJ, {"team": "HHH", "week": 11, "gsis_id": "qb", "pos": "QB", "status": "Out"}]
+    w = H.team_week(depth, "HHH", 2026, 11, NOW, ros, inj, vals, RATES)
+    qb = next(s for s in w["starters"] if s["slot"] == "QB")
+    assert (qb["player"], qb["status"], qb["missing_pts"]) == ("Q B", "Out", 4.0)
+    assert w["reported"]
+
+
+def test_the_ir_window_counts_games_not_weeks():
+    weeks = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15]  # a bye in week 11
+    assert H.eligible_week(10, weeks) == 15  # misses 10, 12, 13, 14
+    assert H.eligible_week(7, weeks) == 12  # misses 7, 8, 9, 10
+    assert H.eligible_week(1, weeks) is None  # IR from camp: no window
+    assert H.eligible_week(13, weeks) is None  # the season ends first
+
+
+def test_wr_replacements_only_name_a_receiver_who_was_left_out():
+    w = _week()
+    wr = {s["player"]: s["replaced_by"] for s in w["starters"] if s["slot"].startswith("WR")}
+    assert wr == {"Star WR": "W Four", "W Two": None, "W Three": None}
