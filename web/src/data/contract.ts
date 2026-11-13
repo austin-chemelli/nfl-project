@@ -511,6 +511,34 @@ export const PathsOutcome = z.looseObject({
 })
 export type PathsOutcome = z.infer<typeof PathsOutcome>
 
+// Market leans from the ledger (ADR 0028, M25.6): points toward the home team, with a CI and its parts.
+export const Lean = z.looseObject({
+  game_id: nstr,
+  season: num,
+  week: num,
+  home: z.string(),
+  away: z.string(),
+  pts: num,
+  lo: num,
+  hi: num,
+  side: z.string(),
+  parts: z.array(z.looseObject({ candidate: z.string(), label: z.string(), pts: num, lo: num, hi: num })),
+  tracked: z.boolean(),
+  grade: z.enum(['right', 'wrong', 'push']).nullable(),
+})
+export type Lean = z.infer<typeof Lean>
+export const LeansRecord = z.looseObject({
+  from_season: num,
+  from_week: num,
+  weeks_tracked: num,
+  n: num,
+  right: num,
+  wrong: num,
+  push: num,
+  mean_abs_pts: num,
+})
+export type LeansRecord = z.infer<typeof LeansRecord>
+
 export const Game = GameRow.extend({
   contributions: z.record(z.string(), Contribution),
   edges: z.record(z.string(), z.looseObject({ favors: nstr, strength_pct: nnum })),
@@ -531,6 +559,7 @@ export const Game = GameRow.extend({
   paths: UpsetPaths.nullable().default(null), // how the underdog wins: conditions with history, never a probability
   paths_outcome: PathsOutcome.nullable().default(null), // finished games: which conditions the dog met
   edge_cards: z.array(EdgeSide).nullable().default(null), // both teams' levers; null without a line
+  lean: Lean.nullable().default(null), // the ledger's use candidates against the market (M25.6)
 })
 
 // --------------------------------------------------------------------------- retrospective
@@ -752,6 +781,7 @@ export const Tracker = z.looseObject({
     .looseObject({ first_lock: nstr.default(null), weeks: num, n: num, mae: nnum.default(null), market_mae: nnum.default(null), side_right: num, side_n: num })
     .nullable()
     .default(null),
+  leans: LeansRecord.nullable().default(null), // M25.6: the leans' live record from 2026 Week 10
 })
 
 // --------------------------------------------------------------------------------- hypotheses

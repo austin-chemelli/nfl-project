@@ -3987,5 +3987,41 @@
    ],
    "met": null
   }
- ]
+ ],
+ "lean": {
+  "game_id": "2026_08_CAR_GB",
+  "season": 2026,
+  "week": 8,
+  "home": "GB",
+  "away": "CAR",
+  "pts": -0.46,
+  "lo": -0.75,
+  "hi": -0.21,
+  "side": "CAR",
+  "parts": [
+   {
+    "candidate": "net_epa_noto",
+    "label": "Net EPA without turnovers",
+    "pts": 0.0,
+    "lo": -0.0,
+    "hi": 0.01
+   },
+   {
+    "candidate": "net_def_half",
+    "label": "Net EPA with the defense at half weight",
+    "pts": -0.03,
+    "lo": -0.07,
+    "hi": -0.01
+   },
+   {
+    "candidate": "success_off",
+    "label": "Offensive success rate",
+    "pts": -0.43,
+    "lo": -0.68,
+    "hi": -0.21
+   }
+  ],
+  "tracked": false,
+  "grade": null
+ }
 }
