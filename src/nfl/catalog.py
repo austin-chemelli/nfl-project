@@ -51,6 +51,7 @@ TABLES: tuple[Table, ...] = (
     Table("pfr_def", "curated", "PFR advanced defense by week, 2018+: coverage targets, pressures"),
     Table("players", "curated", "every player: gsis, pfr, espn ids, position, draft, birth date"),
     Table("contracts", "curated", "contracts from Over The Cap: value, APY, cap share (gsis_id)"),
+    Table("rosters_weekly", "curated", "each team's roster by week with status: ACT, INA, RES (IR R01, designated to return R48, PUP R04), 2025+"),
     Table("draft_picks", "curated", "every draft pick with career summary (gsis_id, pfr_player_id)"),
     Table("features", "features", "the feature store, long and as-of stamped: use features_asof(ts)"),
     Table("predictions", "mart", "every forecast, live and backfill (append-only)"),

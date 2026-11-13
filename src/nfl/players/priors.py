@@ -17,6 +17,8 @@ TOP_STARTER_POINTS: dict[str, float] = {
     "RB": 0.6,
     "OL": 0.5,  # per starter: five of them, about 2.5 for the line
     "EDGE": 1.0,
+    "DL": 0.7,  # interior: a top one (a Chris Jones) a bit under a top edge (M24.7)
+    "LB": 0.4,  # off-ball linebackers: the smallest effect in the published ranges
     "CB": 0.8,
     "S": 0.5,
 }
@@ -30,7 +32,7 @@ MAX_MULTIPLIER = 1.25  # the best of the best, a little above "top starter"
 # How each group's quality blends production with the contract-or-draft prior (weight on production).
 PRODUCTION_WEIGHT: dict[str, float] = {
     "QB": 0.8, "WR": 0.8, "TE": 0.8, "RB": 0.8,
-    "EDGE": 0.5, "CB": 0.5, "S": 0.5,
+    "EDGE": 0.5, "DL": 0.5, "LB": 0.5, "CB": 0.5, "S": 0.5,
     "OL": 0.0,  # no free per-lineman production: the prior alone
 }  # fmt: skip
 
@@ -42,6 +44,8 @@ N0: dict[str, float] = {
     "TE": 4.0,
     "RB": 4.0,
     "EDGE": 4.0,
+    "DL": 4.0,
+    "LB": 4.0,
     "CB": 4.0,
     "S": 4.0,
 }
@@ -54,11 +58,11 @@ FULL_ROLE = 0.7  # a role this large counts fully; a smaller one scales the valu
 POSITION_GROUP: dict[str, str] = {
     # PFF
     "QB": "QB", "HB": "RB", "WR": "WR", "TE": "TE", "T": "OL", "G": "OL", "C": "OL",
-    "ED": "EDGE", "CB": "CB", "S": "S",
+    "ED": "EDGE", "DI": "DL", "LB": "LB", "CB": "CB", "S": "S",
     # NGS
     "RB": "RB", "SLOT_WR": "WR", "EDGE": "EDGE", "OLB": "EDGE", "SLOT_CB": "CB",
-    "SAFETY": "S", "HIGH_SAFETY": "S",
+    "SAFETY": "S", "HIGH_SAFETY": "S", "INTERIOR_LINE": "DL", "MLB": "LB", "ILB": "LB",
     # snap counts (PFR)
     "OT": "OL", "OL": "OL", "C/G": "OL", "G/T": "OL", "G/C": "OL", "DE": "EDGE",
-    "FS": "S", "SS": "S", "DB": "CB",
+    "DT": "DL", "NT": "DL", "FS": "S", "SS": "S", "DB": "CB",
 }  # fmt: skip

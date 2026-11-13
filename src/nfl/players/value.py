@@ -1,7 +1,7 @@
 """What a player is worth in points of spread, week by week (ADR 0027, M24.2).
 
 One row per (season, week, player) for regular-season weeks from 2013 (snap counts) for the v1
-groups (QB, RB, WR, TE, OL, EDGE, CB, S): the value **as of the start of that week**, from games
+groups (QB, RB, WR, TE, OL, EDGE, CB, S; interior DL and LB from M24.7): the value **as of the start of that week**, from games
 before it only. Values are for a player in his role: what the team loses, against a replacement,
 if he doesn't play.
 
@@ -11,7 +11,9 @@ if he doesn't play.
   of production and a prior. Production is recency-weighted (this season 1, each season back x0.75,
   three seasons) and shrunk toward the group mean: quarterbacks EPA per dropback (as
   `features/qb.py`), receivers receiving EPA per game, running backs rushing plus receiving EPA per
-  game, edges sacks plus QB hits per game, corners and safeties passes defended plus twice the
+  game, edges sacks plus QB hits per game, interior linemen sacks plus QB hits plus tackles for
+  loss per game, linebackers solo tackles plus half the assists plus tackles for loss, passes
+  defended and twice the interceptions per game, corners and safeties passes defended plus twice the
   interceptions per game. The prior is the contract's share of the cap (contracts active that
   season) or, on a rookie deal, the draft slot. Linemen have no free per-player production and use
   the prior alone.
@@ -58,7 +60,11 @@ pw as (
         coalesce(receiving_epa, 0) as rec_epa,
         coalesce(rushing_epa, 0) + coalesce(receiving_epa, 0) as rush_rec_epa,
         coalesce(def_sacks, 0) + coalesce(def_qb_hits, 0) as pressure,
-        coalesce(def_pass_defended, 0) + 2 * coalesce(def_interceptions, 0) as ball
+        coalesce(def_pass_defended, 0) + 2 * coalesce(def_interceptions, 0) as ball,
+        coalesce(def_sacks, 0) + coalesce(def_qb_hits, 0) + coalesce(def_tackles_for_loss, 0) as front,
+        coalesce(def_tackles_solo, 0) + 0.5 * coalesce(def_tackle_assists, 0)
+            + coalesce(def_tackles_for_loss, 0) + coalesce(def_pass_defended, 0)
+            + 2 * coalesce(def_interceptions, 0) as stops
     from player_weeks where season >= {lo}
 ),
 qb as (
@@ -68,7 +74,7 @@ qb as (
 )
 select sn.season, sn.week, sn.game_type, sn.team, sn.gsis_id, g.display_name as player,
     coalesce(g.grp_player, {snap}) as grp, sn.share,
-    pw.rec_epa, pw.rush_rec_epa, pw.pressure, pw.ball, qb.dropbacks, qb.qb_epa
+    pw.rec_epa, pw.rush_rec_epa, pw.pressure, pw.ball, pw.front, pw.stops, qb.dropbacks, qb.qb_epa
 from snaps sn
 left join groups g using (gsis_id)
 left join pw using (season, week, gsis_id)
@@ -95,6 +101,8 @@ def player_games(paths: Paths, lo: int = FIRST_SEASON - P.SEASONS_BACK) -> pl.Da
         .when(pl.col("grp") == "RB").then(pl.col("rush_rec_epa"))
         .when(pl.col("grp") == "EDGE").then(pl.col("pressure"))
         .when(pl.col("grp").is_in(["CB", "S"])).then(pl.col("ball"))
+        .when(pl.col("grp") == "DL").then(pl.col("front"))
+        .when(pl.col("grp") == "LB").then(pl.col("stops"))
         .otherwise(None)
     )  # fmt: skip
     n = pl.when(pl.col("grp") == "QB").then(pl.col("dropbacks")).otherwise(pl.lit(1.0))

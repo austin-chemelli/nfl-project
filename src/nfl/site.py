@@ -782,6 +782,7 @@ def write_team_files(
     games: pl.DataFrame,
     claims: tuple | None = None,
     injuries: list[dict] | None = None,
+    health: dict | None = None,
 ) -> None:
     """ADR 0021: staff and tendency files for the team pages, one per team, for the current season
     only. Like the league's, a failure here never stops a site build; the last files stay.
@@ -806,6 +807,7 @@ def write_team_files(
         avail = _safe(_availability, {}, paths, season, week, claims, injuries)
         for team, body in team_files(paths, season, week, games, label).items():
             body["availability"] = avail.get(team)  # ADR 0027, M24.4: additive
+            body["health"] = (health or {}).get(team)  # M24.7: how far from full strength
             _write(paths.site / "team" / f"{team}.json", body, compact=True)
     except (Exception, pl.exceptions.PanicException) as e:  # noqa: BLE001
         print(f"site: team files failed, continuing: {e!r}")
@@ -841,6 +843,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
         _player_claims, (None, {}, None), paths, games, season
     )
     lineups = _safe(_lineups, {}, paths, games, season, injuries, now)
+    health = _safe(_health, {}, paths, games, season, injuries, now)
     today = _safe(_today, {}, paths, now)
     matchup_ctx = _safe(_matchup_ctx, None, paths)  # ADR 0028: Engine and ledger, once per build
     conditions = _safe(_conditions_frame, None, paths)
@@ -879,6 +882,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["strong_calls"] = calls_by_game.get(g["game_id"], [])
             detail["key_players"] = claims_by_game.get(g["game_id"])  # ADR 0027: context, M24.4
             detail["lineups"] = lineups.get(g["game_id"])  # ADR 0027: the formation map, M24.5
+            detail["health"] = _game_health(health, g)  # M24.7
             detail["today"] = today.get(g["game_id"])
             detail["matchups"] = _safe(game_matchups, None, matchup_ctx, g, conditions)
             detail["paths"] = _safe(game_paths, None, conditions, g)
@@ -943,7 +947,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             _write(site / "teams.json", teams, compact=True)  # 236 KB at indent=1, 178 KB compact
     except Exception as e:  # noqa: BLE001
         print(f"site: teams.json failed, continuing: {e!r}")
-    write_team_files(paths, season, current_week, games, claims, injuries)
+    write_team_files(paths, season, current_week, games, claims, injuries, health)
     try:
         write_retro(paths, season)
     except Exception as e:  # noqa: BLE001  retros must never break the site build
@@ -1694,6 +1698,54 @@ def _lineups(paths: Paths, games: pl.DataFrame, season: int, injuries: list[dict
     rates = pc.play_rates(pc.rate_table(paths))
     wk = upcoming.filter(pl.col("week").is_in(weeks))
     return lineup.lineups(wk, depth, values, injuries, rates, now)
+
+
+def _health(paths: Paths, games: pl.DataFrame, season: int, injuries: list[dict], now) -> dict:
+    """team -> {now, by_week, outlook}: how far each team is from full strength (M24.7). Context."""
+    import duckdb
+
+    from nfl.players import claims as pc
+    from nfl.players import health as ph
+    from nfl.players import value as pv
+
+    chart_dir = paths.curated_table("depth_charts") / f"season={season}"
+    roster_dir = paths.curated_table("rosters_weekly") / f"season={season}"
+    if not any(chart_dir.glob("*.parquet")):
+        return {}
+    depth = duckdb.sql(
+        "select team, dt, pos_grp, pos_abb, cast(pos_slot as bigint) as pos_slot, "
+        "cast(pos_rank as bigint) as pos_rank, gsis_id, player_name "
+        f"from read_parquet('{chart_dir.as_posix()}/*.parquet', union_by_name=true) "
+        "where dt is not null"
+    ).pl()
+    rosters = (
+        duckdb.sql(
+            "select team, week, gsis_id, status, status_description_abbr "
+            f"from read_parquet('{roster_dir.as_posix()}/*.parquet') where gsis_id is not null"
+        ).pl()
+        if any(roster_dir.glob("*.parquet"))
+        else pl.DataFrame(
+            schema={"team": pl.Utf8, "week": pl.Int64, "gsis_id": pl.Utf8, "status": pl.Utf8,
+                    "status_description_abbr": pl.Utf8}
+        )
+    )  # fmt: skip
+    pg = pv.player_games(paths, lo=season - 1 - pv.P.SEASONS_BACK)
+    values = ph.HealthyValues(pg, pv.prior_scores(paths))
+    rates = pc.play_rates(pc.rate_table(paths))
+    return ph.season(games, depth, rosters, injuries, values, rates, now, season)
+
+
+def _game_health(health: dict, g: dict) -> dict | None:
+    """Each side's health going into this game, when it's the team's next one."""
+    out = {}
+    for side in ("home", "away"):
+        h = (health.get(g[f"{side}_team"]) or {}).get("now")
+        out[side] = (
+            {k: h[k] for k in ("health", "missing_pts", "full_pts")}
+            if h and h["week"] == g["week"]
+            else None
+        )
+    return out if any(out.values()) else None
 
 
 # ---------------------------------------------------------------------------------------- tracker

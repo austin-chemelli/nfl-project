@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-12 for the Players section as built (M24.6), the rest 2026-11-09 (§3.8 the candidates ledger live, ADR 0026; §3.9 matchups and paths to an upset, ADR 0028, planned); the live state is [state.md](state.md).
+Status: current, verified 2026-11-13 for the Players section as built (M24.7 team health), the rest 2026-11-09 (§3.8 the candidates ledger live, ADR 0026; §3.9 matchups and paths to an upset, ADR 0028, planned); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
@@ -377,6 +377,7 @@ As built through M24.5 (2026-11-12). Free nflverse player tables (weekly stats 1
 - **Claims** (`players/claims.py`, M24.4): the daily pass records, per upcoming game and side, the three most valuable listed starters with value, P(play) and value at risk (`marts/player_claims*.parquet`, append-only); a change to Out before kickoff grades the last claim against the consensus line's move. Never read by a lock (tested).
 - **Lineups** (`players/lineup.py`, M24.5): at each `nfl site`, each side's base-formation starters from the latest timestamped depth chart, with values and the game week's statuses, for the next two weeks' unplayed games. Its own chart reader (the top rank per formation slot), separate from `features/availability.py`'s lock lookup. Regular starters on the report whom the chart has moved down are listed beside it (`off_chart`); the team panel's statuses come from the same report rows.
 - **Pages** (M24.5): the game's Injuries tab (formation map, key players, the report), the team's Availability tab, the tracker's Player claims. Site JSON fields `Game.lineups`, `Game.key_players`, `TeamFile.availability`, `Tracker.player_claims`, all nullable.
+- **Team health** (`players/health.py`, M24.7): each team's full-strength lineup (at each base spot, the most valuable player the chart has had as the starter since March who is still on the weekly roster, `curated/rosters_weekly`, 2025+), each valued going into his last game, against this week's status: a reserve list (IR `R01` with its window, four games; designated to return `R48`; PUP), the report, inactive. Health = the share of full-strength value expected on the field, by group, for every game played and the next one, plus an outlook that brings IR players back when eligible. Site JSON `TeamFile.health`, `Game.health` (data only until the team page and map use it). Interior DL and linebackers are valued since M24.7.
 - **Not yet** (M24.3, waits on M23's ledger): `availability.value_lost`, the value of who's missing weighted by status-to-play, as a ledger candidate before any approach may use it.
 
 ```mermaid
@@ -385,6 +386,10 @@ flowchart LR
     PS[(player weeks, snaps,\nPFR adv, contracts, draft)] --> PV[players/value\npoints per player-week]
     INJ[(injuries, daily snapshots)] --> STP[status_to_play rates]
     DC[(depth charts)] --> LU[players/lineup\nformation starters]
+    DC --> HE[players/health\nfull strength vs now]
+    RW[(weekly rosters, IR)] --> HE
+    PV --> HE
+    HE --> SITE
     PV --> CL[player_claims\ngraded by market moves]
     STP --> CL
     PV --> LU
