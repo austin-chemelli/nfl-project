@@ -4,280 +4,81 @@
   "reported": false,
   "full_pts": 11.77,
   "missing_pts": 2.34,
+  "doubt_pts": 0,
   "health": 0.801,
   "groups": [
    {
     "grp": "QB",
     "full_pts": 4.69,
     "missing_pts": 0.0,
+    "doubt_pts": 0.0,
     "health": 1.0
    },
    {
     "grp": "WR",
     "full_pts": 2.62,
     "missing_pts": 1.14,
+    "doubt_pts": 0.0,
     "health": 0.565
    },
    {
     "grp": "OL",
     "full_pts": 1.33,
     "missing_pts": 0.58,
+    "doubt_pts": 0.0,
     "health": 0.564
    },
    {
     "grp": "EDGE",
     "full_pts": 1.02,
     "missing_pts": 0.0,
+    "doubt_pts": 0.0,
     "health": 1.0
    },
    {
     "grp": "DL",
     "full_pts": 0.75,
     "missing_pts": 0.62,
+    "doubt_pts": 0.0,
     "health": 0.173
    },
    {
     "grp": "CB",
     "full_pts": 0.56,
     "missing_pts": 0.0,
+    "doubt_pts": 0.0,
     "health": 1.0
    },
    {
     "grp": "LB",
     "full_pts": 0.35,
     "missing_pts": 0.0,
+    "doubt_pts": 0.0,
     "health": 1.0
    },
    {
     "grp": "RB",
     "full_pts": 0.32,
     "missing_pts": 0.0,
+    "doubt_pts": 0.0,
     "health": 1.0
    },
    {
     "grp": "S",
     "full_pts": 0.12,
     "missing_pts": 0.0,
+    "doubt_pts": 0.0,
     "health": 1.0
    },
    {
     "grp": "TE",
     "full_pts": 0.01,
     "missing_pts": 0.0,
+    "doubt_pts": 0.0,
     "health": 1.0
    }
   ],
   "starters": [
-   {
-    "slot": "WR1",
-    "unit": "offense",
-    "gsis_id": "00-0035659",
-    "player": "Terry McLaurin",
-    "replaced_by": "Treylon Burks",
-    "grp": "WR",
-    "value_pts": 1.14,
-    "status": "IR",
-    "reserve": true,
-    "p_play": 0.0,
-    "since_week": 8,
-    "eligible_week": 12,
-    "missing_pts": 1.14
-   },
-   {
-    "slot": "WR2",
-    "unit": "offense",
-    "gsis_id": "00-0031588",
-    "player": "Stefon Diggs",
-    "replaced_by": null,
-    "grp": "WR",
-    "value_pts": 1.02,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "WR3",
-    "unit": "offense",
-    "gsis_id": "00-0041040",
-    "player": "Antonio Williams",
-    "replaced_by": null,
-    "grp": "WR",
-    "value_pts": 0.46,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "LDE",
-    "unit": "defense",
-    "gsis_id": "00-0035279",
-    "player": "Charles Omenihu",
-    "replaced_by": null,
-    "grp": "DL",
-    "value_pts": 0.13,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "NT",
-    "unit": "defense",
-    "gsis_id": "00-0034333",
-    "player": "Daron Payne",
-    "replaced_by": "Tim Settle",
-    "grp": "DL",
-    "value_pts": 0.47,
-    "status": "IR",
-    "reserve": true,
-    "p_play": 0.0,
-    "since_week": 9,
-    "eligible_week": 13,
-    "missing_pts": 0.47
-   },
-   {
-    "slot": "RDE",
-    "unit": "defense",
-    "gsis_id": "00-0036260",
-    "player": "Javon Kinlaw",
-    "replaced_by": null,
-    "grp": "DL",
-    "value_pts": 0.15,
-    "status": "IR",
-    "reserve": true,
-    "p_play": 0.0,
-    "since_week": 9,
-    "eligible_week": 13,
-    "missing_pts": 0.15
-   },
-   {
-    "slot": "WLB",
-    "unit": "defense",
-    "gsis_id": "00-0036940",
-    "player": "Odafe Oweh",
-    "replaced_by": null,
-    "grp": "EDGE",
-    "value_pts": 0.69,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "LILB",
-    "unit": "defense",
-    "gsis_id": "00-0034302",
-    "player": "Frankie Luvu",
-    "replaced_by": null,
-    "grp": "LB",
-    "value_pts": 0.17,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "RILB",
-    "unit": "defense",
-    "gsis_id": "00-0041028",
-    "player": "Sonny Styles",
-    "replaced_by": null,
-    "grp": "LB",
-    "value_pts": 0.18,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "SLB",
-    "unit": "defense",
-    "gsis_id": "00-0034373",
-    "player": "Dorance Armstrong",
-    "replaced_by": null,
-    "grp": "EDGE",
-    "value_pts": 0.33,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "LCB",
-    "unit": "defense",
-    "gsis_id": "00-0033551",
-    "player": "Rasul Douglas",
-    "replaced_by": null,
-    "grp": "CB",
-    "value_pts": 0.48,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "SS",
-    "unit": "defense",
-    "gsis_id": "00-0037616",
-    "player": "Nick Cross",
-    "replaced_by": null,
-    "grp": "S",
-    "value_pts": 0.12,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "FS",
-    "unit": "defense",
-    "gsis_id": "00-0034465",
-    "player": "Jeremy Reaves",
-    "replaced_by": null,
-    "grp": "S",
-    "value_pts": 0.0,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "RCB",
-    "unit": "defense",
-    "gsis_id": "00-0040731",
-    "player": "Trey Amos",
-    "replaced_by": null,
-    "grp": "CB",
-    "value_pts": 0.08,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
-   },
    {
     "slot": "LT",
     "unit": "offense",
@@ -286,12 +87,25 @@
     "replaced_by": "Brandon Coleman",
     "grp": "OL",
     "value_pts": 0.58,
+    "doubt": false,
     "status": "IR",
     "reserve": true,
     "p_play": 0.0,
     "since_week": 1,
     "eligible_week": null,
-    "missing_pts": 0.58
+    "missing_pts": 0.58,
+    "depth": [
+     {
+      "player": "Brandon Coleman",
+      "value_pts": 0.17,
+      "status": null
+     },
+     {
+      "player": "Andrew Wylie",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
    },
    {
     "slot": "LG",
@@ -301,27 +115,53 @@
     "replaced_by": null,
     "grp": "OL",
     "value_pts": 0.0,
+    "doubt": false,
     "status": null,
     "reserve": false,
     "p_play": 1.0,
     "since_week": null,
     "eligible_week": null,
-    "missing_pts": 0.0
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Lucas Patrick",
+      "value_pts": 0.0,
+      "status": null
+     },
+     {
+      "player": "Tanoa Togiai",
+      "value_pts": null,
+      "status": null
+     }
+    ]
    },
    {
     "slot": "C",
     "unit": "offense",
-    "gsis_id": "00-0033082",
-    "player": "Lucas Patrick",
+    "gsis_id": "00-0035149",
+    "player": "Nick Allegretti",
     "replaced_by": null,
     "grp": "OL",
     "value_pts": 0.0,
+    "doubt": false,
     "status": null,
     "reserve": false,
     "p_play": 1.0,
     "since_week": null,
     "eligible_week": null,
-    "missing_pts": 0.0
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Matt Gulbin",
+      "value_pts": 0.0,
+      "status": null
+     },
+     {
+      "player": "Julian Good-Jones",
+      "value_pts": null,
+      "status": null
+     }
+    ]
    },
    {
     "slot": "RG",
@@ -331,12 +171,25 @@
     "replaced_by": null,
     "grp": "OL",
     "value_pts": 0.45,
+    "doubt": false,
     "status": null,
     "reserve": false,
     "p_play": 1.0,
     "since_week": null,
     "eligible_week": null,
-    "missing_pts": 0.0
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Matt Gulbin",
+      "value_pts": 0.0,
+      "status": null
+     },
+     {
+      "player": "Nick Allegretti",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
    },
    {
     "slot": "RT",
@@ -346,27 +199,20 @@
     "replaced_by": null,
     "grp": "OL",
     "value_pts": 0.3,
+    "doubt": false,
     "status": null,
     "reserve": false,
     "p_play": 1.0,
     "since_week": null,
     "eligible_week": null,
-    "missing_pts": 0.0
-   },
-   {
-    "slot": "QB",
-    "unit": "offense",
-    "gsis_id": "00-0039910",
-    "player": "Jayden Daniels",
-    "replaced_by": null,
-    "grp": "QB",
-    "value_pts": 4.69,
-    "status": null,
-    "reserve": false,
-    "p_play": 1.0,
-    "since_week": null,
-    "eligible_week": null,
-    "missing_pts": 0.0
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Andrew Wylie",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
    },
    {
     "slot": "TE",
@@ -376,12 +222,137 @@
     "replaced_by": null,
     "grp": "TE",
     "value_pts": 0.01,
+    "doubt": false,
     "status": null,
     "reserve": false,
     "p_play": 1.0,
     "since_week": null,
     "eligible_week": null,
-    "missing_pts": 0.0
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Ben Sinnott",
+      "value_pts": 0.0,
+      "status": null
+     },
+     {
+      "player": "John Bates",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "WR1",
+    "unit": "offense",
+    "gsis_id": "00-0035659",
+    "player": "Terry McLaurin",
+    "replaced_by": "Treylon Burks",
+    "grp": "WR",
+    "value_pts": 1.14,
+    "doubt": false,
+    "status": "IR",
+    "reserve": true,
+    "p_play": 0.0,
+    "since_week": 8,
+    "eligible_week": 12,
+    "missing_pts": 1.14,
+    "depth": [
+     {
+      "player": "Stefon Diggs",
+      "value_pts": 1.02,
+      "status": null
+     },
+     {
+      "player": "Van Jefferson",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "WR2",
+    "unit": "offense",
+    "gsis_id": "00-0031588",
+    "player": "Stefon Diggs",
+    "replaced_by": null,
+    "grp": "WR",
+    "value_pts": 1.02,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Antonio Williams",
+      "value_pts": 0.46,
+      "status": null
+     },
+     {
+      "player": "Luke McCaffrey",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "WR3",
+    "unit": "offense",
+    "gsis_id": "00-0041040",
+    "player": "Antonio Williams",
+    "replaced_by": null,
+    "grp": "WR",
+    "value_pts": 0.46,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Treylon Burks",
+      "value_pts": 0.0,
+      "status": null
+     },
+     {
+      "player": "Dyami Brown",
+      "value_pts": 0.0,
+      "status": "IR"
+     }
+    ]
+   },
+   {
+    "slot": "QB",
+    "unit": "offense",
+    "gsis_id": "00-0039910",
+    "player": "Jayden Daniels",
+    "replaced_by": null,
+    "grp": "QB",
+    "value_pts": 4.69,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Marcus Mariota",
+      "value_pts": 2.57,
+      "status": null
+     },
+     {
+      "player": "Athan Kaliakmanis",
+      "value_pts": 0.24,
+      "status": null
+     }
+    ]
    },
    {
     "slot": "RB",
@@ -391,12 +362,297 @@
     "replaced_by": null,
     "grp": "RB",
     "value_pts": 0.32,
+    "doubt": false,
     "status": null,
     "reserve": false,
     "p_play": 1.0,
     "since_week": null,
     "eligible_week": null,
-    "missing_pts": 0.0
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Austin Ekeler",
+      "value_pts": 0.0,
+      "status": null
+     },
+     {
+      "player": "Robert Henry Jr.",
+      "value_pts": null,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "LDE",
+    "unit": "defense",
+    "gsis_id": "00-0035279",
+    "player": "Charles Omenihu",
+    "replaced_by": null,
+    "grp": "DL",
+    "value_pts": 0.13,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Jer'Zhan Newton",
+      "value_pts": 0.19,
+      "status": null
+     },
+     {
+      "player": "Deatrich Wise Jr.",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "NT",
+    "unit": "defense",
+    "gsis_id": "00-0034333",
+    "player": "Daron Payne",
+    "replaced_by": "Tim Settle",
+    "grp": "DL",
+    "value_pts": 0.47,
+    "doubt": false,
+    "status": "IR",
+    "reserve": true,
+    "p_play": 0.0,
+    "since_week": 9,
+    "eligible_week": 13,
+    "missing_pts": 0.47,
+    "depth": [
+     {
+      "player": "Tim Settle",
+      "value_pts": 0.04,
+      "status": null
+     },
+     {
+      "player": "Ricky Barber",
+      "value_pts": 0.07,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "RDE",
+    "unit": "defense",
+    "gsis_id": "00-0036260",
+    "player": "Javon Kinlaw",
+    "replaced_by": "Shy Tuttle",
+    "grp": "DL",
+    "value_pts": 0.15,
+    "doubt": false,
+    "status": "IR",
+    "reserve": true,
+    "p_play": 0.0,
+    "since_week": 9,
+    "eligible_week": 13,
+    "missing_pts": 0.15,
+    "depth": [
+     {
+      "player": "Shy Tuttle",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "SLB",
+    "unit": "defense",
+    "gsis_id": "00-0034373",
+    "player": "Dorance Armstrong",
+    "replaced_by": null,
+    "grp": "EDGE",
+    "value_pts": 0.33,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "K'Lavon Chaisson",
+      "value_pts": 0.47,
+      "status": null
+     },
+     {
+      "player": "Javontae Jean-Baptiste",
+      "value_pts": 0.0,
+      "status": "IR"
+     }
+    ]
+   },
+   {
+    "slot": "LILB",
+    "unit": "defense",
+    "gsis_id": "00-0034302",
+    "player": "Frankie Luvu",
+    "replaced_by": null,
+    "grp": "LB",
+    "value_pts": 0.17,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Jordan Magee",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "RILB",
+    "unit": "defense",
+    "gsis_id": "00-0041028",
+    "player": "Sonny Styles",
+    "replaced_by": null,
+    "grp": "LB",
+    "value_pts": 0.18,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Kain Medrano",
+      "value_pts": 0.0,
+      "status": null
+     },
+     {
+      "player": "Ale Kaho",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "WLB",
+    "unit": "defense",
+    "gsis_id": "00-0036940",
+    "player": "Odafe Oweh",
+    "replaced_by": null,
+    "grp": "EDGE",
+    "value_pts": 0.69,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Joshua Josephs",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "LCB",
+    "unit": "defense",
+    "gsis_id": "00-0033551",
+    "player": "Rasul Douglas",
+    "replaced_by": null,
+    "grp": "CB",
+    "value_pts": 0.48,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Fabian Moreau",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "RCB",
+    "unit": "defense",
+    "gsis_id": "00-0040731",
+    "player": "Trey Amos",
+    "replaced_by": null,
+    "grp": "CB",
+    "value_pts": 0.08,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": []
+   },
+   {
+    "slot": "SS",
+    "unit": "defense",
+    "gsis_id": "00-0037616",
+    "player": "Nick Cross",
+    "replaced_by": null,
+    "grp": "S",
+    "value_pts": 0.12,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Tyler Owens",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
+   },
+   {
+    "slot": "FS",
+    "unit": "defense",
+    "gsis_id": "00-0034465",
+    "player": "Jeremy Reaves",
+    "replaced_by": null,
+    "grp": "S",
+    "value_pts": 0.0,
+    "doubt": false,
+    "status": null,
+    "reserve": false,
+    "p_play": 1.0,
+    "since_week": null,
+    "eligible_week": null,
+    "missing_pts": 0.0,
+    "depth": [
+     {
+      "player": "Quan Martin",
+      "value_pts": 0.0,
+      "status": null
+     },
+     {
+      "player": "Percy Butler",
+      "value_pts": 0.0,
+      "status": null
+     }
+    ]
    }
   ]
  },

@@ -95,6 +95,13 @@ def listed(paths: Paths, seasons: tuple[int, int] = (FIRST_SEASON, 2025)) -> pl.
     ).filter(pl.col("pos_group").is_not_null())
 
 
+# the practice statuses that say a player is hurt, and how the pages name them (M24.7)
+PRACTICE = {
+    "Did Not Participate In Practice": "Did not practice",
+    "Limited Participation in Practice": "Limited in practice",
+}
+
+
 def wilson(k: int, n: int, z: float = Z90) -> tuple[float, float]:
     """Wilson score interval for k successes in n."""
     if n == 0:

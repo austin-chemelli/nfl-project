@@ -234,11 +234,13 @@ export const HealthStarter = z.looseObject({
   slot: z.string(), unit: z.string(), player: z.string(), grp: nstr, value_pts: nnum,
   status: nstr, reserve: z.boolean().default(false), p_play: num, since_week: nnum.default(null),
   eligible_week: nnum.default(null), replaced_by: nstr.default(null), missing_pts: nnum,
+  doubt: z.boolean().default(false), // missed or limited in practice before Friday's game statuses: shown, not counted
+  depth: z.array(z.looseObject({ player: z.string(), value_pts: nnum, status: nstr })).default([]), // the chart behind him at the spot
 })
-export const HealthGroup = z.looseObject({ grp: z.string(), full_pts: num, missing_pts: num, health: nnum })
+export const HealthGroup = z.looseObject({ grp: z.string(), full_pts: num, missing_pts: num, doubt_pts: num.default(0), health: nnum })
 export const HealthWeek = z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num.optional() })
 export const TeamHealth = z.looseObject({
-  now: z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num, groups: z.array(HealthGroup), starters: z.array(HealthStarter) }),
+  now: z.looseObject({ week: num, reported: z.boolean().default(false), health: nnum, missing_pts: num, doubt_pts: num.default(0), full_pts: num, groups: z.array(HealthGroup), starters: z.array(HealthStarter) }),
   by_week: z.array(HealthWeek).default([]),
   outlook: z.array(HealthWeek).default([]),
 })

@@ -73,6 +73,7 @@ def starters(depth: pl.DataFrame, team: str, cutoff: datetime) -> pl.DataFrame:
         .alias("unit"),
         pl.col("pos_grp").alias("formation"),
         "pos_abb",
+        "pos_slot",
         "gsis_id",
         pl.col("player_name").alias("player"),
         "chart_dt",
