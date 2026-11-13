@@ -15,7 +15,10 @@ import { simInputFrom } from '../../lib/league/input'
 import { usePicks } from '../../lib/picks'
 import { decide, movers, parseScenario, picksInPlay, toOddsTeam, winners, writeScenario, type Scenario } from './whatif'
 import { RUNS, useWhatIf } from './useWhatIf'
+import type { TeamOdds } from '../../lib/league/simulate'
 import { WhatIfPanel } from './WhatIf'
+import { Move } from './Move'
+import { Bracket } from './Bracket'
 import type { LeagueOddsTeam, LeagueTeam } from '../../data/contract'
 
 const CONFS: Conf[] = ['AFC', 'NFC']
@@ -68,27 +71,6 @@ function WinsRange({ w }: { w: { mean: number; lo: number; hi: number } }) {
         <span className="absolute -inset-y-0.5 w-0.5 bg-[var(--text-muted)]" style={{ left: at(w.mean) }} />
       </span>
       <span className="tabular whitespace-nowrap text-ink-2">{winsRange(w)} wins</span>
-    </span>
-  )
-}
-
-/** Below this change (probability) a what-if cell shows no arrow. */
-const MOVE_MIN = 0.01
-
-/** "▲23" / "▼8" points of probability, or nothing for a change under a point. */
-function Move({ from, to, big = false }: { from: number; to: number; big?: boolean }) {
-  const d = to - from
-  if (Math.abs(d) < MOVE_MIN) return big ? <span aria-hidden className="w-9 shrink-0" /> : null
-  const up = d > 0
-  return (
-    <span
-      title={`${fmtProb(from)} now`}
-      aria-label={`${up ? 'up' : 'down'} from ${fmtProb(from)}`}
-      className={`tabular shrink-0 text-[11px] font-semibold ${big ? 'w-9 text-left' : 'ml-1'}`}
-      style={{ color: up ? 'var(--good)' : 'var(--critical)' }}
-    >
-      {up ? '▲' : '▼'}
-      {Math.round(Math.abs(d) * 100)}
     </span>
   )
 }
@@ -203,6 +185,10 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
   const lead = moved[0] && all.find((r) => r.team.team === moved[0].team)?.team.conf
   const tables = lead === 'NFC' ? [...unordered].reverse() : unordered
   const anySpark = !on && all.some((r) => hasSpark(sparkSeries(file, r.team.team, view)))
+  const layout: 'bracket' | 'table' = params.get('layout') === 'table' ? 'table' : 'bracket'
+  const toMap = (o: Record<string, TeamOdds>) => Object.fromEntries(Object.entries(o).map(([t, x]) => [t, toOddsTeam(x)]))
+  const shownOdds = live ? toMap(wi.next!) : file.odds[view].teams
+  const wasOdds = live ? toMap(wi.now!) : undefined
   if (Object.keys(file.odds[view].teams).length === 0) return <p className="text-ink-2">The regular season is over. The final records are on the Standings tab.</p>
 
   return (
@@ -211,6 +197,7 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
       <p className="text-[13px] text-ink-3">Simulated {kickoffEt(file.as_of)}.</p>
       <div className="flex flex-wrap items-center gap-3">
         <Segmented<View> label="Odds from" value={view} onChange={(v) => set('view', v, 'market')} options={[{ value: 'market', label: 'Market' }, { value: 'student', label: 'Student' }]} />
+        <Segmented<'bracket' | 'table'> label="Layout" value={layout} onChange={(v) => set('layout', v, 'bracket')} options={[{ value: 'bracket', label: 'Bracket' }, { value: 'table', label: 'Table' }]} />
         {canWhatIf && (
           <Segmented<'off' | 'on'> label="What if" value={on ? 'on' : 'off'} onChange={(v) => setScenario({ ...scenario, on: v === 'on' })} options={[{ value: 'off', label: 'Published' }, { value: 'on', label: 'What if…' }]} />
         )}
@@ -240,13 +227,25 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
 
           {view === 'market' && marketNote(file.odds.market) && <p className="text-[13px] text-ink-3">{marketNote(file.odds.market)}</p>}
 
-          {tables.map(([conf, rows]) => (
-            <ConfTable key={conf} file={file} conf={conf} rows={rows} view={view} on={on} anySpark={anySpark} />
-          ))}
-          <p className="text-[13px] text-ink-3">
-            The line marks the seven highest chances in each conference, not today's seeds. Tap a team for each round.{anySpark && ' Small line: chance at each Tuesday refresh.'}
-            {on && ' Gray tick and arrows: the chance now, before your decisions.'}
-          </p>
+          {layout === 'bracket' ? (
+            <>
+              <Bracket file={file} odds={shownOdds} was={wasOdds} wide={!on} first={lead === 'NFC' ? 'NFC' : 'AFC'} />
+              <p className="text-[13px] text-ink-3">
+                One likely bracket, not a prediction of it: each seed goes to the team most likely to hold it, and each game to the team more likely to win it. Every number is that team's chance to win that round
+                (for the Super Bowl, the title), with its seed on the left, across all {on && wi.runs ? wi.runs.toLocaleString('en-US') : file.n_sims.toLocaleString('en-US')} simulated seasons, whoever it plays.{on && ' Arrows: the change from now, before your decisions.'} The table has every team's odds of making the playoffs.
+              </p>
+            </>
+          ) : (
+            <>
+              {tables.map(([conf, rows]) => (
+                <ConfTable key={conf} file={file} conf={conf} rows={rows} view={view} on={on} anySpark={anySpark} />
+              ))}
+              <p className="text-[13px] text-ink-3">
+                The line marks the seven highest chances in each conference, not today's seeds. Tap a team for each round.{anySpark && ' Small line: chance at each Tuesday refresh.'}
+                {on && ' Gray tick and arrows: the chance now, before your decisions.'}
+              </p>
+            </>
+          )}
         </div>
       </div>
 

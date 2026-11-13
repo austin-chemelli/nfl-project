@@ -45,7 +45,7 @@ describe('League page, playoff tabs', () => {
   })
 
   it('Odds: both conferences on one page, the market by default, the Student a click away, one rule after the 7th row', async () => {
-    renderRoute('/league?tab=odds')
+    renderRoute('/league?tab=odds&layout=table')
     const order = (conf: string, v: 'market' | 'student') =>
       league.teams.filter((t) => t.conf === conf).map((t) => t.team).sort((a, b) => league.odds[v].teams[b].playoffs - league.odds[v].teams[a].playoffs || a.localeCompare(b))
     const list = await screen.findByRole('list', { name: 'AFC playoff odds' })
@@ -64,14 +64,28 @@ describe('League page, playoff tabs', () => {
     expect(screen.getByRole('radio', { name: 'Student' })).toHaveAttribute('aria-checked', 'true')
   })
 
+  it('Odds: the projected bracket is the default, with both conferences, the Super Bowl and the table a click away', async () => {
+    renderRoute('/league?tab=odds')
+    const afc = await screen.findByRole('region', { name: 'AFC projected bracket' })
+    expect(screen.getByRole('region', { name: 'NFC projected bracket' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Bracket' })).toHaveAttribute('aria-checked', 'true')
+    // seven seeds: one bye and three wild-card games, then two divisional games and a conference game
+    expect(within(afc).getByText('Bye')).toBeInTheDocument()
+    expect(afc.querySelectorAll('[data-team]')).toHaveLength(1 + 6 + 4 + 2)
+    expect(within(screen.getByRole('region', { name: 'Projected Super Bowl' })).getByText(/Projected champion/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: 'Table' }))
+    expect(await screen.findByRole('list', { name: 'AFC playoff odds' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'AFC projected bracket' })).toBeNull()
+  })
+
   it('Odds: restores the toggles from the URL', async () => {
-    renderRoute('/league?tab=odds&view=student')
+    renderRoute('/league?tab=odds&layout=table&view=student')
     await screen.findByRole('list', { name: 'NFC playoff odds' })
     expect(screen.getByRole('radio', { name: 'Student' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('Odds: team bars use the team color slot, not a raw color, and no probability reads 0% or 100%', async () => {
-    const { container } = renderRoute('/league?tab=odds')
+    const { container } = renderRoute('/league?tab=odds&layout=table')
     const list = await screen.findByRole('list', { name: 'AFC playoff odds' })
     const row = within(list).getAllByRole('listitem')[0]
     expect(row).toHaveAttribute('data-matchup')
@@ -84,14 +98,14 @@ describe('League page, playoff tabs', () => {
   })
 
   it('Odds: rounds show on hover', async () => {
-    renderRoute('/league?tab=odds')
+    renderRoute('/league?tab=odds&layout=table')
     const row = within(await screen.findByRole('list', { name: 'AFC playoff odds' })).getAllByRole('listitem')[0]
     await userEvent.hover(row)
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Win the Super Bowl')
   })
 
   it('Odds: one fine print block, with the file\'s counts and how the estimate tested', async () => {
-    renderRoute('/league?tab=odds')
+    renderRoute('/league?tab=odds&layout=table')
     await screen.findByRole('list', { name: 'AFC playoff odds' })
     expect(document.querySelectorAll('details summary').length).toBeGreaterThan(0)
     const fine = screen.getByText('How these odds are made').closest('details')!
@@ -129,7 +143,7 @@ describe('League page, playoff tabs', () => {
   })
 
   it('Odds: a sparkline for each team with two or more points, labelled with the first and last value, in the view shown', async () => {
-    const withHistory = (view: string) => `/league?tab=odds&view=${view}`
+    const withHistory = (view: string) => `/league?tab=odds&layout=table&view=${view}`
     renderRoute(withHistory('student'))
     const list = await screen.findByRole('list', { name: 'AFC playoff odds' })
     const sparks = within(list).getAllByRole('img')
@@ -155,7 +169,7 @@ describe('League page, playoff tabs', () => {
       const f = JSON.parse(fs.readFileSync(path.join(root, 'site/league.json'), 'utf8'))
       f.history = history === lone ? Object.fromEntries(Object.entries(history).filter(([k]) => k === 'KC')) : history
       fs.writeFileSync(path.join(root, 'site/league.json'), JSON.stringify(f))
-      const { unmount } = renderRoute('/league?tab=odds', root)
+      const { unmount } = renderRoute('/league?tab=odds&layout=table', root)
       const list = await screen.findByRole('list', { name: 'AFC playoff odds' })
       expect(within(list).queryAllByRole('img')).toHaveLength(0)
       expect(list.querySelectorAll('svg')).toHaveLength(0)
@@ -166,7 +180,7 @@ describe('League page, playoff tabs', () => {
   })
 
   it('Odds: says when it was simulated', async () => {
-    renderRoute('/league?tab=odds')
+    renderRoute('/league?tab=odds&layout=table')
     expect(await screen.findByText(/^Simulated \w{3}, /)).toBeInTheDocument()
   })
 
@@ -179,10 +193,10 @@ describe('League page, playoff tabs', () => {
   })
 
   it('Market view says most of it is an estimate; the Student view does not', async () => {
-    renderRoute('/league?tab=odds')
+    renderRoute('/league?tab=odds&layout=table')
     expect(await screen.findByText(/games left have a betting line yet/)).toBeInTheDocument()
     cleanup()
-    renderRoute('/league?tab=odds&view=student')
+    renderRoute('/league?tab=odds&layout=table&view=student')
     await screen.findByRole('list', { name: 'AFC playoff odds' })
     expect(screen.queryByText(/games left have a betting line yet/)).toBeNull()
   })
@@ -242,7 +256,7 @@ describe('What if mode (M26.4)', () => {
   })
 
   it('turns on, decides a game, and shows now → what if', async () => {
-    render(<MemoryRouter initialEntries={['/league?whatif=1']}><Odds file={ready} runs={runs} /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/league?whatif=1&layout=table']}><Odds file={ready} runs={runs} /></MemoryRouter>)
     expect(screen.getByRole('radio', { name: 'What if…' })).toHaveAttribute('aria-checked', 'true')
     const panel = screen.getByRole('region', { name: 'What if: decide games' })
     expect(await screen.findByText(/200 simulated seasons/)).toBeInTheDocument()
@@ -260,7 +274,7 @@ describe('What if mode (M26.4)', () => {
   })
 
   it('by team: one team wins out, then clears', async () => {
-    render(<MemoryRouter initialEntries={['/league?whatif=1']}><Odds file={ready} runs={runs} /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/league?whatif=1&layout=table']}><Odds file={ready} runs={runs} /></MemoryRouter>)
     const panel = screen.getByRole('region', { name: 'What if: decide games' })
     await userEvent.click(within(panel).getByRole('radio', { name: 'By team' }))
     const team = ready.games[0].home
