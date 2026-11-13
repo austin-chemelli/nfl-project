@@ -3,7 +3,7 @@
  * Production reads the public bucket (VITE_DATA_URL); `npm run dev` reads the local data/ folder
  * through the Vite plugin at /data.
  */
-import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
 import type { z } from 'zod'
 import * as C from './contract'
 
@@ -57,6 +57,14 @@ function useJson<S extends z.ZodType>(key: string, path: string | null, schema: 
 export const useMeta = () => useJson('meta', 'site/meta.json', C.Meta)
 export const useSlate = (season?: number, week?: number) =>
   useJson('slate', season && week ? `site/slate_${season}_${pad(week)}.json` : null, C.Slate)
+/** Several weeks' slates at once (same cache as `useSlate`): the record of your picks reads every week you picked. */
+export const useSlates = (season: number, weeks: number[]) =>
+  useQueries({
+    queries: weeks.map((w) => {
+      const path = `site/slate_${season}_${pad(w)}.json`
+      return { queryKey: ['slate', path], queryFn: () => fetchJson(path, C.Slate), staleTime: FIVE_MIN, retry: (n: number, e: unknown) => !isNotFound(e) && n < 1 }
+    }),
+  })
 export const useGame = (id?: string) => useJson('game', id ? `site/game/${id}.json` : null, C.Game)
 export const useTracker = () => useJson('tracker', 'site/tracker.json', C.Tracker)
 export const useHypotheses = () => useJson('hypotheses', 'site/hypotheses.json', C.Hypotheses)

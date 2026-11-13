@@ -10,6 +10,7 @@ import { kickoffEt, pct, spreadLabel } from '../../lib/format'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { matchupVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
+import { YourPick } from '../../components/YourPick'
 import { cardSentence, contrastLine, gameStatus, pickOf, stakesLine, whyLine } from './helpers'
 
 function TeamCode({ team, color }: { team: string; color: string }) {
@@ -53,49 +54,50 @@ export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Me
   const stakes = g.result == null ? stakesLine(g, league) : null
   const move = pregame ? cardMove(g.line_move, g.home, g.away) : null
   return (
-    <Link
-      to={`/game/${g.game_id}`}
-      data-matchup
-      style={matchupVars(g.away, g.home)}
-      aria-labelledby={`${id}-head`}
-      aria-describedby={why ? `${id}-why` : undefined}
-      className="relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-line bg-surface-1 p-3 pt-3.5 hover:bg-surface-2 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
-    >
+    <div data-matchup style={matchupVars(g.away, g.home)} className="relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-surface-1">
       <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: 'linear-gradient(90deg, var(--team-away) 50%, var(--team-home) 50%)' }} />
-      <div id={`${id}-head`} className="flex items-start justify-between gap-2">
-        <span className="inline-flex items-baseline gap-2 text-lg font-semibold text-ink">
-          <TeamCode team={g.away} color="var(--team-away)" />
-          <span className="text-ink-3">@</span>
-          <TeamCode team={g.home} color="var(--team-home)" />
-        </span>
-        <span className="flex flex-col items-end gap-1 text-right">
-          {g.result ? <FinalScore g={g} /> : <span className="text-[13px] text-ink-2">{kickoffEt(g.kickoff_utc)}</span>}
-          {showStatus && <StatusBadge status={status} />}
-        </span>
-      </div>
-      <div className="text-[13px] text-ink-2">
-        {spreadLabel(g.market?.spread_home, g.home, g.away)}
-        {g.market?.total != null && <span className="text-ink-3"> · total {g.market.total}</span>}
-        {fav && <span className="text-ink-3"> · market {fav}</span>}
-      </div>
-      {move && <div className="text-[13px] text-ink-2">{move}</div>}
-      {pk && (
-        <div className="text-[14px] font-medium text-ink">
-          {SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}
-          {g.models[HEADLINE]?.spread_home != null && <span className="font-normal text-ink-2"> ({spreadLabel(g.models[HEADLINE].spread_home, g.home, g.away)})</span>}
+      <Link
+        to={`/game/${g.game_id}`}
+        aria-labelledby={`${id}-head`}
+        aria-describedby={why ? `${id}-why` : undefined}
+        className="flex min-w-0 flex-1 flex-col gap-2 p-3 pt-3.5 hover:bg-surface-2 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+      >
+        <div id={`${id}-head`} className="flex items-start justify-between gap-2">
+          <span className="inline-flex items-baseline gap-2 text-lg font-semibold text-ink">
+            <TeamCode team={g.away} color="var(--team-away)" />
+            <span className="text-ink-3">@</span>
+            <TeamCode team={g.home} color="var(--team-home)" />
+          </span>
+          <span className="flex flex-col items-end gap-1 text-right">
+            {g.result ? <FinalScore g={g} /> : <span className="text-[13px] text-ink-2">{kickoffEt(g.kickoff_utc)}</span>}
+            {showStatus && <StatusBadge status={status} />}
+          </span>
         </div>
-      )}
-      {why && <div id={`${id}-why`} className="text-[14px] text-ink">{why}</div>}
-      {contrast && <div className="text-[13px] text-ink-2">{contrast}</div>}
-      {stakes && <div className="tabular text-[13px] text-ink-2">{stakes}</div>}
-      <div className={`flex items-center gap-2 text-[11px] text-ink-3 ${pregame ? 'border-t border-line pt-2' : ''}`}>
-        <span>{g.away}</span>
-        <div className="min-w-0 flex-1">
-          <ProbStrip compact home={g.home} market={mk} models={models} />
+        <div className="text-[13px] text-ink-2">
+          {spreadLabel(g.market?.spread_home, g.home, g.away)}
+          {g.market?.total != null && <span className="text-ink-3"> · total {g.market.total}</span>}
+          {fav && <span className="text-ink-3"> · market {fav}</span>}
         </div>
-        <span>{g.home}</span>
-      </div>
-      <div className={pregame ? 'text-[12px] text-ink-3' : 'text-[14px] text-ink'}>{cardSentence(g)}</div>
-    </Link>
+        {move && <div className="text-[13px] text-ink-2">{move}</div>}
+        {pk && (
+          <div className="text-[14px] font-medium text-ink">
+            {SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}
+            {g.models[HEADLINE]?.spread_home != null && <span className="font-normal text-ink-2"> ({spreadLabel(g.models[HEADLINE].spread_home, g.home, g.away)})</span>}
+          </div>
+        )}
+        {why && <div id={`${id}-why`} className="text-[14px] text-ink">{why}</div>}
+        {contrast && <div className="text-[13px] text-ink-2">{contrast}</div>}
+        {stakes && <div className="tabular text-[13px] text-ink-2">{stakes}</div>}
+        <div className={`flex items-center gap-2 text-[11px] text-ink-3 ${pregame ? 'border-t border-line pt-2' : ''}`}>
+          <span>{g.away}</span>
+          <div className="min-w-0 flex-1">
+            <ProbStrip compact home={g.home} market={mk} models={models} />
+          </div>
+          <span>{g.home}</span>
+        </div>
+        <div className={pregame ? 'text-[12px] text-ink-3' : 'text-[14px] text-ink'}>{cardSentence(g)}</div>
+      </Link>
+      <YourPick g={g} />
+    </div>
   )
 }

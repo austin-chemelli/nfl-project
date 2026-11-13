@@ -129,6 +129,7 @@ Live view, with the areas each chat has claimed: `.notes/hub/tracks/` (uncommitt
 | M23 second-level features | planned 2026-11-08 (ADR 0026): calibration study first (the Student carries a home shift from pooling 2002+: favorites at 0.55-0.75 win 3-5 points less than it says), a candidates ledger that keeps every tested feature on the History page, EPA without turnovers / takeaways / fumble luck into the existing groups via a shadow `student_v2`, `DecompBar` and `ReliabilityBadge`, the context splits; player-level data is another chat's flight |
 | M24 Player value and scored impact claims | M24.0 sources and M24.1 status-to-play rates live 2026-11-09 (#33, ADR 0027); M24.2 value model live 2026-11-10 (#34); M24.4 scored claims live 2026-11-12 (#40; the daily pass writes them); M24.5 pages built 2026-11-12, PR open; screening (M24.3) waits on M23 phase 0 |
 | M25 Matchups and paths to an upset | planned 2026-11-09 (ADR 0028): situation splits as a SQL model and a matchup engine (edges in points, shrunk toward the league effect, badged), paths to an upset as conditions and plausibility (pre-game rates predict a game's turnover margin with r 0.00, so never a probability), market leans from the ledger, a Matchups tab, `UpsetPaths` and `MatchupGrid`; phases 0-2 are site work in season, phase 3 (a `matchup` approach beside the Student) is offseason and gated; M25.0, M25.1, M25.2, M25.4 merged 2026-11-11 (#41, #47, #46, #42); next M25.3 |
+| M26 Your picks and the playoff what-if | decided 2026-11-12 (Austin; ADR 0029): idea (d), staged. M26.1 picks on the slate built 2026-11-12, PR open; M26.2-M26.4 (played results in `league.json`, the simulation in TypeScript, the what-if on the League page) next |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -210,7 +211,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | Doc | Read it when | Verified |
 |---|---|---|
 | [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-09 |
-| [adr/](adr/) | before re-opening a decision; ADR 0028 is the newest (0026 second-level features, 0027 player value, 0028 matchups and paths to an upset) | 2026-11-09 |
+| [adr/](adr/) | before re-opening a decision; ADR 0029 is the newest (0027 player value, 0028 matchups and paths to an upset, 0029 visitor picks in the browser) | 2026-11-12 |
 | [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-12 |
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-12 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-08 |
