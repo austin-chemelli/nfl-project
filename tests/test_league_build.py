@@ -362,6 +362,9 @@ def test_games_take_swings_from_the_market_runs():
     inp["student"].p_home = np.full(len(inp["student"].p_home), 0.5)
     obj, sims = lb.league_file(games, inp, 2026, NOW, n_runs=RUNS)
     lev = {g.game_id: g.leverage_total for g in sims["market"].games}
-    assert all(row["leverage_total"] == pytest.approx(lev[row["game_id"]], abs=1e-4) for row in obj["games"])
+    assert all(
+        row["leverage_total"] == pytest.approx(lev[row["game_id"]], abs=1e-4)
+        for row in obj["games"]
+    )
     assert all(row["p_student"] == 0.5 for row in obj["games"])
     assert any(row["p_market"] != 0.5 for row in obj["games"])
