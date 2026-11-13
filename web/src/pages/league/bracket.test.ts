@@ -54,3 +54,19 @@ describe('projectConference', () => {
     expect(sb.winner.team).toBe('N')
   })
 })
+
+describe('records', () => {
+  it('projects a final record from expected wins and keeps it possible', async () => {
+    const { projected, recordView } = await import('./bracket')
+    expect(projected({ w: 7, l: 2, t: 0, left: 8 }, 11.6)).toEqual({ w: 12, l: 5, t: 0 })
+    expect(projected({ w: 7, l: 2, t: 0, left: 8 }, 3)).toEqual({ w: 7, l: 10, t: 0 }) // never fewer wins than now
+    expect(projected({ w: 5, l: 2, t: 1, left: 9 }, 10.5)).toEqual({ w: 10, l: 6, t: 1 })
+    const r = recordView({ team: 'DAL', w: 4, l: 5, t: 0, left: 8 }, [
+      { home: 'DAL', away: 'SF', winner: 'home' }, { home: 'PHI', away: 'DAL', winner: 'home' }, { home: 'KC', away: 'BUF', winner: 'away' },
+    ], 9.2, 8.1)
+    expect(r.now).toEqual({ w: 5, l: 6, t: 0 })
+    expect(r.added).toEqual({ w: 1, l: 1 })
+    expect(r.proj).toEqual({ w: 9, l: 8, t: 0 })
+    expect(r.projWas).toEqual({ w: 8, l: 9, t: 0 })
+  })
+})

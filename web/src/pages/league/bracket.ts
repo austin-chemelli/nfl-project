@@ -79,3 +79,35 @@ export function superBowl(afc: Seeded, nfc: Seeded, odds: OddsMap): { afc: Seede
   const winner = reach(odds, nfc.team, 'champ') > reach(odds, afc.team, 'champ') ? nfc : afc
   return { afc, nfc, winner }
 }
+
+export type Rec = { w: number; l: number; t: number }
+export type RecordView = { now: Rec; added: { w: number; l: number }; proj: Rec; projWas?: Rec }
+
+/** Final record from the expected wins (ties count half in the engine): wins rounded, the rest losses. */
+export function projected(st: { w: number; l: number; t: number; left: number }, winsMean: number): Rec {
+  const total = st.w + st.l + st.t + st.left
+  const w = Math.max(st.w, Math.min(total - st.t - st.l, Math.round(winsMean - st.t / 2)))
+  return { w, l: total - st.t - w, t: st.t }
+}
+
+/** A team's record now plus the games decided in a scenario, and its projected final record (and the one before the decisions). */
+export function recordView(
+  st: { team: string; w: number; l: number; t: number; left: number },
+  decided: { home: string; away: string; winner: 'home' | 'away' }[],
+  winsMean: number,
+  wasWinsMean?: number,
+): RecordView {
+  let w = 0
+  let l = 0
+  for (const g of decided) {
+    if (g.home !== st.team && g.away !== st.team) continue
+    if ((g.winner === 'home') === (g.home === st.team)) w++
+    else l++
+  }
+  return {
+    now: { w: st.w + w, l: st.l + l, t: st.t },
+    added: { w, l },
+    proj: projected(st, winsMean),
+    projWas: wasWinsMean == null ? undefined : projected(st, wasWinsMean),
+  }
+}

@@ -189,6 +189,12 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
   const toMap = (o: Record<string, TeamOdds>) => Object.fromEntries(Object.entries(o).map(([t, x]) => [t, toOddsTeam(x)]))
   const shownOdds = live ? toMap(wi.next!) : file.odds[view].teams
   const wasOdds = live ? toMap(wi.now!) : undefined
+  const decidedGames = live
+    ? file.games.flatMap((g) => {
+        const d = decided.get(g.game_id)
+        return d ? [{ home: g.home, away: g.away, winner: d.winner }] : []
+      })
+    : []
   if (Object.keys(file.odds[view].teams).length === 0) return <p className="text-ink-2">The regular season is over. The final records are on the Standings tab.</p>
 
   return (
@@ -203,15 +209,11 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
         )}
       </div>
 
-      <div className={on ? 'grid items-start gap-4 lg:grid-cols-[21rem_minmax(0,1fr)]' : 'contents'}>
-        {on && (
-          <div className="lg:sticky lg:top-14 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto">
-            <WhatIfPanel file={file} scenario={scenario} decided={decided} source={view} nPicks={picksInPlay(file, picks)} onChange={setScenario} />
-          </div>
-        )}
-        <div className={on ? 'flex min-w-0 flex-col gap-4' : 'contents'}>
+      <div className="contents">
+        {on && <WhatIfPanel file={file} scenario={scenario} decided={decided} source={view} nPicks={picksInPlay(file, picks)} onChange={setScenario} />}
+        <div className="contents">
           {on && (
-            <div className="flex flex-col gap-1 rounded-md border-l-4 border-[var(--accent)] bg-surface-2 px-3 py-2 text-[13px] lg:sticky lg:top-14 lg:z-10" aria-live="polite">
+            <div className="sticky top-12 z-10 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-md border-l-4 border-[var(--accent)] bg-surface-2 px-3 py-1.5 text-[13px] shadow-sm" aria-live="polite">
               <span className="font-medium text-ink">
                 Your scenario, not the published odds{wi.busy ? ' · simulating…' : wi.runs ? ` · ${wi.runs.toLocaleString('en-US')} simulated seasons` : ''}
               </span>
@@ -229,10 +231,10 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
 
           {layout === 'bracket' ? (
             <>
-              <Bracket file={file} odds={shownOdds} was={wasOdds} wide={!on} first={lead === 'NFC' ? 'NFC' : 'AFC'} />
+              <Bracket file={file} odds={shownOdds} was={wasOdds} decided={decidedGames} first={lead === 'NFC' ? 'NFC' : 'AFC'} />
               <p className="text-[13px] text-ink-3">
                 One likely bracket, not a prediction of it: each seed goes to the team most likely to hold it, and each game to the team more likely to win it. Every number is that team's chance to win that round
-                (for the Super Bowl, the title), with its seed on the left, across all {on && wi.runs ? wi.runs.toLocaleString('en-US') : file.n_sims.toLocaleString('en-US')} simulated seasons, whoever it plays.{on && ' Arrows: the change from now, before your decisions.'} The table has every team's odds of making the playoffs.
+                (for the Super Bowl, the title), with its seed on the left; under it, its record and its projected final record (expected wins, rounded), across all {on && wi.runs ? wi.runs.toLocaleString('en-US') : file.n_sims.toLocaleString('en-US')} simulated seasons, whoever it plays.{on && ' Arrows and colors: the change from now, before your decisions; the record counts the games you decided, wins in green and losses in red.'} The table has every team's odds of making the playoffs.
               </p>
             </>
           ) : (

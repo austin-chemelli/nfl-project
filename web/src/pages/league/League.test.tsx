@@ -72,7 +72,10 @@ describe('League page, playoff tabs', () => {
     // seven seeds: one bye and three wild-card games, then two divisional games and a conference game
     expect(within(afc).getByText('Bye')).toBeInTheDocument()
     expect(afc.querySelectorAll('[data-team]')).toHaveLength(1 + 6 + 4 + 2)
-    expect(within(screen.getByRole('region', { name: 'Projected Super Bowl' })).getByText(/Projected champion/)).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Projected Super Bowl' })).getByText(/Champion:/)).toBeInTheDocument()
+    // each team in the bracket shows its record and its projected final record
+    const first = afc.querySelector('[data-team]') as HTMLElement
+    expect(first.textContent).toMatch(/\d+–\d+ · proj \d+–\d+/)
     await userEvent.click(screen.getByRole('radio', { name: 'Table' }))
     expect(await screen.findByRole('list', { name: 'AFC playoff odds' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'AFC projected bracket' })).toBeNull()
