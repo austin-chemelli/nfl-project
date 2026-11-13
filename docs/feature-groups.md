@@ -1,6 +1,6 @@
 # Feature groups
 
-Status: current, verified 2026-11-09 (registry v6, ADR 0018; the `matchups` group note from ADR 0028).
+Status: current, verified 2026-11-12 for the player-value note (M24.6), the rest 2026-11-09 (registry v6, ADR 0018; the `matchups` group note from ADR 0028).
 
 The two-level feature design is ADR 0012. This file is the group registry in prose; the code registry is `src/nfl/features/groups.py` (M2.8). Chosen 2026-10-27 (option B of `.notes/feature-group-options.md`, with the scheme group split three ways). Signs are the declared default direction *for the team* (positive = good for the home team when home − away is positive); the fitted inner weights may disagree, and the Hypotheses page reports when they do. "Exists" means built as of 2026-10-27; everything else has a task in `docs/tasks.md`. Members marked *adv* are hidden behind "more" in the UI but always part of the composite once built.
 
@@ -24,6 +24,8 @@ Sixteen groups; `coaching`, `off_scheme`, `def_scheme` and `matchups` are contex
 | **Matchups** | `matchup.pa_vs_pa_defense`, `matchup.blitz_vs_blitz_offense`, `matchup.motion_vs_motion_defense`, `matchup.under_center_vs_light_box`, `matchup.off_vs_man`, `matchup.off_vs_pressure`, `matchup.off_11_vs_def_11` (all +: offense's edge in that interaction) | none | This offense against this defense specifically |
 | **Market behavior** (ADR 0013) | `market.line_move_pts` (+), `market.ml_spread_gap` (+), `narrative.public_bet_pct_home` (no prior direction) | gap; line moves live only | How the betting market is *behaving*, never what it predicts; capped at 20% of a persona's budget; mostly live-only |
 | **Buzz** | `narrative.sentiment` (+), `narrative.hype` (+) | contract only | Media and public mood. Live only; "weeks tracked" applies |
+
+Player value (ADR 0027, M24) is not in any group yet: the claims, the formation map and the team availability panel are page context only. `availability.value_lost` (the value of the starters who are missing, weighted by how often a status plays) enters the candidates ledger first (M24.3); it would join Health only at a registry bump after a shadow line beats the Student (ADR 0018's bar).
 
 Not in any group, by ADR 0013 (the market's forecast is the reference, never an input): `market.spread_line`, `market.p_home_vigfree`, `market.total_line`. Also not in a group: `narrative.upset_buzz` (game-level, while Buzz is team-level; shown on the game page), `narrative.public_pick` (categorical). The code registry is the source of truth when this table and `src/nfl/features/groups.py` disagree.
 

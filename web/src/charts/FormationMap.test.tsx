@@ -19,6 +19,7 @@ const LINEUPS = Lineups.parse({
     defense_formation: 'Base 3-4 D',
     offense: [spot('QB', 'Lamar Jackson', 6.55, 'Out', 0), spot('WR1', 'Zay Flowers', 1.15, 'Questionable', 0.73), spot('C', 'New Center', null)],
     defense: [spot('NT', 'Nose Tackle', null, 'Questionable', 0.7), spot('LCB', 'A Corner', 0.8)],
+    off_chart: [spot('RB', 'Moved Down', 0.6, 'Out', 0)],
   },
   away: null,
 })
@@ -33,6 +34,7 @@ describe('FormationMap', () => {
     expect(container.querySelector('[data-slot="C"]')!.getAttribute('aria-label')).toBe('C: New Center, not valued yet')
     expect(container.querySelector('[data-slot="NT"] [data-badge="Q"]')).not.toBeNull()
     expect(screen.getByText('Base 3-4 D', { exact: false })).toBeInTheDocument()
+    expect(screen.getByTestId('off-chart-home').textContent).toBe('Also on the report, moved off the depth chart: Moved Down (RB, Out, 0.6 pts at risk)')
     // Out: only the ring, no filled core; Questionable: a core
     expect(qb.querySelectorAll('circle').length).toBe(2 + 1) // hit area, ring, badge
     expect(container.querySelector('[data-slot="WR1"]')!.querySelectorAll('circle').length).toBe(2 + 1 + 1)

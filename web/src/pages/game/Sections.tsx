@@ -405,7 +405,7 @@ export function Injuries({ g }: { g: Game }) {
     <Section title="Injuries">
       {hasMap && (
         <p className="mb-3 text-ink-2">
-          Each team's starters from its latest depth chart, sized by what each is worth in points; the empty part of a ring is the value at risk from this week's report.
+          Each team's starters from its latest depth chart, sized by what each is worth in points on the spread (losing a player worth 1.0 moves a fair line about a point toward the opponent); the empty part of a ring is the value at risk from this week's report.
         </p>
       )}
       <div className="grid gap-6 md:grid-cols-2">
