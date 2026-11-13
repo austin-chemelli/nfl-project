@@ -3,7 +3,7 @@
  * latest depth chart, line of scrimmage at the top. A dot's ring is sized by what the player is worth
  * in points; the filled core is the share of that value expected to play (all of it when he isn't on
  * the report, none when he's Out), so the empty part is the value at risk. Groups the model doesn't
- * value yet (linebackers, interior linemen) are dashed rings with no number. Listed players carry a
+ * value yet (a player without enough recent games) are dashed rings with no number. Listed players carry a
  * status letter. The team color comes from `[data-matchup]` (`matchupVars`), never a raw brand color.
  */
 import type { LineupSpot, SideLineup } from '../data/contract'
@@ -79,7 +79,7 @@ function Tip({ s }: { s: LineupSpot }) {
     <>
       <TipTitle note={`${s.slot}${s.grp ? ` · ${s.grp}` : ''}`}>{s.player}</TipTitle>
       {s.value_pts === null ? (
-        <TipNote>No value yet: the model doesn&apos;t cover linebackers or interior linemen, or a player without enough games.</TipNote>
+        <TipNote>No value yet: not enough recent games to value him.</TipNote>
       ) : (
         <TipRow value={`${pts(s.value_pts)} pts`} label="on the spread, his worth to the team" />
       )}

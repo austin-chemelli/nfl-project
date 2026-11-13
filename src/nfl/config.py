@@ -32,12 +32,14 @@ DATASETS: dict[str, tuple[str, str, int | None]] = {
     "players": ("players", "players.parquet", None),
     "contracts": ("contracts", "historical_contracts.parquet", None),
     "draft_picks": ("draft_picks", "draft_picks.parquet", None),
+    # who is on each team's roster each week, with the reserve lists (IR, PUP): team health (M24.7)
+    "rosters_weekly": ("weekly_rosters", "roster_weekly_{season}.parquet", 2002),
 }
 
 # Datasets whose download or curate may fail without failing the job (ADR 0027).
 OPTIONAL_DATASETS: frozenset[str] = frozenset(
     {"player_stats", "snap_counts", "pfr_pass", "pfr_rush", "pfr_rec", "pfr_def",
-     "players", "contracts", "draft_picks"}
+     "players", "contracts", "draft_picks", "rosters_weekly"}
 )  # fmt: skip
 # Single-file datasets fetched on every default ingest (refetched each run; unchanged files skip).
 SINGLE_FILE_DATASETS: tuple[str, ...] = ("schedules", "players", "contracts", "draft_picks")
@@ -55,6 +57,10 @@ DEFAULT_SEASONS: dict[str, tuple[int, int]] = {
     "pfr_rush": (2018, 2026),
     "pfr_rec": (2018, 2026),
     "pfr_def": (2018, 2026),
+    "rosters_weekly": (
+        2025,
+        2026,
+    ),  # timestamped depth charts start in 2025: nothing older reads it
 }
 
 # History starts here (pbp + schedules). Fits train from FIRST_TRAIN_SEASON so Elo and the

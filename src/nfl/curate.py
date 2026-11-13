@@ -309,6 +309,7 @@ PLAYER_TABLES: dict[str, tuple[str, bool]] = {
     "players": ("players", False),
     "contracts": ("contracts", False),
     "draft_picks": ("draft_picks", False),
+    "rosters_weekly": ("rosters_weekly", True),
 }
 # Nested columns dropped from contracts: the yearly history lists don't fit a flat table.
 _NESTED = {"contracts": "exclude (season_history, contract_history)"}

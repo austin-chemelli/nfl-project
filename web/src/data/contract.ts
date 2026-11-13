@@ -192,8 +192,8 @@ export const KeyPlayer = z.looseObject({
 export const KeyPlayers = z.looseObject({ home: z.array(KeyPlayer), away: z.array(KeyPlayer) })
 export type KeyPlayer = z.infer<typeof KeyPlayer>
 // The formation map (ADR 0027, M24.5): each side's eleven starters on offense and defense from the
-// latest depth chart before the site build; value null for groups the model doesn't value yet
-// (linebackers, interior linemen); status only for a player on this week's report.
+// latest depth chart before the site build; value null for a player without enough recent games
+// (every group is valued since M24.7); status only for a player on this week's report.
 export const LineupSpot = z.looseObject({
   slot: z.string(), // LT, LG, C, RG, RT, TE, WR1-3, QB, RB; LDE, LDT, NT, RDT, RDE, SLB, LILB, MLB, RILB, WLB, LCB, RCB, SS, FS
   player: z.string(),
@@ -228,6 +228,24 @@ export const TeamAvailability = z.looseObject({
   reported: z.boolean(), // false before any pass has read this week's report
   value_at_risk: nnum, // null when not reported: no report yet is not "nobody hurt"
 })
+
+// How far from full strength (M24.7): the full-strength starters, what each is expected to miss
+export const HealthStarter = z.looseObject({
+  slot: z.string(), unit: z.string(), player: z.string(), grp: nstr, value_pts: nnum,
+  status: nstr, reserve: z.boolean().default(false), p_play: num, since_week: nnum.default(null),
+  eligible_week: nnum.default(null), replaced_by: nstr.default(null), missing_pts: nnum,
+})
+export const HealthGroup = z.looseObject({ grp: z.string(), full_pts: num, missing_pts: num, health: nnum })
+export const HealthWeek = z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num.optional() })
+export const TeamHealth = z.looseObject({
+  now: z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num, groups: z.array(HealthGroup), starters: z.array(HealthStarter) }),
+  by_week: z.array(HealthWeek).default([]),
+  outlook: z.array(HealthWeek).default([]),
+})
+const GameHealthSide = z.looseObject({ health: nnum, missing_pts: num, full_pts: num })
+export const GameHealth = z.looseObject({ home: GameHealthSide.nullable().default(null), away: GameHealthSide.nullable().default(null) })
+export type HealthStarter = z.infer<typeof HealthStarter>
+export type TeamHealth = z.infer<typeof TeamHealth>
 
 export const StrongCall = z.looseObject({
   game_id: z.string(), week: num, model_id: z.string(), lock_ts: nstr.default(null), side: z.string(), team: z.string(),
@@ -554,6 +572,7 @@ export const Game = GameRow.extend({
   strong_calls: z.array(StrongCall).default([]),
   key_players: KeyPlayers.nullable().default(null), // the latest claims before kickoff (ADR 0027)
   lineups: Lineups.nullable().default(null), // the formation map's starters (ADR 0027, M24.5)
+  health: GameHealth.nullable().default(null), // each side's share of full strength (M24.7)
   today: Today.nullable().default(null), // the latest preview score: not a lock, never graded
   expected_score: ExpectedScore.nullable().default(null), // the locked total split by the headline spread: context (ADR 0024)
   matchups: Matchups.nullable().default(null), // what each side's habits imply, in points a game (ADR 0028)
@@ -1218,6 +1237,7 @@ export const TeamFile = z.looseObject({
   other_starter_weeks: z.array(z.looseObject({ week: num, qb: z.string() })).default([]),
   units: z.looseObject({ off: TeamUnit, def: TeamUnit }),
   availability: TeamAvailability.nullable().default(null), // ADR 0027: top starters by value, statuses
+  health: TeamHealth.nullable().default(null), // M24.7: how far from full strength, by week
 })
 export type TeamFile = z.infer<typeof TeamFile>
 export type TeamUnit = z.infer<typeof TeamUnit>

@@ -793,6 +793,7 @@ def players_value(
     import polars as pl
     from rich.table import Table
 
+    from nfl.players.priors import GROUPS
     from nfl.players.value import build
 
     df = build(get_paths(), (season_from, season_to))
@@ -802,7 +803,7 @@ def players_value(
     if show:
         s, w = (int(x) for x in show.split(":"))
         sl = df.filter((pl.col("season") == s) & (pl.col("week") == w))
-        for grp in ("QB", "WR", "TE", "RB", "OL", "EDGE", "CB", "S"):
+        for grp in GROUPS:
             t = Table(title=f"{grp}, {s} week {w}")
             for h in ("player", "team", "role", "quality", "points"):
                 t.add_column(h, justify="left" if h in ("player", "team") else "right")

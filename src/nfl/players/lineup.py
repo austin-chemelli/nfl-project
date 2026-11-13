@@ -4,8 +4,8 @@ and his status this week: the data behind the Injuries tab's formation map (ADR 
 Starters come from the team's latest depth chart taken before the cutoff (the 2026 charts are
 timestamped): the top-ranked player at each formation spot of the base offense (3WR 1TE) and base
 defense (4-3 or 3-4). The fullback and the nickel back are extra spots, not part of the eleven.
-Values come from the M24.2 model; linebackers and interior linemen have none yet (not a v1 group), so
-they carry no number. A status shows only for a player listed Out, Doubtful or Questionable on the
+Values come from the M24.2 model (interior DL and linebackers since M24.7); a player without enough
+recent games carries no number. A status shows only for a player listed Out, Doubtful or Questionable on the
 game week's report; everyone else is unlisted, never "healthy" by inference.
 
 Context only: nothing here reaches a lock or a feature.
@@ -32,6 +32,15 @@ def _ts(dt: str) -> datetime:
     return t.astimezone(UTC).replace(tzinfo=None) if t.tzinfo else t
 
 
+def with_chart_dt(depth: pl.DataFrame) -> pl.DataFrame:
+    """`chart_dt` (naive UTC) from `dt`, unless the frame already has it (parse once per build)."""
+    if "chart_dt" in depth.columns:
+        return depth
+    return depth.with_columns(
+        pl.col("dt").map_elements(_ts, return_dtype=pl.Datetime("us")).alias("chart_dt")
+    )
+
+
 def starters(depth: pl.DataFrame, team: str, cutoff: datetime) -> pl.DataFrame:
     """The team's latest chart before `cutoff`: one row per formation spot (slot, unit, formation,
     gsis_id, player, chart_dt), the top-ranked player at each. Empty without a chart."""
@@ -40,8 +49,8 @@ def starters(depth: pl.DataFrame, team: str, cutoff: datetime) -> pl.DataFrame:
         & pl.col("dt").is_not_null()
         & (pl.col("pos_grp") != "Special Teams")
         & ~pl.col("pos_abb").is_in(EXTRA)
-    ).with_columns(pl.col("dt").map_elements(_ts, return_dtype=pl.Datetime("us")).alias("chart_dt"))
-    d = d.filter(pl.col("chart_dt") < cutoff)
+    )
+    d = with_chart_dt(d).filter(pl.col("chart_dt") < cutoff)
     if d.is_empty():
         return pl.DataFrame()
     d = d.filter(pl.col("chart_dt") == d["chart_dt"].max())
@@ -63,6 +72,7 @@ def starters(depth: pl.DataFrame, team: str, cutoff: datetime) -> pl.DataFrame:
         .otherwise(pl.lit("offense"))
         .alias("unit"),
         pl.col("pos_grp").alias("formation"),
+        "pos_abb",
         "gsis_id",
         pl.col("player_name").alias("player"),
         "chart_dt",
