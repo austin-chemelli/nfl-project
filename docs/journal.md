@@ -810,3 +810,13 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Measured.** 10,000 runs take 1.1-1.3 s on the laptop (2,000 take 0.3 s), so the page will compute "now" once per source and run the what-if at 2,000 first, then refine to 10,000.
 
 **Lesson.** Porting arithmetic operation for operation (integer sums, then one division) made float equality in the tiebreak steps hold across languages without any tolerance.
+
+## 2026-11-12: The What if mode (M26.4; picks track)
+
+**Why.** Austin asked to see the playoff what-if rather than review the engine on its own. Decisions from the plan: a mode inside the Playoff odds tab, your slate picks applied with a visible switch, Student and market only.
+
+**What changed.** A Published / What if… switch on Playoff odds. On: a game list (this week open, later weeks folded) beside the table on wide screens, stacked on a phone; each game's two team buttons decide it, clicking again leaves it to the source; "Use my N picks", "Favorites win out", "Reset", "Copy link"; the scenario lives in the URL (`d`, `fav`, `mypicks`). The table shows the what-if chance with an arrow from now and a gray tick at now on the bar, Division and Bye arrows, and a "Biggest movers" line. "Now" and the scenario run on one seed in the Web Worker, 2,000 runs first, then 10,000. The slate's "Your picks" strip links to it. #54 merged #53's branch in to use the picks store.
+
+**Measured.** On today's real file, deciding a game shows a first answer in about 0.4 s and the 10,000-run answer in about 1.5 s; the page stays responsive. WAS over NYG, PIT over PHI and DAL over SF move NYG 59% → 41%, DAL 33% → 49%, WAS 13% → 17%.
+
+**Lesson.** The first layout stacked a 14-game list above the table, so nothing moved on screen while you clicked; putting the list beside the table is what makes it feel like a what-if.

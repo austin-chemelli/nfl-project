@@ -2,6 +2,7 @@
  * Your picks this season (M26.1): this week's progress and your record against the Student and the
  * market's favorite on the same games. Everything is read from this browser's picks and the slates.
  */
+import { Link } from 'react-router'
 import { Help } from '../../components/Help'
 import { useSlates } from '../../data/api'
 import type { GameRow } from '../../data/contract'
@@ -38,6 +39,11 @@ export function YourPicks({ season, games, now }: { season: number; games: GameR
         </span>
       ) : (
         weeks.length > 0 && <span className="text-ink-3">Your record starts when a game you picked is final.</span>
+      )}
+      {pickedOpen > 0 && (
+        <Link to="/league?whatif=1" className="text-accent hover:underline">
+          What your picks mean for the playoffs →
+        </Link>
       )}
       {pickedOpen > 0 && (
         <button type="button" onClick={() => clearOpenPicks(games, now)} className="ml-auto text-accent hover:underline">

@@ -223,3 +223,37 @@ describe('League page', () => {
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })
+
+describe('What if mode (M26.4)', () => {
+  const ratings = Object.fromEntries(league.teams.map((t, i) => [t.team, ((i * 7) % 32 - 15.5) / 18]))
+  const ready: LeagueFile = {
+    ...league,
+    through_week: 0,
+    played: [],
+    odds: { student: { ...league.odds.student, ratings, home_term: 0.15 }, market: { ...league.odds.market, ratings, home_term: 0.15 } },
+  }
+  const runs = { quick: 100, full: 200 }
+
+  it('has no switch on a file from before M26.2', () => {
+    render(<MemoryRouter><Odds file={league} runs={runs} /></MemoryRouter>)
+    expect(screen.queryByRole('radiogroup', { name: 'What if' })).toBeNull()
+  })
+
+  it('turns on, decides a game, and shows now → what if', async () => {
+    render(<MemoryRouter initialEntries={['/league?whatif=1']}><Odds file={ready} runs={runs} /></MemoryRouter>)
+    expect(screen.getByRole('radio', { name: 'What if…' })).toHaveAttribute('aria-checked', 'true')
+    const panel = screen.getByRole('region', { name: 'What if: decide games' })
+    expect(await screen.findByText(/200 simulated seasons/)).toBeInTheDocument()
+    expect(screen.getByText('Decide a game below to see who it moves.')).toBeInTheDocument()
+    const game = within(panel).getAllByRole('group', { name: /^Decide / })[0]
+    const away = within(game).getAllByRole('button')[0]
+    await userEvent.click(away)
+    expect(away).toHaveAttribute('aria-pressed', 'true')
+    expect(within(panel).getByText(/1 of 34 decided/)).toBeInTheDocument()
+    expect(await screen.findByText(/Your scenario, not the published odds · 200 simulated seasons/)).toBeInTheDocument()
+    await userEvent.click(within(panel).getByRole('button', { name: 'Favorites win out' }))
+    expect(within(panel).getByText(/34 of 34 decided/)).toBeInTheDocument()
+    await userEvent.click(within(panel).getByRole('button', { name: 'Reset' }))
+    expect(within(panel).getByText(/0 of 34 decided/)).toBeInTheDocument()
+  })
+})
