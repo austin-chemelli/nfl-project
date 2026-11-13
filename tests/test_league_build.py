@@ -353,3 +353,15 @@ def test_an_empty_similar_file_never_replaces_a_good_one_in_season(tmp_path, mon
     lb.build(paths, 2026, now=NOW, n_runs=RUNS)
     assert (paths.site / "similar.json").read_text() == old
     assert "SIMILAR NOT UPDATED" in capsys.readouterr().out
+
+
+def test_games_take_swings_from_the_market_runs():
+    """M26 (Austin, 2026-11-12): the market is the page's default view, so leverage and swings come from its runs."""
+    games = _games()
+    inp = _inputs(games)
+    inp["student"].p_home = np.full(len(inp["student"].p_home), 0.5)
+    obj, sims = lb.league_file(games, inp, 2026, NOW, n_runs=RUNS)
+    lev = {g.game_id: g.leverage_total for g in sims["market"].games}
+    assert all(row["leverage_total"] == pytest.approx(lev[row["game_id"]], abs=1e-4) for row in obj["games"])
+    assert all(row["p_student"] == 0.5 for row in obj["games"])
+    assert any(row["p_market"] != 0.5 for row in obj["games"])

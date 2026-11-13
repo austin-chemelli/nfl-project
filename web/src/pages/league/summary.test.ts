@@ -57,13 +57,13 @@ describe('summary tiles on a small league', () => {
 describe('summary tiles on the fixture', () => {
   it('agree with a brute-force reading of the file', () => {
     for (const conf of ['AFC', 'NFC'] as const) {
-      const best = Math.max(...file.teams.filter((t) => t.conf === conf).map((t) => file.odds.student.teams[t.team].seed[0]))
+      const best = Math.max(...file.teams.filter((t) => t.conf === conf).map((t) => file.odds.market.teams[t.team].seed[0]))
       expect(topSeed(file, conf)!.p).toBe(best)
     }
     const wk = Math.min(...file.games.map((g) => g.week))
     expect(gameOfWeek(file, 0)!.leverage_total).toBe(Math.max(...file.games.filter((g) => g.week === wk).map((g) => g.leverage_total)))
     const lowestLeader = Math.min(
-      ...[...new Set(file.teams.map((t) => t.div))].map((d) => Math.max(...file.teams.filter((t) => t.div === d).map((t) => file.odds.student.teams[t.team].division))),
+      ...[...new Set(file.teams.map((t) => t.div))].map((d) => Math.max(...file.teams.filter((t) => t.div === d).map((t) => file.odds.market.teams[t.team].division))),
     )
     expect(closestRace(file)!.leader.p).toBe(lowestLeader)
   })

@@ -104,3 +104,19 @@ export function movers(now: Record<string, TeamOdds>, next: Record<string, TeamO
     .filter((m) => Math.abs(m.to - m.from) >= min)
     .sort((a, b) => Math.abs(b.to - b.from) - Math.abs(a.to - a.from) || a.team.localeCompare(b.team))
 }
+
+/** One team's remaining games, in week order. */
+export const teamGames = (file: LeagueFile, team: string): LeagueGame[] => gamesByWeek(file).flatMap(([, gs]) => gs.filter((g) => g.home === team || g.away === team))
+
+/** Decide every game in `games` for (`'win'`) or against (`'lose'`) `team`, or (`'clear'`) drop the link's decisions on them. */
+export function setTeamGames(s: Scenario, games: LeagueGame[], team: string, how: 'win' | 'lose' | 'clear'): Scenario {
+  const decisions = new Map(s.decisions)
+  for (const g of games) {
+    if (how === 'clear') decisions.delete(g.game_id)
+    else {
+      const other = g.home === team ? g.away : g.home
+      decisions.set(g.game_id, how === 'win' ? team : other)
+    }
+  }
+  return { ...s, decisions }
+}

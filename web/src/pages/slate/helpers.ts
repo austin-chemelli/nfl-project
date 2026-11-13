@@ -256,7 +256,7 @@ export function contrastLine(g: GameRow): string | null {
 export const STAKES_MIN = 0.08
 
 /**
- * "Playoff stakes: CHI 55% → 80% with a win." The Student's simulations only, for the team whose playoff
+ * "Playoff stakes: CHI 55% → 80% with a win." The market's simulations (the League page's default), for the team whose playoff
  * chances swing most on this game, when that swing is at least 8 points and both branches have at least
  * 1,000 runs. Null with no league file, no entry for the game, or no swing that big.
  */

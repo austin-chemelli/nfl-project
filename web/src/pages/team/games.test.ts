@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { LeagueFile, LeagueGame, TeamChange, TeamGame } from '../../data/contract'
 import { changeLines, gameNotes, gamesThatMatter } from './games'
 
-const league = { odds: { student: { teams: { CAR: { playoffs: 0.2 } } } } } as unknown as LeagueFile
+const league = { odds: { market: { teams: { CAR: { playoffs: 0.2 } } } } } as unknown as LeagueFile
 const game = (id: string, week: number, hi: number, lo: number, over: Partial<LeagueGame> = {}): LeagueGame =>
   ({
     game_id: id, week, kickoff: `2026-11-${10 + week}T18:00:00Z`, home: 'CAR', away: 'TB', p_student: 0.5, p_market: null,

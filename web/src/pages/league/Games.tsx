@@ -17,6 +17,7 @@ function GameRow({ g, file }: { g: LeagueGame; file: LeagueFile }) {
         <span className="text-[13px] text-ink-3">
           Week {g.week}
           {g.kickoff && ` · ${kickoffEt(g.kickoff)}`}
+          {g.p_market != null && ` · Market ${g.p_market >= 0.5 ? g.home : g.away} ${pct(Math.max(g.p_market, 1 - g.p_market))}`}
           {g.p_student != null && ` · Student ${g.p_student >= 0.5 ? g.home : g.away} ${pct(Math.max(g.p_student, 1 - g.p_student))}`}
         </span>
       </div>
@@ -42,7 +43,7 @@ export function Games({ file }: { file: LeagueFile }) {
   if (week == null) return <p className="text-ink-2">No games are left to simulate.</p>
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <p className="text-ink-2">Games that move playoff chances the most, by the Student's simulations.</p>
+      <p className="text-ink-2">Games that move playoff chances the most, by the market's simulations.</p>
       <section aria-label={`Week ${week} games`}>
         <h3 className="text-[15px] font-medium text-ink">Week {week}</h3>
         <ul className="m-0 list-none p-0">

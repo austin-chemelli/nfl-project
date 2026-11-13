@@ -6,7 +6,8 @@ import { kickoffEt, pct } from '../../lib/format'
 import type { Source } from '../../lib/league/input'
 import { matchupVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
-import { gamesByWeek, toggle, type Decided, type Scenario } from './whatif'
+import { Segmented } from '../../components/ui'
+import { gamesByWeek, setTeamGames, teamGames, toggle, type Decided, type Scenario } from './whatif'
 
 const FROM_LABEL: Record<Decided['from'], string> = { link: 'decided', pick: 'your pick', favorite: 'favorite' }
 
@@ -28,19 +29,20 @@ function DecideButton({ team, side, on, other, onClick }: { team: string; side: 
   )
 }
 
-function GameRow({ g, d, source, onPick }: { g: LeagueGame; d: Decided | undefined; source: Source; onPick: (team: string) => void }) {
+function GameRow({ g, d, source, onPick, week = false }: { g: LeagueGame; d: Decided | undefined; source: Source; onPick: (team: string) => void; week?: boolean }) {
   const p = source === 'student' ? g.p_student : g.p_market
   const fav = p == null ? null : p >= 0.5 ? `${g.home} ${pct(p)}` : `${g.away} ${pct(1 - p)}`
   const won = d ? (d.winner === 'home' ? g.home : g.away) : null
   return (
     <li data-matchup style={matchupVars(g.away, g.home)} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line py-2 text-[13px]">
+      {week && <span className="tabular w-11 shrink-0 whitespace-nowrap text-[12px] text-ink-3">Wk {g.week}</span>}
       <span role="group" aria-label={`Decide ${g.away} at ${g.home}`} className="flex gap-1.5">
         <DecideButton team={g.away} side="away" on={won === g.away} other={won === g.home} onClick={() => onPick(g.away)} />
         <span className="self-center text-ink-3">@</span>
         <DecideButton team={g.home} side="home" on={won === g.home} other={won === g.away} onClick={() => onPick(g.home)} />
       </span>
       <Link to={`/game/${g.game_id}`} title={g.kickoff ? kickoffEt(g.kickoff) : undefined} className="min-w-0 flex-1 text-ink-3 hover:text-ink">
-        {fav ? `${source === 'student' ? 'Student' : 'Market'} ${fav}` : 'Game page'}
+        {fav ?? 'Game page'}
       </Link>
       {d && d.from !== 'link' && <span className="rounded-full border border-line px-2 py-px text-[11px] text-ink-3">{FROM_LABEL[d.from]}</span>}
     </li>
@@ -56,6 +58,9 @@ export function WhatIfPanel({ file, scenario, decided, source, nPicks, onChange 
   onChange: (s: Scenario) => void
 }) {
   const [copied, setCopied] = useState(false)
+  const [by, setBy] = useState<'week' | 'team'>('week')
+  const [team, setTeam] = useState('')
+  const teams = [...new Set(file.games.flatMap((g) => [g.home, g.away]))].sort((a, b) => teamInfo(a).name.localeCompare(teamInfo(b).name))
   const weeks = gamesByWeek(file)
   const copy = () => {
     try {
@@ -91,6 +96,45 @@ export function WhatIfPanel({ file, scenario, decided, source, nPicks, onChange 
           {copied ? 'Link copied' : 'Copy link'}
         </button>
       </div>
+      <Segmented<'week' | 'team'> label="Decide games" value={by} onChange={setBy} options={[{ value: 'week', label: 'By week' }, { value: 'team', label: 'By team' }]} />
+      {by === 'team' ? (
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-[13px] text-ink-2">
+            Team
+            <select value={team} onChange={(e) => setTeam(e.target.value)} className="min-w-0 flex-1 cursor-pointer rounded-md border border-line bg-surface-1 px-2 py-1.5 text-ink">
+              <option value="">Choose a team…</option>
+              {teams.map((t) => (
+                <option key={t} value={t}>
+                  {teamInfo(t).name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {team && (() => {
+            const games = teamGames(file, team)
+            const won = games.filter((g) => { const d = decided.get(g.game_id); return d && (d.winner === 'home' ? g.home : g.away) === team }).length
+            const lost = games.filter((g) => { const d = decided.get(g.game_id); return d && (d.winner === 'home' ? g.home : g.away) !== team }).length
+            return (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" className={btn} onClick={() => onChange(setTeamGames(scenario, games, team, 'win'))}>{team} wins out</button>
+                  <button type="button" className={btn} onClick={() => onChange(setTeamGames(scenario, games, team, 'lose'))}>{team} loses out</button>
+                  <button type="button" className={btn} onClick={() => onChange(setTeamGames(scenario, games, team, 'clear'))}>Clear</button>
+                </div>
+                <div className="text-[12px] text-ink-3">
+                  {games.length} games left · decided {won}–{lost} for {team}
+                </div>
+                <ul className="m-0 list-none p-0">
+                  {games.map((g) => (
+                    <GameRow key={g.game_id} g={g} d={decided.get(g.game_id)} source={source} onPick={(t) => onChange(toggle(scenario, g, t, decided.get(g.game_id)))} week />
+                  ))}
+                </ul>
+              </>
+            )
+          })()}
+        </div>
+      ) : (
+        <>
       {weeks.map(([week, games], i) => {
         const list = (
           <ul className="m-0 list-none p-0">
@@ -113,6 +157,8 @@ export function WhatIfPanel({ file, scenario, decided, source, nPicks, onChange 
           </details>
         )
       })}
+        </>
+      )}
     </section>
   )
 }

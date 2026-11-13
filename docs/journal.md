@@ -820,3 +820,11 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Measured.** On today's real file, deciding a game shows a first answer in about 0.4 s and the 10,000-run answer in about 1.5 s; the page stays responsive. WAS over NYG, PIT over PHI and DAL over SF move NYG 59% → 41%, DAL 33% → 49%, WAS 13% → 17%.
 
 **Lesson.** The first layout stacked a 14-game list above the table, so nothing moved on screen while you clicked; putting the list beside the table is what makes it feel like a what-if.
+
+## 2026-11-12: What if, after Austin's look: both conferences, by team, the market first (M26.4; picks track)
+
+**Why.** Austin's review of the What if mode: switching between AFC and NFC was annoying; a way to take one team (the Cowboys) and decide its next few games; and the market, not the Student, as the default for every playoff view.
+
+**What changed.** Playoff odds shows both conferences, AFC then NFC, with no conference switch (in a scenario the biggest mover's conference comes first, and the movers line spans both). The decide panel gains "By week / By team": pick a team, see its remaining games with their week, decide them one by one or with "wins out", "loses out" and "Clear". The market is the default view (`?view=student` for the Student) on the Odds tab, the summary tiles, the team page's playoff tile and odds; `league.json`'s `games[].swings` and leverage now come from the market's runs (`_games` takes the market sim, `p_student` from the Student's inputs), so "Games that matter" and the slate's "Playoff stakes" line follow it. The market note reads "None of the N games left has a betting line yet" instead of "Only 0".
+
+**Measured.** On today's file, DAL winning its next three (SF, TEN, PHI) moves DAL 47% → 66% and NYG 53% → 41% in the market's view.

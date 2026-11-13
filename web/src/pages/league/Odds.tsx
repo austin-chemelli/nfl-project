@@ -9,14 +9,16 @@ import { teamDotVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
 import { hasSpark, sparkSeries } from './context'
 import { Spark } from './Spark'
-import { barWidth, fmtProb, oddsRows, parseConf, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
+import { barWidth, fmtProb, oddsRows, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
 import { TeamLink } from '../../components/TeamLink'
 import { simInputFrom } from '../../lib/league/input'
 import { usePicks } from '../../lib/picks'
 import { decide, movers, parseScenario, picksInPlay, toOddsTeam, winners, writeScenario, type Scenario } from './whatif'
 import { RUNS, useWhatIf } from './useWhatIf'
 import { WhatIfPanel } from './WhatIf'
-import type { LeagueOddsTeam } from '../../data/contract'
+import type { LeagueOddsTeam, LeagueTeam } from '../../data/contract'
+
+const CONFS: Conf[] = ['AFC', 'NFC']
 
 const MAX_WINS = 17
 const ROUNDS = [
@@ -91,70 +93,21 @@ function Move({ from, to, big = false }: { from: number; to: number; big?: boole
   )
 }
 
-/** The Playoff odds tab: P(playoffs) for one conference, Student or market (ADR 0019); with `?whatif=1`, your scenario against now (M26.4). */
-export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: number; full: number } }) {
-  const [params, setParams] = useSearchParams()
-  const conf = parseConf(params.get('conf'))
-  const view = parseView(params.get('view'))
-  const set = (k: string, v: string, fallback: string) =>
-    setParams((prev) => { const n = new URLSearchParams(prev); if (v === fallback) n.delete(k); else n.set(k, v); return n }, { replace: true, preventScrollReset: true })
-  const scenario = parseScenario(params)
-  const canWhatIf = useMemo(() => simInputFrom(file, view) != null, [file, view])
-  const on = scenario.on && canWhatIf
-  const picks = usePicks()
-  const decided = useMemo(() => (on ? decide(file, scenario, picks, view) : new Map()), [on, file, params, picks, view]) // eslint-disable-line react-hooks/exhaustive-deps
-  const wi = useWhatIf(file, view, winners(decided), on, runs)
-  const setScenario = (sc: Scenario) => setParams((prev) => writeScenario(prev, sc), { replace: true, preventScrollReset: true })
+type Row = { team: LeagueTeam; odds: LeagueOddsTeam; was?: LeagueOddsTeam }
 
-  const base = oddsRows(file, conf, view)
-  const live = on && wi.now && wi.next
-  const rows: { team: (typeof base)[number]['team']; odds: LeagueOddsTeam; was?: LeagueOddsTeam }[] = live
-    ? base.map((r) => ({ team: r.team, odds: toOddsTeam(wi.next![r.team.team]), was: toOddsTeam(wi.now![r.team.team]) })).sort((a, b) => b.odds.playoffs - a.odds.playoffs || a.team.team.localeCompare(b.team.team))
-    : base
-  const moved = live ? movers(wi.now!, wi.next!, base.map((r) => r.team.team)).slice(0, 4) : []
+/** One conference's table: the playoff bar, seed, division, bye and wins, with what-if arrows when `on`. */
+function ConfTable({ file, conf, rows, view, on, anySpark }: { file: LeagueFile; conf: Conf; rows: Row[]; view: View; on: boolean; anySpark: boolean }) {
   const { box, at, bind, card } = useChartTip()
-  const anySpark = !on && rows.some((r) => hasSpark(sparkSeries(file, r.team.team, view)))
   const tipRow = rows.find((r) => r.team.team === at?.key)
-  if (Object.keys(file.odds.student.teams).length === 0) return <p className="text-ink-2">The regular season is over. The final records are on the Standings tab.</p>
-
+  const cols = on ? 'md:grid-cols-[5.5rem_2.5rem_minmax(0,1fr)_4.75rem_4.75rem_13rem]' : 'md:grid-cols-[6.5rem_2.5rem_minmax(0,1fr)_4rem_4rem_13rem]'
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <p className="text-ink-2">Each team's chance of reaching the playoffs, the top seven in its conference.</p>
-      <p className="text-[13px] text-ink-3">Simulated {kickoffEt(file.as_of)}.</p>
-      <div className="flex flex-wrap items-center gap-3">
-        <Segmented<Conf> label="Conference" value={conf} onChange={(v) => set('conf', v, 'AFC')} options={[{ value: 'AFC', label: 'AFC' }, { value: 'NFC', label: 'NFC' }]} />
-        <Segmented<View> label="Odds from" value={view} onChange={(v) => set('view', v, 'student')} options={[{ value: 'student', label: 'Student' }, { value: 'market', label: 'Market' }]} />
-        {canWhatIf && (
-          <Segmented<'off' | 'on'> label="What if" value={on ? 'on' : 'off'} onChange={(v) => setScenario({ ...scenario, on: v === 'on' })} options={[{ value: 'off', label: 'Published' }, { value: 'on', label: 'What if…' }]} />
-        )}
-      </div>
-
-      <div className={on ? 'grid items-start gap-4 lg:grid-cols-[21rem_minmax(0,1fr)]' : 'contents'}>
-      {on && (
-        <div className="lg:sticky lg:top-14 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto">
-          <WhatIfPanel file={file} scenario={scenario} decided={decided} source={view} nPicks={picksInPlay(file, picks)} onChange={setScenario} />
-        </div>
-      )}
-      <div className={on ? 'flex min-w-0 flex-col gap-4' : 'contents'}>
-      {on && (
-        <div className="flex flex-col gap-1 rounded-md border-l-4 border-[var(--accent)] bg-surface-2 px-3 py-2 text-[13px]" aria-live="polite">
-          <span className="font-medium text-ink">
-            Your scenario, not the published odds{wi.busy ? ' · simulating…' : wi.runs ? ` · ${wi.runs.toLocaleString('en-US')} simulated seasons` : ''}
-          </span>
-          {live && (moved.length ? (
-            <span className="tabular text-ink-2">
-              Biggest movers: {moved.map((m) => `${m.team} ${fmtProb(m.from)} → ${fmtProb(m.to)}`).join(' · ')}
-            </span>
-          ) : (
-            <span className="text-ink-3">{decided.size ? `No ${conf} team moves 3 points or more.` : 'Decide a game below to see who it moves.'}</span>
-          ))}
-        </div>
-      )}
-
-      {view === 'market' && marketNote(file.odds.market) && <p className="text-[13px] text-ink-3">{marketNote(file.odds.market)}</p>}
-
+    <section className="flex min-w-0 flex-col gap-1">
+      <h3 className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+        <span aria-hidden className="inline-block h-3 w-1 rounded-sm" style={{ background: `var(--conf-${conf.toLowerCase()})` }} />
+        {conf}
+      </h3>
       <div ref={box} className="relative">
-        <div aria-hidden className={`hidden ${on ? 'grid-cols-[5.5rem_2.5rem_minmax(0,1fr)_4.75rem_4.75rem_13rem]' : 'grid-cols-[6.5rem_2.5rem_minmax(0,1fr)_4rem_4rem_13rem]'} gap-x-3 border-b border-line px-2 pb-1 text-[12px] uppercase tracking-wide text-ink-3 md:grid`}>
+        <div aria-hidden className={`hidden ${cols.replace('md:', '')} gap-x-3 border-b border-line px-2 pb-1 text-[12px] uppercase tracking-wide text-ink-3 md:grid`}>
           <span>Team</span>
           <span>Seed</span>
           <span>Playoffs</span>
@@ -170,7 +123,7 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
               {...(bind(team.team) as unknown as HTMLAttributes<HTMLLIElement>)}
               data-matchup
               style={{ ...teamDotVars(team.team), cursor: 'pointer' }}
-              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line px-2 py-2 text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${on ? 'md:grid-cols-[5.5rem_2.5rem_minmax(0,1fr)_4.75rem_4.75rem_13rem]' : 'md:grid-cols-[6.5rem_2.5rem_minmax(0,1fr)_4rem_4rem_13rem]'} md:py-1.5 ${i === 7 ? 'border-t-2 border-t-[var(--text-muted)]' : ''}`}
+              className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line px-2 py-2 text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${cols} md:py-1.5 ${i === 7 ? 'border-t-2 border-t-[var(--text-muted)]' : ''}`}
             >
               <span className="order-1 col-span-2 flex items-center gap-2 md:order-3 md:col-span-1">
                 <span className="relative h-3 min-w-0 flex-1 rounded-sm bg-surface-2">
@@ -218,11 +171,83 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
           ),
         )}
       </div>
-      <p className="text-[13px] text-ink-3">
-        The line marks the seven highest chances, not today's seeds. Tap a team for each round.{anySpark && ' Small line: chance at each Tuesday refresh.'}
-        {on && ' Gray tick and arrows: the chance now, before your decisions.'}
-      </p>
+    </section>
+  )
+}
+
+/** The Playoff odds tab: P(playoffs) for both conferences, market (default) or Student (ADR 0019); with `?whatif=1`, your scenario against now (M26.4). */
+export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: number; full: number } }) {
+  const [params, setParams] = useSearchParams()
+  const view = parseView(params.get('view'))
+  const set = (k: string, v: string, fallback: string) =>
+    setParams((prev) => { const n = new URLSearchParams(prev); if (v === fallback) n.delete(k); else n.set(k, v); return n }, { replace: true, preventScrollReset: true })
+  const scenario = parseScenario(params)
+  const canWhatIf = useMemo(() => simInputFrom(file, view) != null, [file, view])
+  const on = scenario.on && canWhatIf
+  const picks = usePicks()
+  const decided = useMemo(() => (on ? decide(file, scenario, picks, view) : new Map()), [on, file, params, picks, view]) // eslint-disable-line react-hooks/exhaustive-deps
+  const wi = useWhatIf(file, view, winners(decided), on, runs)
+  const setScenario = (sc: Scenario) => setParams((prev) => writeScenario(prev, sc), { replace: true, preventScrollReset: true })
+
+  const live = on && wi.now && wi.next
+  const rowsOf = (conf: Conf): Row[] => {
+    const base = oddsRows(file, conf, view)
+    return live
+      ? base.map((r) => ({ team: r.team, odds: toOddsTeam(wi.next![r.team.team]), was: toOddsTeam(wi.now![r.team.team]) })).sort((a, b) => b.odds.playoffs - a.odds.playoffs || a.team.team.localeCompare(b.team.team))
+      : base
+  }
+  const unordered = CONFS.map((c) => [c, rowsOf(c)] as const)
+  const all = unordered.flatMap(([, r]) => r)
+  const moved = live ? movers(wi.now!, wi.next!, all.map((r) => r.team.team)).slice(0, 5) : []
+  // in a scenario, the conference of the biggest mover comes first
+  const lead = moved[0] && all.find((r) => r.team.team === moved[0].team)?.team.conf
+  const tables = lead === 'NFC' ? [...unordered].reverse() : unordered
+  const anySpark = !on && all.some((r) => hasSpark(sparkSeries(file, r.team.team, view)))
+  if (Object.keys(file.odds[view].teams).length === 0) return <p className="text-ink-2">The regular season is over. The final records are on the Standings tab.</p>
+
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <p className="text-ink-2">Each team's chance of reaching the playoffs, the top seven in its conference.</p>
+      <p className="text-[13px] text-ink-3">Simulated {kickoffEt(file.as_of)}.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Segmented<View> label="Odds from" value={view} onChange={(v) => set('view', v, 'market')} options={[{ value: 'market', label: 'Market' }, { value: 'student', label: 'Student' }]} />
+        {canWhatIf && (
+          <Segmented<'off' | 'on'> label="What if" value={on ? 'on' : 'off'} onChange={(v) => setScenario({ ...scenario, on: v === 'on' })} options={[{ value: 'off', label: 'Published' }, { value: 'on', label: 'What if…' }]} />
+        )}
       </div>
+
+      <div className={on ? 'grid items-start gap-4 lg:grid-cols-[21rem_minmax(0,1fr)]' : 'contents'}>
+        {on && (
+          <div className="lg:sticky lg:top-14 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto">
+            <WhatIfPanel file={file} scenario={scenario} decided={decided} source={view} nPicks={picksInPlay(file, picks)} onChange={setScenario} />
+          </div>
+        )}
+        <div className={on ? 'flex min-w-0 flex-col gap-4' : 'contents'}>
+          {on && (
+            <div className="flex flex-col gap-1 rounded-md border-l-4 border-[var(--accent)] bg-surface-2 px-3 py-2 text-[13px] lg:sticky lg:top-14 lg:z-10" aria-live="polite">
+              <span className="font-medium text-ink">
+                Your scenario, not the published odds{wi.busy ? ' · simulating…' : wi.runs ? ` · ${wi.runs.toLocaleString('en-US')} simulated seasons` : ''}
+              </span>
+              {live && (moved.length ? (
+                <span className="tabular text-ink-2">
+                  Biggest movers: {moved.map((m) => `${m.team} ${fmtProb(m.from)} → ${fmtProb(m.to)}`).join(' · ')}
+                </span>
+              ) : (
+                <span className="text-ink-3">{decided.size ? 'No team moves 3 points or more.' : 'Decide a game to see who it moves.'}</span>
+              ))}
+            </div>
+          )}
+
+          {view === 'market' && marketNote(file.odds.market) && <p className="text-[13px] text-ink-3">{marketNote(file.odds.market)}</p>}
+
+          {tables.map(([conf, rows]) => (
+            <ConfTable key={conf} file={file} conf={conf} rows={rows} view={view} on={on} anySpark={anySpark} />
+          ))}
+          <p className="text-[13px] text-ink-3">
+            The line marks the seven highest chances in each conference, not today's seeds. Tap a team for each round.{anySpark && ' Small line: chance at each Tuesday refresh.'}
+            {on && ' Gray tick and arrows: the chance now, before your decisions.'}
+          </p>
+        </div>
       </div>
 
       <DataTable>
@@ -239,7 +264,7 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ team, odds }) => (
+            {all.map(({ team, odds }) => (
               <tr key={team.team}>
                 <td className={td}>{teamInfo(team.team).name}</td>
                 <td className={`${td} tabular text-right`}>{fmtProb(odds.playoffs)}</td>

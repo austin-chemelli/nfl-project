@@ -44,28 +44,30 @@ describe('League page, playoff tabs', () => {
     expect(await screen.findByRole('tab', { name: 'Games that matter' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('Odds: both conferences and both views, URL-synced, sorted, one rule after the 7th row', async () => {
+  it('Odds: both conferences on one page, the market by default, the Student a click away, one rule after the 7th row', async () => {
     renderRoute('/league?tab=odds')
+    const order = (conf: string, v: 'market' | 'student') =>
+      league.teams.filter((t) => t.conf === conf).map((t) => t.team).sort((a, b) => league.odds[v].teams[b].playoffs - league.odds[v].teams[a].playoffs || a.localeCompare(b))
     const list = await screen.findByRole('list', { name: 'AFC playoff odds' })
     const rows = within(list).getAllByRole('listitem')
     expect(rows).toHaveLength(16)
-    const afc = league.teams.filter((t) => t.conf === 'AFC').map((t) => t.team).sort((a, b) => league.odds.student.teams[b].playoffs - league.odds.student.teams[a].playoffs || a.localeCompare(b))
-    expect(rows.map((r) => r.getAttribute('data-team'))).toEqual(afc)
+    expect(rows.map((r) => r.getAttribute('data-team'))).toEqual(order('AFC', 'market'))
     expect(rows.filter((r) => r.className.includes('border-t-2'))).toHaveLength(1)
     expect(rows[7].className).toContain('border-t-2')
-
-    await userEvent.click(screen.getByRole('radio', { name: 'NFC' }))
-    await userEvent.click(screen.getByRole('radio', { name: 'Market' }))
-    const nfc = within(await screen.findByRole('list', { name: 'NFC playoff odds' })).getAllByRole('listitem')
-    const order = league.teams.filter((t) => t.conf === 'NFC').map((t) => t.team).sort((a, b) => league.odds.market.teams[b].playoffs - league.odds.market.teams[a].playoffs || a.localeCompare(b))
-    expect(nfc.map((r) => r.getAttribute('data-team'))).toEqual(order)
+    expect(within(screen.getByRole('list', { name: 'NFC playoff odds' })).getAllByRole('listitem').map((r) => r.getAttribute('data-team'))).toEqual(order('NFC', 'market'))
+    expect(screen.queryByRole('radiogroup', { name: 'Conference' })).toBeNull()
     expect(screen.getByRole('radio', { name: 'Market' })).toHaveAttribute('aria-checked', 'true')
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Student' }))
+    const nfc = within(await screen.findByRole('list', { name: 'NFC playoff odds' })).getAllByRole('listitem')
+    expect(nfc.map((r) => r.getAttribute('data-team'))).toEqual(order('NFC', 'student'))
+    expect(screen.getByRole('radio', { name: 'Student' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('Odds: restores the toggles from the URL', async () => {
-    renderRoute('/league?tab=odds&conf=NFC&view=market')
+    renderRoute('/league?tab=odds&view=student')
     await screen.findByRole('list', { name: 'NFC playoff odds' })
-    expect(screen.getByRole('radio', { name: 'Market' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Student' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('Odds: team bars use the team color slot, not a raw color, and no probability reads 0% or 100%', async () => {
@@ -177,10 +179,10 @@ describe('League page, playoff tabs', () => {
   })
 
   it('Market view says most of it is an estimate; the Student view does not', async () => {
-    renderRoute('/league?tab=odds&view=market')
+    renderRoute('/league?tab=odds')
     expect(await screen.findByText(/games left have a betting line yet/)).toBeInTheDocument()
     cleanup()
-    renderRoute('/league?tab=odds')
+    renderRoute('/league?tab=odds&view=student')
     await screen.findByRole('list', { name: 'AFC playoff odds' })
     expect(screen.queryByText(/games left have a betting line yet/)).toBeNull()
   })
@@ -244,7 +246,7 @@ describe('What if mode (M26.4)', () => {
     expect(screen.getByRole('radio', { name: 'What if…' })).toHaveAttribute('aria-checked', 'true')
     const panel = screen.getByRole('region', { name: 'What if: decide games' })
     expect(await screen.findByText(/200 simulated seasons/)).toBeInTheDocument()
-    expect(screen.getByText('Decide a game below to see who it moves.')).toBeInTheDocument()
+    expect(screen.getByText('Decide a game to see who it moves.')).toBeInTheDocument()
     const game = within(panel).getAllByRole('group', { name: /^Decide / })[0]
     const away = within(game).getAllByRole('button')[0]
     await userEvent.click(away)
@@ -255,5 +257,19 @@ describe('What if mode (M26.4)', () => {
     expect(within(panel).getByText(/34 of 34 decided/)).toBeInTheDocument()
     await userEvent.click(within(panel).getByRole('button', { name: 'Reset' }))
     expect(within(panel).getByText(/0 of 34 decided/)).toBeInTheDocument()
+  })
+
+  it('by team: one team wins out, then clears', async () => {
+    render(<MemoryRouter initialEntries={['/league?whatif=1']}><Odds file={ready} runs={runs} /></MemoryRouter>)
+    const panel = screen.getByRole('region', { name: 'What if: decide games' })
+    await userEvent.click(within(panel).getByRole('radio', { name: 'By team' }))
+    const team = ready.games[0].home
+    await userEvent.selectOptions(within(panel).getByRole('combobox', { name: 'Team' }), team)
+    const n = ready.games.filter((g) => g.home === team || g.away === team).length
+    expect(within(panel).getAllByRole('group', { name: /^Decide / })).toHaveLength(n)
+    await userEvent.click(within(panel).getByRole('button', { name: `${team} wins out` }))
+    expect(within(panel).getByText(new RegExp(`decided ${n}–0 for ${team}`))).toBeInTheDocument()
+    await userEvent.click(within(panel).getByRole('button', { name: 'Clear' }))
+    expect(within(panel).getByText(new RegExp(`decided 0–0 for ${team}`))).toBeInTheDocument()
   })
 })
