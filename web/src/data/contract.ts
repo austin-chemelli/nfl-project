@@ -238,7 +238,7 @@ export const HealthStarter = z.looseObject({
 export const HealthGroup = z.looseObject({ grp: z.string(), full_pts: num, missing_pts: num, health: nnum })
 export const HealthWeek = z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num.optional() })
 export const TeamHealth = z.looseObject({
-  now: z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num, groups: z.array(HealthGroup), starters: z.array(HealthStarter) }),
+  now: z.looseObject({ week: num, reported: z.boolean().default(false), health: nnum, missing_pts: num, full_pts: num, groups: z.array(HealthGroup), starters: z.array(HealthStarter) }),
   by_week: z.array(HealthWeek).default([]),
   outlook: z.array(HealthWeek).default([]),
 })

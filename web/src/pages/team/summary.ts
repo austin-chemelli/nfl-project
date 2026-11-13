@@ -6,6 +6,18 @@ import { biggestChange } from './tendencies'
 
 export type TileText = { label: string; value: string; sub: string; tab: string }
 
+/** Health (M24.7): the share of full-strength value expected on the field this week. */
+export function healthTile(file: TeamFile | undefined): TileText | null {
+  const h = file?.health?.now
+  if (!h || h.health == null) return null
+  return {
+    label: 'Health',
+    value: `${Math.round(100 * h.health)}%`,
+    sub: h.missing_pts > 0 ? `of full strength, ${h.missing_pts.toFixed(1)} pts out` : 'full strength',
+    tab: 'health',
+  }
+}
+
 export function playoffTile(league: LeagueFile | undefined, code: string): TileText | null {
   const odds = league?.odds.market.teams[code]
   if (!odds) return null
