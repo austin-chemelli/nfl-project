@@ -12,46 +12,12 @@ import { DepthField, DepthFieldKey } from '../../charts/DepthField'
 import { useWidth } from '../../charts/useWidth'
 import { FinePrint } from '../../components/FinePrint'
 import type { TeamFile, TeamHealth } from '../../data/contract'
-import { GROUP, outLine, roomsLede, tone } from '../../lib/health'
+import { outLine, roomsLede } from '../../lib/health'
 import { Block } from './Block'
 import { Rooms } from './Rooms'
 
 const pct = (v: number | null | undefined) => (v == null ? '–' : `${Math.round(100 * v)}%`)
 const name = (s: { player: string; key: boolean }) => (s.key ? `${s.player} ★` : s.player)
-
-function Groups({ h }: { h: TeamHealth['now'] }) {
-  return (
-    <ul className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="health-groups">
-      {h.groups.map((g) => {
-        const share = g.health ?? 1
-        const rows = h.starters.filter((s) => s.grp === g.grp)
-        const out = rows.filter((s) => tone(s) === 'out' || tone(s) === 'iffy').map(name)
-        const doubt = rows.filter((s) => s.doubt).map(name)
-        const full = rows.reduce((a, s) => a + s.weight, 0)
-        const doubtShare = full ? Math.min(share, rows.filter((s) => s.doubt).reduce((a, s) => a + s.weight, 0) / full) : 0
-        return (
-          <li key={g.grp} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_3rem] items-center gap-x-3 gap-y-0.5 text-[14px]">
-            <span className="truncate text-ink-2">{GROUP[g.grp] ?? g.grp}</span>
-            <span className="relative h-3 overflow-hidden rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]" role="img" aria-label={`${GROUP[g.grp] ?? g.grp} at ${pct(share)} of full strength`}>
-              <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent)]" style={{ width: `${Math.max(0, Math.min(1, share)) * 100}%` }} />
-              {doubtShare > 0 && (
-                <span data-doubt className="absolute inset-y-0" style={{ left: `${(share - doubtShare) * 100}%`, width: `${doubtShare * 100}%`, background: 'repeating-linear-gradient(135deg, var(--accent) 0 3px, var(--surface-2) 3px 6px)' }} />
-              )}
-            </span>
-            <span className={`tabular text-right ${share < 1 ? 'font-medium text-ink' : 'text-ink-3'}`}>{pct(share)}</span>
-            {(out.length > 0 || doubt.length > 0) && (
-              <span className="col-start-2 col-end-4 text-[12px] text-ink-3">
-                {out.length > 0 && <>missing {out.join(', ')} ({out.length} of {g.starters || rows.length})</>}
-                {out.length > 0 && doubt.length > 0 && '; '}
-                {doubt.length > 0 && <>in doubt (practice) {doubt.join(', ')}</>}
-              </span>
-            )}
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
 
 const H = 170
 const PAD = { top: 14, right: 16, bottom: 26, left: 40 }
@@ -134,21 +100,16 @@ export function Health({ file }: { file: TeamFile }) {
           <DepthFieldKey />
         </div>
       </Block>
-      {health.rooms.length > 0 && (
-        <Block title="Position rooms" line={roomsLede(health.rooms)}>
-          <Rooms rooms={health.rooms} />
-        </Block>
-      )}
-      <Block title={`Health, Week ${h.week}`} line={lede}>
+      <Block title={`Health, Week ${h.week}`} line={health.rooms.length > 0 && h.health != null ? `${lede} ${roomsLede(health.rooms)}` : lede}>
         {!h.reported && (
           <p className="m-0 text-[13px] text-ink-3" data-testid="health-doubt">
             No game statuses yet this week (teams post them Friday), so the share counts only reserve lists.
             {doubtNames.length > 0
-              ? <> In doubt from practice: {doubtNames.join(', ')} (striped in the bars).</>
+              ? <> In doubt from practice: {doubtNames.join(', ')} (marked under their rooms).</>
               : ' No full-strength starter missed practice.'}
           </p>
         )}
-        <Groups h={h} />
+        <Rooms rooms={health.rooms} h={h} />
       </Block>
       {listed.length > 0 && (
         <Block title="What we said about this week">

@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { RoomGrade } from '../../data/contract'
+import { RoomGrade, type TeamHealth } from '../../data/contract'
 import { roomsLede } from '../../lib/health'
 import { Rooms } from './Rooms'
 
@@ -14,7 +14,7 @@ const rooms = [
 
 describe('Rooms', () => {
   it('orders rooms like the field, with the full rank and the estimate now', () => {
-    render(<Rooms rooms={rooms} />)
+    render(<Rooms rooms={rooms} h={{ groups: [], starters: [] } as unknown as TeamHealth['now']} />)
     const items = [...screen.getByTestId('health-rooms').querySelectorAll('[data-room]')]
     expect(items.map((li) => li.getAttribute('data-room'))).toEqual(['QB', 'WR'])
     expect(items[1].textContent).toContain('~#24#2')
