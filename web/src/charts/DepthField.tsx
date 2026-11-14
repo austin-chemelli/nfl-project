@@ -4,11 +4,12 @@
  * cues only: a key player's card is shaded in the team color; a starter who won't play has a red
  * status line and the man who plays instead under it; a Questionable, Doubtful or hurt-in-practice
  * starter has an amber one. No player values. Hover a card for the return window and the chart
- * behind him. On a phone the same lineup reads as room cards. The color is the team's
+ * behind him. On a phone the same lineup reads as room cards. On a game, `FacingField` draws one
+ * team's offense against the other's defense across the line of scrimmage. The color is the team's
  * (`--team-home`/`--team-away` under `[data-matchup]`) or the accent on the team page.
  */
 import type { HealthStarter } from '../data/contract'
-import { GROUP, GROUP_ORDER, lastName, stepsIn, tone, whenBack, type Tone } from '../lib/health'
+import { GROUP, GROUP_ORDER, lastName, stepsIn, tone, unitHealth, whenBack, type Tone } from '../lib/health'
 import { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'
 
 type Layout = { left: string[][]; center: string[][]; right: string[][] }
@@ -89,29 +90,91 @@ function Tip({ s, week }: { s: HealthStarter; week: number }) {
   )
 }
 
-function Unit({ unit, spots, color, week }: { unit: 'offense' | 'defense'; spots: HealthStarter[]; color: string; week: number }) {
-  const { box, at, bind, card } = useChartTip()
-  const hovered = spots.find((s) => s.slot === at?.key)
+type Bind = ReturnType<typeof useChartTip>['bind']
+
+/** One unit's formation rows. `flip` turns a defense to face an offense drawn under it: rows run
+ * from the deep safeties down to the line, each row and the corners mirrored, so the left end sits
+ * across from the right tackle. */
+function Grid({ unit, spots, color, week, bind, flip = false }: { unit: 'offense' | 'defense'; spots: HealthStarter[]; color: string; week: number; bind: Bind; flip?: boolean }) {
   const by = new Map(spots.map((s) => [s.slot, s]))
   const layout = LAYOUT[unit]
   const placed = new Set([...layout.left, ...layout.center, ...layout.right].flat())
   const extra = spots.filter((s) => !placed.has(s.slot)).map((s) => s.slot)
+  const order = (rs: string[][]) => (flip ? [...rs].reverse().map((r) => [...r].reverse()) : rs)
   const rows = (rs: string[][]) =>
-    rs.map((r) => r.filter((k) => by.has(k))).filter((r) => r.length > 0).map((r) => (
+    order(rs).map((r) => r.filter((k) => by.has(k))).filter((r) => r.length > 0).map((r) => (
       <div key={r.join()} className="flex items-start justify-center gap-1.5">
         {r.map((k) => <Card key={k} s={by.get(k)!} week={week} color={color} bind={bind} />)}
       </div>
     ))
+  const [left, right] = flip ? [layout.right, layout.left] : [layout.left, layout.right]
+  const side = `flex flex-col gap-3 ${flip ? 'self-end' : ''}`
+  return (
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2" data-unit={unit}>
+      <div className={side}>{rows(left)}</div>
+      <div className="flex flex-col gap-3">{rows([...layout.center, extra])}</div>
+      <div className={side}>{rows(right)}</div>
+    </div>
+  )
+}
+
+function Unit({ unit, spots, color, week }: { unit: 'offense' | 'defense'; spots: HealthStarter[]; color: string; week: number }) {
+  const { box, at, bind, card } = useChartTip()
+  const hovered = spots.find((s) => s.slot === at?.key)
   return (
     <figure className="m-0 min-w-0">
       <figcaption className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-3">{unit === 'offense' ? 'Offense' : 'Defense'}</figcaption>
       <div ref={box} className="relative rounded-lg bg-[var(--surface-2)] px-2 pb-3 pt-2.5" role="group" aria-label={`${unit}: full-strength starters`}>
-        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2">
-          <div className="flex flex-col gap-3">{rows(layout.left)}</div>
-          <div className="flex flex-col gap-3">{rows([...layout.center, extra])}</div>
-          <div className="flex flex-col gap-3">{rows(layout.right)}</div>
-        </div>
+        <Grid unit={unit} spots={spots} color={color} week={week} bind={bind} />
         {hovered && card(<Tip s={hovered} week={week} />)}
+      </div>
+    </figure>
+  )
+}
+
+type Side = { team: string; starters: HealthStarter[]; color: string }
+
+/** One team's offense against the other's defense, facing each other across the line of
+ * scrimmage (game page). Each side keeps its own team color for key players. */
+export function FacingField({ offense, defense, week, testId }: { offense: Side; defense: Side; week: number; testId?: string }) {
+  const { box, at, bind, card } = useChartTip()
+  const o = offense.starters.filter((s) => s.unit === 'offense')
+  const d = defense.starters.filter((s) => s.unit === 'defense')
+  const hovered = [...o, ...d].find((s) => s.slot === at?.key)
+  const pct = (spots: HealthStarter[]) => {
+    const h = unitHealth(spots)
+    return h == null ? '' : ` · ${Math.round(100 * h)}%`
+  }
+  const tag = (team: string, unit: string, color: string, spots: HealthStarter[]) => (
+    <div className="flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide text-ink-2">
+      <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+      {team} {unit}<span className="font-normal normal-case tracking-normal text-ink-3">{pct(spots)}</span>
+    </div>
+  )
+  return (
+    <figure className="m-0 min-w-0" data-testid={testId}>
+      <figcaption className="mb-1.5 text-[15px] font-semibold">
+        {offense.team} offense <span className="font-normal text-ink-3">vs</span> {defense.team} defense
+      </figcaption>
+      <div className="hidden max-w-[880px] md:block" data-view="field">
+        <div ref={box} className="relative rounded-lg bg-[var(--surface-2)] px-2 pb-2.5 pt-2" role="group" aria-label={`${offense.team} offense against ${defense.team} defense`}>
+          {tag(defense.team, 'defense', defense.color, d)}
+          <div className="mt-1.5"><Grid unit="defense" spots={d} color={defense.color} week={week} bind={bind} flip /></div>
+          <div className="relative my-3 flex items-center" aria-hidden>
+            <div className="h-0 flex-1 border-t-2 border-dashed border-[var(--text-muted)] opacity-50" />
+            <span className="px-2 text-[10px] uppercase tracking-wide text-ink-3">line of scrimmage</span>
+            <div className="h-0 flex-1 border-t-2 border-dashed border-[var(--text-muted)] opacity-50" />
+          </div>
+          <Grid unit="offense" spots={o} color={offense.color} week={week} bind={bind} />
+          <div className="mt-1.5">{tag(offense.team, 'offense', offense.color, o)}</div>
+          {hovered && card(<Tip s={hovered} week={week} />)}
+        </div>
+      </div>
+      <div className="grid gap-3 md:hidden" data-view="rooms">
+        {tag(offense.team, 'offense', offense.color, o)}
+        <Rooms starters={o} week={week} color={offense.color} />
+        {tag(defense.team, 'defense', defense.color, d)}
+        <Rooms starters={d} week={week} color={defense.color} />
       </div>
     </figure>
   )

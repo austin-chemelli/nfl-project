@@ -52,3 +52,10 @@ export function outLine(out: number, keyOut: number): string {
   const k = keyOut === 0 ? '' : keyOut === out ? (out === 1 ? ', a key player' : ', all key players') : `, ${keyOut} of them key`
   return `${out} starter${out === 1 ? '' : 's'} out${k}`
 }
+
+/** The share of a unit's spot weight that is available (team health, one unit). */
+export function unitHealth(spots: Pick<HealthStarter, 'weight' | 'p_play'>[]): number | null {
+  const full = spots.reduce((a, s) => a + s.weight, 0)
+  if (full <= 0) return null
+  return 1 - spots.reduce((a, s) => a + s.weight * (1 - s.p_play), 0) / full
+}

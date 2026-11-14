@@ -61,5 +61,24 @@ describe('Injuries tab with team health', () => {
     const field = screen.getByTestId('depth-field-home')
     expect(within(field.querySelector('[data-view="field"] [data-slot="LT"]') as HTMLElement).getByText('IR')).toBeInTheDocument()
     expect(screen.queryByTestId('depth-field-away')).toBeNull()
+    expect(screen.queryByTestId('facing-away')).toBeNull()
+  })
+
+  it('draws each offense against the other defense, the defense mirrored across the line', () => {
+    const g = Game.parse({ ...base, health: { home: was, away: was } })
+    render(<Injuries g={g} />)
+    expect(screen.queryByTestId('depth-field-home')).toBeNull()
+    const f = screen.getByTestId('facing-away')
+    expect(f.querySelector('figcaption')!.textContent).toBe(`${g.away} offense vs ${g.home} defense`)
+    const view = f.querySelector('[data-view="field"]')!
+    // defense above the offense, its line nearest the line of scrimmage and mirrored (RDE on the left)
+    const units = [...view.querySelectorAll('[data-unit]')].map((u) => u.getAttribute('data-unit'))
+    expect(units).toEqual(['defense', 'offense'])
+    const d = view.querySelector('[data-unit="defense"]')!
+    const slots = [...d.querySelectorAll('[data-slot]')].map((c) => c.getAttribute('data-slot'))
+    const line = slots.filter((x) => /DE$|DT$|^NT$/.test(x!))
+    expect(slots.indexOf(line[0]!)).toBeGreaterThan(slots.findIndex((x) => /S$/.test(x!) && !/CB/.test(x!)))
+    if (line.includes('LDE') && line.includes('RDE')) expect(line.indexOf('RDE')).toBeLessThan(line.indexOf('LDE'))
+    expect(screen.getByTestId('facing-home')).toBeInTheDocument()
   })
 })

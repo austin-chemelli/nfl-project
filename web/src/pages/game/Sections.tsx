@@ -1,7 +1,7 @@
 import { TeamLink } from '../../components/TeamLink'
 import { useState } from 'react'
 import { DivergingBars, Dumbbell, FaceOff, HabitList, MatchupBand, ProbStrip } from '../../charts'
-import { DepthField, DepthFieldKey } from '../../charts/DepthField'
+import { DepthField, DepthFieldKey, FacingField } from '../../charts/DepthField'
 import { FormationKey, FormationMap } from '../../charts/FormationMap'
 import { outLine } from '../../lib/health'
 import { Help } from '../../components/Help'
@@ -404,6 +404,9 @@ export function Injuries({ g }: { g: Game }) {
   // the full-strength lineup from team health (M24.7 round 3), when it's each team's next game
   const full = (side: 'home' | 'away') => (g.health?.[side]?.starters.length ? g.health[side] : null)
   const hasField = Boolean(full('home') || full('away'))
+  // both lineups: each offense drawn against the other defense, facing across the line
+  const facing = Boolean(full('home') && full('away'))
+  const fside = (side: 'home' | 'away') => ({ team: g[side], starters: full(side)!.starters, color: `var(--team-${side})` })
   const hasKeys = sides.some(([side]) => (g.key_players?.[side].length ?? 0) > 0)
   if (g.injuries.length === 0 && !hasMap && !hasField && !hasKeys) return <Section title="Injuries"><p className="text-ink-2">No official report in our data yet.</p></Section>
   return (
@@ -411,7 +414,9 @@ export function Injuries({ g }: { g: Game }) {
       {hasField ? (
         <>
           <p className="mb-1 text-ink-2">
-            Each team's full-strength lineup: the best starter its depth chart has had at each spot this season, with who is out (on IR or this week's report) and who steps in.
+            {facing
+              ? 'Each offense against the other defense, at full strength: the best starter each depth chart has had at each spot this season, with who is out (on IR or this week\u2019s report) and who steps in. The percentage is how much of the unit is available.'
+              : 'Each team\u2019s full-strength lineup: the best starter its depth chart has had at each spot this season, with who is out (on IR or this week\u2019s report) and who steps in.'}
           </p>
           <p className="mb-3 text-[15px] font-medium text-ink" data-testid="health-header">
             {sides.filter(([side]) => g.health?.[side]?.health != null).map(([side, team], i) => {
@@ -427,7 +432,13 @@ export function Injuries({ g }: { g: Game }) {
           Each team's starters from its latest depth chart, sized by what each is worth in points on the spread (losing a player worth 1.0 moves a fair line about a point toward the opponent); the empty part of a ring is the value at risk from this week's report.
         </p>
       )}
-      <div className={`grid gap-6 ${hasField ? '' : 'md:grid-cols-2'}`}>
+      {facing && (
+        <div className="mb-6 grid gap-6">
+          <FacingField offense={fside('away')} defense={fside('home')} week={g.week} testId="facing-away" />
+          <FacingField offense={fside('home')} defense={fside('away')} week={g.week} testId="facing-home" />
+        </div>
+      )}
+      <div className={`grid gap-6 ${hasField && !facing ? '' : 'md:grid-cols-2'}`}>
         {sides.map(([side, team]) => {
           const rows = sortInjuries(g.injuries.filter((i) => i.team === team))
           const lineup = g.lineups?.[side]
@@ -435,11 +446,11 @@ export function Injuries({ g }: { g: Game }) {
           return (
             <div key={team} className="min-w-0">
               <h3 className="mb-1 text-[15px] font-semibold">{team}</h3>
-              {full(side) ? (
+              {facing ? null : full(side) ? (
                 <DepthField starters={full(side)!.starters} week={g.week} color={`var(--team-${side})`} testId={`depth-field-${side}`} />
               ) : lineup && <FormationMap lineup={lineup} side={side} />}
               {(full(side) ?? lineup) && !(full(side) ?? lineup)!.reported && (
-                <p className="mt-2 text-[13px] text-ink-2">{full(side) ? 'No game statuses on this week\u2019s report yet: only reserve lists count, and a starter hurt in practice is marked ?.' : 'No game statuses on this week\u2019s report yet, so every ring is drawn full: that means no report, not a healthy team.'}</p>
+                <p className="mt-2 text-[13px] text-ink-2">{full(side) ? 'No game statuses on this week\u2019s report yet: only reserve lists count, and a starter hurt in practice shows amber.' : 'No game statuses on this week\u2019s report yet, so every ring is drawn full: that means no report, not a healthy team.'}</p>
               )}
               {key.length > 0 && <KeyPlayers players={key} />}
               {rows.length === 0 ? (
