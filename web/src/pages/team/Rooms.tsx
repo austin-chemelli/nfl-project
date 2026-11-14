@@ -17,7 +17,10 @@ function fmt(key: string, v: number): string {
 }
 
 function Tip({ r }: { r: RoomGrade }) {
-  const basis = r.basis === 'players' ? `its full-strength starters' plays, this season and last (${r.plays ?? 0})` : `this season's team stats, ${r.games ?? 0} games near full strength`
+  const unit = ['EDGE', 'DL', 'LB', 'CB', 'S'].includes(r.grp) ? 'snaps' : 'plays'
+  const basis = r.basis === 'players'
+    ? `its full-strength starters' own ${unit}, this season and last (${(r.plays ?? 0).toLocaleString('en-US')}), wherever they played`
+    : `this season's team stats, ${r.games ?? 0} games near full strength`
   return (
     <>
       <TipTitle note={`#${r.rank} ${r.label} at full strength`}>{GROUP[r.grp] ?? r.grp}</TipTitle>

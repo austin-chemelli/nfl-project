@@ -1173,138 +1173,144 @@
     },
     {
       "grp": "EDGE",
-      "z": -0.034,
-      "rank": 15,
-      "label": "average",
-      "basis": "team",
-      "games": 6,
-      "plays": null,
+      "z": 0.339,
+      "rank": 12,
+      "label": "good",
+      "basis": "players",
+      "games": null,
+      "plays": 1189,
       "stats": [
         {
           "key": "edge_pressure",
-          "label": "edge pressures per opponent dropback",
-          "value": 0.1211,
+          "label": "pressures per snap",
+          "value": 0.0425,
           "rank": 14
         },
         {
           "key": "edge_sack",
-          "label": "edge sacks per opponent dropback",
-          "value": 0.0293,
-          "rank": 18
+          "label": "sacks per snap",
+          "value": 0.013,
+          "rank": 9
         }
       ],
       "health": 1.0,
-      "z_now": -0.034,
-      "now_rank": 15,
-      "now_label": "average"
+      "z_now": 0.339,
+      "now_rank": 12,
+      "now_label": "good"
     },
     {
       "grp": "DL",
-      "z": 0.264,
-      "rank": 10,
-      "label": "good",
-      "basis": "team",
-      "games": 6,
-      "plays": null,
+      "z": -0.289,
+      "rank": 21,
+      "label": "average",
+      "basis": "players",
+      "games": null,
+      "plays": 1779,
       "stats": [
         {
           "key": "dl_pressure",
-          "label": "interior pressures per opponent dropback",
-          "value": 0.0854,
-          "rank": 11
+          "label": "pressures per snap",
+          "value": 0.0315,
+          "rank": 19
         },
         {
-          "key": "dl_ybc",
-          "label": "opponent yards before contact per carry",
-          "value": 2.3907,
-          "rank": 18
+          "key": "dl_tackle",
+          "label": "tackles per snap",
+          "value": 0.0636,
+          "rank": 20
         }
       ],
       "health": 0.286,
-      "z_now": -0.995,
-      "now_rank": 28,
+      "z_now": -1.154,
+      "now_rank": 31,
       "now_label": "weak"
     },
     {
       "grp": "LB",
-      "z": -0.64,
-      "rank": 27,
+      "z": -1.053,
+      "rank": 30,
       "label": "weak",
-      "basis": "team",
-      "games": 5,
-      "plays": null,
+      "basis": "players",
+      "games": null,
+      "plays": 1847,
       "stats": [
         {
-          "key": "lb_rush_epa",
-          "label": "opponent EPA per rush",
-          "value": -0.0088,
-          "rank": 30
+          "key": "lb_tackle",
+          "label": "tackles per snap",
+          "value": 0.1065,
+          "rank": 32
         },
         {
           "key": "lb_missed",
-          "label": "linebacker missed-tackle rate",
-          "value": 0.0737,
-          "rank": 14
+          "label": "missed-tackle rate",
+          "value": 0.0972,
+          "rank": 29
+        },
+        {
+          "key": "lb_ypt",
+          "label": "yards allowed per target",
+          "value": 6.8175,
+          "rank": 17
         }
       ],
       "health": 1.0,
-      "z_now": -0.64,
-      "now_rank": 27,
+      "z_now": -1.053,
+      "now_rank": 30,
       "now_label": "weak"
     },
     {
       "grp": "CB",
-      "z": 0.242,
+      "z": 0.383,
       "rank": 11,
       "label": "good",
-      "basis": "team",
-      "games": 6,
-      "plays": null,
+      "basis": "players",
+      "games": null,
+      "plays": 1754,
       "stats": [
         {
           "key": "cb_ypt",
           "label": "yards allowed per target",
-          "value": 6.4954,
-          "rank": 8
+          "value": 6.7587,
+          "rank": 12
         },
         {
           "key": "cb_cmp",
           "label": "completion rate allowed",
-          "value": 0.5963,
-          "rank": 21
+          "value": 0.5647,
+          "rank": 15
         }
       ],
       "health": 1.0,
-      "z_now": 0.242,
+      "z_now": 0.383,
       "now_rank": 11,
       "now_label": "good"
     },
     {
       "grp": "S",
-      "z": 0.534,
-      "rank": 5,
-      "label": "elite",
-      "basis": "team",
-      "games": 4,
-      "plays": null,
+      "z": 0.08,
+      "rank": 14,
+      "label": "good",
+      "basis": "players",
+      "games": null,
+      "plays": 2429,
       "stats": [
         {
           "key": "s_ypt",
           "label": "yards allowed per target",
-          "value": 9.8148,
-          "rank": 24
+          "value": 8.3803,
+          "rank": 18
         },
         {
           "key": "s_missed",
-          "label": "safety missed-tackle rate",
-          "value": 0.0175,
-          "rank": 1
+          "label": "missed-tackle rate",
+          "value": 0.0839,
+          "rank": 17
         }
       ],
       "health": 1.0,
-      "z_now": 0.534,
-      "now_rank": 5,
-      "now_label": "elite"
+      "z_now": 0.08,
+      "now_rank": 14,
+      "now_label": "good"
     }
   ]
 }

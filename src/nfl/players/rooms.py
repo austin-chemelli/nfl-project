@@ -1,10 +1,12 @@
 """How strong each position room is (M24.7 round 3, PR B): a league rank per team and room from this
 season's games, and an estimate of the rank now, with the room's injuries.
 
-Each room has two or three stats from play-by-play and PFR's advanced game stats, each signed so
-higher is better and turned into a z-score across the 32 teams. A room's grade is the mean of its
-z-scores, ranked 1-32 with a label. It is how the room has played this season, injuries included:
-a room that lost its best player in Week 3 is graded on the games without him too.
+Each room has two or three stats, each signed so higher is better and turned into a z-score across
+the 32 teams. A room's grade is the mean of its z-scores, ranked 1-32 with a label. Every room but
+the offensive line is graded on its full-strength starters' own numbers (play-by-play for the
+offense, PFR's per-player games and snaps for the defense), this season and last, shrunk toward the
+league: a pass rusher back from injury counts at full strength. The offensive line uses team stats
+from the weeks it went in near full strength.
 
 The estimate now (decision 4a of the round-3 plan): the room's available share of spot weight
 (team health, the same weights as the team's percentage) pulls its grade toward a replacement
@@ -35,11 +37,11 @@ STATS: dict[str, list[tuple[str, str, bool]]] = {
     "RB": [("rb_epa", "EPA per carry", True), ("rb_success", "success rate per carry", True)],
     "WR": [("wr_epa", "EPA per target", True), ("wr_success", "success rate per target", True)],
     "TE": [("te_epa", "EPA per target", True), ("te_success", "success rate per target", True)],
-    "EDGE": [("edge_pressure", "edge pressures per opponent dropback", True), ("edge_sack", "edge sacks per opponent dropback", True)],
-    "DL": [("dl_pressure", "interior pressures per opponent dropback", True), ("dl_ybc", "opponent yards before contact per carry", False)],
-    "LB": [("lb_rush_epa", "opponent EPA per rush", False), ("lb_missed", "linebacker missed-tackle rate", False)],
+    "EDGE": [("edge_pressure", "pressures per snap", True), ("edge_sack", "sacks per snap", True)],
+    "DL": [("dl_pressure", "pressures per snap", True), ("dl_tackle", "tackles per snap", True)],
+    "LB": [("lb_tackle", "tackles per snap", True), ("lb_missed", "missed-tackle rate", False), ("lb_ypt", "yards allowed per target", False)],
     "CB": [("cb_ypt", "yards allowed per target", False), ("cb_cmp", "completion rate allowed", False)],
-    "S": [("s_ypt", "yards allowed per target", False), ("s_missed", "safety missed-tackle rate", False)],
+    "S": [("s_ypt", "yards allowed per target", False), ("s_missed", "missed-tackle rate", False)],
 }  # fmt: skip
 
 
@@ -57,13 +59,21 @@ def _group_sql() -> str:
     )
 
 
-# The skill rooms are graded on their full-strength starters' own plays, this season and last (last
-# season counts LAST_SEASON), wherever they played: a room's receivers are who they are, and four
-# healthy games of team targets are too few. The line and the defense use team stats.
-PLAYER_ROOMS = ("QB", "RB", "WR", "TE")
+# Every room but the offensive line is graded on its full-strength starters' own numbers, this season
+# and last (last season counts LAST_SEASON), wherever they played: a room is who is in it, so a star
+# back from injury (or traded in) counts, and a few healthy team games are too few. The offensive line
+# has no per-player blocking stats here, so it uses team stats from its healthy weeks.
+PLAYER_ROOMS = ("QB", "RB", "WR", "TE", "EDGE", "DL", "LB", "CB", "S")
+DEFENSE_ROOMS = ("EDGE", "DL", "LB", "CB", "S")
 LAST_SEASON = 0.5
 # a room's plays are shrunk toward the league's: this many league-average plays are added to its own
 SHRINK = {"QB": 200, "RB": 100, "WR": 100, "TE": 60}
+# defensive stat -> (numerator, denominator, league-average units added) from PFR's per-player games
+DEF_RATIO: dict[str, tuple[str, str, float]] = {
+    "pressure": ("pressures", "snaps", 300), "sack": ("sacks", "snaps", 300),
+    "tackle": ("tackles", "snaps", 300), "missed": ("missed", "chances", 40),
+    "ypt": ("yds", "targets", 40), "cmp": ("cmp", "targets", 40),
+}  # fmt: skip
 
 
 def player_rooms(
@@ -72,7 +82,7 @@ def player_rooms(
     """team -> room -> {plays, stat: value} for `PLAYER_ROOMS`, from each team's full-strength
     starters (`gsis_id`, `grp`) and their regular-season plays in `season` and the one before."""
     rows = [(t, s["gsis_id"], s["grp"]) for t, ss in starters.items() for s in ss
-            if s.get("gsis_id") and s.get("grp") in PLAYER_ROOMS]  # fmt: skip
+            if s.get("gsis_id") and s.get("grp") in PLAYER_ROOMS and s["grp"] not in DEFENSE_ROOMS]  # fmt: skip
     if not rows:
         return {}
     who = pl.DataFrame(rows, schema=["team", "gsis_id", "grp"], orient="row")  # noqa: F841  read by duckdb
@@ -102,6 +112,55 @@ def player_rooms(
         for r in d.iter_rows(named=True):
             vals = {f"{grp.lower()}_{c}": (r[c] + k * mean[c]) / (r["n"] + k) for c in mean}
             out.setdefault(r["team"], {})[grp] = {"plays": r["plays"], **vals}
+    for team, rooms in defense_rooms(con, season, starters).items():
+        out.setdefault(team, {}).update(rooms)
+    return out
+
+
+def defense_rooms(
+    con: duckdb.DuckDBPyConnection, season: int, starters: dict[str, list[dict]]
+) -> dict[str, dict]:
+    """team -> room -> {plays (snaps), stat: value} for `DEFENSE_ROOMS`, from each team's
+    full-strength starters' PFR game rows and snaps in `season` and the one before."""
+    rows = [(t, s["gsis_id"], s["grp"]) for t, ss in starters.items() for s in ss
+            if s.get("gsis_id") and s.get("grp") in DEFENSE_ROOMS]  # fmt: skip
+    if not rows:
+        return {}
+    who = pl.DataFrame(rows, schema=["team", "gsis_id", "grp"], orient="row")  # noqa: F841  read by duckdb
+    q = f"""
+    with d as (
+      select who.team, who.grp, case when d.season = {season} then 1.0 else {LAST_SEASON} end as w,
+             coalesce(s.defense_snaps, 0) as snaps, coalesce(d.def_pressures, 0) as pressures,
+             coalesce(d.def_sacks, 0) as sacks, coalesce(d.def_tackles_combined, 0) as tackles,
+             coalesce(d.def_missed_tackles, 0) as missed, coalesce(d.def_targets, 0) as targets,
+             coalesce(d.def_completions_allowed, 0) as cmp, coalesce(d.def_yards_allowed, 0) as yds
+      from who join players p on p.gsis_id = who.gsis_id
+      join pfr_def d on d.pfr_player_id = p.pfr_id
+      left join snap_counts s on s.pfr_player_id = d.pfr_player_id and s.pfr_game_id = d.pfr_game_id
+      where d.season in ({season - 1}, {season}) and d.game_type = 'REG'
+    )
+    select team, grp, sum(snaps)::bigint as plays,
+           sum(w * snaps)::double as snaps, sum(w * pressures)::double as pressures,
+           sum(w * sacks)::double as sacks, sum(w * tackles)::double as tackles,
+           sum(w * missed)::double as missed, sum(w * (missed + tackles))::double as chances,
+           sum(w * targets)::double as targets, sum(w * cmp)::double as cmp, sum(w * yds)::double as yds
+    from d group by 1, 2
+    """
+    df = con.sql(q).pl()
+    out: dict[str, dict] = {}
+    for (grp,), d in df.partition_by("grp", as_dict=True).items():
+        keys = [k for k, _, _ in STATS[grp]]
+        vals_by = {}
+        for key in keys:
+            num, den, k = DEF_RATIO[key.split("_", 1)[1]]
+            total = d[den].sum()
+            mean = d[num].sum() / total if total else 0.0
+            vals_by[key] = [(r[num] + k * mean) / (r[den] + k) for r in d.iter_rows(named=True)]
+        for i, r in enumerate(d.iter_rows(named=True)):
+            out.setdefault(r["team"], {})[grp] = {
+                "plays": r["plays"],
+                **{k: v[i] for k, v in vals_by.items()},
+            }
     return out
 
 

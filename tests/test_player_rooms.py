@@ -21,23 +21,24 @@ def _sums(teams: dict[str, list[tuple[int, float]]]) -> pl.DataFrame:
     return pl.DataFrame(rows).select("team", "week", *sorted(cols))
 
 
-def test_a_room_is_graded_on_its_healthy_weeks_and_ranked_league_wide():
-    # AAA was the best team in its healthy weeks (1-3) and awful in week 4, when the CBs were out
+def test_the_line_is_graded_on_its_healthy_weeks_and_ranked_league_wide():
+    # AAA's line allowed the most in its healthy weeks (1-3) and nothing in week 4, when it was hurt
     sums = _sums({
         "AAA": [(1, 3.0), (2, 3.0), (3, 3.0), (4, -9.0)],
         "BBB": [(1, 1.0), (2, 1.0), (3, 1.0), (4, 1.0)],
         "CCC": [(1, 0.0), (2, 0.0), (3, 0.0), (4, 0.0)],
     })  # fmt: skip
     counted = R.healthy_weeks(
-        {"AAA": [{"week": w, "rooms": {"CB": 1.0 if w < 4 else 0.4}} for w in (1, 2, 3, 4)]}
+        {"AAA": [{"week": w, "rooms": {"OL": 1.0 if w < 4 else 0.4}} for w in (1, 2, 3, 4)]}
     )
     st = R.stats(sums, counted)
-    assert st["AAA"]["CB"]["games"] == 3 and st["AAA"]["CB"]["cb_ypt"] == 3.0
-    assert st["AAA"]["S"]["games"] == 4  # no health rows for S: every week counts
+    assert st["AAA"]["OL"]["games"] == 3 and st["AAA"]["OL"]["ol_sack"] == 3.0
+    assert st["BBB"]["OL"]["games"] == 4  # no health rows: every week counts
     g = R.grades(st)
-    # cb stats are lower-is-better, so the team allowing the most ranks last
-    assert [g[t]["CB"]["rank"] for t in ("AAA", "BBB", "CCC")] == [3, 2, 1]
-    assert g["CCC"]["CB"]["label"] == "elite" and g["CCC"]["CB"]["basis"] == "team"
+    # sacks allowed: lower is better, so the line allowing the most ranks last on that stat
+    sack = {t: next(x["rank"] for x in g[t]["OL"]["stats"] if x["key"] == "ol_sack") for t in g}
+    assert [sack[t] for t in ("AAA", "BBB", "CCC")] == [3, 2, 1]
+    assert g["CCC"]["OL"]["basis"] == "team"
 
 
 def test_too_few_healthy_weeks_fall_back_to_every_week():
@@ -93,3 +94,28 @@ def test_skill_rooms_use_their_starters_plays_shrunk_toward_the_league():
     st = R.stats(_sums({t: [(w, 0.0) for w in (1, 2, 3)] for t in starters}), players=pr)
     g = R.grades(st)
     assert g["AAA"]["WR"]["rank"] == 1 and g["AAA"]["WR"]["basis"] == "players"
+
+
+def test_a_pass_rusher_back_from_injury_counts_with_last_seasons_rush():
+    import duckdb
+
+    con = duckdb.connect()
+    # the star missed this season (no 2026 rows) but had a big 2025; the other room is ordinary
+    pfr = [("star", 2025, g, 50, 1.0, 0.5) for g in range(17)] + [
+        (p, s, g, 50, 0.1, 0.0) for p in ("plain",) for s in (2025, 2026) for g in range(17)
+    ]  # fmt: skip
+    con.register(
+        "players", pl.DataFrame({"gsis_id": ["g_star", "g_plain"], "pfr_id": ["star", "plain"]})
+    )
+    con.register("pfr_def", pl.DataFrame(
+        [{"pfr_player_id": p, "season": s, "game_type": "REG", "pfr_game_id": f"{p}{s}{g}",
+          "def_pressures": pr, "def_sacks": sk, "def_tackles_combined": 2, "def_missed_tackles": 0,
+          "def_targets": 0, "def_completions_allowed": 0, "def_yards_allowed": 0} for p, s, g, _, pr, sk in pfr]
+    ))  # fmt: skip
+    con.register("snap_counts", pl.DataFrame(
+        [{"pfr_player_id": p, "pfr_game_id": f"{p}{s}{g}", "defense_snaps": n} for p, s, g, n, _, _ in pfr]
+    ))  # fmt: skip
+    rooms = R.defense_rooms(con, 2026, {"LA": [{"gsis_id": "g_star", "grp": "EDGE"}],
+                                         "XX": [{"gsis_id": "g_plain", "grp": "EDGE"}]})  # fmt: skip
+    assert rooms["LA"]["EDGE"]["edge_pressure"] > rooms["XX"]["EDGE"]["edge_pressure"]
+    assert rooms["LA"]["EDGE"]["plays"] == 850
