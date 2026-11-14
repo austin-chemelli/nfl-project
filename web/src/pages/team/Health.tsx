@@ -1,45 +1,33 @@
 /**
- * How far the team is from full strength (M24.7): the share of its full-strength starters' value
- * expected on the field this week, by position group, a depth chart of each spot (the full-strength
- * starter, his status and window, who is behind him), the scored claims' sentences, and
- * the same share for every game so far with an outlook that brings players back when eligible.
- * Context only (ADR 0027).
+ * How far the team is from full strength (M24.7): the share of its full-strength lineup expected on
+ * the field this week, by position room, the lineup on the field (key players starred, who is out
+ * and who steps in), the scored claims' sentences, and the same share for every game so far with an
+ * outlook that brings players back when eligible. Shares are in spot weights, not player values
+ * (round 3): every starter at a position counts the same, a key player 1.5 times. Context only
+ * (ADR 0027).
  */
 import { scaleLinear } from 'd3-scale'
 import { TipRow, TipTitle, useChartTip } from '../../charts/ChartTip'
+import { DepthField, DepthFieldKey } from '../../charts/DepthField'
 import { useWidth } from '../../charts/useWidth'
 import { FinePrint } from '../../components/FinePrint'
-import { TableScroll, td, th } from '../../components/ui'
-import type { HealthStarter, TeamFile, TeamHealth } from '../../data/contract'
+import type { TeamFile, TeamHealth } from '../../data/contract'
+import { GROUP, outLine, tone } from '../../lib/health'
 import { Block } from './Block'
 
-const GROUP: Record<string, string> = {
-  QB: 'Quarterback', RB: 'Running back', WR: 'Receivers', TE: 'Tight end', OL: 'Offensive line',
-  EDGE: 'Edge rushers', DL: 'Interior line', LB: 'Linebackers', CB: 'Cornerbacks', S: 'Safeties',
-}
 const pct = (v: number | null | undefined) => (v == null ? '–' : `${Math.round(100 * v)}%`)
-const pts = (v: number) => v.toFixed(1)
-
-/** "IR since Wk 9 · eligible Wk 13", "Out", "IR since camp · no return window". */
-// oxlint-disable-next-line react/only-export-components
-export function whenBack(s: HealthStarter, week: number): string {
-  if (!s.reserve) return s.status ?? ''
-  const since = s.since_week == null ? '' : s.since_week <= 1 ? ' since camp' : ` since Wk ${s.since_week}`
-  if (s.eligible_week == null) return `${s.status}${since} · no return window`
-  if (s.eligible_week <= week) return `${s.status}${since} · eligible now`
-  return `${s.status}${since} · eligible Wk ${s.eligible_week}`
-}
+const name = (s: { player: string; key: boolean }) => (s.key ? `${s.player} ★` : s.player)
 
 function Groups({ h }: { h: TeamHealth['now'] }) {
-  const outBy = (grp: string) => h.starters.filter((s) => s.grp === grp && (s.missing_pts ?? 0) > 0).map((s) => s.player)
-  const doubtBy = (grp: string) => h.starters.filter((s) => s.grp === grp && s.doubt).map((s) => s.player)
   return (
     <ul className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="health-groups">
       {h.groups.map((g) => {
         const share = g.health ?? 1
-        const out = outBy(g.grp)
-        const doubt = doubtBy(g.grp)
-        const doubtShare = g.full_pts ? Math.min(share, g.doubt_pts / g.full_pts) : 0
+        const rows = h.starters.filter((s) => s.grp === g.grp)
+        const out = rows.filter((s) => tone(s) === 'out' || tone(s) === 'iffy').map(name)
+        const doubt = rows.filter((s) => s.doubt).map(name)
+        const full = rows.reduce((a, s) => a + s.weight, 0)
+        const doubtShare = full ? Math.min(share, rows.filter((s) => s.doubt).reduce((a, s) => a + s.weight, 0) / full) : 0
         return (
           <li key={g.grp} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_3rem] items-center gap-x-3 gap-y-0.5 text-[14px]">
             <span className="truncate text-ink-2">{GROUP[g.grp] ?? g.grp}</span>
@@ -52,7 +40,7 @@ function Groups({ h }: { h: TeamHealth['now'] }) {
             <span className={`tabular text-right ${share < 1 ? 'font-medium text-ink' : 'text-ink-3'}`}>{pct(share)}</span>
             {(out.length > 0 || doubt.length > 0) && (
               <span className="col-start-2 col-end-4 text-[12px] text-ink-3">
-                {out.length > 0 && <>missing {out.join(', ')} · {pts(g.missing_pts)} of {pts(g.full_pts)} pts</>}
+                {out.length > 0 && <>missing {out.join(', ')} ({out.length} of {g.starters || rows.length})</>}
                 {out.length > 0 && doubt.length > 0 && '; '}
                 {doubt.length > 0 && <>in doubt (practice) {doubt.join(', ')}</>}
               </span>
@@ -64,81 +52,19 @@ function Groups({ h }: { h: TeamHealth['now'] }) {
   )
 }
 
-const tone = (s: { status: string | null; p_play?: number; doubt?: boolean }) =>
-  s.status == null ? '' : s.doubt || (s.p_play ?? 1) >= 0.5 ? 'text-ink-2 italic' : 'text-[var(--critical)]'
-
-function DepthRows({ rows, week }: { rows: HealthStarter[]; week: number }) {
-  return (
-    <TableScroll>
-      <table className="w-full table-fixed border-collapse text-[14px]">
-        <colgroup><col className="w-12" /><col /><col /></colgroup>
-        <thead>
-          <tr>
-            <th className={th}>Spot</th>
-            <th className={th}>Full strength</th>
-            <th className={th}>Behind him on the chart</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((s) => {
-            const out = (s.missing_pts ?? 0) > 0
-            return (
-              <tr key={s.slot} data-slot={s.slot} className={out ? 'bg-[var(--surface-2)]' : ''}>
-                <td className={`${td} text-ink-3`}>{s.slot.replace(/[123]$/, '')}</td>
-                <td className={`${td} break-words`}>
-                  <span className="font-medium text-ink">{s.player}</span>
-                  {s.value_pts != null && <span className="tabular text-ink-3"> · {pts(s.value_pts)}</span>}
-                  {s.status && <span className={`block text-[13px] ${tone(s)}`}>{whenBack(s, week)}{!s.reserve && !s.doubt && s.status !== 'Out' ? ` · plays ${pct(s.p_play)}` : ''}</span>}
-                </td>
-                <td className={`${td} break-words text-ink-2`}>
-                  {s.depth.length === 0 && (s.replaced_by ? <span>{s.replaced_by}</span> : <span className="text-ink-3">–</span>)}
-                  {s.depth.map((d, i) => (
-                    <span key={d.player} className={i === 0 && out ? 'font-medium text-ink' : ''}>
-                      {i > 0 && <span className="text-ink-3">, then </span>}
-                      {d.player}
-                      {d.value_pts != null && <span className="tabular text-ink-3"> · {pts(d.value_pts)}</span>}
-                      {d.status && <span className={`text-[13px] ${tone(d)}`}> ({d.status})</span>}
-                    </span>
-                  ))}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </TableScroll>
-  )
-}
-
-function DepthChart({ h }: { h: TeamHealth['now'] }) {
-  return (
-    <div className="flex flex-col gap-5" data-testid="health-depth">
-      {(['offense', 'defense'] as const).map((u) => {
-        const rows = h.starters.filter((s) => s.unit === u)
-        return rows.length > 0 && (
-          <div key={u} className="flex flex-col gap-1">
-            <h4 className="m-0 text-[13px] font-medium uppercase tracking-wide text-ink-3">{u === 'offense' ? 'Offense' : 'Defense'}</h4>
-            <DepthRows rows={rows} week={h.week} />
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 const H = 170
 const PAD = { top: 14, right: 16, bottom: 26, left: 40 }
 
-type Pt = { week: number; health: number; missing: number; kind: 'past' | 'now' | 'outlook' }
+type Pt = { week: number; health: number; out: number; keyOut: number; kind: 'past' | 'now' | 'outlook' }
 
 /** Health by week: the games so far solid, this week marked, the outlook dashed. */
 export function HealthChart({ health }: { health: TeamHealth }) {
   const [ref, width] = useWidth()
   const { box, at, bind, card } = useChartTip()
   const pts_: Pt[] = [
-    ...health.by_week.filter((w) => w.health != null).map((w) => ({ week: w.week, health: w.health!, missing: w.missing_pts, kind: 'past' as const })),
-    ...(health.now.health != null ? [{ week: health.now.week, health: health.now.health, missing: health.now.missing_pts, kind: 'now' as const }] : []),
-    ...health.outlook.filter((w) => w.health != null).map((w) => ({ week: w.week, health: w.health!, missing: w.missing_pts, kind: 'outlook' as const })),
+    ...health.by_week.filter((w) => w.health != null).map((w) => ({ week: w.week, health: w.health!, out: w.out, keyOut: w.key_out, kind: 'past' as const })),
+    ...(health.now.health != null ? [{ week: health.now.week, health: health.now.health, out: health.now.out, keyOut: health.now.key_out, kind: 'now' as const }] : []),
+    ...health.outlook.filter((w) => w.health != null).map((w) => ({ week: w.week, health: w.health!, out: w.out, keyOut: w.key_out, kind: 'outlook' as const })),
   ]
   if (pts_.length < 2) return null
   const weeks = pts_.map((p) => p.week)
@@ -180,7 +106,7 @@ export function HealthChart({ health }: { health: TeamHealth }) {
         <>
           <TipTitle note={hovered.kind === 'outlook' ? 'if players return when eligible' : hovered.kind === 'now' ? 'this week' : 'going into the game'}>Week {hovered.week}</TipTitle>
           <TipRow value={pct(hovered.health)} label="of full strength" />
-          <TipRow value={`${pts(hovered.missing)} pts`} label="missing" />
+          <TipRow value={hovered.out} label={outLine(hovered.out, hovered.keyOut).replace(/^\d+ /, '')} />
         </>,
       )}
     </div>
@@ -192,11 +118,11 @@ export function Health({ file }: { file: TeamFile }) {
   if (!health) return null
   const h = health.now
   const lede = h.health == null
-    ? 'No starter values yet.'
-    : h.missing_pts > 0
-      ? `At ${pct(h.health)} of full strength going into Week ${h.week}: ${pts(h.missing_pts)} of ${pts(h.full_pts)} points of starter value expected to miss.`
+    ? 'No depth chart yet.'
+    : h.out > 0
+      ? `At ${pct(h.health)} of full strength going into Week ${h.week}: ${outLine(h.out, h.key_out)}.`
       : `At full strength going into Week ${h.week}: every full-strength starter is available.`
-  const doubtNames = h.starters.filter((s) => s.doubt).map((s) => s.player)
+  const doubtNames = h.starters.filter((s) => s.doubt).map(name)
   const listed = file.availability?.reported ? file.availability.listed : []
   const back = health.outlook.find((o) => o.health != null && o.health >= 0.995)
   return (
@@ -206,14 +132,17 @@ export function Health({ file }: { file: TeamFile }) {
           <p className="m-0 text-[13px] text-ink-3" data-testid="health-doubt">
             No game statuses yet this week (teams post them Friday), so the share counts only reserve lists.
             {doubtNames.length > 0
-              ? <> In doubt from practice: {doubtNames.join(', ')} ({pts(h.doubt_pts)} pts, striped in the bars).</>
+              ? <> In doubt from practice: {doubtNames.join(', ')} (striped in the bars).</>
               : ' No full-strength starter missed practice.'}
           </p>
         )}
         <Groups h={h} />
       </Block>
-      <Block title="Depth chart" line="Each spot's full-strength starter, this week's status, and who is behind him on the latest chart (in bold where he plays instead).">
-        <DepthChart h={h} />
+      <Block title="Full-strength lineup" line="The best lineup the chart has had this season, as it stands this week: who is out, and who steps in. Hover a player for his return window and the chart behind him.">
+        <div className="flex flex-col gap-3" data-testid="health-depth">
+          <DepthField starters={h.starters} week={h.week} />
+          <DepthFieldKey />
+        </div>
       </Block>
       {listed.length > 0 && (
         <Block title="What we said about this week">
@@ -233,7 +162,7 @@ export function Health({ file }: { file: TeamFile }) {
         <HealthChart health={health} />
       </Block>
       <FinePrint>
-        <p>Full strength is the team&apos;s best lineup this season: at each spot, the most valuable player the depth chart has had as the starter since March who is still on the roster and is out now (a healthy player the chart moved down lost the job; he doesn&apos;t count). Each is valued as he was going into his last game. A player on IR may return after missing four of his team&apos;s games; IR from before Week 1 usually means the season, so it gets no window. Questionable and Doubtful count by how often players with that status have played since 2016. Before Friday's statuses, a starter who missed or was limited in practice is shown as in doubt but not counted: a Wednesday absence is often a rest day, and the play rates we can measure (23% after a missed last practice, 74% after a limited one) are for the week's last practice. Context only: no prediction uses it.</p>
+        <p>Full strength is the team&apos;s best lineup this season: at each spot, the best player the depth chart has had as the starter since March who is still on the roster and is out now (a healthy player the chart moved down lost the job; he doesn&apos;t count). The share weighs each spot by its position (a quarterback more than a guard, every corner the same) and a key player (★) one and a half times: the top 30% at his position across the league by our player ratings, a veteran paid like the top 15% at his position, or a 1st-round pick on his rookie deal. The ratings only pick the key players; we don&apos;t show them, because they aren&apos;t reliable enough player by player. A player on IR may return after missing four of his team&apos;s games; IR from before Week 1 usually means the season, so it gets no window. Questionable and Doubtful count by how often players with that status have played since 2016. Before Friday&apos;s statuses, a starter who missed or was limited in practice is shown as in doubt but not counted: a Wednesday absence is often a rest day. Context only: no prediction uses it.</p>
       </FinePrint>
     </div>
   )

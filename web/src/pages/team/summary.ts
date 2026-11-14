@@ -3,17 +3,18 @@ import type { LeagueFile, UnitCaller, TeamFile, TeamRow } from '../../data/contr
 import { ordinal } from '../league/helpers'
 import { fmtProb } from '../league/playoffs'
 import { biggestChange } from './tendencies'
+import { outLine } from '../../lib/health'
 
 export type TileText = { label: string; value: string; sub: string; tab: string }
 
-/** Health (M24.7): the share of full-strength value expected on the field this week. */
+/** Health (M24.7): the share of the full-strength lineup expected on the field this week. */
 export function healthTile(file: TeamFile | undefined): TileText | null {
   const h = file?.health?.now
   if (!h || h.health == null) return null
   return {
     label: 'Health',
     value: `${Math.round(100 * h.health)}%`,
-    sub: h.missing_pts > 0 ? `of full strength, ${h.missing_pts.toFixed(1)} pts out` : 'full strength',
+    sub: h.out > 0 ? `of full strength, ${outLine(h.out, h.key_out)}` : 'full strength',
     tab: 'health',
   }
 }

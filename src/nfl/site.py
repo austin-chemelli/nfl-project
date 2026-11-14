@@ -1760,12 +1760,14 @@ def _practice_rows(paths: Paths, season: int) -> list[dict]:
 
 
 def _game_health(health: dict, g: dict) -> dict | None:
-    """Each side's health going into this game, when it's the team's next one."""
+    """Each side's health going into this game, when it's the team's next one: the share, the
+    starters out, and the full-strength lineup the Injuries map draws (round 3)."""
+    keep = ("health", "missing_pts", "full_pts", "missing_w", "full_w", "out", "key_out", "reported")  # fmt: skip
     out = {}
     for side in ("home", "away"):
         h = (health.get(g[f"{side}_team"]) or {}).get("now")
         out[side] = (
-            {k: h[k] for k in ("health", "missing_pts", "full_pts")}
+            {**{k: h.get(k) for k in keep}, "starters": h["starters"]}
             if h and h["week"] == g["week"]
             else None
         )

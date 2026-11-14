@@ -98,9 +98,42 @@ def test_health_totals_and_groups():
     w = _week()
     assert w["full_pts"] == round(0.5 + 1.2 + 0.6 + 0.3 + 4.0 + 0.5 + 0.2, 2)
     assert w["missing_pts"] == round(0.5 + 1.2 + 0.15 + 0.5, 2)
-    assert w["health"] == round(1 - w["missing_pts"] / w["full_pts"], 3)
+    # health is in spot weights, not model points: OL 0.5, three WR 1.2, QB 6, DL 0.7, TE 0.8
+    assert (w["full_w"], w["missing_w"]) == (11.6, round(0.5 + 1.2 + 0.25 * 1.2 + 0.7, 3))
+    assert w["health"] == round(1 - w["missing_w"] / w["full_w"], 3)
+    assert (w["out"], w["key_out"]) == (4, 0)
+    s = {x["slot"]: x for x in w["starters"]}
+    assert (s["QB"]["weight"], s["WR1"]["missing_w"]) == (6.0, 1.2)  # the page reads them per spot
     wr = next(g for g in w["groups"] if g["grp"] == "WR")
     assert (wr["full_pts"], wr["missing_pts"]) == (2.1, 1.35)
+    assert (wr["full_w"], wr["starters"], wr["out"]) == (3.6, 3, 2)
+
+
+def test_key_players_are_the_top_of_each_group_league_wide_and_count_more():
+    """Two teams' WR rooms: the top 30% of the six by value are key, wherever they play; a key
+    player's spot counts 1.5 times; a 1st-round pick on his rookie deal is key on the draft alone."""
+    a = {**_week(), "starters": [s for s in _week()["starters"] if s["grp"] == "WR"]}
+    b = {"starters": [
+        {"gsis_id": f"b{i}", "grp": "WR", "value_pts": v, "p_play": 1.0, "star": False}
+        for i, v in enumerate((2.0, 0.2, 0.1))
+    ]}  # fmt: skip
+    keys = H.key_ids([a, b])
+    assert keys == {"b0", "star"}  # round(0.3 * 6) = 2: 2.0 and 1.2
+    a = H.with_keys(a, keys)
+    assert a["full_w"] == round(1.2 * 1.5 + 1.2 + 1.2, 3) and a["key_out"] == 1
+    assert H._star({"rookie": True, "draft_pick": 20}) and not H._star(
+        {"rookie": True, "draft_pick": 40}
+    )
+    assert H._star({"rookie": False, "prior_pct": 0.9}) and not H._star(None)
+
+
+def test_losing_the_top_two_corners_is_a_big_loss_even_without_stars():
+    """Equal weights within a position: two missing corners cost two full corner spots."""
+    cb = [{"gsis_id": f"c{i}", "grp": "CB", "value_pts": 0.05, "p_play": 0.0 if i < 2 else 1.0,
+           "missing_pts": 0.0, "key": False} for i in range(2)]  # fmt: skip
+    qb = [{"gsis_id": "q", "grp": "QB", "value_pts": 5.0, "p_play": 1.0, "missing_pts": 0, "key": True}]  # fmt: skip
+    t = H.summarize(cb + qb)
+    assert t["missing_w"] == 1.6 and t["health"] == round(1 - 1.6 / (1.6 + 9.0), 3)
 
 
 def test_outlook_brings_players_back_when_eligible_and_not_before():
