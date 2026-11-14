@@ -10,8 +10,15 @@ Each full-strength starter then has this week's status: on a reserve list (IR, P
 roster), listed Out, Doubtful or Questionable on the report, before Friday's game statuses the
 latest practice report (did not practice, limited) as a doubt that doesn't count against health
 (a Wednesday DNP is often rest, and the rates we can measure are for the week's last practice),
-inactive, or available. What he's expected to miss is value × (1 − P(plays)); the team's health is the share
-of its full-strength value expected on the field. Each spot also carries the chart's next two men
+inactive, or available.
+
+**Weights, not values (round 3, Austin 2026-11-13).** The value model's per-player numbers aren't
+trusted enough to show or to size a loss. They only *rank*: a **key player** is a full-strength
+starter in the top 30% of his position group league-wide, or a high-paid veteran, or a 1st-round
+pick still on his rookie deal. Every spot then weighs its position's scale (a quarterback spot more
+than a guard's, `priors.TOP_STARTER_POINTS`), a key player 1.5 times that. What he's expected to
+miss is weight × (1 − P(plays)); the team's health is the share
+of its full-strength weight expected on the field. Each spot also carries the chart's next two men
 there (who plays if he can't). The outlook assumes a player on IR returns the week he's eligible
 (four team games after he went on it) and a player on the report the next week: a window, never a
 date.
@@ -27,6 +34,7 @@ import polars as pl
 
 from nfl.players import claims as C
 from nfl.players import lineup as L
+from nfl.players import priors as P
 from nfl.players import status as S
 from nfl.players import value as V
 
@@ -39,6 +47,20 @@ RESERVE = {
     "R04": "PUP",
 }
 OUTLOOK_WEEKS = 4
+
+SPOT_WEIGHT = P.TOP_STARTER_POINTS  # a spot's weight by position group
+KEY_SHARE = 0.30  # the top share of full-strength starters in a group, league-wide, are key
+KEY_BONUS = 1.5  # a key player's spot counts this many times its position's weight
+STAR_CAP_PCT = 0.85  # a veteran paid like the top 15% at his position is key
+STAR_PICK = 32  # a 1st-round pick on his rookie deal is key
+# a spot's group when its player has no value row (the 3-4's outside backers are edge rushers, but
+# a valued player carries his own group)
+SLOT_GROUP = {
+    "LT": "OL", "LG": "OL", "C": "OL", "RG": "OL", "RT": "OL", "TE": "TE", "WR": "WR",
+    "QB": "QB", "RB": "RB", "LDE": "EDGE", "RDE": "EDGE", "LDT": "DL", "NT": "DL", "RDT": "DL",
+    "SLB": "LB", "WLB": "LB", "MLB": "LB", "LILB": "LB", "RILB": "LB", "LCB": "CB", "RCB": "CB",
+    "SS": "S", "FS": "S",
+}  # fmt: skip
 
 
 # ------------------------------------------------------------------------------- healthy values
@@ -381,39 +403,104 @@ def team_week(
             for g, n in behind.get(slot_key[s["slot"]], [])
             if g not in full_ids  # a full-strength starter elsewhere isn't depth here
         ][:2]
-        starters.append({**s, "grp": v["grp"] if v else None, "value_pts": value, **st,
-                         "missing_pts": missing, "depth": chain})  # fmt: skip
+        grp = v["grp"] if v else SLOT_GROUP.get(s["slot"].rstrip("123"))
+        starters.append({**s, "grp": grp, "value_pts": value, **st, "missing_pts": missing,
+                         "star": _star(v), "key": _star(v), "depth": chain})  # fmt: skip
     order = {k: i for i, k in enumerate((*L.OFFENSE_ORDER, *L.DEFENSE_ORDER))}
     starters.sort(key=lambda s: (s["unit"] != "offense", order.get(s["slot"], 99)))
+    starters = weighted(starters)
     return {"week": week, "reported": reported, **summarize(starters), "starters": starters}
 
 
+def _star(v: dict | None) -> bool:
+    """Key on his contract or draft slot alone: a veteran paid like the top 15% at his position, or a
+    1st-round pick still on his rookie deal."""
+    if not v:
+        return False
+    if v.get("rookie"):
+        return v.get("draft_pick") is not None and v["draft_pick"] <= STAR_PICK
+    return (v.get("prior_pct") or 0) >= STAR_CAP_PCT
+
+
+def weight(s: dict) -> float:
+    """A spot's weight: its position's scale, 1.5 times for a key player."""
+    return SPOT_WEIGHT.get(s.get("grp") or "", 0.0) * (KEY_BONUS if s.get("key") else 1.0)
+
+
+def key_ids(nows: list[dict]) -> set[str]:
+    """The league's key players from every team's current full-strength starters: the top
+    `KEY_SHARE` of each position group by value (above zero), plus the contract and draft stars."""
+    by_grp: dict[str, list[tuple[float, str]]] = {}
+    keys: set[str] = set()
+    for tw in nows:
+        for s in tw["starters"]:
+            if s.get("star"):
+                keys.add(s["gsis_id"])
+            if s["value_pts"] and s["grp"]:
+                by_grp.setdefault(s["grp"], []).append((s["value_pts"], s["gsis_id"]))
+    for rows in by_grp.values():
+        rows.sort(reverse=True)
+        keys |= {g for _, g in rows[: max(1, round(KEY_SHARE * len(rows)))]}
+    return keys
+
+
+def with_keys(tw: dict, keys: set[str]) -> dict:
+    """The week with each starter's key flag from the league-wide set, totals recomputed."""
+    starters = weighted(
+        [{**s, "key": s.get("star", False) or s["gsis_id"] in keys} for s in tw["starters"]]
+    )
+    return {**tw, **summarize(starters), "starters": starters}
+
+
+def weighted(starters: list[dict]) -> list[dict]:
+    """Each starter with his spot's weight and the weight he's expected to miss."""
+    return [{**s, "weight": round(weight(s), 3),
+             "missing_w": round(weight(s) * (1 - s["p_play"]), 3)} for s in starters]  # fmt: skip
+
+
+WEEK_KEYS = ("week", "health", "missing_pts", "full_pts", "missing_w", "out", "key_out")
+
+
 def summarize(starters: list[dict]) -> dict:
-    full = sum(s["value_pts"] or 0 for s in starters)
-    miss = sum(s["missing_pts"] or 0 for s in starters)
+    """Totals in weights (health, by group, starters out) and, kept for M24.3, in model points."""
+    starters = weighted(starters)
+    full_w = sum(s["weight"] for s in starters)
+    miss_w = sum(s["missing_w"] for s in starters)
     groups: dict[str, dict] = {}
     for s in starters:
-        if s["value_pts"] is None:
+        if not s["grp"]:
             continue
-        g = groups.setdefault(
-            s["grp"], {"grp": s["grp"], "full_pts": 0.0, "missing_pts": 0.0, "doubt_pts": 0.0}
-        )
-        g["full_pts"] += s["value_pts"]
+        g = groups.setdefault(s["grp"], {
+            "grp": s["grp"], "full_pts": 0.0, "missing_pts": 0.0, "doubt_pts": 0.0,
+            "full_w": 0.0, "missing_w": 0.0, "doubt_w": 0.0, "starters": 0, "out": 0, "key_out": 0,
+        })  # fmt: skip
+        g["full_pts"] += s["value_pts"] or 0
         g["missing_pts"] += s["missing_pts"] or 0
-        g["doubt_pts"] += s["value_pts"] if s.get("doubt") else 0
+        g["doubt_pts"] += (s["value_pts"] or 0) if s.get("doubt") else 0
+        g["full_w"] += s["weight"]
+        g["missing_w"] += s["missing_w"]
+        g["doubt_w"] += s["weight"] if s.get("doubt") else 0
+        g["starters"] += 1
+        g["out"] += s["p_play"] < 1
+        g["key_out"] += s["p_play"] < 1 and bool(s.get("key"))
     rows = [
-        {**g, "full_pts": round(g["full_pts"], 2), "missing_pts": round(g["missing_pts"], 2),
-         "doubt_pts": round(g["doubt_pts"], 2),
-         "health": round(1 - g["missing_pts"] / g["full_pts"], 3) if g["full_pts"] else None}
+        {**g, **{k: round(g[k], 2) for k in ("full_pts", "missing_pts", "doubt_pts")},
+         **{k: round(g[k], 3) for k in ("full_w", "missing_w", "doubt_w")},
+         "health": round(1 - g["missing_w"] / g["full_w"], 3) if g["full_w"] else None}
         for g in groups.values()
     ]  # fmt: skip
     return {
-        "full_pts": round(full, 2),
-        "missing_pts": round(miss, 2),
-        # starters who missed or were limited in practice before game statuses: value in doubt
+        "full_pts": round(sum(s["value_pts"] or 0 for s in starters), 2),
+        "missing_pts": round(sum(s["missing_pts"] or 0 for s in starters), 2),
+        # starters who missed or were limited in practice before game statuses: in doubt
         "doubt_pts": round(sum(s["value_pts"] or 0 for s in starters if s.get("doubt")), 2),
-        "health": round(1 - miss / full, 3) if full else None,
-        "groups": sorted(rows, key=lambda g: -g["full_pts"]),
+        "full_w": round(full_w, 3),
+        "missing_w": round(miss_w, 3),
+        "doubt_w": round(sum(s["weight"] for s in starters if s.get("doubt")), 3),
+        "out": sum(s["p_play"] < 1 for s in starters),
+        "key_out": sum(s["p_play"] < 1 and bool(s.get("key")) for s in starters),
+        "health": round(1 - miss_w / full_w, 3) if full_w else None,
+        "groups": sorted(rows, key=lambda g: -g["full_w"]),
     }
 
 
@@ -437,10 +524,10 @@ def outlook(now: dict, weeks: list[int]) -> list[dict]:
                 or (s["status"] == RESERVE["R48"] and w > now["week"])
             )
             p = 1.0 if back else s["p_play"]
-            rows.append({**s, "missing_pts": round((s["value_pts"] or 0) * (1 - p), 2)
+            rows.append({**s, "p_play": p, "missing_pts": round((s["value_pts"] or 0) * (1 - p), 2)
                          if s["value_pts"] is not None else None})  # fmt: skip
         t = summarize(rows)
-        out.append({"week": w, "health": t["health"], "missing_pts": t["missing_pts"]})
+        out.append({"week": w, **{k: t[k] for k in WEEK_KEYS if k not in ("week", "full_pts")}})
     return out
 
 
@@ -468,7 +555,7 @@ def season(
         dep = depth_by.get(team, depth.clear())
         ros = ros_by.get(team, rosters.clear())
         inj = [i for i in injuries if i["team"] == team]
-        by_week, nxt = [], None
+        past, nxt = [], None
         for g in tg.iter_rows(named=True):
             upcoming = g["kickoff_utc"] > now
             cutoff = now if upcoming else g["kickoff_utc"]
@@ -478,9 +565,16 @@ def season(
             if upcoming:
                 nxt = tw
                 break
-            by_week.append({k: tw[k] for k in ("week", "health", "missing_pts", "full_pts")})
+            past.append(tw)
         if nxt is None:
             continue
         later = [w for w in tg["week"].to_list() if w > nxt["week"]][:OUTLOOK_WEEKS]
-        out[team] = {"now": nxt, "by_week": by_week, "outlook": outlook(nxt, later)}
+        out[team] = {"now": nxt, "past": past, "later": later}
+    # key players are league-wide: from every team's current full-strength lineup, then the same
+    # set marks every week of the season
+    keys = key_ids([t["now"] for t in out.values()])
+    for team, t in out.items():
+        nxt = with_keys(t["now"], keys)
+        by_week = [{k: tw[k] for k in WEEK_KEYS} for tw in (with_keys(p, keys) for p in t["past"])]
+        out[team] = {"now": nxt, "by_week": by_week, "outlook": outlook(nxt, t["later"])}
     return out

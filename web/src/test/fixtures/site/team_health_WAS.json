@@ -5,13 +5,24 @@
   "full_pts": 11.77,
   "missing_pts": 2.34,
   "doubt_pts": 0,
-  "health": 0.801,
+  "full_w": 26.7,
+  "missing_w": 4.3,
+  "doubt_w": 0,
+  "out": 4,
+  "key_out": 3,
+  "health": 0.839,
   "groups": [
    {
     "grp": "QB",
     "full_pts": 4.69,
     "missing_pts": 0.0,
     "doubt_pts": 0.0,
+    "full_w": 9.0,
+    "missing_w": 0.0,
+    "doubt_w": 0.0,
+    "starters": 1,
+    "out": 0,
+    "key_out": 0,
     "health": 1.0
    },
    {
@@ -19,34 +30,64 @@
     "full_pts": 2.62,
     "missing_pts": 1.14,
     "doubt_pts": 0.0,
-    "health": 0.565
+    "full_w": 4.8,
+    "missing_w": 1.8,
+    "doubt_w": 0.0,
+    "starters": 3,
+    "out": 1,
+    "key_out": 1,
+    "health": 0.625
    },
    {
     "grp": "OL",
     "full_pts": 1.33,
     "missing_pts": 0.58,
     "doubt_pts": 0.0,
-    "health": 0.564
-   },
-   {
-    "grp": "EDGE",
-    "full_pts": 1.02,
-    "missing_pts": 0.0,
-    "doubt_pts": 0.0,
-    "health": 1.0
+    "full_w": 3.25,
+    "missing_w": 0.75,
+    "doubt_w": 0.0,
+    "starters": 5,
+    "out": 1,
+    "key_out": 1,
+    "health": 0.769
    },
    {
     "grp": "DL",
     "full_pts": 0.75,
     "missing_pts": 0.62,
     "doubt_pts": 0.0,
-    "health": 0.173
+    "full_w": 2.45,
+    "missing_w": 1.75,
+    "doubt_w": 0.0,
+    "starters": 3,
+    "out": 2,
+    "key_out": 1,
+    "health": 0.286
+   },
+   {
+    "grp": "EDGE",
+    "full_pts": 1.02,
+    "missing_pts": 0.0,
+    "doubt_pts": 0.0,
+    "full_w": 2.0,
+    "missing_w": 0.0,
+    "doubt_w": 0.0,
+    "starters": 2,
+    "out": 0,
+    "key_out": 0,
+    "health": 1.0
    },
    {
     "grp": "CB",
     "full_pts": 0.56,
     "missing_pts": 0.0,
     "doubt_pts": 0.0,
+    "full_w": 1.6,
+    "missing_w": 0.0,
+    "doubt_w": 0.0,
+    "starters": 2,
+    "out": 0,
+    "key_out": 0,
     "health": 1.0
    },
    {
@@ -54,13 +95,12 @@
     "full_pts": 0.35,
     "missing_pts": 0.0,
     "doubt_pts": 0.0,
-    "health": 1.0
-   },
-   {
-    "grp": "RB",
-    "full_pts": 0.32,
-    "missing_pts": 0.0,
-    "doubt_pts": 0.0,
+    "full_w": 1.2,
+    "missing_w": 0.0,
+    "doubt_w": 0.0,
+    "starters": 2,
+    "out": 0,
+    "key_out": 0,
     "health": 1.0
    },
    {
@@ -68,6 +108,12 @@
     "full_pts": 0.12,
     "missing_pts": 0.0,
     "doubt_pts": 0.0,
+    "full_w": 1.0,
+    "missing_w": 0.0,
+    "doubt_w": 0.0,
+    "starters": 2,
+    "out": 0,
+    "key_out": 0,
     "health": 1.0
    },
    {
@@ -75,6 +121,25 @@
     "full_pts": 0.01,
     "missing_pts": 0.0,
     "doubt_pts": 0.0,
+    "full_w": 0.8,
+    "missing_w": 0.0,
+    "doubt_w": 0.0,
+    "starters": 1,
+    "out": 0,
+    "key_out": 0,
+    "health": 1.0
+   },
+   {
+    "grp": "RB",
+    "full_pts": 0.32,
+    "missing_pts": 0.0,
+    "doubt_pts": 0.0,
+    "full_w": 0.6,
+    "missing_w": 0.0,
+    "doubt_w": 0.0,
+    "starters": 1,
+    "out": 0,
+    "key_out": 0,
     "health": 1.0
    }
   ],
@@ -94,6 +159,8 @@
     "since_week": 1,
     "eligible_week": null,
     "missing_pts": 0.58,
+    "star": true,
+    "key": true,
     "depth": [
      {
       "player": "Brandon Coleman",
@@ -105,7 +172,9 @@
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.75,
+    "missing_w": 0.75
    },
    {
     "slot": "LG",
@@ -122,6 +191,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Lucas Patrick",
@@ -133,7 +204,9 @@
       "value_pts": null,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.5,
+    "missing_w": 0.0
    },
    {
     "slot": "C",
@@ -150,6 +223,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Matt Gulbin",
@@ -161,7 +236,9 @@
       "value_pts": null,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.5,
+    "missing_w": 0.0
    },
    {
     "slot": "RG",
@@ -178,6 +255,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": true,
+    "key": true,
     "depth": [
      {
       "player": "Matt Gulbin",
@@ -185,11 +264,13 @@
       "status": null
      },
      {
-      "player": "Nick Allegretti",
+      "player": "Andrew Wylie",
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.75,
+    "missing_w": 0.0
    },
    {
     "slot": "RT",
@@ -206,13 +287,17 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": true,
+    "key": true,
     "depth": [
      {
       "player": "Andrew Wylie",
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.75,
+    "missing_w": 0.0
    },
    {
     "slot": "TE",
@@ -229,6 +314,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Ben Sinnott",
@@ -240,7 +327,9 @@
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.8,
+    "missing_w": 0.0
    },
    {
     "slot": "WR1",
@@ -257,18 +346,17 @@
     "since_week": 8,
     "eligible_week": 12,
     "missing_pts": 1.14,
+    "star": true,
+    "key": true,
     "depth": [
-     {
-      "player": "Stefon Diggs",
-      "value_pts": 1.02,
-      "status": null
-     },
      {
       "player": "Van Jefferson",
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 1.8,
+    "missing_w": 1.8
    },
    {
     "slot": "WR2",
@@ -285,18 +373,22 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": true,
+    "key": true,
     "depth": [
-     {
-      "player": "Antonio Williams",
-      "value_pts": 0.46,
-      "status": null
-     },
      {
       "player": "Luke McCaffrey",
       "value_pts": 0.0,
       "status": null
+     },
+     {
+      "player": "Jaylin Lane",
+      "value_pts": 0.0,
+      "status": "IR"
      }
-    ]
+    ],
+    "weight": 1.8,
+    "missing_w": 0.0
    },
    {
     "slot": "WR3",
@@ -313,6 +405,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Treylon Burks",
@@ -324,7 +418,9 @@
       "value_pts": 0.0,
       "status": "IR"
      }
-    ]
+    ],
+    "weight": 1.2,
+    "missing_w": 0.0
    },
    {
     "slot": "QB",
@@ -341,6 +437,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": true,
+    "key": true,
     "depth": [
      {
       "player": "Marcus Mariota",
@@ -352,7 +450,9 @@
       "value_pts": 0.24,
       "status": null
      }
-    ]
+    ],
+    "weight": 9.0,
+    "missing_w": 0.0
    },
    {
     "slot": "RB",
@@ -369,6 +469,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Austin Ekeler",
@@ -380,7 +482,9 @@
       "value_pts": null,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.6,
+    "missing_w": 0.0
    },
    {
     "slot": "LDE",
@@ -397,6 +501,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Jer'Zhan Newton",
@@ -408,7 +514,9 @@
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.7,
+    "missing_w": 0.0
    },
    {
     "slot": "NT",
@@ -425,6 +533,8 @@
     "since_week": 9,
     "eligible_week": 13,
     "missing_pts": 0.47,
+    "star": true,
+    "key": true,
     "depth": [
      {
       "player": "Tim Settle",
@@ -436,7 +546,9 @@
       "value_pts": 0.07,
       "status": null
      }
-    ]
+    ],
+    "weight": 1.05,
+    "missing_w": 1.05
    },
    {
     "slot": "RDE",
@@ -453,13 +565,17 @@
     "since_week": 9,
     "eligible_week": 13,
     "missing_pts": 0.15,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Shy Tuttle",
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.7,
+    "missing_w": 0.7
    },
    {
     "slot": "SLB",
@@ -476,6 +592,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "K'Lavon Chaisson",
@@ -487,7 +605,9 @@
       "value_pts": 0.0,
       "status": "IR"
      }
-    ]
+    ],
+    "weight": 1.0,
+    "missing_w": 0.0
    },
    {
     "slot": "LILB",
@@ -504,13 +624,17 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": true,
+    "key": true,
     "depth": [
      {
       "player": "Jordan Magee",
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.6,
+    "missing_w": 0.0
    },
    {
     "slot": "RILB",
@@ -527,6 +651,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": true,
+    "key": true,
     "depth": [
      {
       "player": "Kain Medrano",
@@ -538,7 +664,9 @@
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.6,
+    "missing_w": 0.0
    },
    {
     "slot": "WLB",
@@ -555,13 +683,17 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Joshua Josephs",
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 1.0,
+    "missing_w": 0.0
    },
    {
     "slot": "LCB",
@@ -578,13 +710,17 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Fabian Moreau",
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.8,
+    "missing_w": 0.0
    },
    {
     "slot": "RCB",
@@ -601,7 +737,11 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
-    "depth": []
+    "star": false,
+    "key": false,
+    "depth": [],
+    "weight": 0.8,
+    "missing_w": 0.0
    },
    {
     "slot": "SS",
@@ -618,13 +758,17 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Tyler Owens",
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.5,
+    "missing_w": 0.0
    },
    {
     "slot": "FS",
@@ -641,6 +785,8 @@
     "since_week": null,
     "eligible_week": null,
     "missing_pts": 0.0,
+    "star": false,
+    "key": false,
     "depth": [
      {
       "player": "Quan Martin",
@@ -652,86 +798,127 @@
       "value_pts": 0.0,
       "status": null
      }
-    ]
+    ],
+    "weight": 0.5,
+    "missing_w": 0.0
    }
   ]
  },
  "by_week": [
   {
    "week": 1,
-   "health": 0.921,
+   "health": 0.89,
    "missing_pts": 0.88,
-   "full_pts": 11.13
+   "full_pts": 11.13,
+   "missing_w": 2.95,
+   "out": 3,
+   "key_out": 1
   },
   {
    "week": 2,
-   "health": 0.924,
+   "health": 0.913,
    "missing_pts": 0.88,
-   "full_pts": 11.64
+   "full_pts": 11.64,
+   "missing_w": 2.33,
+   "out": 4,
+   "key_out": 2
   },
   {
    "week": 3,
-   "health": 0.502,
+   "health": 0.536,
    "missing_pts": 5.73,
-   "full_pts": 11.51
+   "full_pts": 11.51,
+   "missing_w": 12.4,
+   "out": 6,
+   "key_out": 4
   },
   {
    "week": 4,
-   "health": 0.448,
+   "health": 0.57,
    "missing_pts": 5.71,
-   "full_pts": 10.35
+   "full_pts": 10.35,
+   "missing_w": 11.483,
+   "out": 5,
+   "key_out": 4
   },
   {
    "week": 5,
-   "health": 0.797,
+   "health": 0.866,
    "missing_pts": 1.97,
-   "full_pts": 9.72
+   "full_pts": 9.72,
+   "missing_w": 3.533,
+   "out": 4,
+   "key_out": 3
   },
   {
    "week": 6,
-   "health": 0.916,
+   "health": 0.882,
    "missing_pts": 0.9,
-   "full_pts": 10.68
+   "full_pts": 10.68,
+   "missing_w": 3.14,
+   "out": 7,
+   "key_out": 2
   },
   {
    "week": 8,
-   "health": 0.823,
+   "health": 0.839,
    "missing_pts": 1.99,
-   "full_pts": 11.26
+   "full_pts": 11.26,
+   "missing_w": 4.3,
+   "out": 4,
+   "key_out": 3
   },
   {
    "week": 9,
-   "health": 0.799,
+   "health": 0.839,
    "missing_pts": 2.34,
-   "full_pts": 11.65
+   "full_pts": 11.65,
+   "missing_w": 4.3,
+   "out": 4,
+   "key_out": 3
   },
   {
    "week": 10,
-   "health": 0.801,
+   "health": 0.839,
    "missing_pts": 2.34,
-   "full_pts": 11.77
+   "full_pts": 11.77,
+   "missing_w": 4.3,
+   "out": 4,
+   "key_out": 3
   }
  ],
  "outlook": [
   {
    "week": 12,
-   "health": 0.898,
-   "missing_pts": 1.2
+   "health": 0.906,
+   "missing_pts": 1.2,
+   "missing_w": 2.5,
+   "out": 3,
+   "key_out": 2
   },
   {
    "week": 13,
-   "health": 0.951,
-   "missing_pts": 0.58
+   "health": 0.972,
+   "missing_pts": 0.58,
+   "missing_w": 0.75,
+   "out": 1,
+   "key_out": 1
   },
   {
    "week": 14,
-   "health": 0.951,
-   "missing_pts": 0.58
+   "health": 0.972,
+   "missing_pts": 0.58,
+   "missing_w": 0.75,
+   "out": 1,
+   "key_out": 1
   },
   {
    "week": 15,
-   "health": 0.951,
-   "missing_pts": 0.58
+   "health": 0.972,
+   "missing_pts": 0.58,
+   "missing_w": 0.75,
+   "out": 1,
+   "key_out": 1
   }
  ]
 }

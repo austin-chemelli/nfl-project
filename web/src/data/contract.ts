@@ -236,15 +236,18 @@ export const HealthStarter = z.looseObject({
   eligible_week: nnum.default(null), replaced_by: nstr.default(null), missing_pts: nnum,
   doubt: z.boolean().default(false), // missed or limited in practice before Friday's game statuses: shown, not counted
   depth: z.array(z.looseObject({ player: z.string(), value_pts: nnum, status: nstr })).default([]), // the chart behind him at the spot
+  key: z.boolean().default(false), // a key player (round 3): top of his position league-wide, or a contract or draft star
+  weight: num.default(0), // his spot's weight: the position's scale, 1.5x for a key player; health is in these, not points
 })
-export const HealthGroup = z.looseObject({ grp: z.string(), full_pts: num, missing_pts: num, doubt_pts: num.default(0), health: nnum })
-export const HealthWeek = z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num.optional() })
+const counts = { out: num.default(0), key_out: num.default(0) } // starters not expected to play fully, and how many are key
+export const HealthGroup = z.looseObject({ grp: z.string(), full_pts: num, missing_pts: num, doubt_pts: num.default(0), health: nnum, starters: num.default(0), ...counts })
+export const HealthWeek = z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num.optional(), ...counts })
 export const TeamHealth = z.looseObject({
-  now: z.looseObject({ week: num, reported: z.boolean().default(false), health: nnum, missing_pts: num, doubt_pts: num.default(0), full_pts: num, groups: z.array(HealthGroup), starters: z.array(HealthStarter) }),
+  now: z.looseObject({ week: num, reported: z.boolean().default(false), health: nnum, missing_pts: num, doubt_pts: num.default(0), full_pts: num, ...counts, groups: z.array(HealthGroup), starters: z.array(HealthStarter) }),
   by_week: z.array(HealthWeek).default([]),
   outlook: z.array(HealthWeek).default([]),
 })
-const GameHealthSide = z.looseObject({ health: nnum, missing_pts: num, full_pts: num })
+const GameHealthSide = z.looseObject({ health: nnum, missing_pts: num, full_pts: num, ...counts, reported: z.boolean().default(false), starters: z.array(HealthStarter).default([]) })
 export const GameHealth = z.looseObject({ home: GameHealthSide.nullable().default(null), away: GameHealthSide.nullable().default(null) })
 export type HealthStarter = z.infer<typeof HealthStarter>
 export type TeamHealth = z.infer<typeof TeamHealth>

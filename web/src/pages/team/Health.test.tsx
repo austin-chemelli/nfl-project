@@ -5,7 +5,8 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it } from 'vitest'
 import { TeamHealth, type HealthStarter, type TeamFile } from '../../data/contract'
 import { healthTile } from './summary'
-import { Health, whenBack } from './Health'
+import { Health } from './Health'
+import { whenBack } from '../../lib/health'
 
 afterEach(cleanup)
 
@@ -17,12 +18,14 @@ const ui = (f: TeamFile) => render(<MemoryRouter><Health file={f} /></MemoryRout
 describe('Health tab', () => {
   it('leads with the share of full strength, then groups, who is missing and the chart', () => {
     ui(file)
-    expect(screen.getByText(/At 80% of full strength going into Week 11/)).toBeInTheDocument()
+    expect(screen.getByText(/At 84% of full strength going into Week 11: 4 starters out, 3 of them key/)).toBeInTheDocument()
     const groups = within(screen.getByTestId('health-groups'))
-    expect(groups.getByText(/missing Terry McLaurin/)).toBeInTheDocument()
+    expect(groups.getByText(/missing Terry McLaurin ★ \(1 of 3\)/)).toBeInTheDocument()
+    expect(screen.getByTestId('health-groups').textContent).not.toMatch(/pts/)
     const depth = within(screen.getByTestId('health-depth'))
     expect(depth.getByText(/IR since camp · no return window/)).toBeInTheDocument()
     expect(depth.getByText(/IR since Wk 8 · eligible Wk 12/)).toBeInTheDocument()
+    expect(screen.getByTestId('health-depth').querySelector('[data-view="field"] [data-slot="WR1"]')!.getAttribute('data-tone')).toBe('out')
     expect(screen.getByTestId('health-depth').querySelector('[data-slot="QB"]')).not.toBeNull()
     expect(screen.getByTestId('health-chart').querySelectorAll('[data-kind="outlook"]').length).toBe(health.outlook.length)
   })
@@ -35,7 +38,7 @@ describe('Health tab', () => {
   it('renders nothing without health, and the tile reads the share', () => {
     const { container } = ui({ health: null } as unknown as TeamFile)
     expect(container.innerHTML).toBe('')
-    expect(healthTile(file)).toMatchObject({ label: 'Health', value: '80%', tab: 'health' })
+    expect(healthTile(file)).toMatchObject({ label: 'Health', value: '84%', sub: 'of full strength, 4 starters out, 3 of them key', tab: 'health' })
     expect(healthTile(undefined)).toBeNull()
   })
 
@@ -49,13 +52,12 @@ describe('Health tab', () => {
   })
 
   it('stripes and names practice doubts before Friday, without counting them', () => {
-    const now = { ...health.now, reported: false, doubt_pts: 0.9,
-      groups: health.now.groups.map((g) => (g.grp === 'CB' ? { ...g, doubt_pts: 0.9 } : g)),
+    const now = { ...health.now, reported: false,
       starters: health.now.starters.map((s) => (s.grp === 'CB' ? { ...s, status: 'Did not practice', doubt: true } : s)) }
     const { container } = ui({ health: { ...health, now } } as unknown as TeamFile)
-    expect(screen.getByTestId('health-doubt').textContent).toMatch(/In doubt from practice: .+ \(0\.9 pts/)
+    expect(screen.getByTestId('health-doubt').textContent).toMatch(/In doubt from practice: .+ \(striped/)
     expect(container.querySelector('[data-doubt]')).not.toBeNull()
-    expect(screen.getByText(/At 80% of full strength/)).toBeInTheDocument()
+    expect(screen.getByText(/At 84% of full strength/)).toBeInTheDocument()
   })
 
   it('says when a player can be back', () => {
