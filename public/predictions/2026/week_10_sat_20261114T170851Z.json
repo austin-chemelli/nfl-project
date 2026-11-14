@@ -1,0 +1,728 @@
+{
+ "code_version": "b3cbf8c",
+ "conventions": "p_home = home win probability; spread_home > 0 = home favored (points)",
+ "data_snapshot": "20261114T170240Z",
+ "games": [
+  {
+   "away": "NE",
+   "game_id": "2026_10_NE_DET",
+   "home": "DET",
+   "kickoff_utc": "2026-11-15T14:30:00Z",
+   "market": {
+    "as_of": "2026-11-14T17:03:02Z",
+    "p_home_vigfree": 0.5777,
+    "source": "odds_api",
+    "spread_home": 2.5,
+    "total": 49.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.5624,
+     "spread_home": 2.121
+    },
+    "elo_v0": {
+     "p_home": 0.54,
+     "spread_home": 1.1135
+    },
+    "global": {
+     "p_home": 0.6257,
+     "spread_home": 4.3277
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.5777,
+     "spread_home": 2.5
+    },
+    "sharp": {
+     "p_home": 0.6809,
+     "spread_home": 6.3476
+    },
+    "student": {
+     "p_home": 0.6152,
+     "spread_home": 3.9538
+    },
+    "student_v2": {
+     "p_home": 0.5996,
+     "spread_home": 3.4075
+    },
+    "traditionalist": {
+     "p_home": 0.548,
+     "spread_home": 1.6279
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 49.5195
+   }
+  },
+  {
+   "away": "BUF",
+   "game_id": "2026_10_BUF_NYJ",
+   "home": "NYJ",
+   "kickoff_utc": "2026-11-15T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-12T14:01:47Z",
+    "p_home_vigfree": 0.2166,
+    "source": "odds_api",
+    "spread_home": -8.0,
+    "total": 51.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.2615,
+     "spread_home": -8.6247
+    },
+    "elo_v0": {
+     "p_home": 0.1423,
+     "spread_home": -12.4822
+    },
+    "global": {
+     "p_home": 0.2599,
+     "spread_home": -8.6887
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.2166,
+     "spread_home": -8.0
+    },
+    "sharp": {
+     "p_home": 0.3388,
+     "spread_home": -5.6141
+    },
+    "student": {
+     "p_home": 0.2316,
+     "spread_home": -9.9026
+    },
+    "student_v2": {
+     "p_home": 0.2198,
+     "spread_home": -10.4341
+    },
+    "traditionalist": {
+     "p_home": 0.1937,
+     "spread_home": -11.6667
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 48.401
+   }
+  },
+  {
+   "away": "CAR",
+   "game_id": "2026_10_CAR_NO",
+   "home": "NO",
+   "kickoff_utc": "2026-11-15T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-14T17:03:02Z",
+    "p_home_vigfree": 0.5583,
+    "source": "odds_api",
+    "spread_home": 2.5,
+    "total": 49.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.6271,
+     "spread_home": 4.377
+    },
+    "elo_v0": {
+     "p_home": 0.5578,
+     "spread_home": 1.6137
+    },
+    "global": {
+     "p_home": 0.5809,
+     "spread_home": 2.7578
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.5583,
+     "spread_home": 2.5
+    },
+    "sharp": {
+     "p_home": 0.6309,
+     "spread_home": 4.5112
+    },
+    "student": {
+     "p_home": 0.6419,
+     "spread_home": 4.9094
+    },
+    "student_v2": {
+     "p_home": 0.6257,
+     "spread_home": 4.3259
+    },
+    "traditionalist": {
+     "p_home": 0.6377,
+     "spread_home": 4.7556
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 45.7064
+   }
+  },
+  {
+   "away": "HOU",
+   "game_id": "2026_10_HOU_CLE",
+   "home": "CLE",
+   "kickoff_utc": "2026-11-15T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-14T17:03:02Z",
+    "p_home_vigfree": 0.3295,
+    "source": "odds_api",
+    "spread_home": -4.5,
+    "total": 40.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.3623,
+     "spread_home": -4.7558
+    },
+    "elo_v0": {
+     "p_home": 0.4283,
+     "spread_home": -2.008
+    },
+    "global": {
+     "p_home": 0.4083,
+     "spread_home": -3.1294
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.3295,
+     "spread_home": -4.5
+    },
+    "sharp": {
+     "p_home": 0.4188,
+     "spread_home": -2.7654
+    },
+    "student": {
+     "p_home": 0.3716,
+     "spread_home": -4.4246
+    },
+    "student_v2": {
+     "p_home": 0.3562,
+     "spread_home": -4.9772
+    },
+    "traditionalist": {
+     "p_home": 0.3871,
+     "spread_home": -3.8729
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 42.3163
+   }
+  },
+  {
+   "away": "JAX",
+   "game_id": "2026_10_JAX_TEN",
+   "home": "TEN",
+   "kickoff_utc": "2026-11-15T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-14T01:06:49Z",
+    "p_home_vigfree": 0.1771,
+    "source": "odds_api",
+    "spread_home": -10.5,
+    "total": 46.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.1768,
+     "spread_home": -12.5231
+    },
+    "elo_v0": {
+     "p_home": 0.1603,
+     "spread_home": -11.5076
+    },
+    "global": {
+     "p_home": 0.2116,
+     "spread_home": -10.8127
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.1771,
+     "spread_home": -10.5
+    },
+    "sharp": {
+     "p_home": 0.2123,
+     "spread_home": -10.7784
+    },
+    "student": {
+     "p_home": 0.182,
+     "spread_home": -12.2533
+    },
+    "student_v2": {
+     "p_home": 0.1727,
+     "spread_home": -12.7397
+    },
+    "traditionalist": {
+     "p_home": 0.2174,
+     "spread_home": -10.5448
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 43.2563
+   }
+  },
+  {
+   "away": "KC",
+   "game_id": "2026_10_KC_ATL",
+   "home": "ATL",
+   "kickoff_utc": "2026-11-15T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-14T17:03:02Z",
+    "p_home_vigfree": 0.3928,
+    "source": "odds_api",
+    "spread_home": -3.0,
+    "total": 47.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.328,
+     "spread_home": -6.0118
+    },
+    "elo_v0": {
+     "p_home": 0.398,
+     "spread_home": -2.8749
+    },
+    "global": {
+     "p_home": 0.3446,
+     "spread_home": -5.3998
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.3928,
+     "spread_home": -3.0
+    },
+    "sharp": {
+     "p_home": 0.3409,
+     "spread_home": -5.5361
+    },
+    "student": {
+     "p_home": 0.3198,
+     "spread_home": -6.3219
+    },
+    "student_v2": {
+     "p_home": 0.3053,
+     "spread_home": -6.8756
+    },
+    "traditionalist": {
+     "p_home": 0.3492,
+     "spread_home": -5.2319
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 45.6984
+   }
+  },
+  {
+   "away": "MIA",
+   "game_id": "2026_10_MIA_IND",
+   "home": "IND",
+   "kickoff_utc": "2026-11-15T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-14T17:03:02Z",
+    "p_home_vigfree": 0.6548,
+    "source": "odds_api",
+    "spread_home": 4.5,
+    "total": 37.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.7697,
+     "spread_home": 9.959
+    },
+    "elo_v0": {
+     "p_home": 0.6004,
+     "spread_home": 2.8286
+    },
+    "global": {
+     "p_home": 0.6459,
+     "spread_home": 5.0521
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.6548,
+     "spread_home": 4.5
+    },
+    "sharp": {
+     "p_home": 0.8191,
+     "spread_home": 12.3087
+    },
+    "student": {
+     "p_home": 0.7324,
+     "spread_home": 8.3719
+    },
+    "student_v2": {
+     "p_home": 0.7173,
+     "spread_home": 7.7603
+    },
+    "traditionalist": {
+     "p_home": 0.5996,
+     "spread_home": 3.4053
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 41.8819
+   }
+  },
+  {
+   "away": "MIN",
+   "game_id": "2026_10_MIN_GB",
+   "home": "GB",
+   "kickoff_utc": "2026-11-15T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-14T17:03:02Z",
+    "p_home_vigfree": 0.5788,
+    "source": "odds_api",
+    "spread_home": 3.0,
+    "total": 42.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.6215,
+     "spread_home": 4.1755
+    },
+    "elo_v0": {
+     "p_home": 0.5548,
+     "spread_home": 1.5299
+    },
+    "global": {
+     "p_home": 0.6186,
+     "spread_home": 4.0743
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.5788,
+     "spread_home": 3.0
+    },
+    "sharp": {
+     "p_home": 0.6637,
+     "spread_home": 5.7055
+    },
+    "student": {
+     "p_home": 0.6083,
+     "spread_home": 3.7124
+    },
+    "student_v2": {
+     "p_home": 0.5925,
+     "spread_home": 3.1574
+    },
+    "traditionalist": {
+     "p_home": 0.5353,
+     "spread_home": 1.1954
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 46.642
+   }
+  },
+  {
+   "away": "LA",
+   "game_id": "2026_10_LA_ARI",
+   "home": "ARI",
+   "kickoff_utc": "2026-11-15T21:05:00Z",
+   "market": {
+    "as_of": "2026-11-14T01:06:49Z",
+    "p_home_vigfree": 0.2101,
+    "source": "odds_api",
+    "spread_home": -9.5,
+    "total": 39.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.19,
+     "spread_home": -11.8493
+    },
+    "elo_v0": {
+     "p_home": 0.2786,
+     "spread_home": -6.6116
+    },
+    "global": {
+     "p_home": 0.2766,
+     "spread_home": -8.0053
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.2101,
+     "spread_home": -9.5
+    },
+    "sharp": {
+     "p_home": 0.2257,
+     "spread_home": -10.1644
+    },
+    "student": {
+     "p_home": 0.2283,
+     "spread_home": -10.0499
+    },
+    "student_v2": {
+     "p_home": 0.2181,
+     "spread_home": -10.5124
+    },
+    "traditionalist": {
+     "p_home": 0.2894,
+     "spread_home": -7.4954
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 42.0897
+   }
+  },
+  {
+   "away": "SEA",
+   "game_id": "2026_10_SEA_LV",
+   "home": "LV",
+   "kickoff_utc": "2026-11-15T21:05:00Z",
+   "market": {
+    "as_of": "2026-11-14T01:06:49Z",
+    "p_home_vigfree": 0.2837,
+    "source": "odds_api",
+    "spread_home": -6.5,
+    "total": 40.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.463,
+     "spread_home": -1.2539
+    },
+    "elo_v0": {
+     "p_home": 0.2617,
+     "spread_home": -7.2078
+    },
+    "global": {
+     "p_home": 0.3952,
+     "spread_home": -3.5872
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.2837,
+     "spread_home": -6.5
+    },
+    "sharp": {
+     "p_home": 0.5294,
+     "spread_home": 0.9947
+    },
+    "student": {
+     "p_home": 0.4705,
+     "spread_home": -1.0007
+    },
+    "student_v2": {
+     "p_home": 0.4553,
+     "spread_home": -1.515
+    },
+    "traditionalist": {
+     "p_home": 0.4539,
+     "spread_home": -1.5625
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 42.6429
+   }
+  },
+  {
+   "away": "SF",
+   "game_id": "2026_10_SF_DAL",
+   "home": "DAL",
+   "kickoff_utc": "2026-11-15T21:25:00Z",
+   "market": {
+    "as_of": "2026-11-14T17:03:02Z",
+    "p_home_vigfree": 0.3425,
+    "source": "odds_api",
+    "spread_home": -4.0,
+    "total": 55.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.4301,
+     "spread_home": -2.3765
+    },
+    "elo_v0": {
+     "p_home": 0.3346,
+     "spread_home": -4.7759
+    },
+    "global": {
+     "p_home": 0.431,
+     "spread_home": -2.3468
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.3425,
+     "spread_home": -4.0
+    },
+    "sharp": {
+     "p_home": 0.4765,
+     "spread_home": -0.795
+    },
+    "student": {
+     "p_home": 0.4487,
+     "spread_home": -1.7397
+    },
+    "student_v2": {
+     "p_home": 0.4319,
+     "spread_home": -2.3158
+    },
+    "traditionalist": {
+     "p_home": 0.4678,
+     "spread_home": -1.0902
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 51.182
+   }
+  },
+  {
+   "away": "PIT",
+   "game_id": "2026_10_PIT_CIN",
+   "home": "CIN",
+   "kickoff_utc": "2026-11-16T01:20:00Z",
+   "market": {
+    "as_of": "2026-11-12T01:06:14Z",
+    "p_home_vigfree": 0.6234,
+    "source": "odds_api",
+    "spread_home": 3.5,
+    "total": 49.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.6481,
+     "spread_home": 5.1317
+    },
+    "elo_v0": {
+     "p_home": 0.5868,
+     "spread_home": 2.438
+    },
+    "global": {
+     "p_home": 0.6096,
+     "spread_home": 3.7585
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.6234,
+     "spread_home": 3.5
+    },
+    "sharp": {
+     "p_home": 0.7039,
+     "spread_home": 7.2326
+    },
+    "student": {
+     "p_home": 0.6126,
+     "spread_home": 3.8609
+    },
+    "student_v2": {
+     "p_home": 0.5962,
+     "spread_home": 3.2872
+    },
+    "traditionalist": {
+     "p_home": 0.491,
+     "spread_home": -0.3042
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 48.4839
+   }
+  },
+  {
+   "away": "LAC",
+   "game_id": "2026_10_LAC_BAL",
+   "home": "BAL",
+   "kickoff_utc": "2026-11-17T01:15:00Z",
+   "market": {
+    "as_of": "2026-11-14T17:03:02Z",
+    "p_home_vigfree": 0.6605,
+    "source": "odds_api",
+    "spread_home": 4.5,
+    "total": 38.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.7506,
+     "spread_home": 9.13
+    },
+    "elo_v0": {
+     "p_home": 0.7039,
+     "spread_home": 6.0187
+    },
+    "global": {
+     "p_home": 0.7019,
+     "spread_home": 7.1544
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.6605,
+     "spread_home": 4.5
+    },
+    "sharp": {
+     "p_home": 0.7516,
+     "spread_home": 9.172
+    },
+    "student": {
+     "p_home": 0.7425,
+     "spread_home": 8.7911
+    },
+    "student_v2": {
+     "p_home": 0.7292,
+     "spread_home": 8.2385
+    },
+    "traditionalist": {
+     "p_home": 0.701,
+     "spread_home": 7.1164
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 41.0624
+   }
+  }
+ ],
+ "lock_ts": "2026-11-14T17:08:51Z",
+ "odds_snapshot": "20261114T170302Z",
+ "schema_version": "1",
+ "season": 2026,
+ "slot": "sat",
+ "week": 10
+}
