@@ -33,7 +33,7 @@ describe('Health tab', () => {
   it('grades each position room and says which falls furthest with the injuries', () => {
     ui(file)
     expect(screen.getByText('Biggest drop: interior line, #10 at full strength to about #28 now.')).toBeInTheDocument()
-    expect(screen.getByTestId('health-rooms').querySelector('[data-room="WR"]')!.textContent).toContain('#1 → ~#12')
+    expect(screen.getByTestId('health-rooms').querySelector('[data-room="WR"]')!.textContent).toContain('~#12#1')
   })
 
   it('notes when the week has no game statuses yet', () => {

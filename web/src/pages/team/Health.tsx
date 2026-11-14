@@ -128,6 +128,17 @@ export function Health({ file }: { file: TeamFile }) {
   const back = health.outlook.find((o) => o.health != null && o.health >= 0.995)
   return (
     <div className="flex flex-col gap-8">
+      <Block title="Full-strength lineup" line="The best lineup the chart has had this season, as it stands this week: who is out, and who steps in. Hover a player for his return window and the chart behind him.">
+        <div className="flex flex-col gap-3" data-testid="health-depth">
+          <DepthField starters={h.starters} week={h.week} />
+          <DepthFieldKey />
+        </div>
+      </Block>
+      {health.rooms.length > 0 && (
+        <Block title="Position rooms" line={roomsLede(health.rooms)}>
+          <Rooms rooms={health.rooms} />
+        </Block>
+      )}
       <Block title={`Health, Week ${h.week}`} line={lede}>
         {!h.reported && (
           <p className="m-0 text-[13px] text-ink-3" data-testid="health-doubt">
@@ -138,17 +149,6 @@ export function Health({ file }: { file: TeamFile }) {
           </p>
         )}
         <Groups h={h} />
-      </Block>
-      {health.rooms.length > 0 && (
-        <Block title="Position rooms" line={roomsLede(health.rooms)}>
-          <Rooms rooms={health.rooms} />
-        </Block>
-      )}
-      <Block title="Full-strength lineup" line="The best lineup the chart has had this season, as it stands this week: who is out, and who steps in. Hover a player for his return window and the chart behind him.">
-        <div className="flex flex-col gap-3" data-testid="health-depth">
-          <DepthField starters={h.starters} week={h.week} />
-          <DepthFieldKey />
-        </div>
       </Block>
       {listed.length > 0 && (
         <Block title="What we said about this week">

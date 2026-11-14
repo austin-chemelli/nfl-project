@@ -17,10 +17,10 @@ describe('Rooms', () => {
     render(<Rooms rooms={rooms} />)
     const items = [...screen.getByTestId('health-rooms').querySelectorAll('[data-room]')]
     expect(items.map((li) => li.getAttribute('data-room'))).toEqual(['QB', 'WR'])
-    expect(items[1].textContent).toContain('#2 → ~#24')
-    expect(items[1].querySelector('[data-now]')).not.toBeNull()
-    expect(items[0].querySelector('[data-now]')).toBeNull()
-    expect(items[0].textContent).toContain('#7 good')
+    expect(items[1].textContent).toContain('~#24#2')
+    expect(items[1].querySelector('[data-full]')).not.toBeNull()
+    expect(items[0].querySelector('[data-full]')).toBeNull()
+    expect(items[0].textContent).toContain('#7#7')
   })
 
   it('names the biggest drop', () => {
