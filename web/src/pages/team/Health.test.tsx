@@ -25,7 +25,7 @@ describe('Health tab', () => {
     const depth = within(screen.getByTestId('health-depth'))
     expect(depth.getByText(/IR since camp · no return window/)).toBeInTheDocument()
     expect(depth.getByText(/IR since Wk 8 · eligible Wk 12/)).toBeInTheDocument()
-    expect(screen.getByTestId('health-depth').querySelector('svg [data-slot="WR1"]')!.getAttribute('data-tone')).toBe('out')
+    expect(screen.getByTestId('health-depth').querySelector('[data-view="field"] [data-slot="WR1"]')!.getAttribute('data-tone')).toBe('out')
     expect(screen.getByTestId('health-depth').querySelector('[data-slot="QB"]')).not.toBeNull()
     expect(screen.getByTestId('health-chart').querySelectorAll('[data-kind="outlook"]').length).toBe(health.outlook.length)
   })

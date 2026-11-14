@@ -20,16 +20,16 @@ const rows = [
 ]
 
 describe('DepthField', () => {
-  it('stars key players, empties the ring of a player out and names who steps in', () => {
+  it('shades key players, marks a player out with his window and names who plays instead', () => {
     render(<DepthField starters={rows} week={11} />)
-    const field = screen.getByTestId('depth-field')
-    const wr = field.querySelector('svg [data-slot="WR1"]')!
+    const field = screen.getByTestId('depth-field').querySelector('[data-view="field"]')!
+    const wr = field.querySelector('[data-slot="WR1"]') as HTMLElement
     expect(wr.getAttribute('data-tone')).toBe('out')
     expect(wr.getAttribute('data-key')).toBe('true')
-    expect(within(wr as HTMLElement).getByText('→ Atwell')).toBeInTheDocument()
-    expect(wr.querySelector('[data-badge="IR"]')).not.toBeNull()
-    expect(field.querySelector('svg [data-slot="TE"] [data-badge="?"]')).not.toBeNull()
-    expect(field.querySelector('svg [data-slot="LCB"]')!.getAttribute('data-tone')).toBe('iffy')
+    expect(within(wr).getByText('IR · Wk 15')).toBeInTheDocument()
+    expect(within(wr).getByText('→ Atwell')).toBeInTheDocument()
+    expect(within(field.querySelector('[data-slot="TE"]') as HTMLElement).getByText('No practice')).toBeInTheDocument()
+    expect(field.querySelector('[data-slot="LCB"]')!.getAttribute('data-tone')).toBe('iffy')
     // no player values anywhere on the field
     expect(field.textContent).not.toMatch(/pts/)
   })
@@ -59,7 +59,7 @@ describe('Injuries tab with team health', () => {
     render(<Injuries g={g} />)
     expect(screen.getByTestId('health-header').textContent).toBe(`${g.home} 84% of full strength (4 starters out, 3 of them key)`)
     const field = screen.getByTestId('depth-field-home')
-    expect(field.querySelector('svg [data-slot="LT"] [data-badge="IR"]')).not.toBeNull()
+    expect(within(field.querySelector('[data-view="field"] [data-slot="LT"]') as HTMLElement).getByText('IR')).toBeInTheDocument()
     expect(screen.queryByTestId('depth-field-away')).toBeNull()
   })
 })

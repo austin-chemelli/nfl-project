@@ -1,87 +1,86 @@
 /**
- * A team's full-strength lineup on the field (M24.7 round 3): offense and defense in their base
- * formations, one ring per spot. A key player's ring carries a star; a starter who won't play is an
- * empty dashed ring with a badge (IR, O, D, Q) and the man who steps in named under it; a practice
- * doubt before Friday is striped. Every ring is the same size: no per-player values on show. Hover a
- * ring for his status, return window and the chart behind him. On a phone the same lineup reads as
- * room cards. The color is the team's (`--team-home`/`--team-away` under `[data-matchup]`) or the
- * accent on the team page.
+ * A team's full-strength lineup (M24.7 round 3): offense and defense as name cards in formation rows
+ * (the line, then the backfield or the second level, receivers and corners on the outside). Three
+ * cues only: a key player's card is shaded in the team color; a starter who won't play has a red
+ * status line and the man who plays instead under it; a Questionable, Doubtful or hurt-in-practice
+ * starter has an amber one. No player values. Hover a card for the return window and the chart
+ * behind him. On a phone the same lineup reads as room cards. The color is the team's
+ * (`--team-home`/`--team-away` under `[data-matchup]`) or the accent on the team page.
  */
-import { useId } from 'react'
 import type { HealthStarter } from '../data/contract'
-import { GROUP, GROUP_ORDER, badge, lastName, stepsIn, tone, whenBack } from '../lib/health'
+import { GROUP, GROUP_ORDER, lastName, stepsIn, tone, whenBack, type Tone } from '../lib/health'
 import { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'
 
-const W = 640
-const H = 232
-const LOS = 22
-const R = 13
+type Layout = { left: string[][]; center: string[][]; right: string[][] }
 
-// Spot -> (x, y), both units facing the line at the top.
-const SPOTS: Record<string, [number, number]> = {
-  WR1: [44, 52], WR3: [124, 112], LT: [200, 52], LG: [260, 52], C: [320, 52], RG: [380, 52], RT: [440, 52],
-  TE: [506, 52], WR2: [596, 52], QB: [320, 128], RB: [320, 192],
-  LCB: [44, 60], WLB: [140, 108], LDE: [200, 52], LDT: [280, 52], NT: [320, 52], RDT: [360, 52],
-  RDE: [440, 52], SLB: [500, 108], LILB: [262, 132], MLB: [320, 132], RILB: [378, 132], RCB: [596, 60],
-  SS: [236, 196], FS: [404, 196],
+// rows top (the line of scrimmage) to bottom; slots not listed go to a last center row
+const LAYOUT: Record<'offense' | 'defense', Layout> = {
+  offense: { left: [['WR1'], ['WR3']], center: [['LT', 'LG', 'C', 'RG', 'RT', 'TE'], ['QB'], ['RB']], right: [['WR2']] },
+  defense: {
+    left: [['LCB']],
+    center: [['LDE', 'LDT', 'NT', 'RDT', 'RDE'], ['WLB', 'LILB', 'MLB', 'RILB', 'SLB'], ['SS', 'FS']],
+    right: [['RCB']],
+  },
 }
 
-const BADGE_FILL: Record<string, string> = { IR: 'var(--critical)', PUP: 'var(--critical)', RES: 'var(--critical)', O: 'var(--critical)', INA: 'var(--critical)', D: 'var(--critical)', Q: 'var(--warning)', '?': 'var(--warning)' }
-const BADGE_INK: Record<string, string> = { Q: '#1b1f24', '?': '#1b1f24' }
+const DOT: Record<Tone, string | null> = { out: 'var(--critical)', iffy: 'var(--warning)', doubt: 'var(--warning)', in: null }
 
-function Star({ x, y, r, fill, stroke }: { x: number; y: number; r: number; fill: string; stroke?: string }) {
-  const pts = Array.from({ length: 10 }, (_, i) => {
-    const a = (Math.PI / 5) * i - Math.PI / 2
-    const rr = i % 2 ? r * 0.45 : r
-    return `${x + rr * Math.cos(a)},${y + rr * Math.sin(a)}`
-  }).join(' ')
-  return <polygon points={pts} fill={fill} stroke={stroke} strokeWidth={stroke ? 1.25 : undefined} strokeLinejoin="round" />
+/** The status line on a card: "IR · Wk 15" (back that week at the earliest), "Out", "Questionable", "No practice". */
+function shortStatus(s: HealthStarter, week: number): string | null {
+  if (!s.status) return null
+  if (s.reserve) {
+    const kind = s.status.startsWith('PUP') ? 'PUP' : s.status.startsWith('IR') ? 'IR' : 'Reserve'
+    if (s.eligible_week == null) return kind
+    return s.eligible_week <= week ? `${kind} · eligible` : `${kind} · Wk ${s.eligible_week}`
+  }
+  if (s.doubt) return s.status === 'Did not practice' ? 'No practice' : 'Limited'
+  return s.status
 }
 
-function Ring({ s, color, stripe, bind }: { s: HealthStarter; color: string; stripe: string; bind: ReturnType<typeof useChartTip>['bind'] }) {
-  const xy = SPOTS[s.slot]
-  if (!xy) return null
-  const [x, y] = xy
+const keyStyle = (color: string) => ({
+  background: `color-mix(in srgb, ${color} 16%, var(--surface-1))`,
+  borderColor: `color-mix(in srgb, ${color} 55%, transparent)`,
+})
+
+function Card({ s, week, color, bind }: { s: HealthStarter; week: number; color: string; bind: ReturnType<typeof useChartTip>['bind'] }) {
   const t = tone(s)
-  const b = badge(s)
+  const status = shortStatus(s, week)
   const sub = t === 'out' || t === 'iffy' ? stepsIn(s) : null
-  const bw = b && b.length > 1 ? 9 + 5 * b.length : 14
   return (
-    <g {...bind(s.slot)} data-slot={s.slot} data-tone={t} data-key={s.key || undefined} aria-label={label(s)}>
-      <circle cx={x} cy={y} r={R + 8} fill="transparent" />
-      {t === 'out' ? (
-        <circle cx={x} cy={y} r={R} fill="var(--surface-1)" stroke={color} strokeWidth={1.75} strokeDasharray="3 2.5" />
-      ) : (
-        <circle cx={x} cy={y} r={R} fill={t === 'doubt' ? `url(#${stripe})` : color} fillOpacity={t === 'iffy' ? 0.45 : 1} stroke={color} strokeWidth={1.75} />
+    <div
+      {...bind(s.slot)}
+      data-slot={s.slot}
+      data-tone={t}
+      data-key={s.key || undefined}
+      aria-label={label(s, week)}
+      className="w-[6.25rem] shrink-0 rounded-md border border-line bg-[var(--surface-1)] px-1.5 py-1 text-center leading-tight"
+      style={{ ...bind(s.slot).style, ...(s.key ? keyStyle(color) : {}) }}
+    >
+      <div className="text-[10px] font-medium uppercase tracking-wide text-ink-3">{s.slot.replace(/[123]$/, '')}</div>
+      <div className={`break-words text-[13px] ${s.key ? 'font-semibold' : ''} ${t === 'out' ? 'text-ink-3' : 'text-ink'}`}>{lastName(s.player)}</div>
+      {status && (
+        <div className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-ink-2">
+          <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: DOT[t] ?? 'var(--text-muted)' }} />
+          <span className="truncate">{status}</span>
+        </div>
       )}
-      {s.key && <Star x={x} y={y} r={7} fill={t === 'out' || t === 'doubt' ? color : 'var(--surface-1)'} stroke={t === 'doubt' ? 'var(--surface-1)' : undefined} />}
-      {b && (
-        <g data-badge={b}>
-          <rect x={x + R * 0.55} y={y - R - 6} width={bw} height={13} rx={6.5} fill={BADGE_FILL[b] ?? 'var(--critical)'} stroke="var(--surface-1)" strokeWidth={1.5} />
-          <text x={x + R * 0.55 + bw / 2} y={y - R + 3.8} textAnchor="middle" fontSize={9} fontWeight={700} fill={BADGE_INK[b] ?? '#fff'}>{b}</text>
-        </g>
-      )}
-      <text x={x} y={y + R + 13} textAnchor="middle" fontSize={11.5} fontWeight={s.key ? 650 : 400} fill={t === 'out' ? 'var(--text-muted)' : 'var(--text-primary)'} textDecoration={t === 'out' ? 'line-through' : undefined}>
-        {lastName(s.player)}
-      </text>
-      {sub && (
-        <text x={x} y={y + R + 26} textAnchor="middle" fontSize={10.5} fill="var(--text-secondary)">→ {lastName(sub)}</text>
-      )}
-    </g>
+      {sub && <div className="truncate text-[11px] font-medium text-ink">→ {lastName(sub)}</div>}
+    </div>
   )
 }
 
-function label(s: HealthStarter) {
-  return `${s.slot}: ${s.player}${s.key ? ', key player' : ''}${s.status ? `, ${s.status}` : ''}${stepsIn(s) && s.status ? `; ${stepsIn(s)} steps in` : ''}`
+function label(s: HealthStarter, week: number) {
+  const st = s.status ? `, ${whenBack(s, week)}` : ''
+  const sub = s.status && stepsIn(s) ? `; ${stepsIn(s)} plays instead` : ''
+  return `${s.slot}: ${s.player}${s.key ? ', key player' : ''}${st}${sub}`
 }
 
 function Tip({ s, week }: { s: HealthStarter; week: number }) {
   const t = tone(s)
   return (
     <>
-      <TipTitle note={`${s.slot.replace(/[123]$/, '')}${s.grp ? ` · ${GROUP[s.grp] ?? s.grp}` : ''}`}>{s.player}{s.key ? ' ★' : ''}</TipTitle>
-      {s.key && <TipNote>Key player: among the best at his position.</TipNote>}
-      {s.status ? <TipRow value={whenBack(s, week)} label="" /> : <TipNote>Not on a reserve list or this week&apos;s report.</TipNote>}
+      <TipTitle note={`${s.slot.replace(/[123]$/, '')}${s.grp ? ` · ${GROUP[s.grp] ?? s.grp}` : ''}${s.key ? ' · key player' : ''}`}>{s.player}</TipTitle>
+      {s.status ? <TipRow color={DOT[t] ?? undefined} value={whenBack(s, week)} label="" /> : <div className="text-ink-2">Available: not on a reserve list or this week&apos;s report.</div>}
       {t === 'iffy' && <TipRow value={`${Math.round(100 * s.p_play)}%`} label={`of players listed ${s.status} have played`} />}
       {t === 'doubt' && <TipNote>Hurt in practice; no game status until Friday.</TipNote>}
       {s.depth.length > 0 && <TipRow value={s.depth.map((d) => d.player + (d.status ? ` (${d.status})` : '')).join(', then ')} label="behind him" />}
@@ -90,25 +89,28 @@ function Tip({ s, week }: { s: HealthStarter; week: number }) {
   )
 }
 
-function Unit({ title, spots, color, week }: { title: string; spots: HealthStarter[]; color: string; week: number }) {
+function Unit({ unit, spots, color, week }: { unit: 'offense' | 'defense'; spots: HealthStarter[]; color: string; week: number }) {
   const { box, at, bind, card } = useChartTip()
-  const stripe = useId().replace(/:/g, '')
   const hovered = spots.find((s) => s.slot === at?.key)
+  const by = new Map(spots.map((s) => [s.slot, s]))
+  const layout = LAYOUT[unit]
+  const placed = new Set([...layout.left, ...layout.center, ...layout.right].flat())
+  const extra = spots.filter((s) => !placed.has(s.slot)).map((s) => s.slot)
+  const rows = (rs: string[][]) =>
+    rs.map((r) => r.filter((k) => by.has(k))).filter((r) => r.length > 0).map((r) => (
+      <div key={r.join()} className="flex items-start justify-center gap-1.5">
+        {r.map((k) => <Card key={k} s={by.get(k)!} week={week} color={color} bind={bind} />)}
+      </div>
+    ))
   return (
     <figure className="m-0 min-w-0">
-      <figcaption className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-3">{title}</figcaption>
-      <div ref={box} className="relative">
-        <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="group" aria-label={`${title}: full-strength starters`}>
-          <defs>
-            <pattern id={stripe} width={5} height={5} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width={5} height={5} fill="var(--surface-1)" />
-              <rect width={2.5} height={5} fill={color} />
-            </pattern>
-          </defs>
-          <rect x={0} y={0} width={W} height={H} rx={8} fill="var(--surface-2)" />
-          <line x1={8} x2={W - 8} y1={LOS} y2={LOS} stroke="var(--text-muted)" strokeWidth={1} strokeDasharray="5 4" />
-          {spots.map((s) => <Ring key={s.slot} s={s} color={color} stripe={stripe} bind={bind} />)}
-        </svg>
+      <figcaption className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-3">{unit === 'offense' ? 'Offense' : 'Defense'}</figcaption>
+      <div ref={box} className="relative rounded-lg bg-[var(--surface-2)] px-2 pb-3 pt-2.5" role="group" aria-label={`${unit}: full-strength starters`}>
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2">
+          <div className="flex flex-col gap-3">{rows(layout.left)}</div>
+          <div className="flex flex-col gap-3">{rows([...layout.center, extra])}</div>
+          <div className="flex flex-col gap-3">{rows(layout.right)}</div>
+        </div>
         {hovered && card(<Tip s={hovered} week={week} />)}
       </div>
     </figure>
@@ -116,7 +118,7 @@ function Unit({ title, spots, color, week }: { title: string; spots: HealthStart
 }
 
 /** The phone layout: one card per position room. */
-function Rooms({ starters, week }: { starters: HealthStarter[]; week: number }) {
+function Rooms({ starters, week, color }: { starters: HealthStarter[]; week: number; color: string }) {
   const groups = GROUP_ORDER.filter((g) => starters.some((s) => s.grp === g))
   return (
     <div className="grid gap-2">
@@ -135,9 +137,14 @@ function Rooms({ starters, week }: { starters: HealthStarter[]; week: number }) 
                 const sub = t === 'out' || t === 'iffy' ? stepsIn(s) : null
                 return (
                   <li key={s.slot} data-slot={s.slot}>
-                    <span className="inline-block w-10 text-ink-3">{s.slot.replace(/[123]$/, '')}</span>
-                    <span className={`${s.key ? 'font-semibold' : ''} ${t === 'out' ? 'text-ink-3 line-through' : 'text-ink'}`}>{s.player}{s.key ? ' ★' : ''}</span>
-                    {s.status && <span className={`block pl-10 text-[13px] ${t === 'out' ? 'text-[var(--critical)]' : 'text-ink-2 italic'}`}>{whenBack(s, week)}{sub ? ` → ${sub}` : ''}</span>}
+                    <span className="inline-block w-10 text-[12px] text-ink-3">{s.slot.replace(/[123]$/, '')}</span>
+                    <span className={`rounded px-1 ${s.key ? 'font-semibold' : ''} ${t === 'out' ? 'text-ink-3' : 'text-ink'}`} style={s.key ? keyStyle(color) : undefined}>{s.player}</span>
+                    {s.status && (
+                      <span className="flex items-center gap-1 pl-10 text-[13px] text-ink-2">
+                        <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: DOT[t] ?? 'var(--text-muted)' }} />
+                        {whenBack(s, week)}{sub ? ` → ${sub}` : ''}
+                      </span>
+                    )}
                   </li>
                 )
               })}
@@ -153,33 +160,28 @@ export function DepthField({ starters, week, color = 'var(--accent)', testId = '
   const units = (['offense', 'defense'] as const).map((u) => [u, starters.filter((s) => s.unit === u)] as const).filter(([, rows]) => rows.length > 0)
   return (
     <div data-testid={testId}>
-      <div className="hidden max-w-[760px] gap-4 sm:grid">
-        {units.map(([u, rows]) => <Unit key={u} title={u === 'offense' ? 'Offense' : 'Defense'} spots={rows} color={color} week={week} />)}
+      <div className="hidden max-w-[880px] gap-4 md:grid" data-view="field">
+        {units.map(([u, rows]) => <Unit key={u} unit={u} spots={rows} color={color} week={week} />)}
       </div>
-      <div className="sm:hidden">
-        <Rooms starters={starters} week={week} />
+      <div className="md:hidden" data-view="rooms">
+        <Rooms starters={starters} week={week} color={color} />
       </div>
     </div>
   )
 }
 
-/** The key under the field, once per page. */
+/** The key under the lineup, once per page. */
 export function DepthFieldKey({ color = 'var(--accent)' }: { color?: string }) {
+  const dot = (c: string) => <span aria-hidden className="inline-block h-2 w-2 rounded-full" style={{ background: c }} />
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-3">
       <span className="inline-flex items-center gap-1.5">
-        <svg width={16} height={16} aria-hidden><circle cx={8} cy={8} r={7} fill={color} /><Star x={8} y={8} r={4.5} fill="var(--surface-1)" /></svg>
+        <span aria-hidden className="inline-block h-3 w-5 rounded-sm border" style={keyStyle(color)} />
         key player
       </span>
-      <span className="inline-flex items-center gap-1.5">
-        <svg width={16} height={16} aria-hidden><circle cx={8} cy={8} r={6.5} fill="var(--surface-1)" stroke={color} strokeWidth={1.5} strokeDasharray="3 2.5" /></svg>
-        out (IR, O), with who steps in
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <svg width={16} height={16} aria-hidden><circle cx={8} cy={8} r={6.5} fill={color} fillOpacity={0.45} stroke={color} strokeWidth={1.5} /></svg>
-        Questionable or Doubtful
-      </span>
-      <span>? hurt in practice, no game status yet</span>
+      <span className="inline-flex items-center gap-1.5">{dot('var(--critical)')} out, with who plays instead (→)</span>
+      <span className="inline-flex items-center gap-1.5">{dot('var(--warning)')} questionable, doubtful or hurt in practice</span>
+      <span>IR · Wk 15: can return in Week 15 at the earliest</span>
     </div>
   )
 }
