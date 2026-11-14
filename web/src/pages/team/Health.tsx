@@ -12,8 +12,9 @@ import { DepthField, DepthFieldKey } from '../../charts/DepthField'
 import { useWidth } from '../../charts/useWidth'
 import { FinePrint } from '../../components/FinePrint'
 import type { TeamFile, TeamHealth } from '../../data/contract'
-import { GROUP, outLine, tone } from '../../lib/health'
+import { GROUP, outLine, roomsLede, tone } from '../../lib/health'
 import { Block } from './Block'
+import { Rooms } from './Rooms'
 
 const pct = (v: number | null | undefined) => (v == null ? '–' : `${Math.round(100 * v)}%`)
 const name = (s: { player: string; key: boolean }) => (s.key ? `${s.player} ★` : s.player)
@@ -138,6 +139,11 @@ export function Health({ file }: { file: TeamFile }) {
         )}
         <Groups h={h} />
       </Block>
+      {health.rooms.length > 0 && (
+        <Block title="Position rooms" line={roomsLede(health.rooms)}>
+          <Rooms rooms={health.rooms} />
+        </Block>
+      )}
       <Block title="Full-strength lineup" line="The best lineup the chart has had this season, as it stands this week: who is out, and who steps in. Hover a player for his return window and the chart behind him.">
         <div className="flex flex-col gap-3" data-testid="health-depth">
           <DepthField starters={h.starters} week={h.week} />
@@ -162,7 +168,7 @@ export function Health({ file }: { file: TeamFile }) {
         <HealthChart health={health} />
       </Block>
       <FinePrint>
-        <p>Full strength is the team&apos;s best lineup this season: at each spot, the best player the depth chart has had as the starter since March who is still on the roster and is out now (a healthy player the chart moved down lost the job; he doesn&apos;t count). The share weighs each spot by its position (a quarterback more than a guard, every corner the same) and a key player (★) one and a half times: the top 30% at his position across the league by our player ratings, a veteran paid like the top 15% at his position, or a 1st-round pick on his rookie deal. The ratings only pick the key players; we don&apos;t show them, because they aren&apos;t reliable enough player by player. A player on IR may return after missing four of his team&apos;s games; IR from before Week 1 usually means the season, so it gets no window. Questionable and Doubtful count by how often players with that status have played since 2016. Before Friday&apos;s statuses, a starter who missed or was limited in practice is shown as in doubt but not counted: a Wednesday absence is often a rest day. Context only: no prediction uses it.</p>
+        <p>Full strength is the team&apos;s best lineup this season: at each spot, the best player the depth chart has had as the starter since March who is still on the roster and is out now (a healthy player the chart moved down lost the job; he doesn&apos;t count). The share weighs each spot by its position (a quarterback more than a guard, every corner the same) and a key player (★) one and a half times: the top 30% at his position across the league by our player ratings, a veteran paid like the top 15% at his position, or a 1st-round pick on his rookie deal. The ratings only pick the key players; we don&apos;t show them, because they aren&apos;t reliable enough player by player. A player on IR may return after missing four of his team&apos;s games; IR from before Week 1 usually means the season, so it gets no window. Questionable and Doubtful count by how often players with that status have played since 2016. Before Friday&apos;s statuses, a starter who missed or was limited in practice is shown as in doubt but not counted: a Wednesday absence is often a rest day. A position room&apos;s rank is against the other 31 teams&apos; rooms. Quarterbacks, backs, receivers and tight ends are graded on their full-strength starters&apos; own plays (EPA and success rate, last season counting half, small samples pulled toward the league average), wherever they played. The line and the defense are graded on team stats (pressure and sack rates, yards before contact, pressures by edge and interior rushers, yards and completions allowed per target, missed tackles) from the games the room went into at 80% strength or more. The rank now is an estimate: the share of the room that is missing pulls its grade toward a room of backups. Context only: no prediction uses it.</p>
       </FinePrint>
     </div>
   )

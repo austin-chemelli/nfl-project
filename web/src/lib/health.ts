@@ -1,5 +1,5 @@
 /** Shared words for team health (M24.7): group names, when a player can be back, his badge. */
-import type { HealthStarter } from '../data/contract'
+import type { HealthStarter, RoomGrade } from '../data/contract'
 
 export const GROUP: Record<string, string> = {
   QB: 'Quarterback', RB: 'Running back', WR: 'Receivers', TE: 'Tight end', OL: 'Offensive line',
@@ -58,4 +58,11 @@ export function unitHealth(spots: Pick<HealthStarter, 'weight' | 'p_play'>[]): n
   const full = spots.reduce((a, s) => a + s.weight, 0)
   if (full <= 0) return null
   return 1 - spots.reduce((a, s) => a + s.weight * (1 - s.p_play), 0) / full
+}
+
+/** "Receivers fall from #2 at full strength to about #24 now." The room that falls furthest. */
+export function roomsLede(rooms: RoomGrade[]): string {
+  const worst = [...rooms].sort((a, b) => (b.now_rank - b.rank) - (a.now_rank - a.rank))[0]
+  if (!worst || worst.now_rank - worst.rank < 3) return 'How each room has played against the league. No room is missing enough to move far.'
+  return `Biggest drop: ${(GROUP[worst.grp] ?? worst.grp).toLowerCase()}, #${worst.rank} at full strength to about #${worst.now_rank} now.`
 }

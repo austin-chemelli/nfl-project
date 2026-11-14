@@ -30,6 +30,12 @@ describe('Health tab', () => {
     expect(screen.getByTestId('health-chart').querySelectorAll('[data-kind="outlook"]').length).toBe(health.outlook.length)
   })
 
+  it('grades each position room and says which falls furthest with the injuries', () => {
+    ui(file)
+    expect(screen.getByText('Biggest drop: interior line, #10 at full strength to about #28 now.')).toBeInTheDocument()
+    expect(screen.getByTestId('health-rooms').querySelector('[data-room="WR"]')!.textContent).toContain('#1 → ~#12')
+  })
+
   it('notes when the week has no game statuses yet', () => {
     ui(file)
     expect(screen.getByText(/No game statuses yet this week/)).toBeInTheDocument()

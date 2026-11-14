@@ -242,10 +242,20 @@ export const HealthStarter = z.looseObject({
 const counts = { out: num.default(0), key_out: num.default(0) } // starters not expected to play fully, and how many are key
 export const HealthGroup = z.looseObject({ grp: z.string(), full_pts: num, missing_pts: num, doubt_pts: num.default(0), health: nnum, starters: num.default(0), ...counts })
 export const HealthWeek = z.looseObject({ week: num, health: nnum, missing_pts: num, full_pts: num.optional(), ...counts })
+// a position room graded against the league (M24.7 round 3, PR B): rank 1-32 at full strength and
+// estimated now with the room's injuries
+export const RoomGrade = z.looseObject({
+  grp: z.string(), rank: num, label: z.string(), z: num, basis: z.string().default('team'),
+  games: nnum.default(null), plays: nnum.default(null),
+  stats: z.array(z.looseObject({ key: z.string(), label: z.string(), value: num, rank: num })).default([]),
+  health: nnum.default(null), now_rank: num, now_label: z.string(),
+})
+export type RoomGrade = z.infer<typeof RoomGrade>
 export const TeamHealth = z.looseObject({
   now: z.looseObject({ week: num, reported: z.boolean().default(false), health: nnum, missing_pts: num, doubt_pts: num.default(0), full_pts: num, ...counts, groups: z.array(HealthGroup), starters: z.array(HealthStarter) }),
   by_week: z.array(HealthWeek).default([]),
   outlook: z.array(HealthWeek).default([]),
+  rooms: z.array(RoomGrade).default([]),
 })
 const GameHealthSide = z.looseObject({ health: nnum, missing_pts: num, full_pts: num, ...counts, reported: z.boolean().default(false), starters: z.array(HealthStarter).default([]) })
 export const GameHealth = z.looseObject({ home: GameHealthSide.nullable().default(null), away: GameHealthSide.nullable().default(null) })
