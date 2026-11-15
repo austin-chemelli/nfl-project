@@ -69,3 +69,9 @@ def test_built_game_files_agree():
         pytest.skip("no local site files")
     bad = {f.name: c for f in files if (c := lineup_conflicts(json.loads(f.read_text())))}
     assert bad == {}
+
+
+def test_a_replacement_the_report_rules_out_is_a_conflict():
+    s = _starter("SS", "x", "X", None, depth=[{"gsis_id": "a", "player": "A", "status": "Out"}])
+    g = _game([{**s, "steps_in": "A"}], INJ, spots=[{"slot": "QB", "gsis_id": "q", "player": "Q", "status": None, "steps_in": "A", "steps_in_id": "a"}])  # fmt: skip
+    assert lineup_conflicts(g) == ["home SS: A named to play, report 'Out'", "home map QB: A named to play, report 'Out'"]  # fmt: skip

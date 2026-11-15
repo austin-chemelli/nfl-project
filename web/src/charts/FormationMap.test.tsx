@@ -17,7 +17,7 @@ const LINEUPS = Lineups.parse({
     reported: true,
     offense_formation: '3WR 1TE',
     defense_formation: 'Base 3-4 D',
-    offense: [spot('QB', 'Lamar Jackson', 6.55, 'Out', 0), spot('WR1', 'Zay Flowers', 1.15, 'Questionable', 0.73), spot('C', 'New Center', null)],
+    offense: [{ ...spot('QB', 'Lamar Jackson', 6.55, 'Out', 0), steps_in: 'Tyler Huntley' }, spot('WR1', 'Zay Flowers', 1.15, 'Questionable', 0.73), spot('C', 'New Center', null)],
     defense: [spot('NT', 'Nose Tackle', null, 'Questionable', 0.7), spot('LCB', 'A Corner', 0.8)],
     off_chart: [spot('RB', 'Moved Down', 0.6, 'Out', 0)],
   },
@@ -28,7 +28,9 @@ describe('FormationMap', () => {
   it('draws every starter, a status only for listed players, and no number for unvalued spots', () => {
     const { container } = render(<FormationMap lineup={LINEUPS.home!} side="home" />)
     const qb = container.querySelector('[data-slot="QB"]')!
-    expect(qb.getAttribute('aria-label')).toBe('QB: Lamar Jackson, worth 6.5 points, Out')
+    expect(qb.getAttribute('aria-label')).toBe('QB: Lamar Jackson, worth 6.5 points, Out; Tyler Huntley plays instead')
+    expect(qb.querySelector('[data-steps-in]')!.textContent).toBe('→ Huntley')
+    expect(container.querySelector('[data-slot="WR1"] [data-steps-in]')).toBeNull() // Questionable: nobody named
     expect(qb.querySelector('[data-badge="O"]')).not.toBeNull()
     expect(container.querySelector('[data-slot="LCB"] [data-badge]')).toBeNull() // not listed: no status
     expect(container.querySelector('[data-slot="C"]')!.getAttribute('aria-label')).toBe('C: New Center, not valued yet')

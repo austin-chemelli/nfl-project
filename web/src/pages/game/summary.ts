@@ -12,7 +12,7 @@ import type { Efficiency, Game, Meta, RetroGame, TeamRetro } from '../../data/co
 import { pct, spreadLabel } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf } from '../../lib/meta'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
-import { injuryRank, sortInjuries } from './helpers'
+import { homeFieldPp, injuryRank, neutralDiscount, sortInjuries } from './helpers'
 
 export type TabId = 'retro' | 'preview' | 'approaches' | 'tendencies' | 'details' | 'news'
 
@@ -131,12 +131,13 @@ function marketTile(g: Game, now: string): TileSpec {
 function factorTile(g: Game, meta: Meta): TileSpec {
   const c = g.contributions[HEADLINE]
   if (!c) return { id: 'factor', label: 'Biggest factor', value: '–', sub: 'no breakdown', tab: 'preview' }
+  // the neutral-site discount sits on home field, as on the Preview chart
   const items = [
-    { name: 'Home field', pp: c.home_field_pp ?? 0 },
-    ...Object.entries(c.groups).map(([id, x]) => ({ name: groupOf(meta, id)?.name ?? id, pp: x.pp ?? 0 })),
+    { name: 'Home field', pp: homeFieldPp(g, c) ?? 0 },
+    ...Object.entries(c.groups).map(([id, x]) => ({ name: groupOf(meta, id)?.name ?? id, pp: (x.pp ?? 0) - (id === 'venue_weather' ? neutralDiscount(g, c) : 0) })),
   ]
   const top = items.reduce((a, b) => (Math.abs(b.pp) > Math.abs(a.pp) ? b : a))
-  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${Math.abs(top.pp).toFixed(1)} pts toward ${top.pp >= 0 ? g.home : g.away}, ${SHORT[HEADLINE]}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
+  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${Math.abs(top.pp).toFixed(1)} win-chance pts toward ${top.pp >= 0 ? g.home : g.away}, ${SHORT[HEADLINE]}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
 }
 
 /** Position weight for "key": the injury file has no importance field, so the position stands in for it. */

@@ -217,19 +217,7 @@ def absent(g: str, team: str, week: int, roster: dict, injuries: list[dict]) -> 
     return game is not None
 
 
-def chart_depth(depth: pl.DataFrame, team: str, cutoff: datetime) -> dict[tuple, list[tuple]]:
-    """(pos_abb, pos_slot) -> [(gsis_id, player)] in rank order on the latest chart before the
-    cutoff: the depth at each spot."""
-    d = L.with_chart_dt(
-        depth.filter((pl.col("team") == team) & pl.col("gsis_id").is_not_null())
-    ).filter(pl.col("chart_dt") < cutoff)
-    if d.is_empty():
-        return {}
-    d = d.filter(pl.col("chart_dt") == d["chart_dt"].max()).sort("pos_rank")
-    out: dict[tuple, list[tuple]] = {}
-    for r in d.iter_rows(named=True):
-        out.setdefault((r["pos_abb"], r["pos_slot"]), []).append((r["gsis_id"], r["player_name"]))
-    return out
+chart_depth = L.chart_depth  # shared with the depth-chart map
 
 
 def full_strength(

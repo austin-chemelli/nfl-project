@@ -153,7 +153,7 @@ _GROUPS = [
     Group("health", "Health", "Who's playing", "Who is missing",
           "Who is missing from the lineup, weighted by how much the position matters.",
           (
-              M("availability.injury_impact", -1, "Injury impact", "index", "Starters listed Out or Doubtful (half for Questionable), weighted by position: QB 5, tackles, edge rushers, top corner and top receiver 2, others 1."),
+              M("availability.injury_impact", -1, "Injury impact (report)", "index", "Starters listed Out or Doubtful (half for Questionable), weighted by position: QB 5, tackles, edge rushers, top corner and top receiver 2, others 1."),
               M("availability.starters_out", -1, "Starters out", "count", "Depth-chart starters listed Out or Doubtful."),
               M("availability.ol_starters_out", -1, "Offensive line starters out", "count", "Starting centers, guards and tackles listed Out or Doubtful."),
               M("availability.report_count", -1, "Players on the injury report", "count", "Players with an Out, Doubtful or Questionable game status."),

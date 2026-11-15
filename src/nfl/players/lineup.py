@@ -20,6 +20,7 @@ import polars as pl
 from nfl.players import claims as C
 
 EXTRA = ("FB", "NB")
+RULED_OUT = ("Out", "Doubtful")  # a starter listed so has the man who plays instead named
 OFFENSE_ORDER = ("LT", "LG", "C", "RG", "RT", "TE", "WR1", "WR2", "WR3", "QB", "RB")
 DEFENSE_ORDER = (
     "LDE", "LDT", "NT", "RDT", "RDE", "SLB", "LILB", "MLB", "RILB", "WLB", "LCB", "RCB", "SS", "FS",
@@ -80,7 +81,22 @@ def starters(depth: pl.DataFrame, team: str, cutoff: datetime) -> pl.DataFrame:
     )
 
 
-def _spot(r: dict, values: dict, listed: dict, rates: dict) -> dict:
+def chart_depth(depth: pl.DataFrame, team: str, cutoff: datetime) -> dict[tuple, list[tuple]]:
+    """(pos_abb, pos_slot) -> [(gsis_id, player)] in rank order on the latest chart before the
+    cutoff: the depth at each spot."""
+    d = with_chart_dt(
+        depth.filter((pl.col("team") == team) & pl.col("gsis_id").is_not_null())
+    ).filter(pl.col("chart_dt") < cutoff)
+    if d.is_empty():
+        return {}
+    d = d.filter(pl.col("chart_dt") == d["chart_dt"].max()).sort("pos_rank")
+    out: dict[tuple, list[tuple]] = {}
+    for r in d.iter_rows(named=True):
+        out.setdefault((r["pos_abb"], r["pos_slot"]), []).append((r["gsis_id"], r["player_name"]))
+    return out
+
+
+def _spot(r: dict, values: dict, listed: dict, rates: dict, behind: list[tuple] = ()) -> dict:
     v = values.get(r["gsis_id"])
     value = round(float(v["value_pts"]), 2) if v else None
     inj = listed.get(r["gsis_id"])
@@ -91,11 +107,20 @@ def _spot(r: dict, values: dict, listed: dict, rates: dict) -> dict:
     )
     p_play = round(p_play, 4) if p_play is not None else None
     at_risk = round(value * (1 - p_play), 2) if value is not None and p_play is not None else None
-    return {
+    out = {
         "slot": r["slot"], "player": r["player"], "gsis_id": r["gsis_id"],
         "grp": v["grp"] if v else None,
         "value_pts": value, "status": status, "p_play": p_play, "at_risk": at_risk,
     }  # fmt: skip
+    if status in RULED_OUT:
+        # who plays instead: the first man behind him on the chart the report doesn't rule out
+        nxt = next(
+            ((g, n) for g, n in behind if g != r["gsis_id"] and (listed.get(g) or {}).get("status") not in RULED_OUT),
+            None,
+        )  # fmt: skip
+        out["steps_in"] = nxt[1] if nxt else None
+        out["steps_in_id"] = nxt[0] if nxt else None
+    return out
 
 
 def side(
@@ -120,6 +145,7 @@ def side(
     }
     # a regular starter on the report whom the chart has already moved down: the map would show his
     # replacement full, hiding the very absence it is for
+    chart = chart_depth(depth, team, cutoff)
     on_map = set(s["gsis_id"].to_list())
     out["off_chart"] = sorted(
         (
@@ -136,7 +162,10 @@ def side(
         u = s.filter(pl.col("unit") == unit)
         rank = {k: i for i, k in enumerate(order)}
         rows = sorted(u.iter_rows(named=True), key=lambda r: rank.get(r["slot"], len(order)))
-        out[unit] = [_spot(r, vals, listed, rates) for r in rows]
+        out[unit] = [
+            _spot(r, vals, listed, rates, chart.get((r["pos_abb"], r["pos_slot"]), []))
+            for r in rows
+        ]
         out[f"{unit}_formation"] = u["formation"][0] if u.height else None
     return out
 

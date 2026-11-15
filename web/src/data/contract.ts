@@ -204,6 +204,7 @@ export const LineupSpot = z.looseObject({
   status: nstr,
   p_play: nnum,
   at_risk: nnum,
+  steps_in: nstr.optional(), // Out or Doubtful: the first man behind him the report doesn't rule out (absent otherwise, and in older files)
 })
 export const SideLineup = z.looseObject({
   chart_ts: z.string(),

@@ -1816,6 +1816,17 @@ def lineup_conflicts(detail: dict) -> list[str]:
             (f"{side} map {x['slot']}", x) for u in ("offense", "defense") for x in lu.get(u, [])
         ]
     out = []
+    # the man named to play for a starter who can't must not be ruled out by the same report
+    ruled_out = ("Out", "Doubtful")
+    for where, x in shown:
+        sub = x.get("steps_in_id") or next(
+            (d.get("gsis_id") for d in x.get("depth", []) if d.get("player") == x.get("steps_in")),
+            None,
+        )
+        if sub and (listed.get(sub) or {}).get("status") in ruled_out:
+            out.append(
+                f"{where}: {x.get('steps_in')} named to play, report {listed[sub]['status']!r}"
+            )
     for where, x in shown:
         g, st = x.get("gsis_id"), x.get("status")
         if g is None or st in reserve:

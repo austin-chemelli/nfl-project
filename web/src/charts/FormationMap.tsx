@@ -8,10 +8,11 @@
  */
 import type { LineupSpot, SideLineup } from '../data/contract'
 import { kickoffEt } from '../lib/format'
+import { lastName } from '../lib/health'
 import { TipNote, TipRow, TipTitle, useChartTip } from './ChartTip'
 
 const W = 320
-const H = 136
+const H = 152 // room under the bottom row for a "→ who plays" label
 const LOS = 18
 
 // Spot -> (x, y) on a 320 x 136 field, offense and defense each facing the line at the top.
@@ -65,13 +66,16 @@ function Spot({ s, color, bind }: { s: LineupSpot; color: string; bind: ReturnTy
         </g>
       )}
       <text x={x} y={y + Math.max(r, 5) + 9} textAnchor="middle" fontSize={8.5} fill="var(--text-muted)">{s.slot.replace(/[123]$/, '')}</text>
+      {s.steps_in && (
+        <text data-steps-in x={x} y={y + Math.max(r, 5) + 18} textAnchor="middle" fontSize={8.5} fontWeight={600} fill="var(--text-primary)">→ {lastName(s.steps_in)}</text>
+      )}
     </g>
   )
 }
 
 function label(s: LineupSpot) {
   const v = s.value_pts === null ? 'not valued yet' : `worth ${pts(s.value_pts)} points`
-  return `${s.slot}: ${s.player}, ${v}${s.status ? `, ${s.status}` : ''}`
+  return `${s.slot}: ${s.player}, ${v}${s.status ? `, ${s.status}` : ''}${s.steps_in ? `; ${s.steps_in} plays instead` : ''}`
 }
 
 function Tip({ s }: { s: LineupSpot }) {
@@ -86,6 +90,7 @@ function Tip({ s }: { s: LineupSpot }) {
       {s.status && <TipRow value={s.status} label="on this week's report" />}
       {s.status && s.p_play !== null && s.status !== 'Out' && <TipRow value={pct(s.p_play)} label={`of players listed ${s.status} have played`} />}
       {s.at_risk !== null && <TipRow value={`${pts(s.at_risk)} pts`} label="at risk" />}
+      {s.steps_in && <TipRow value={s.steps_in} label="plays instead (next on the chart not ruled out)" />}
     </>
   )
 }
@@ -146,7 +151,7 @@ export function FormationKey() {
         <svg width={14} height={14} aria-hidden><circle cx={7} cy={7} r={5} fill="none" stroke="var(--text-muted)" strokeWidth={1.25} strokeDasharray="2 2" /></svg>
         not valued yet
       </span>
-      <span>Q, D, O: Questionable, Doubtful, Out</span>
+      <span>Q, D, O: Questionable, Doubtful, Out; → who plays instead</span>
     </div>
   )
 }
