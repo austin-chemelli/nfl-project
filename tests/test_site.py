@@ -574,3 +574,11 @@ def test_pregame_elo_ignores_the_games_own_result(tmp_path, monkeypatch):
         season = history.filter(pl.col("season") == 2026)
         got.append(_elo(site.pregame_rows(Paths(tmp_path), season, have, now)))
     assert got[0] == pytest.approx(got[1])
+
+
+def test_header_qb_prefers_the_charted_starter_over_the_schedule():
+    """Site checks 2026-11-15: the schedule named BAL's Huntley while the chart and the model had Brissett."""
+    row = {"home_qb": "Tyler Huntley", "away_qb": "Bryce Young",
+           "card": {"charted_qb": {"home": "Jacoby Brissett", "away": None}}}  # fmt: skip
+    assert site._header_qbs(row) == {"home_qb": "Jacoby Brissett", "away_qb": "Bryce Young"}
+    assert site._header_qbs({"home_qb": "A", "away_qb": "B", "card": None}) == {"home_qb": "A", "away_qb": "B"}  # fmt: skip

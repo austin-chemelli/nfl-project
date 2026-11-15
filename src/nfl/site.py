@@ -872,6 +872,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
         for g in wk.iter_rows(named=True):
             row = _game_row(g, allrows, market, reg)
             row["card"] = _card(g, edges, injuries, now, **card_ctx)
+            row |= _header_qbs(row)
             points = lines.get(g["game_id"], [])
             row["line_move"] = _safe(_line_move, None, points, locks.get(g["game_id"]))
             slate_games.append(row)
@@ -1138,6 +1139,14 @@ def _contrast(ranks: dict, g: dict) -> dict | None:
                 best = (key, {"offense": off, "defense": dfn, "off_label": ol, "def_label": dl,
                               "off_rank": ro, "def_rank": rd})  # fmt: skip
     return None if best is None else best[1]
+
+
+def _header_qbs(row: dict) -> dict:
+    """The header's and slate's quarterbacks: the charted QB1 the model uses for a game not yet
+    kicked off, else the schedule's name (site checks 2026-11-15: the schedule named a reserve-list
+    QB on six games)."""
+    charted = (row.get("card") or {}).get("charted_qb") or {}
+    return {f"{s}_qb": charted.get(s) or row.get(f"{s}_qb") for s in ("home", "away")}
 
 
 def _qb_starts(games: pl.DataFrame) -> dict[str, list[tuple[datetime, str]]]:

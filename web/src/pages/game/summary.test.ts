@@ -40,7 +40,7 @@ describe('summaryTiles', () => {
     const contributions = { ...game.contributions, student: { ...c, home_field_pp: 7.1, groups: { venue_weather: { pp: -4.1, features: { 'environment.neutral_site': -4.1 } } } } }
     const f = summaryTiles({ ...game, neutral_site: true, contributions }, meta, null).find((x) => x.id === 'factor')
     expect(f).toMatchObject({ value: 'Home field' })
-    expect(f?.sub).toMatch(/^3\.0 win-chance pts toward/)
+    expect(f?.sub).toMatch(/^3\.0 win-chance pts toward \w+ \(7\.1, less 4\.1 for a neutral site\), Student$/)
   })
 
   it('pregame: the biggest edge is never a context-only group', () => {

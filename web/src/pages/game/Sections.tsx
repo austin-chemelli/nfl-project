@@ -170,7 +170,7 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
           )
         })}
       </div>
-      <DataTable summary="All four approaches, side by side">
+      <DataTable summary={`All ${opts.length} approaches, side by side`}>
         <table className="w-full border-collapse text-[14px]">
           <thead>
             <tr>
@@ -455,7 +455,7 @@ export function Injuries({ g }: { g: Game }) {
               )}
               {key.length > 0 && <KeyPlayers players={key} />}
               {rows.length === 0 ? (
-                <p className="mt-3 text-ink-2">{g.injuries.length === 0 ? 'No official report in our data yet.' : 'None listed.'}</p>
+                <p className="mt-3 text-ink-2">{g.injuries.length === 0 ? 'No game statuses on the official report yet (practice-only reports aren\u2019t listed here).' : 'None listed with a game status.'}</p>
               ) : (
                 <TableScroll>
                   <table className="mt-3 w-full border-collapse text-[14px]">

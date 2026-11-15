@@ -13,6 +13,7 @@ import { pct, spreadLabel } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf } from '../../lib/meta'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { homeFieldPp, injuryRank, neutralDiscount, sortInjuries } from './helpers'
+import { etStamp, fmtPts } from './line'
 
 export type TabId = 'retro' | 'preview' | 'approaches' | 'tendencies' | 'details' | 'news'
 
@@ -119,7 +120,7 @@ function marketTile(g: Game, now: string): TileSpec {
   const line = g.market?.spread_home
   const mkText = mk == null
     ? 'no market line yet'
-    : `market ${fav(mk, g.home, g.away)} ${favPct(mk)}${line != null && Math.abs(line) >= 0.25 ? `, ${line > 0 ? g.home : g.away} −${Math.abs(line)}` : ''}${lineAge(g.market?.as_of, now)}`
+    : `market ${fav(mk, g.home, g.away)} ${favPct(mk)}${line != null && Math.abs(line) >= 0.25 ? `, ${line > 0 ? g.home : g.away} −${fmtPts(Math.abs(line))} (books' average${g.market?.as_of ? `, ${etStamp(g.market.as_of)}` : ''})` : ''}${lineAge(g.market?.as_of, now)}`
   if (mk == null || p == null) return { id: 'market', label: 'vs the market', value: '–', sub: mkText, tab: 'approaches' }
   const d = Math.round(100 * (p - mk))
   if (fav(p, g.home, g.away) !== fav(mk, g.home, g.away)) return { id: 'market', label: 'vs the market', value: 'Other side', sub: mkText, tab: 'approaches' }
@@ -137,7 +138,10 @@ function factorTile(g: Game, meta: Meta): TileSpec {
     ...Object.entries(c.groups).map(([id, x]) => ({ name: groupOf(meta, id)?.name ?? id, pp: (x.pp ?? 0) - (id === 'venue_weather' ? neutralDiscount(g, c) : 0) })),
   ]
   const top = items.reduce((a, b) => (Math.abs(b.pp) > Math.abs(a.pp) ? b : a))
-  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${Math.abs(top.pp).toFixed(1)} win-chance pts toward ${top.pp >= 0 ? g.home : g.away}, ${SHORT[HEADLINE]}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
+  // at a neutral site, home field's parts: "(7.0, less 4.9 for a neutral site)"
+  const off = neutralDiscount(g, c)
+  const parts = top.name === 'Home field' && off !== 0 && c.home_field_pp != null ? ` (${c.home_field_pp.toFixed(1)}, less ${Math.abs(off).toFixed(1)} for a neutral site)` : ''
+  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${Math.abs(top.pp).toFixed(1)} win-chance pts toward ${top.pp >= 0 ? g.home : g.away}${parts}, ${SHORT[HEADLINE]}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
 }
 
 /** Position weight for "key": the injury file has no importance field, so the position stands in for it. */
