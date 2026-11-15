@@ -12,45 +12,12 @@ import { DepthField, DepthFieldKey } from '../../charts/DepthField'
 import { useWidth } from '../../charts/useWidth'
 import { FinePrint } from '../../components/FinePrint'
 import type { TeamFile, TeamHealth } from '../../data/contract'
-import { GROUP, outLine, tone } from '../../lib/health'
+import { outLine, roomsLede } from '../../lib/health'
 import { Block } from './Block'
+import { Rooms } from './Rooms'
 
 const pct = (v: number | null | undefined) => (v == null ? '–' : `${Math.round(100 * v)}%`)
 const name = (s: { player: string; key: boolean }) => (s.key ? `${s.player} ★` : s.player)
-
-function Groups({ h }: { h: TeamHealth['now'] }) {
-  return (
-    <ul className="m-0 flex list-none flex-col gap-2.5 p-0" data-testid="health-groups">
-      {h.groups.map((g) => {
-        const share = g.health ?? 1
-        const rows = h.starters.filter((s) => s.grp === g.grp)
-        const out = rows.filter((s) => tone(s) === 'out' || tone(s) === 'iffy').map(name)
-        const doubt = rows.filter((s) => s.doubt).map(name)
-        const full = rows.reduce((a, s) => a + s.weight, 0)
-        const doubtShare = full ? Math.min(share, rows.filter((s) => s.doubt).reduce((a, s) => a + s.weight, 0) / full) : 0
-        return (
-          <li key={g.grp} className="grid grid-cols-[minmax(0,7.5rem)_minmax(0,1fr)_3rem] items-center gap-x-3 gap-y-0.5 text-[14px]">
-            <span className="truncate text-ink-2">{GROUP[g.grp] ?? g.grp}</span>
-            <span className="relative h-3 overflow-hidden rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--border)]" role="img" aria-label={`${GROUP[g.grp] ?? g.grp} at ${pct(share)} of full strength`}>
-              <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--accent)]" style={{ width: `${Math.max(0, Math.min(1, share)) * 100}%` }} />
-              {doubtShare > 0 && (
-                <span data-doubt className="absolute inset-y-0" style={{ left: `${(share - doubtShare) * 100}%`, width: `${doubtShare * 100}%`, background: 'repeating-linear-gradient(135deg, var(--accent) 0 3px, var(--surface-2) 3px 6px)' }} />
-              )}
-            </span>
-            <span className={`tabular text-right ${share < 1 ? 'font-medium text-ink' : 'text-ink-3'}`}>{pct(share)}</span>
-            {(out.length > 0 || doubt.length > 0) && (
-              <span className="col-start-2 col-end-4 text-[12px] text-ink-3">
-                {out.length > 0 && <>missing {out.join(', ')} ({out.length} of {g.starters || rows.length})</>}
-                {out.length > 0 && doubt.length > 0 && '; '}
-                {doubt.length > 0 && <>in doubt (practice) {doubt.join(', ')}</>}
-              </span>
-            )}
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
 
 const H = 170
 const PAD = { top: 14, right: 16, bottom: 26, left: 40 }
@@ -127,22 +94,22 @@ export function Health({ file }: { file: TeamFile }) {
   const back = health.outlook.find((o) => o.health != null && o.health >= 0.995)
   return (
     <div className="flex flex-col gap-8">
-      <Block title={`Health, Week ${h.week}`} line={lede}>
-        {!h.reported && (
-          <p className="m-0 text-[13px] text-ink-3" data-testid="health-doubt">
-            No game statuses yet this week (teams post them Friday), so the share counts only reserve lists.
-            {doubtNames.length > 0
-              ? <> In doubt from practice: {doubtNames.join(', ')} (striped in the bars).</>
-              : ' No full-strength starter missed practice.'}
-          </p>
-        )}
-        <Groups h={h} />
-      </Block>
       <Block title="Full-strength lineup" line="The best lineup the chart has had this season, as it stands this week: who is out, and who steps in. Hover a player for his return window and the chart behind him.">
         <div className="flex flex-col gap-3" data-testid="health-depth">
           <DepthField starters={h.starters} week={h.week} />
           <DepthFieldKey />
         </div>
+      </Block>
+      <Block title={`Health, Week ${h.week}`} line={health.rooms.length > 0 && h.health != null ? `${lede} ${roomsLede(health.rooms)}` : lede}>
+        {!h.reported && (
+          <p className="m-0 text-[13px] text-ink-3" data-testid="health-doubt">
+            No game statuses yet this week (teams post them Friday), so the share counts only reserve lists.
+            {doubtNames.length > 0
+              ? <> In doubt from practice: {doubtNames.join(', ')} (marked under their rooms).</>
+              : ' No full-strength starter missed practice.'}
+          </p>
+        )}
+        <Rooms rooms={health.rooms} h={h} />
       </Block>
       {listed.length > 0 && (
         <Block title="What we said about this week">
@@ -162,7 +129,7 @@ export function Health({ file }: { file: TeamFile }) {
         <HealthChart health={health} />
       </Block>
       <FinePrint>
-        <p>Full strength is the team&apos;s best lineup this season: at each spot, the best player the depth chart has had as the starter since March who is still on the roster and is out now (a healthy player the chart moved down lost the job; he doesn&apos;t count). The share weighs each spot by its position (a quarterback more than a guard, every corner the same) and a key player (★) one and a half times: the top 30% at his position across the league by our player ratings, a veteran paid like the top 15% at his position, or a 1st-round pick on his rookie deal. The ratings only pick the key players; we don&apos;t show them, because they aren&apos;t reliable enough player by player. A player on IR may return after missing four of his team&apos;s games; IR from before Week 1 usually means the season, so it gets no window. Questionable and Doubtful count by how often players with that status have played since 2016. Before Friday&apos;s statuses, a starter who missed or was limited in practice is shown as in doubt but not counted: a Wednesday absence is often a rest day. Context only: no prediction uses it.</p>
+        <p>Full strength is the team&apos;s best lineup this season: at each spot, the best player the depth chart has had as the starter since March who is still on the roster and is out now (a healthy player the chart moved down lost the job; he doesn&apos;t count). The share weighs each spot by its position (a quarterback more than a guard, every corner the same) and a key player (★) one and a half times: the top 30% at his position across the league by our player ratings, a veteran paid like the top 15% at his position, or a 1st-round pick on his rookie deal. The ratings only pick the key players; we don&apos;t show them, because they aren&apos;t reliable enough player by player. A player on IR may return after missing four of his team&apos;s games; IR from before Week 1 usually means the season, so it gets no window. Questionable and Doubtful count by how often players with that status have played since 2016. Before Friday&apos;s statuses, a starter who missed or was limited in practice is shown as in doubt but not counted: a Wednesday absence is often a rest day. A position room&apos;s rank is against the other 31 teams&apos; rooms. Every room but the offensive line is graded on its full-strength starters&apos; own numbers, wherever they played, this season and last (last season counting half, small samples pulled toward the league average), so a starter back from injury counts: EPA and success rate for the offense; pressures, sacks and tackles per snap, missed tackles, and yards and completions allowed per target for the defense. The offensive line has no per-player blocking stats, so it is graded on team stats (pressure and sack rates allowed, yards before contact) from the games it went into at 80% strength or more. The rank now is an estimate: the share of the room that is missing pulls its grade toward a room of backups. Context only: no prediction uses it.</p>
       </FinePrint>
     </div>
   )

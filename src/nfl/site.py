@@ -1733,7 +1733,26 @@ def _health(paths: Paths, games: pl.DataFrame, season: int, injuries: list[dict]
     values = ph.HealthyValues(pg, pv.prior_scores(paths))
     rates = pc.play_rates(pc.rate_table(paths))
     report = injuries + _practice_rows(paths, season)
-    return ph.season(games, depth, rosters, report, values, rates, now, season)
+    out = ph.season(games, depth, rosters, report, values, rates, now, season)
+    return _with_rooms(paths, season, out)
+
+
+def _with_rooms(paths: Paths, season: int, health: dict) -> dict:
+    """Each team's position rooms graded against the league and estimated now (M24.7 round 3).
+    Rooms are graded on the games each went into near full strength."""
+    from nfl.catalog import connect
+    from nfl.players import rooms as pr
+
+    con = connect(paths)
+    sums = _safe(pr.week_sums, None, con, season)
+    if sums is None or sums.is_empty():
+        return health
+    by_week = {t: h["by_week"] for t, h in health.items()}
+    starters = {t: h["now"]["starters"] for t, h in health.items()}
+    players = _safe(pr.player_rooms, {}, con, season, starters)
+    graded = pr.grades(pr.stats(sums, pr.healthy_weeks(by_week), players))
+    now = pr.with_now(graded, {t: h["now"]["groups"] for t, h in health.items()})
+    return {t: {**h, "rooms": now.get(t, [])} for t, h in health.items()}
 
 
 def _practice_rows(paths: Paths, season: int) -> list[dict]:

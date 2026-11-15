@@ -19,15 +19,22 @@ describe('Health tab', () => {
   it('leads with the share of full strength, then groups, who is missing and the chart', () => {
     ui(file)
     expect(screen.getByText(/At 84% of full strength going into Week 11: 4 starters out, 3 of them key/)).toBeInTheDocument()
-    const groups = within(screen.getByTestId('health-groups'))
+    const groups = within(screen.getByTestId('health-rooms'))
     expect(groups.getByText(/missing Terry McLaurin ★ \(1 of 3\)/)).toBeInTheDocument()
-    expect(screen.getByTestId('health-groups').textContent).not.toMatch(/pts/)
+    expect(screen.getByTestId('health-rooms').textContent).not.toMatch(/pts/)
     const depth = within(screen.getByTestId('health-depth'))
     expect(depth.getByText(/IR since camp · no return window/)).toBeInTheDocument()
     expect(depth.getByText(/IR since Wk 8 · eligible Wk 12/)).toBeInTheDocument()
     expect(screen.getByTestId('health-depth').querySelector('[data-view="field"] [data-slot="WR1"]')!.getAttribute('data-tone')).toBe('out')
     expect(screen.getByTestId('health-depth').querySelector('[data-slot="QB"]')).not.toBeNull()
     expect(screen.getByTestId('health-chart').querySelectorAll('[data-kind="outlook"]').length).toBe(health.outlook.length)
+  })
+
+  it('grades each position room and says which falls furthest with the injuries', () => {
+    ui(file)
+    expect(screen.getByText(/of them key\. Biggest drop: receivers, #1 at full strength to about #12 now\./)).toBeInTheDocument()
+    expect(screen.queryByTestId('health-groups')).toBeNull()
+    expect(screen.getByTestId('health-rooms').querySelector('[data-room="WR"]')!.textContent).toContain('~#12#1')
   })
 
   it('notes when the week has no game statuses yet', () => {
@@ -55,7 +62,7 @@ describe('Health tab', () => {
     const now = { ...health.now, reported: false,
       starters: health.now.starters.map((s) => (s.grp === 'CB' ? { ...s, status: 'Did not practice', doubt: true } : s)) }
     const { container } = ui({ health: { ...health, now } } as unknown as TeamFile)
-    expect(screen.getByTestId('health-doubt').textContent).toMatch(/In doubt from practice: .+ \(striped/)
+    expect(screen.getByTestId('health-doubt').textContent).toMatch(/In doubt from practice: .+ \(marked under their rooms/)
     expect(container.querySelector('[data-doubt]')).not.toBeNull()
     expect(screen.getByText(/At 84% of full strength/)).toBeInTheDocument()
   })

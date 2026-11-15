@@ -575,6 +575,12 @@ def season(
     keys = key_ids([t["now"] for t in out.values()])
     for team, t in out.items():
         nxt = with_keys(t["now"], keys)
-        by_week = [{k: tw[k] for k in WEEK_KEYS} for tw in (with_keys(p, keys) for p in t["past"])]
+        by_week = [
+            {
+                **{k: tw[k] for k in WEEK_KEYS},
+                "rooms": {g["grp"]: g["health"] for g in tw["groups"]},
+            }
+            for tw in (with_keys(p, keys) for p in t["past"])
+        ]
         out[team] = {"now": nxt, "by_week": by_week, "outlook": outlook(nxt, t["later"])}
     return out
