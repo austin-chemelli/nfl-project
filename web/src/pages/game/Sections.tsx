@@ -1,6 +1,6 @@
 import { TeamLink } from '../../components/TeamLink'
 import { useState } from 'react'
-import { DivergingBars, Dumbbell, FaceOff, HabitList, MatchupBand, ProbStrip } from '../../charts'
+import { DivergingBars, Dumbbell, FaceOff, HabitList, HabitRule, MatchupBand, ProbStrip } from '../../charts'
 import { DepthField, DepthFieldKey, FacingField } from '../../charts/DepthField'
 import { FormationKey, FormationMap } from '../../charts/FormationMap'
 import { outLine } from '../../lib/health'
@@ -372,6 +372,7 @@ export function MatchupsSection({ g }: { g: Game; meta: Meta }) {
     >
       {m.lede && <p className="mb-4 max-w-3xl text-[14px] text-ink">{m.lede}</p>}
       <div className="flex flex-col gap-6">
+        <HabitRule />
         {m.sides.map((side) => (
           <Card key={`${side.offense}-${side.defense}`}>
             <h3 className="m-0 flex items-center gap-2 text-[15px] font-semibold" data-testid="side-title">
