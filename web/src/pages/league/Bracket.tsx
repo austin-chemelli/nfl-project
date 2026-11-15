@@ -13,7 +13,7 @@ import type { LeagueFile, LeagueTeam } from '../../data/contract'
 import { TeamLink } from '../../components/TeamLink'
 import { teamDotVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
-import { projectConference, projectSeeds, recordView, superBowl, type ConfBracket, type Game, type OddsMap, type Rec, type Seeded } from './bracket'
+import { projectConference, projectField, recordView, superBowl, type ConfBracket, type Game, type OddsMap, type Rec, type Seeded } from './bracket'
 import { Move } from './Move'
 import { fmtProb, type Conf } from './playoffs'
 
@@ -141,9 +141,20 @@ function ConfTitle({ conf, right = false }: { conf: Conf; right?: boolean }) {
   )
 }
 
-function Bubble({ teams, ctx, right = false }: { teams: string[]; ctx: Ctx; right?: boolean }) {
+/** "Next in line", and which division winners are in only because each division gets a seed. */
+function Bubble({ teams, byRule, ctx, right = false }: { teams: string[]; byRule: { div: string; team: string }[]; ctx: Ctx; right?: boolean }) {
   if (!teams.length) return null
-  return <p className={`tabular text-[12px] text-ink-3 ${right ? 'text-right' : ''}`}>Next in line: {teams.map((t) => `${t} ${fmtProb(value(ctx.odds, t, 'playoffs'))}`).join(' · ')}</p>
+  const pct = (t: string) => `${t} ${fmtProb(value(ctx.odds, t, 'playoffs'))}`
+  return (
+    <p className={`tabular text-[12px] text-ink-3 ${right ? 'text-right' : ''}`}>
+      Next in line: {teams.map(pct).join(' · ')}
+      {byRule.map(({ div, team }) => (
+        <span key={team} className="block">
+          {pct(team)} is in as the likeliest {div} winner: every division winner gets a top-4 seed.
+        </span>
+      ))}
+    </p>
+  )
 }
 
 /** Elbow lines from each team's row to its row in the next round, measured from the DOM after layout. */
@@ -209,11 +220,16 @@ export function Bracket({ file, odds, was, decided = [], first = 'AFC' }: { file
   const outer = useRef<HTMLDivElement>(null)
   const faceOff = useWidth(outer) >= FACE_OFF_MIN
   const confs = (['AFC', 'NFC'] as Conf[]).map((conf) => {
-    const teams = file.teams.filter((t) => t.conf === conf && odds[t.team]).map((t) => t.team).sort((a, b) => odds[b].playoffs - odds[a].playoffs || a.localeCompare(b))
-    const seeds = projectSeeds(teams, odds)
-    const b = projectConference(seeds, odds)
-    const bubble = teams.filter((t) => !seeds.includes(t)).slice(0, 3)
-    return { conf, b, bubble }
+    const teams = file.teams.filter((t) => t.conf === conf && odds[t.team]).sort((a, b) => a.team.localeCompare(b.team))
+    const field = projectField(teams, odds)
+    const b = projectConference(field.seeds, odds)
+    const bubble = field.out.slice(0, 3)
+    // division winners in only because the rule gives each division a seed: below a team left out
+    const best = field.out.length ? value(odds, field.out[0], 'playoffs') : 0
+    const byRule = Object.entries(field.divWinner)
+      .filter(([, t]) => value(odds, t, 'playoffs') < best - 0.005)
+      .map(([div, team]) => ({ div, team }))
+    return { conf, b, bubble, byRule }
   })
   const [afc, nfc] = confs
   const sb = superBowl(afc.b.champ, nfc.b.champ, odds)
@@ -266,17 +282,17 @@ export function Bracket({ file, odds, was, decided = [], first = 'AFC' }: { file
               <section aria-label="NFC projected bracket" className="col-span-3 grid grid-cols-3 gap-3">{confColumns('NFC', nfc.b, ctx, true)}</section>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Bubble teams={afc.bubble} ctx={ctx} />
-              <Bubble teams={nfc.bubble} ctx={ctx} right />
+              <Bubble teams={afc.bubble} byRule={afc.byRule} ctx={ctx} />
+              <Bubble teams={nfc.bubble} byRule={nfc.byRule} ctx={ctx} right />
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            {(first === 'NFC' ? [nfc, afc] : [afc, nfc]).map(({ conf, b, bubble }) => (
+            {(first === 'NFC' ? [nfc, afc] : [afc, nfc]).map(({ conf, b, bubble, byRule }) => (
               <section key={conf} aria-label={`${conf} projected bracket`} className="flex min-w-0 flex-col gap-2">
                 <ConfTitle conf={conf} />
                 <div className="grid grid-cols-3 gap-2 sm:gap-3">{confColumns(conf, b, ctx, false)}</div>
-                <Bubble teams={bubble} ctx={ctx} />
+                <Bubble teams={bubble} byRule={byRule} ctx={ctx} />
               </section>
             ))}
             <div className="mx-auto w-full max-w-xs">{sbBox}</div>

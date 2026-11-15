@@ -2,8 +2,12 @@
  * The projected bracket (M26.4 follow-up, Austin 2026-11-12): one plausible playoff field and path
  * drawn from the simulated odds, not a forecast of its own.
  *
- * Seeds: the assignment of teams to seeds 1-7 that maximizes the summed P(team holds that seed),
- * solved exactly (DP over which seeds are filled), so a team that leads two seeds lands in one.
+ * Field (bracket fix, 2026-11-15): valid by construction and in line with the playoff odds. Each division
+ * goes to its most likely winner (P(win division)); the wild cards to the other teams most likely to make
+ * the playoffs. Only then are seeds ordered, within each group (1-4 the division winners, 5-7 the wild
+ * cards), by the assignment that maximizes the summed P(team holds that seed), so a team that leads two
+ * seeds lands in one. Seeding the whole conference that way put two NFC East teams in seeds 3-4, and CLE
+ * (32%) in as the 7 seed over KC (84%), whose chances sat in seeds other teams were given.
  * Games: the team more likely to reach the next round advances (the Super Bowl: more likely to win
  * it). Reseeding follows the NFL: the 1 seed meets the lowest seed left. The numbers on each team
  * are its chance to reach that round across every simulated season.
@@ -15,8 +19,11 @@ export type Seeded = { team: string; seed: number } // seed is 1-based
 export type Game = { a: Seeded; b: Seeded; winner: Seeded }
 export type ConfBracket = { seeds: Seeded[]; wildCard: Game[]; bye: Seeded[]; divisional: Game[]; conference: Game; champ: Seeded }
 
-/** Teams in `teams` assigned to seeds 1..n, maximizing the summed seed probabilities. Ties keep the order of `teams`. */
-export function projectSeeds(teams: string[], odds: OddsMap, n = 7): string[] {
+/**
+ * Teams in `teams` assigned to seeds offset+1..offset+n, maximizing the summed seed probabilities.
+ * Ties keep the order of `teams`.
+ */
+export function projectSeeds(teams: string[], odds: OddsMap, n = 7, offset = 0): string[] {
   const full = (1 << n) - 1
   const m = teams.length
   // best[i][mask]: best sum using teams i.. with `mask` seeds already taken; -Infinity when the rest can't be filled
@@ -30,7 +37,7 @@ export function projectSeeds(teams: string[], odds: OddsMap, n = 7): string[] {
       let c = -1
       for (let k = 0; k < n; k++) {
         if (mask & (1 << k)) continue
-        const v = (p[k] ?? 0) + best[i + 1][mask | (1 << k)]
+        const v = (p[offset + k] ?? 0) + best[i + 1][mask | (1 << k)]
         if (v > b + 1e-12) {
           b = v
           c = k
@@ -50,6 +57,39 @@ export function projectSeeds(teams: string[], odds: OddsMap, n = 7): string[] {
     }
   }
   return out
+}
+
+export type Field = {
+  seeds: string[]
+  /** division name -> its projected winner (seeds 1..divisions) */
+  divWinner: Record<string, string>
+  /** teams left out, most likely to make the playoffs first */
+  out: string[]
+}
+
+/**
+ * The projected field of one conference: one division winner per division in the top seeds, the wild
+ * cards from the rest by playoff chance, `nSeeds` in all. Ties go to the higher playoff chance, then the
+ * order of `teams`.
+ */
+export function projectField(teams: { team: string; div: string }[], odds: OddsMap, nSeeds = 7): Field {
+  const po = (t: string) => odds[t]?.playoffs ?? 0
+  const byPlayoffs = teams.map((t, i) => ({ ...t, i })).sort((a, b) => po(b.team) - po(a.team) || a.i - b.i)
+  const divWinner: Record<string, string> = {}
+  const pDiv = (t: string) => odds[t]?.division ?? 0
+  for (const t of byPlayoffs) {
+    const cur = divWinner[t.div]
+    if (cur == null || pDiv(t.team) > pDiv(cur) + 1e-12) divWinner[t.div] = t.team
+  }
+  const winners = byPlayoffs.filter((t) => divWinner[t.div] === t.team).map((t) => t.team)
+  const nWild = Math.max(0, nSeeds - winners.length)
+  const rest = byPlayoffs.filter((t) => divWinner[t.div] !== t.team).map((t) => t.team)
+  const wild = rest.slice(0, nWild)
+  return {
+    seeds: [...projectSeeds(winners, odds, winners.length), ...projectSeeds(wild, odds, wild.length, winners.length)],
+    divWinner,
+    out: rest.slice(nWild),
+  }
 }
 
 const reach = (odds: OddsMap, t: string, round: 'div' | 'conf' | 'sb' | 'champ') => odds[t]?.rounds[round] ?? 0

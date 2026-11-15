@@ -233,7 +233,7 @@ export function Odds({ file, runs = RUNS }: { file: LeagueFile; runs?: { quick: 
             <>
               <Bracket file={file} odds={shownOdds} was={wasOdds} decided={decidedGames} first={lead === 'NFC' ? 'NFC' : 'AFC'} />
               <p className="text-[13px] text-ink-3">
-                One likely bracket, not a prediction of it: each seed goes to the team most likely to hold it, and each game to the team more likely to win it. Every number is that team's chance to win that round
+                One likely bracket, not a prediction of it: each division goes to the team most likely to win it and the wild cards to the other teams most likely to make the playoffs, seeded by where each is most likely to finish; each game goes to the team more likely to win it. Every number is that team's chance to win that round
                 (for the Super Bowl, the title), with its seed on the left; under it, its record and its projected final record (expected wins, rounded), across all {on && wi.runs ? wi.runs.toLocaleString('en-US') : file.n_sims.toLocaleString('en-US')} simulated seasons, whoever it plays.{on && ' Arrows and colors: the change from now, before your decisions; the record counts the games you decided, wins in green and losses in red.'} The table has every team's odds of making the playoffs.
               </p>
             </>

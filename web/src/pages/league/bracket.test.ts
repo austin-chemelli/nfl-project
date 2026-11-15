@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { LeagueOddsTeam } from '../../data/contract'
-import { projectConference, projectSeeds, superBowl, type OddsMap } from './bracket'
+import { projectConference, projectField, projectSeeds, superBowl, type OddsMap } from './bracket'
 
-const o = (seed: number[], r: { div?: number; conf?: number; sb?: number; champ?: number } = {}): LeagueOddsTeam => ({
-  playoffs: seed.reduce((a, b) => a + b, 0), division: 0, bye: seed[0] ?? 0, seed: [...seed, 0, 0, 0, 0, 0, 0, 0].slice(0, 7),
+const o = (seed: number[], r: { div?: number; conf?: number; sb?: number; champ?: number } = {}, division = 0): LeagueOddsTeam => ({
+  playoffs: seed.reduce((a, b) => a + b, 0), division, bye: seed[0] ?? 0, seed: [...seed, 0, 0, 0, 0, 0, 0, 0].slice(0, 7),
   rounds: { div: r.div ?? 0, conf: r.conf ?? 0, sb: r.sb ?? 0, champ: r.champ ?? 0 }, wins: { mean: 9, lo: 8, hi: 10 },
 })
 
@@ -21,6 +21,55 @@ describe('projectSeeds', () => {
   it('fills every seed even when some teams have no chance at any', () => {
     const odds: OddsMap = Object.fromEntries('ABCDEFGH'.split('').map((t, i) => [t, o(i < 7 ? Array.from({ length: 7 }, (_, k) => (k === i ? 0.6 : 0.01)) : [])]))
     expect(projectSeeds('HGFEDCBA'.split(''), odds)).toEqual('ABCDEFG'.split(''))
+  })
+})
+
+describe('projectField', () => {
+  // The market NFC of 2026-11-15, rounded: the unconstrained seeding put NYG 3 and DAL 4 (both NFC East),
+  // and left the NFC South out.
+  const nfc: OddsMap = {
+    SF: o([0.38, 0.34, 0.05, 0.01, 0.05, 0.06, 0.05], {}, 0.78), DET: o([0.23, 0.16, 0.01, 0, 0.2, 0.15, 0.1], {}, 0.41),
+    MIN: o([0.17, 0.12, 0.01, 0, 0.23, 0.16, 0.12], {}, 0.31), CHI: o([0.12, 0.09, 0, 0, 0.2, 0.19, 0.15], {}, 0.22),
+    SEA: o([0.03, 0.09, 0.02, 0, 0.09, 0.15, 0.17], {}, 0.14), GB: o([0.03, 0.04, 0, 0, 0.11, 0.15, 0.17], {}, 0.07),
+    NYG: o([0.01, 0.03, 0.25, 0.15, 0, 0.01, 0.02], {}, 0.44), DAL: o([0, 0.03, 0.19, 0.2, 0, 0.01, 0.02], {}, 0.42),
+    LA: o([0.02, 0.04, 0.01, 0, 0.1, 0.11, 0.13], {}, 0.08), CAR: o([0, 0.02, 0.16, 0.19, 0, 0, 0.01], {}, 0.38),
+    ATL: o([0, 0.01, 0.1, 0.13, 0, 0.01, 0.01], {}, 0.24), TB: o([0, 0, 0.08, 0.16, 0, 0, 0.01], {}, 0.24),
+    WAS: o([0, 0, 0.05, 0.05, 0, 0, 0.01], {}, 0.11), PHI: o([0, 0, 0.01, 0.02, 0, 0, 0], {}, 0.03),
+  }
+  const div: Record<string, string> = {
+    SF: 'W', SEA: 'W', LA: 'W', DET: 'N', MIN: 'N', CHI: 'N', GB: 'N', NYG: 'E', DAL: 'E', WAS: 'E', PHI: 'E', CAR: 'S', ATL: 'S', TB: 'S',
+  }
+  const teams = Object.keys(nfc).map((team) => ({ team, div: div[team] }))
+
+  it('regression: the unconstrained seeding puts two NFC East teams in seeds 3-4 and no NFC South team', () => {
+    const old = projectSeeds(Object.keys(nfc), nfc)
+    expect(old.slice(2, 4)).toEqual(['NYG', 'DAL'])
+    expect(old.filter((t) => div[t] === 'S')).toEqual([])
+  })
+
+  it('one winner per division in seeds 1-4, wild cards by playoff chance in 5-7', () => {
+    const f = projectField(teams, nfc)
+    expect(f.seeds).toEqual(['DET', 'SF', 'NYG', 'CAR', 'MIN', 'CHI', 'SEA'])
+    expect(new Set(f.seeds.slice(0, 4).map((t) => div[t])).size).toBe(4)
+    expect(f.divWinner).toEqual({ W: 'SF', N: 'DET', E: 'NYG', S: 'CAR' })
+    expect(f.out.slice(0, 3)).toEqual(['GB', 'DAL', 'LA'])
+    // every wild card is at least as likely to make the playoffs as every team left out
+    const minWild = Math.min(...f.seeds.slice(4).map((t) => nfc[t].playoffs))
+    expect(Math.max(...f.out.map((t) => nfc[t].playoffs))).toBeLessThanOrEqual(minWild)
+  })
+
+  it('a wild card whose chances sit in the top seeds still beats a long shot (KC over CLE)', () => {
+    // KC mostly wins its division or nothing; the per-seed sum dropped it for a 32% team
+    const odds: OddsMap = {
+      BUF: o([0.6, 0.3, 0.05], {}, 0.9), JAX: o([0.2, 0.3, 0.3, 0.1], {}, 0.9), DEN: o([0.1, 0.2, 0.3, 0.2, 0.05], {}, 0.6),
+      CIN: o([0.05, 0.1, 0.2, 0.4, 0.05], {}, 0.6), KC: o([0.05, 0.1, 0.15, 0.2, 0.1, 0.1, 0.05], {}, 0.4),
+      NE: o([0, 0, 0, 0, 0.4, 0.3, 0.1], {}, 0.05), PIT: o([0, 0, 0, 0, 0.3, 0.3, 0.2], {}, 0.05), CLE: o([0, 0, 0, 0, 0.05, 0.1, 0.17], {}, 0),
+    }
+    const d: Record<string, string> = { BUF: 'E', NE: 'E', JAX: 'S', DEN: 'W', KC: 'W', CIN: 'N', PIT: 'N', CLE: 'N' }
+    expect(projectSeeds(Object.keys(odds), odds)).toContain('CLE')
+    const f = projectField(Object.keys(odds).map((team) => ({ team, div: d[team] })), odds)
+    expect(f.seeds).toContain('KC')
+    expect(f.out).toEqual(['CLE'])
   })
 })
 
