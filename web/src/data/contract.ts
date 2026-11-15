@@ -236,6 +236,7 @@ export const HealthStarter = z.looseObject({
   eligible_week: nnum.default(null), replaced_by: nstr.default(null), missing_pts: nnum,
   doubt: z.boolean().default(false), // missed or limited in practice before Friday's game statuses: shown, not counted
   depth: z.array(z.looseObject({ player: z.string(), value_pts: nnum, status: nstr })).default([]), // the chart behind him at the spot
+  steps_in: nstr.optional(), // who plays if he can't: the first man behind him the report doesn't rule out (absent in older files)
   key: z.boolean().default(false), // a key player (round 3): top of his position league-wide, or a contract or draft star
   weight: num.default(0), // his spot's weight: the position's scale, 1.5x for a key player; health is in these, not points
 })

@@ -92,7 +92,8 @@ def _spot(r: dict, values: dict, listed: dict, rates: dict) -> dict:
     p_play = round(p_play, 4) if p_play is not None else None
     at_risk = round(value * (1 - p_play), 2) if value is not None and p_play is not None else None
     return {
-        "slot": r["slot"], "player": r["player"], "grp": v["grp"] if v else None,
+        "slot": r["slot"], "player": r["player"], "gsis_id": r["gsis_id"],
+        "grp": v["grp"] if v else None,
         "value_pts": value, "status": status, "p_play": p_play, "at_risk": at_risk,
     }  # fmt: skip
 

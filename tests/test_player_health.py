@@ -223,3 +223,34 @@ def test_each_spot_carries_the_chart_behind_it():
     assert [d["player"] for d in s["LT"]["depth"]] == ["Backup LT"]  # the camp injury's spot
     assert s["QB"]["depth"] == []
     assert [x["slot"] for x in _week()["starters"]][:3] == ["LT", "TE", "WR1"]  # offense, in order
+
+
+def test_the_man_who_steps_in_is_the_first_one_the_report_doesnt_rule_out():
+    """Austin 2026-11-15: DAL showed P.J. Locke, himself Out, playing for Jalen Thompson (IR)."""
+    depth = pl.concat([DEPTH, pl.DataFrame(_chart(NOV, [
+        (D, "SS", 1, 1, "ss1", "Starter SS"), (D, "SS", 1, 2, "ss2", "Hurt Backup"),
+        (D, "SS", 1, 3, "ss3", "Healthy Third"), (D, "SS", 1, 4, "ss4", "Fourth"),
+    ]))])  # fmt: skip
+    ros = pl.concat([ROSTERS, pl.DataFrame([
+        {"team": "HHH", "week": w, "gsis_id": g, "status": "ACT", "status_description_abbr": "A01"}
+        for w in (8, 9, 10) for g in ("ss1", "ss2", "ss3", "ss4")
+    ])])  # fmt: skip
+    out = [
+        {"team": "HHH", "week": 11, "gsis_id": g, "pos": "S", "status": "Out"}
+        for g in ("ss1", "ss2")
+    ]
+    w = H.team_week(depth, "HHH", 2026, 11, NOW, ros, INJ + out, VALS, RATES)
+    ss = next(s for s in w["starters"] if s["slot"] == "SS")
+    assert ss["status"] == "Out"
+    assert ss["steps_in"] == "Healthy Third"
+    assert [(d["player"], d["status"]) for d in ss["depth"]] == [("Hurt Backup", "Out"), ("Healthy Third", None)]  # fmt: skip
+    # the first backup healthy: he steps in, and the chain still shows the next two
+    w = H.team_week(depth, "HHH", 2026, 11, NOW, ros, INJ + out[:1], VALS, RATES)
+    ss = next(s for s in w["starters"] if s["slot"] == "SS")
+    assert ss["steps_in"] == "Hurt Backup" and len(ss["depth"]) == 2
+    # nobody healthy behind him: nobody named
+    out3 = [*out, *({"team": "HHH", "week": 11, "gsis_id": g, "pos": "S", "status": "Doubtful"} for g in ("ss3", "ss4"))]  # fmt: skip
+    rates = {**RATES, ("Doubtful", "all"): (0.2, 100)}
+    w = H.team_week(depth, "HHH", 2026, 11, NOW, ros, INJ + out3, VALS, rates)
+    ss = next(s for s in w["starters"] if s["slot"] == "SS")
+    assert ss["steps_in"] is None and len(ss["depth"]) == 2

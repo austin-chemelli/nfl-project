@@ -883,6 +883,8 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["key_players"] = claims_by_game.get(g["game_id"])  # ADR 0027: context, M24.4
             detail["lineups"] = lineups.get(g["game_id"])  # ADR 0027: the formation map, M24.5
             detail["health"] = _game_health(health, g)  # M24.7
+            for c in lineup_conflicts(detail):  # the field and the report must agree
+                print(f"site: {g['game_id']}: lineup disagrees with the injury report: {c}")
             detail["today"] = today.get(g["game_id"])
             detail["matchups"] = _safe(game_matchups, None, matchup_ctx, g, conditions)
             detail["paths"] = _safe(game_paths, None, conditions, g)
@@ -1791,6 +1793,38 @@ def _game_health(health: dict, g: dict) -> dict | None:
             else None
         )
     return out if any(out.values()) else None
+
+
+def lineup_conflicts(detail: dict) -> list[str]:
+    """Where a game's lineups (the full-strength field, the men behind each starter, the depth-chart
+    map) show a game status that differs from the game's injury list, matched by player id. A
+    reserve list outranks the report and a practice doubt isn't a game status, so neither counts."""
+    from nfl.players import claims as pc
+    from nfl.players import health as ph
+
+    reserve = {*ph.RESERVE.values(), "Reserve list"}
+    listed = {i["gsis_id"]: i for i in detail.get("injuries") or [] if i.get("gsis_id")}
+    shown: list[tuple[str, dict]] = []
+    for side in ("home", "away"):
+        h = (detail.get("health") or {}).get(side) or {}
+        for s in h.get("starters", []):
+            if not s.get("reserve") and not s.get("doubt"):
+                shown.append((f"{side} {s['slot']}", s))
+            shown += [(f"{side} {s['slot']} depth", d) for d in s.get("depth", [])]
+        lu = (detail.get("lineups") or {}).get(side) or {}
+        shown += [
+            (f"{side} map {x['slot']}", x) for u in ("offense", "defense") for x in lu.get(u, [])
+        ]
+    out = []
+    for where, x in shown:
+        g, st = x.get("gsis_id"), x.get("status")
+        if g is None or st in reserve:
+            continue
+        want = listed[g]["status"] if g in listed else None
+        game_st = st if st in pc.GAME_STATUSES else None
+        if game_st != want:
+            out.append(f"{where}: {x['player']} shown {st!r}, report {want!r}")
+    return out
 
 
 # ---------------------------------------------------------------------------------------- tracker
