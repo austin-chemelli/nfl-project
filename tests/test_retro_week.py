@@ -113,7 +113,10 @@ def test_write_recap(tmp_path):
     WeekRecap.model_validate_json(recap_path(paths, 2026, 8).read_text())
 
 
-def test_ranked_models_compared_on_shared_games(tmp_path):
+def test_a_line_missing_games_is_unranked_not_shrinking_the_week(tmp_path):
+    """Student v2 sat in 1-4 retros a week: ranking over the overlap decided week 9 on 3 games
+    ("Best approach Student v2, 3 of 3 right" beside 14 of 15). A partial line is shown unranked
+    over its own games; the others are ranked over the whole week."""
     paths = Paths(tmp_path)
     a = planted("g_a", student_ll=0.1)
     b = planted("g_b", margin=4, student_ll=5.0)
@@ -121,11 +124,15 @@ def test_ranked_models_compared_on_shared_games(tmp_path):
     write(paths, a, b)
     rec = build_recap(paths, 2026, 8)
     by = {m.model_id: m for m in rec.models}
-    assert by["sharp"].n == 1 and by["student"].n == 2  # n and right stay on their own games
-    assert by["student"].log_loss == pytest.approx(0.1)  # but the mean is over g_a, the shared one
+    assert by["sharp"].n == 1 and by["sharp"].rank == 0
     assert by["sharp"].log_loss == pytest.approx(
         next(p["log_loss"] for p in a["predictions"] if p["model_id"] == "sharp"), abs=1e-3
     )
+    assert by["student"].n == 2 and by["student"].rank > 0
+    assert by["student"].log_loss == pytest.approx(2.55)  # both games, not the overlap
+    assert rec.best_model != "sharp"
+    ranked = sorted((m for m in rec.models if m.rank > 0), key=lambda m: m.rank)
+    assert [m.log_loss for m in ranked] == sorted(m.log_loss for m in ranked)
 
 
 def calls(d, **by_model):

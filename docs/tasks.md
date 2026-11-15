@@ -556,8 +556,8 @@ Plan: `.notes/plans/player-impact.md`. Worktree `~/dev/nfl-project-players`, bra
 ## UI backlog: site-walk leftovers (not started; wait for Austin's go)
 
 From `.notes/site-walk/2026-11-07-2/report.md` (items M21 didn't cover) and the 2026-11-05 round-2 notes:
-- Team page: the next game is bare (no time, pick or link) and the bye week is missing.
-- Phone nav: no hint that the tab row scrolls (a fade at the edge).
+- ~~Team page: the next game is bare and the bye week is missing~~ (done 2026-11-15, site checks).
+- ~~Phone nav: no hint that the tab row scrolls~~ (done 2026-11-15: every tab row fades like the nav).
 - Game page: doesn't say when the game was locked; EPA baselines are unlabeled.
 - Win-probability chart: direction confuses the away team's fans.
 - Worth adding (walk personas): where the LLM sits (the engineer persona's top gap two walks running; overlaps the "how it's built" page in `.notes/project-review-2026-11.md`), results at a glance on the home page, price and CLV, a who-wins sentence per card.

@@ -68,6 +68,10 @@ describe('League page, playoff tabs', () => {
     renderRoute('/league?tab=odds')
     const afc = await screen.findByRole('region', { name: 'AFC projected bracket' })
     expect(screen.getByRole('region', { name: 'NFC projected bracket' })).toBeInTheDocument()
+    // what each number is, without a hover (2026-11-15 walk: "NE 24%" read as the playoff chance)
+    expect(screen.getByText(/chance to win that game and reach the next round, not its playoff chance/)).toBeInTheDocument()
+    expect(within(afc).getByText('% to reach the divisional round')).toBeInTheDocument()
+    expect(screen.getByText('% to win it')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Bracket' })).toHaveAttribute('aria-checked', 'true')
     // seven seeds: one bye and three wild-card games, then two divisional games and a conference game
     expect(within(afc).getByText('Bye')).toBeInTheDocument()

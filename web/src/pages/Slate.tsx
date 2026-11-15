@@ -13,7 +13,7 @@ export default function SlatePage() {
       docTitle={params.season && params.week ? `Week ${params.week}, ${params.season}` : 'This week'}
       lede={
         <>
-          Four forecasting approaches pick every NFL game before kickoff and are scored in public against the betting market.{' '}
+          Five forecasting approaches pick every NFL game before kickoff and are scored in public against the betting market.{' '}
           <Help text="The Student learns from results instead of a persona. It was chosen as the headline pick before the season; the Tracker shows which approach leads now." />
         </>
       }

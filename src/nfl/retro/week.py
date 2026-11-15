@@ -178,8 +178,15 @@ def _models(games: list[RetroGame]) -> list[RecapModel]:
             d["right"] += 1 if p.right else 0
             if p.model_id == MARKET:
                 market[g.game_id] = p.log_loss
-    # ranked models (approaches + ensemble) are compared over the games every one of them has
-    ranked_ids = [m for m, d in acc.items() if d["kind"] in ("approach", "ensemble")]
+    # Ranked models (approaches + ensemble) are compared over the games every one of them has. A
+    # line that covers only part of the week (Student v2 is only in retros rebuilt after its
+    # backfill) would shrink that set to a game or two and decide the week on it, beside counts
+    # over the whole week: it is shown unranked instead, over its own games.
+    week_ids = {g.game_id for g in games}
+    ranked_ids = [
+        m for m, d in acc.items()
+        if d["kind"] in ("approach", "ensemble") and set(d["ll"]) >= week_ids
+    ]  # fmt: skip
     shared = set.intersection(*(set(acc[m]["ll"]) for m in ranked_ids)) if ranked_ids else set()
     rows = []
     for mid, d in acc.items():
@@ -196,11 +203,9 @@ def _models(games: list[RetroGame]) -> list[RecapModel]:
                 3,
             )
         rows.append((mid, d, mean, vs))
-    elig = sorted(
-        (r for r in rows if r[1]["kind"] in ("approach", "ensemble")), key=lambda r: (r[2], r[0])
-    )
+    elig = sorted((r for r in rows if r[0] in ranked_ids), key=lambda r: (r[2], r[0]))
     rest = sorted(
-        (r for r in rows if r[1]["kind"] not in ("approach", "ensemble")),
+        (r for r in rows if r[0] not in ranked_ids),
         key=lambda r: (r[2], r[0]),
     )
     out = []

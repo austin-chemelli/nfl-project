@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { TeamsFile, type TeamFeature } from '../../data/contract'
 import raw from '../../test/fixtures/site/teams.json'
-import { buildPoints, colorMode, divisionsOf, featureById, fmtValue, ordinal, quadrantsFor, rankText, resolveAxes, templateQuadrants, toneFor } from './helpers'
+import { withByes, withStandings, buildPoints, colorMode, divisionsOf, featureById, fmtValue, ordinal, quadrantsFor, rankText, resolveAxes, templateQuadrants, toneFor } from './helpers'
 
 const file = TeamsFile.parse(raw)
 const f = (id: string) => featureById(file, id)!
@@ -126,5 +126,32 @@ describe('fmtValue signed counts', () => {
     expect(fmtValue(0, f('decisions.turnover_margin_pg'))).toBe('0')
     expect(fmtValue(-3, { ...f('decisions.turnover_margin_pg'), id: 'form.streak' })).toBe('−3')
     expect(fmtValue(4, { ...f('decisions.turnover_margin_pg'), id: 'form.streak' })).toBe('+4')
+  })
+})
+
+describe('withStandings', () => {
+  const row = file.teams.CAR
+  const st = { team: 'CAR', w: 9, l: 0, t: 0 }
+  const league = { teams: [st], played: [{ week: 9, home: 'CAR', away: 'DEN', home_score: 24, away_score: 20 }] } as never
+  it('takes the record from the standings and fills scores teams.json has not caught up on', () => {
+    const t = withStandings(row, 'CAR', league)
+    expect([t.wins, t.losses, t.ties]).toEqual([9, 0, 0])
+    const g = t.games.find((x) => x.id === '2026_09_DEN_CAR')!
+    expect([g.pf, g.pa]).toEqual([24, 20])
+    // that game was "next"; the next is now the first unscored one
+    expect(t.next_game_id).toBe('2026_10_CAR_NO')
+    expect(t.through_week).toBe(row.through_week) // the values' week stays as built
+  })
+  it('leaves the row alone without a league file or a standings row', () => {
+    expect(withStandings(row, 'CAR', undefined)).toBe(row)
+    expect(withStandings(row, 'CAR', { teams: [], played: [] } as never)).toBe(row)
+  })
+})
+
+describe('withByes', () => {
+  it('adds a row for each missing week between the first and last game', () => {
+    const out = withByes([1, 2, 3, 4, 6, 7].map((week) => ({ week })))
+    expect(out.map((g) => ('bye' in g ? `bye ${g.week}` : g.week))).toEqual([1, 2, 3, 4, 'bye 5', 6, 7])
+    expect(withByes([])).toEqual([])
   })
 })

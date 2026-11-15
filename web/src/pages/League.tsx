@@ -22,7 +22,7 @@ function Strip({ file }: { file: LeagueFile }) {
   if (afc) tiles.push(<Tile key="afc" label="AFC favorite for the 1 seed" value={afc.team} sub={`${fmtProb(afc.p)} to get it`} tab="odds" />)
   if (nfc) tiles.push(<Tile key="nfc" label="NFC favorite for the 1 seed" value={nfc.team} sub={`${fmtProb(nfc.p)} to get it`} tab="odds" />)
   if (race) tiles.push(<Tile key="race" label="Closest division race" value={race.division} sub={`${race.leader.team} ${fmtProb(race.leader.p)}, ${race.runnerUp.team} ${fmtProb(race.runnerUp.p)}`} tab="standings" />)
-  if (game) tiles.push(<Tile key="game" label="Biggest game this week" value={`${game.away} @ ${game.home}`} sub={`Week ${game.week}, by how far it moves playoff odds`} tab="games" />)
+  if (game) tiles.push(<Tile key="game" label="Biggest game this week" value={`${game.away} @ ${game.home}`} sub={`Week ${game.week}, by how far it moves both teams' playoff odds, added`} tab="games" />)
   return tiles.length ? <SummaryStrip label="League summary">{tiles}</SummaryStrip> : null
 }
 
