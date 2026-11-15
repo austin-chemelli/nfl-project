@@ -46,6 +46,10 @@ def test_an_event_belongs_to_the_window_it_falls_in_and_no_other():
     ev = me.game_events(GAME, POINTS, qb, inj, set(), None)
     assert [(e["kind"], e["after"]) for e in ev] == [("qb", 0), ("injury", 1)]
     assert all("because" not in e["text"] for e in ev)
+    # the change itself rides along, so the page can fold one report into one row
+    assert {k: ev[1][k] for k in ("player", "pos", "status", "was")} == {
+        "player": "Lamar Jackson", "pos": "QB", "status": "Out", "was": "Questionable"
+    }  # fmt: skip
 
 
 def test_other_teams_other_weeks_and_after_kickoff_are_left_out():

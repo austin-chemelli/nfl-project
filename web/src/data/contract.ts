@@ -144,6 +144,8 @@ export const MarketEvent = z.looseObject({
   text: z.string(),
   source_url: nstr.default(null),
   after: num, // index of the last line point before it: the event sits in the move from `after` to `after + 1`
+  // injury events: the change itself, so one report's changes fold into one row (older files lack them)
+  player: nstr.optional(), pos: nstr.optional(), status: nstr.optional(), was: nstr.optional(),
 })
 // Each sportsbook's line at the latest snapshot before kickoff, and where they disagree (ADR 0024, M20.13).
 export const BookLine = z.looseObject({
