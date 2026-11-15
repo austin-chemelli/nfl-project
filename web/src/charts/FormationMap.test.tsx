@@ -68,7 +68,7 @@ describe('Injuries tab lead', () => {
     const early = Game.parse({ ...base, injuries: [], lineups: { home: { ...LINEUPS.home, reported: false }, away: null }, key_players: null })
     render(<Injuries g={early} />)
     expect(screen.getByText(/no report, not a healthy team/)).toBeInTheDocument()
-    expect(screen.getAllByText('No official report in our data yet.').length).toBe(2)
+    expect(screen.getAllByText('No game statuses on the official report yet (practice-only reports aren’t listed here).').length).toBe(2)
   })
 
   it('shows key players without the map text on a finished game', () => {
