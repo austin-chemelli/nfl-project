@@ -22,6 +22,22 @@ describe('team page', () => {
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
   })
 
+  it('shows similar seasons for the team, without the picker or the flag cards the Overview has', async () => {
+    renderRoute('/team/DET?tab=similar')
+    const panel = await screen.findByRole('tabpanel')
+    expect(await within(panel).findByRole('heading', { name: /^How the \d+ nearest team-seasons finished$/ })).toBeInTheDocument()
+    expect(within(panel).getByRole('list', { name: 'Seasons most like Detroit Lions' })).toBeInTheDocument()
+    expect(within(panel).queryByRole('combobox', { name: 'Team' })).toBeNull()
+    expect(within(panel).queryByRole('heading', { name: 'What history says about this team' })).toBeNull()
+    expect(within(panel).getByRole('link', { name: 'League, Similar seasons' })).toHaveAttribute('href', '/league?tab=similar&team=DET')
+  })
+
+  it('has no Similar seasons tab for a team without an entry', async () => {
+    renderRoute('/team/CAR')
+    expect(await screen.findByRole('tab', { name: 'Overview' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Similar seasons' })).toBeNull()
+  })
+
   it('accepts a lower-case code and an old franchise code', async () => {
     renderRoute('/team/car')
     expect(await screen.findByRole('heading', { name: /Carolina Panthers/ })).toBeInTheDocument()

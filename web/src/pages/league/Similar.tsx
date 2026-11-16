@@ -57,8 +57,6 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
     )
   }
 
-  const rows = entry ? similarRows(entry, sim.measures) : []
-  const years = entry ? poolYears(entry.pool) : null
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <div className="flex flex-col gap-4">
@@ -83,7 +81,30 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
           </select>
         </label>
       </div>
+      <SimilarView team={team} sim={sim} active={active} onActive={setActive} />
+    </div>
+  )
+}
 
+/**
+ * One team's similar seasons: the finish grid, the flag cards (unless the page shows them elsewhere),
+ * the overlap chart, the nearest list and the fine print. Shared by the League tab and the team page.
+ */
+export function SimilarView({ team, sim, active, onActive, flags = true }: {
+  team: string
+  sim: SimilarFile
+  active: number | null
+  onActive: (i: number | null) => void
+  /** The team page shows the flag cards on its Overview already. */
+  flags?: boolean
+}) {
+  const entry: SimilarTeam | null = Object.hasOwn(sim.teams, team) ? sim.teams[team] : null
+  const name = teamInfo(team).name || team
+  const setActive = onActive
+  const rows = entry ? similarRows(entry, sim.measures) : []
+  const years = entry ? poolYears(entry.pool) : null
+  return (
+    <div className="flex min-w-0 flex-col gap-6">
       {!entry && (
         <p role="status" className="m-0 rounded-lg border border-line bg-surface-1 p-3 text-ink-2">
           {name} has nothing to show yet: it has played fewer than four games, or one of the measures the comparison needs is missing.
@@ -93,20 +114,22 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
       {entry && (
         <>
           <Section
-            title={`How the ${entry.nearest.length} nearest seasons finished`}
+            title={`How the ${entry.nearest.length} nearest team-seasons finished`}
             lede={
               <>
                 {entry.made_playoffs} of {entry.k_summary} made the playoffs and {entry.rounds.conf} reached the conference championship game or beyond.{' '}
-                <Help text="Each square is one season, furthest round first." />
+                <Help text="Each square is one team-season, furthest round first." />
               </>
             }
           >
             <FinishGrid nearest={entry.nearest} active={active} onActive={setActive} />
           </Section>
 
-          <Section title="What history says about this team" lede={<HistoryLede />}>
-            <FlagCards flags={entry.flags} gamesPlayed={entry.games_played} record={entry.record} peers={entry.peers} />
-          </Section>
+          {flags && (
+            <Section title="What history says about this team" lede={<HistoryLede />}>
+              <FlagCards flags={entry.flags} gamesPlayed={entry.games_played} record={entry.record} peers={entry.peers} />
+            </Section>
+          )}
 
           <Section
             title="Where they overlap"
@@ -116,7 +139,7 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
             <OverlapKey code={team} name={name} active={active} near={entry.nearest} />
           </Section>
 
-          <Section title={`The ${rows.length} nearest`}>
+          <Section title={`The ${rows.length} nearest team-seasons`}>
             <div>
               <div aria-hidden className={`hidden gap-x-3 border-b border-line px-2 pb-1 text-[12px] uppercase tracking-wide text-ink-3 md:grid ${COLS}`}>
                 <span>Season</span>
@@ -166,7 +189,7 @@ function Body({ file, sim }: { file: LeagueFile; sim: SimilarFile }) {
         <p>
           Every team-season from {years ?? '2002 to 2025'} is compared with {entry ? name : 'the team'} at the same number of games played, not the same week, so a bye doesn't throw it off. Only seasons that played this many games count, so late in a season the pool is
           smaller. Ranks on the cards are this season's; the chart's percentiles are across all those seasons. Seasons before 2021 had 16 games and later ones have 17, so records like 12-4 and 12-5 sit side by side. The seven measures are: win percentage so far (counted double), points margin per game, a win percentage implied by points scored and allowed,
-          offensive efficiency and defensive efficiency adjusted for opponents, the quarterback's efficiency, and strength of schedule. The closest ten are listed and the closest {entry?.k_summary ?? 25} are counted.
+          offensive efficiency and defensive efficiency adjusted for opponents, the quarterback's efficiency, and strength of schedule. The closest ten are listed and the closest {entry?.k_summary ?? 25} are counted. These are team-seasons, not seasons: several teams from one year can be among them.
         </p>
         <p>
           The cards come from a fixed list of measures, tested on 2002 to 2025 at 6, 8, 10 and 12 games, and show only from 6 to 12 games. A quarter means about a quarter of that season's teams. Each card compares teams on exactly the same record, so it says what

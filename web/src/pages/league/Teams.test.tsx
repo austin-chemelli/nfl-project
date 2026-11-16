@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ScatterProps } from '../../charts/Scatter'
 import { renderRoute } from '../../test/render'
-import fixture from '../../test/fixtures/site/teams.json'
 
 const last: { props: ScatterProps | null } = { props: null }
 vi.mock('../../charts/Scatter', () => ({
@@ -84,7 +83,8 @@ describe('Teams tab', () => {
     await open('/league')
     const tip = within(renderTip().container)
     expect(tip.getByText('Kansas City Chiefs')).toBeInTheDocument()
-    expect(tip.getByText('AFC West · 5–2')).toBeInTheDocument()
+    // the record is the standings' (league.json: 6-1), not teams.json's last feature build (5-2)
+    expect(tip.getByText('AFC West · 6–1')).toBeInTheDocument()
     expect(tip.getByText(/Offense EPA · 5th of 32/)).toBeInTheDocument()
     expect(tip.getByText('Through Week 8 · tap for games')).toBeInTheDocument()
   })
@@ -136,11 +136,12 @@ describe('Teams tab', () => {
     expect(screen.getByRole('region', { name: 'Kansas City Chiefs games' })).not.toHaveFocus()
   })
 
-  it('says how far each team has played, not the league week', async () => {
+  it('takes the record from the standings and lists the bye', async () => {
     await open('/league?team=PIT')
     const panel = screen.getByRole('region', { name: 'Pittsburgh Steelers games' })
-    const through = fixture.teams.PIT.through_week
-    expect(within(panel).getByText(new RegExp(`through Week ${through}`))).toBeInTheDocument()
+    // teams.json says 6-2 (its last feature build); the standings say 5-2
+    expect(within(panel).getByText(/AFC North · 5–2/)).toBeInTheDocument()
+    expect(within(panel).getByText('Bye')).toBeInTheDocument()
   })
 
   it('keeps the other axis out of each list, so a measure cannot sit on both', async () => {

@@ -2,7 +2,7 @@ import { useId, type Ref } from 'react'
 import { Link } from 'react-router'
 import type { TeamRow } from '../../data/contract'
 import { teamInfo } from '../../lib/teams'
-import { recordText, resultText } from './helpers'
+import { recordText, resultText, withByes } from './helpers'
 
 /** The selected team: record, every game linking to its page, the next one marked, the scheme profile. */
 export function Panel({ code, team, onClose, ref, compare, compareRef }: {
@@ -23,7 +23,6 @@ export function Panel({ code, team, onClose, ref, compare, compareRef }: {
           <h3 className="text-[15px] font-medium text-ink">{teamInfo(code).name}</h3>
           <p className="text-ink-2">
             {team.division} · {recordText(team)}
-            {team.through_week != null && ` · through Week ${team.through_week}`}
           </p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close team panel" className="shrink-0 rounded px-2 py-1 text-ink-2 hover:text-ink">
@@ -52,7 +51,8 @@ export function Panel({ code, team, onClose, ref, compare, compareRef }: {
         </div>
       )}
       <ul className="mt-2 grid gap-x-4 sm:grid-cols-2">
-        {team.games.map((g) => {
+        {withByes(team.games).map((g) => {
+          if ('bye' in g) return <li key={`bye-${g.week}`} className="flex items-baseline gap-2 border-b border-line py-1.5 text-ink-3"><span className="tabular w-12 shrink-0 whitespace-nowrap">Wk {g.week}</span> Bye</li>
           const res = resultText(g.pf, g.pa)
           const next = g.id === team.next_game_id
           return (

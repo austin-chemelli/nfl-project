@@ -1,6 +1,6 @@
 /* oxlint-disable react/only-export-components -- route table; HMR on this file is not needed */
 import { lazy, Suspense, type ComponentType } from 'react'
-import type { RouteObject } from 'react-router'
+import { Navigate, type RouteObject } from 'react-router'
 import { Loading } from '../components/ui'
 import { isHidden } from '../lib/hiddenPages'
 import { Layout } from './Layout'
@@ -37,6 +37,9 @@ export const routes: RouteObject[] = [
       { path: 'build', element: hidable('/build', () => import('../pages/Build')) },
       { path: 'season/:year', element: page(() => import('../pages/Season')) },
       { path: 'method', element: page(() => import('../pages/Method')) },
+      // the nav's labels as URLs, which visitors type (both personas, 2026-11-15 walk)
+      { path: 'teams', element: <Navigate to="/team" replace /> },
+      { path: 'history', element: <Navigate to="/hypotheses" replace /> },
       { path: '*', element: page(() => import('../pages/NotFound')) },
     ],
   },

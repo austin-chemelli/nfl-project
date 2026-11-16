@@ -102,7 +102,7 @@ function Games({ meta, games, week, league }: { meta: Meta; games: GameRow[]; we
     <>
       <Section
         title={`Week ${week}`}
-        help="Each card is one game: the dots are the four approaches and their average, the gray line is the betting market."
+        help="Each card is one game: the dots are the five approaches and their average, the gray line is the betting market."
         aside={
           <div className="flex flex-wrap items-center gap-3">
             <Segmented label="Sort games" value={options.some((o) => o.value === sort) ? sort : 'kickoff'} options={options} onChange={setSort} />
@@ -163,7 +163,7 @@ function Legend() {
       Shaded cell with ▲/▼ (table view): the approach is {Math.round(DIVERGE * 100)}+ points more on the home (▲) or away (▼) side than the market. ✓/✗: right or
       wrong about the winner. <b>Preview</b> = scored now, not a lock; <b>locked</b> = recorded before kickoff; <b>not locked</b> = no lock was
       recorded, scored as of an hour before kickoff; <b>backfill</b> = finished game scored after the fact by frozen models; – = not scored yet.
-      A card's sentence names the approach furthest from the market, or how the four split, or how they did once the game is final; an upset is a winner the market
+      A card's sentence names the approach furthest from the market, or how the five split, or how they did once the game is final; an upset is a winner the market
       gave under 45%.
     </p>
   )
