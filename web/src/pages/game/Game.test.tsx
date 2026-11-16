@@ -26,7 +26,7 @@ describe('Game page', () => {
     expect(screen.getByText('CAR offense vs GB defense')).toBeInTheDocument()
     expect(screen.getByText(/When CAR has the ball/)).toBeInTheDocument()
     // narrative, on the news tab
-    await userEvent.click(screen.getByRole('tab', { name: 'Injuries & news' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'News' }))
     expect(screen.getByText(/What people are saying about the matchup/)).toBeInTheDocument()
     expect(screen.getByText(/Carolina's run defense is among the league's worst/)).toBeInTheDocument()
     expect(screen.getByText(/claude-code\/sonnet-5.5/)).toBeInTheDocument()
@@ -105,7 +105,8 @@ describe('Game page', () => {
     for (const [name, tab] of [
       ["Each approach's reading →", 'Approaches'],
       ['Unit ranks and habits →', 'Matchups'],
-      ['Full report and sources →', 'Injuries & news'],
+      ['Health →', 'Health'],
+      ['News and sources →', 'News'],
       ['Movement and every book →', /^The line/],
       ['Every stat →', 'Details'],
     ] as const) {
@@ -142,7 +143,7 @@ describe('Game page', () => {
     expect(await screen.findByText(/CAR Bryce Young · GB /)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: "Each approach's reading →" }))
     expect(screen.getByRole('tab', { name: 'Approaches' })).toHaveAttribute('aria-selected', 'true')
-    await userEvent.click(screen.getByRole('tab', { name: 'Injuries & news' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'News' }))
     expect(screen.getByText(/This week's coverage, as of \w{3}, \w{3} \d+\. It never feeds the probabilities\./)).toBeInTheDocument()
     expect(screen.getByText(/Written by a language model \(claude-code\/sonnet-5.5, /)).toBeInTheDocument()
   })
@@ -251,7 +252,7 @@ describe('Game page', () => {
 
     it('switches tabs from a summary tile', async () => {
       renderRoute('/game/2026_08_CAR_GB?tab=news', root)
-      await screen.findByRole('tab', { name: 'Injuries & news' })
+      await screen.findByRole('tab', { name: 'News' })
       await userEvent.click(within(screen.getByRole('group', { name: 'Game summary' })).getByText('Played like'))
       expect(screen.getByRole('tab', { name: 'What happened' })).toHaveAttribute('aria-selected', 'true')
     })

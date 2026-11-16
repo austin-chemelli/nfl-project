@@ -1801,7 +1801,17 @@ def _game_health(health: dict, g: dict) -> dict | None:
             if h and h["week"] == g["week"]
             else None
         )
-    return out if any(out.values()) else None
+    if not any(out.values()):
+        return None
+    # the Health tab's board: each offense's rooms against the defense's (Austin 2026-11-15)
+    if out["home"] and out["away"]:
+        from nfl.players import mismatch
+
+        out["board"] = _safe(
+            mismatch.board, None, g["home_team"], g["away_team"],
+            health.get(g["home_team"]), health.get(g["away_team"]),
+        )  # fmt: skip
+    return out
 
 
 def lineup_conflicts(detail: dict) -> list[str]:

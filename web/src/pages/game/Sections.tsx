@@ -4,6 +4,8 @@ import { DivergingBars, Dumbbell, FaceOff, HabitList, HabitRule, MatchupBand, Pr
 import { DepthField, DepthFieldKey, FacingField } from '../../charts/DepthField'
 import { FormationKey, FormationMap } from '../../charts/FormationMap'
 import { outLine } from '../../lib/health'
+import { HealthBoardView } from './HealthBoard'
+import { InjuryReport } from './InjuryReport'
 import { Help } from '../../components/Help'
 import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } from '../../components/ui'
 import type { Game, KeyPlayer, Meta } from '../../data/contract'
@@ -11,7 +13,7 @@ import { fmtUnit, pct, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from '../.
 import { approachOf, groupOf } from '../../lib/meta'
 import { isReference, SHORT } from '../../lib/models'
 import {
-  byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, injuryRank, lineMoveChip, marketSource, previewRows, sortInjuries, tape, tendencyBlocks,
+  byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, lineMoveChip, marketSource, previewRows, tape, tendencyBlocks,
 } from './helpers'
 
 // ----------------------------------------------------------------------- approaches vs market
@@ -399,6 +401,8 @@ export function MatchupsSection({ g }: { g: Game; meta: Meta }) {
 
 // -------------------------------------------------------------------------------- injuries
 
+/** The Health tab (Austin 2026-11-15): the share of full strength, the room-against-room board, the
+ * lineups on a field, then the official report. Named `Injuries` for the tests and links that know it. */
 export function Injuries({ g }: { g: Game }) {
   const sides = [['away', g.away], ['home', g.home]] as const
   const hasMap = Boolean(g.lineups?.home || g.lineups?.away)
@@ -409,17 +413,14 @@ export function Injuries({ g }: { g: Game }) {
   const facing = Boolean(full('home') && full('away'))
   const fside = (side: 'home' | 'away') => ({ team: g[side], starters: full(side)!.starters, color: `var(--team-${side})` })
   const hasKeys = sides.some(([side]) => (g.key_players?.[side].length ?? 0) > 0)
-  if (g.injuries.length === 0 && !hasMap && !hasField && !hasKeys) return <Section title="Injuries"><p className="text-ink-2">No official report in our data yet.</p></Section>
+  const board = g.health?.board
+  const colorOf = (team: string) => (team === g.home ? 'var(--team-home)' : team === g.away ? 'var(--team-away)' : 'var(--text-secondary)')
+  if (g.injuries.length === 0 && !hasMap && !hasField && !hasKeys) return <Section title="Health"><p className="text-ink-2">No official report in our data yet.</p></Section>
   return (
-    <Section title="Injuries">
-      {hasField ? (
-        <>
-          <p className="mb-1 text-ink-2">
-            {facing
-              ? 'Each offense against the other defense, at full strength: the best starter each depth chart has had at each spot this season, with who is out (on IR or this week\u2019s report) and who steps in. The percentage is how much of the unit is available.'
-              : 'Each team\u2019s full-strength lineup: the best starter its depth chart has had at each spot this season, with who is out (on IR or this week\u2019s report) and who steps in.'}
-          </p>
-          <p className="mb-3 text-[15px] font-medium text-ink" data-testid="health-header">
+    <>
+      <Section title="Health" help="How much of each team is available this week, and where that changes a matchup: each room's league rank at full strength and now, then both lineups and the official report.">
+        {hasField && (
+          <p className="mb-4 mt-0 text-[15px] font-medium text-ink" data-testid="health-header">
             {sides.filter(([side]) => g.health?.[side]?.health != null).map(([side, team], i) => {
               const h = g.health![side]!
               return (
@@ -427,62 +428,61 @@ export function Injuries({ g }: { g: Game }) {
               )
             })}
           </p>
-        </>
-      ) : hasMap && (
-        <p className="mb-3 text-ink-2">
-          Each team's starters from its latest depth chart, sized by what each is worth in points on the spread (losing a player worth 1.0 moves a fair line about a point toward the opponent); the empty part of a ring is the value at risk from this week's report.
-        </p>
-      )}
-      {facing && (
-        <div className="mb-6 grid gap-6">
-          <FacingField offense={fside('away')} defense={fside('home')} week={g.week} testId="facing-away" />
-          <FacingField offense={fside('home')} defense={fside('away')} week={g.week} testId="facing-home" />
-        </div>
-      )}
-      <div className={`grid gap-6 ${hasField && !facing ? '' : 'md:grid-cols-2'}`}>
-        {sides.map(([side, team]) => {
-          const rows = sortInjuries(g.injuries.filter((i) => i.team === team))
-          const lineup = g.lineups?.[side]
-          const key = g.key_players?.[side] ?? []
-          return (
-            <div key={team} className="min-w-0">
-              <h3 className="mb-1 text-[15px] font-semibold">{team}</h3>
-              {facing ? null : full(side) ? (
-                <DepthField starters={full(side)!.starters} week={g.week} color={`var(--team-${side})`} testId={`depth-field-${side}`} />
-              ) : lineup && <FormationMap lineup={lineup} side={side} />}
-              {(full(side) ?? lineup) && !(full(side) ?? lineup)!.reported && (
-                <p className="mt-2 text-[13px] text-ink-2">{full(side) ? 'No game statuses on this week\u2019s report yet: only reserve lists count, and a starter hurt in practice shows amber.' : 'No game statuses on this week\u2019s report yet, so every ring is drawn full: that means no report, not a healthy team.'}</p>
-              )}
-              {key.length > 0 && <KeyPlayers players={key} />}
-              {rows.length === 0 ? (
-                <p className="mt-3 text-ink-2">{g.injuries.length === 0 ? 'No game statuses on the official report yet (practice-only reports aren\u2019t listed here).' : 'None listed with a game status.'}</p>
-              ) : (
-                <TableScroll>
-                  <table className="mt-3 w-full border-collapse text-[14px]">
-                    <thead>
-                      <tr><th className={th}>Player</th><th className={th}>Pos</th><th className={th}>Status</th><th className={th}>Injury</th><th className={th}>Practice</th></tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((i) => (
-                        <tr key={`${i.player}-${i.status}`}>
-                          <td className={td}>{i.player}</td>
-                          <td className={td}>{i.pos ?? '–'}</td>
-                          <td className={`${td} ${injuryRank(i.status) <= 1 ? 'font-semibold' : ''}`}>{i.status}</td>
-                          <td className={td}>{i.injury ?? '–'}</td>
-                          <td className={td}>{i.practice ?? '–'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </TableScroll>
-              )}
-            </div>
-          )
-        })}
-      </div>
-      {hasField && <div className="mt-4"><DepthFieldKey color="var(--text-muted)" /></div>}
-      {sides.some(([side]) => !full(side) && g.lineups?.[side]) && <div className="mt-4"><FormationKey /></div>}
-    </Section>
+        )}
+        {board && <HealthBoardView board={board} colorOf={colorOf} />}
+      </Section>
+      <Section title="The lineups">
+        {hasField ? (
+          <p className="mb-3 mt-0 text-ink-2">
+            {facing
+              ? 'Each offense against the other defense, at full strength: the best starter each depth chart has had at each spot this season, with who is out (on IR or this week\u2019s report) and who steps in. The percentage is how much of the unit is available.'
+              : 'Each team\u2019s full-strength lineup: the best starter its depth chart has had at each spot this season, with who is out (on IR or this week\u2019s report) and who steps in.'}
+          </p>
+        ) : hasMap && (
+          <p className="mb-3 mt-0 text-ink-2">
+            Each team's starters from its latest depth chart, sized by what each is worth in points on the spread (losing a player worth 1.0 moves a fair line about a point toward the opponent); the empty part of a ring is the value at risk from this week's report.
+          </p>
+        )}
+        {facing && (
+          <div className="mb-4 grid gap-6">
+            <FacingField offense={fside('away')} defense={fside('home')} week={g.week} testId="facing-away" />
+            <FacingField offense={fside('home')} defense={fside('away')} week={g.week} testId="facing-home" />
+          </div>
+        )}
+        {!facing && (
+          <div className={`grid gap-6 ${hasField ? '' : 'md:grid-cols-2'}`}>
+            {sides.map(([side, team]) => {
+              const lineup = g.lineups?.[side]
+              if (!full(side) && !lineup) return null
+              return (
+                <div key={team} className="min-w-0">
+                  <h3 className="mb-1 text-[15px] font-semibold">{team}</h3>
+                  {full(side) ? (
+                    <DepthField starters={full(side)!.starters} week={g.week} color={`var(--team-${side})`} testId={`depth-field-${side}`} />
+                  ) : lineup && <FormationMap lineup={lineup} side={side} />}
+                </div>
+              )
+            })}
+          </div>
+        )}
+        {sides.some(([side]) => (full(side) ?? g.lineups?.[side]) && !(full(side) ?? g.lineups?.[side])!.reported) && (
+          <p className="mt-2 text-[13px] text-ink-2">{hasField ? 'No game statuses on this week\u2019s report yet: only reserve lists count, and a starter hurt in practice shows amber.' : 'No game statuses on this week\u2019s report yet, so every ring is drawn full: that means no report, not a healthy team.'}</p>
+        )}
+        {hasField && <div className="mt-4"><DepthFieldKey color="var(--text-muted)" /></div>}
+        {sides.some(([side]) => !full(side) && g.lineups?.[side]) && <div className="mt-4"><FormationKey /></div>}
+      </Section>
+      <Section title="Injury report" help="The official report's game statuses for this week (Out, Doubtful, Questionable), with each player's injury and last practice. Key players are the full-strength starters in the top 30% at their position, or paid or drafted like it.">
+        <InjuryReport g={g} />
+        {hasKeys && (
+          <div className="mt-4 grid gap-6 md:grid-cols-2">
+            {sides.map(([side, team]) => {
+              const key = g.key_players?.[side] ?? []
+              return key.length > 0 ? <div key={team} className="min-w-0"><h4 className="m-0 text-[14px] font-semibold">{team}</h4><KeyPlayers players={key} /></div> : null
+            })}
+          </div>
+        )}
+      </Section>
+    </>
   )
 }
 

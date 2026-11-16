@@ -117,8 +117,8 @@ export function NewsSection({ g }: { g: Game }) {
   return (
     <Section
       title="Key news"
-      help="The biggest absences from the official injury report, and the notes from this week's research that matter most for each team (▲ helps, ▼ hurts). The full report, with every source, is on the Injuries & news tab."
-      aside={<More tab="news">Full report and sources</More>}
+      help="The biggest absences from the official injury report, and the notes from this week's research that matter most for each team (▲ helps, ▼ hurts). The full report is on the Health tab; the week's research, with every source, on the News tab."
+      aside={<span className="flex gap-3"><More tab="health">Health</More><More tab="news">News and sources</More></span>}
     >
       <div data-testid="teaser-news" className="flex flex-col gap-3">
         {n?.consensus_narrative && <p className="m-0 max-w-3xl text-[14px]">{firstSentences(n.consensus_narrative, 2)}</p>}

@@ -15,7 +15,7 @@ import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { homeFieldPp, injuryRank, neutralDiscount, sortInjuries } from './helpers'
 import { etStamp, fmtPts } from './line'
 
-export type TabId = 'retro' | 'preview' | 'approaches' | 'tendencies' | 'details' | 'news'
+export type TabId = 'retro' | 'preview' | 'approaches' | 'tendencies' | 'details' | 'health' | 'news'
 
 export type TileSpec = {
   id: string
@@ -80,7 +80,7 @@ function approachesRight(g: Game): { right: string[]; n: number } {
 function pregameTiles(g: Game, meta: Meta): TileSpec[] {
   const tiles: TileSpec[] = [pickTile(g), marketTile(g, meta.generated_at), factorTile(g, meta)]
   const absence = absenceTile(g)
-  tiles.push(absence ?? edgeTile(g, meta) ?? { id: 'absence', label: 'Key absence', value: 'None listed', sub: g.injuries.length ? 'no one out or doubtful' : 'no official report yet', tab: 'news' })
+  tiles.push(absence ?? edgeTile(g, meta) ?? { id: 'absence', label: 'Key absence', value: 'None listed', sub: g.injuries.length ? 'no one out or doubtful' : 'no official report yet', tab: 'health' })
   const score = scoreTile(g)
   if (score) tiles.push(score)
   return tiles
@@ -164,7 +164,7 @@ function absenceTile(g: Game): TileSpec | null {
   const a = topAbsence(g.injuries)
   if (!a) return null
   const i = a.top
-  return { id: 'absence', label: 'Key absence', value: i.player, sub: `${i.team}${i.pos ? ` ${i.pos}` : ''}, ${i.status.toLowerCase()}${a.count > 1 ? ` · +${a.count - 1} more` : ''}`, tab: 'news', team: i.team }
+  return { id: 'absence', label: 'Key absence', value: i.player, sub: `${i.team}${i.pos ? ` ${i.pos}` : ''}, ${i.status.toLowerCase()}${a.count > 1 ? ` · +${a.count - 1} more` : ''}`, tab: 'health', team: i.team }
 }
 
 type EdgeMap = Record<string, { favors: string | null; strength_pct: number | null }>

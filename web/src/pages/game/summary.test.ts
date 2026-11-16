@@ -73,7 +73,7 @@ describe('summaryTiles', () => {
       { week: 8, team: 'CAR', player: 'Q Starter', pos: 'QB', status: 'Out', practice: null, injury: null },
     ] }
     const abs = summaryTiles(g, meta, null).find((x) => x.id === 'absence')
-    expect(abs).toMatchObject({ value: 'Q Starter', sub: 'CAR QB, out · +1 more', tab: 'news' })
+    expect(abs).toMatchObject({ value: 'Q Starter', sub: 'CAR QB, out · +1 more', tab: 'health' })
   })
 
   it('pregame: ranks absences by position and skips long-term lists', () => {
