@@ -1210,7 +1210,11 @@ def build_game(
 
 
 def _with_market(rows: pl.DataFrame, market: pl.DataFrame) -> pl.DataFrame:
-    """Replace any `market_baseline` rows with the game page's market (status = its source)."""
+    """The market each retro grades: the `market_baseline` row scored with the approaches (the line at
+    the lock, or at the backfill's synthetic lock), the same row the tracker and README grade (Austin,
+    2026-11-16). Only a game with no such row falls back to the game page's market (status = its
+    source). Before, every game took the game page's market from the feature store at build time, so
+    a retro built the morning after graded about the lock and one rebuilt after Tuesday the close."""
     if market.is_empty():
         return rows
     mk = market.filter(pl.col("p_home").is_not_null()).select(
@@ -1224,8 +1228,11 @@ def _with_market(rows: pl.DataFrame, market: pl.DataFrame) -> pl.DataFrame:
     )
     if rows.is_empty():
         return mk
-    keep = rows.filter(pl.col("model_id") != "market_baseline").select(mk.columns)
-    return pl.concat([keep, mk], how="vertical_relaxed")
+    have = rows.filter(
+        (pl.col("model_id") == "market_baseline") & pl.col("p_home").is_not_null()
+    ).get_column("game_id")
+    missing = mk.filter(~pl.col("game_id").is_in(have.implode()))
+    return pl.concat([rows.select(mk.columns), missing], how="vertical_relaxed")
 
 
 def build(

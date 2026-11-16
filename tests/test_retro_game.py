@@ -404,7 +404,10 @@ def test_third_down_adjustment_is_point_in_time(tmp_path):
     assert read(paths, "g2")["teams"]["home"]["luck"] == before
 
 
-def test_market_from_market_frame_when_no_prediction_row(tree, monkeypatch):
+def test_market_graded_at_the_lock_and_the_page_market_only_without_one(tree, monkeypatch):
+    """The retro grades the market row scored with the approaches (the tracker's), not the game
+    page's market at build time (Austin, 2026-11-16): week 9 had 12 retros at the lock and 3 at the
+    close depending on when each was built. A game with no such row falls back to the page's."""
     from nfl import site
 
     def fake(paths, games, now):
@@ -414,12 +417,16 @@ def test_market_from_market_frame_when_no_prediction_row(tree, monkeypatch):
         )  # fmt: skip
 
     monkeypatch.setattr(site, "market_rows", fake)
+    preds = tree.marts / "predictions.parquet"
+    pl.read_parquet(preds).filter(
+        ~((pl.col("game_id") == "g2") & (pl.col("model_id") == "market_baseline"))
+    ).write_parquet(preds)
     build_games(tree, 2026)
-    for gid, p, src in (("g1", 0.8, "odds_api"), ("g2", 0.3, "schedules")):
-        m = next(x for x in read(tree, gid)["predictions"] if x["model_id"] == "market_baseline")
-        assert m["p_home"] == p and m["status"] == src and m["kind"] == "reference"
-        assert m["label"] == "Market"
+    g1 = next(x for x in read(tree, "g1")["predictions"] if x["model_id"] == "market_baseline")
+    assert g1["p_home"] == 0.6 and g1["status"] != "odds_api"  # the scored row, not the page's 0.8
     g2 = next(x for x in read(tree, "g2")["predictions"] if x["model_id"] == "market_baseline")
+    assert g2["p_home"] == 0.3 and g2["status"] == "schedules" and g2["kind"] == "reference"
+    assert g2["label"] == "Market"
     assert g2["pick"] == "AWY" and g2["right"] is True  # away won 24-17
 
 
