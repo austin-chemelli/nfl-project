@@ -1,5 +1,5 @@
 import type { ScatterPoint, ScatterTone } from '../../charts/Scatter'
-import type { TeamFeature, TeamRow, TeamsFile } from '../../data/contract'
+import type { LeagueFile, TeamFeature, TeamRow, TeamsFile } from '../../data/contract'
 import { dash, fmtUnit } from '../../lib/format'
 import { teamDotVars } from '../../lib/teamColors'
 import { DEFAULT_PRESET, PRESETS, presetFor, type Quadrants } from './presets'
@@ -104,8 +104,28 @@ export function rankText(t: TeamRow, f: TeamFeature): string | null {
   return r == null ? null : `${ordinal(r)} of ${f.n}`
 }
 
-export function recordText(t: TeamRow): string {
+export function recordText(t: Pick<TeamRow, 'wins' | 'losses' | 'ties'>): string {
   return `${t.wins}–${t.losses}${t.ties ? `–${t.ties}` : ''}`
+}
+
+/**
+ * A teams.json row brought up to the standings. teams.json takes records and scores from the last
+ * feature build, so from Sunday night until the next daily pass it is a game behind; league.json is
+ * rebuilt at every site run. The record and each game's score come from the standings when they load;
+ * the values (and `through_week`, which says how current they are) stay as built.
+ */
+export function withStandings(t: TeamRow, code: string, league: LeagueFile | null | undefined): TeamRow {
+  const st = league?.teams.find((o) => o.team === code)
+  if (!league || !st) return t
+  const score = new Map(league.played.map((p) => [`${p.week}|${p.away}|${p.home}`, p]))
+  const games = t.games.map((g) => {
+    if (g.pf != null && g.pa != null) return g
+    const p = score.get(g.home ? `${g.week}|${g.opp}|${code}` : `${g.week}|${code}|${g.opp}`)
+    if (!p) return g
+    return g.home ? { ...g, pf: p.home_score, pa: p.away_score } : { ...g, pf: p.away_score, pa: p.home_score }
+  })
+  const next = t.next_game_id && games.find((g) => g.id === t.next_game_id)?.pf != null ? (games.find((g) => g.pf == null)?.id ?? null) : t.next_game_id
+  return { ...t, wins: st.w, losses: st.l, ties: st.t, games, next_game_id: next }
 }
 
 export function divisionsOf(file: TeamsFile): string[] {
@@ -146,4 +166,16 @@ export function buildPoints(file: TeamsFile, x: TeamFeature, y: TeamFeature, mod
 export function resultText(pf: number | null, pa: number | null): string | null {
   if (pf == null || pa == null) return null
   return `${pf > pa ? 'W' : pf < pa ? 'L' : 'T'} ${pf}–${pa}`
+}
+
+/** The regular-season list with a row for each bye week (a week with no game between the first and the last listed). */
+export function withByes<G extends { week: number }>(games: G[]): (G | { bye: true; week: number })[] {
+  const weeks = new Set(games.map((g) => g.week))
+  const last = Math.max(0, ...games.map((g) => g.week))
+  const out: (G | { bye: true; week: number })[] = []
+  for (const g of games) {
+    for (let w = (out.length ? out[out.length - 1].week : 0) + 1; w < g.week; w++) if (!weeks.has(w) && w < last) out.push({ bye: true, week: w })
+    out.push(g)
+  }
+  return out
 }

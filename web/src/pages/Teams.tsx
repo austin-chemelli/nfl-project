@@ -1,13 +1,14 @@
 import { Link } from 'react-router'
 import { TeamAccent } from '../components/TeamAccent'
 import { Card, Loaded, Page } from '../components/ui'
-import { isNotFound, useTeams } from '../data/api'
+import { isNotFound, useLeague, useTeams } from '../data/api'
 import { teamInfo } from '../lib/teams'
-import { divisionsOf, recordText } from './league/helpers'
+import { divisionsOf, recordText, withStandings } from './league/helpers'
 
 /** Where the nav's Teams item lands: all 32, by division. */
 export default function TeamsPage() {
   const q = useTeams()
+  const league = useLeague()
   return (
     <Page title="Teams">
       {q.isError && isNotFound(q.error) ? <Card className="text-ink-2">The team list appears after the next data update.</Card> : <Loaded q={q} what="teams">
@@ -18,6 +19,7 @@ export default function TeamsPage() {
                 <h2 className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-3">{d}</h2>
                 <ul>
                   {Object.entries(file.teams)
+                    .map(([code, t]) => [code, withStandings(t, code, league.data)] as const)
                     .filter(([, t]) => t.division === d)
                     .sort(([, a], [, b]) => b.wins - a.wins || a.losses - b.losses)
                     .map(([code, t]) => (

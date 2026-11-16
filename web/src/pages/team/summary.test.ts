@@ -47,4 +47,12 @@ describe('team tiles', () => {
     expect(nextGameTile(row)?.tab).toBe('games')
     expect(nextGameTile({ ...row, next_game_id: null })).toBeNull()
   })
+  it('gives the next game its kickoff and the Student\'s chance from the league file', () => {
+    const row = teams.teams.CAR // next: 2026_09_DEN_CAR, at home
+    const lg = { ...league, games: [{ ...(league.games[0] ?? {}), game_id: '2026_09_DEN_CAR', week: 9, home: 'CAR', away: 'DEN', kickoff: '2026-11-08T18:00:00Z', p_student: 0.4 }] } as typeof league
+    const t = nextGameTile(row, lg)!
+    expect(t.value).toBe('vs DEN')
+    expect(t.sub).toBe('Week 9 · Sun, Nov 8, 1:00 PM ET · Student: CAR 40%')
+    expect(nextGameTile(row, { ...lg, games: [] })?.sub).toBe('Week 9')
+  })
 })

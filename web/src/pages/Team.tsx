@@ -7,12 +7,13 @@ import { TeamAccent } from '../components/TeamAccent'
 import { Card, Loaded, Page, PageSkeleton } from '../components/ui'
 import { isNotFound, useLeague, useSimilar, useTeam, useTeams } from '../data/api'
 import { TEAM_CODES, canonicalTeam, isTeam, teamInfo } from '../lib/teams'
-import { recordText } from './league/helpers'
+import { recordText, withStandings } from './league/helpers'
 import { recordOf } from './league/playoffs'
 import NotFoundPage from './NotFound'
 import { Health } from './team/Health'
 import { Games } from './team/Games'
 import { Overview } from './team/Overview'
+import { TeamSimilar } from './team/Similar'
 import { Staff } from './team/Staff'
 import { callerTile, changeTile, healthTile, nextGameTile, playoffTile, type TileText } from './team/summary'
 import { TeamPicker } from './team/TeamPicker'
@@ -43,7 +44,7 @@ function Body({ code }: { code: string }) {
     callerTile(file.data?.units.def.caller, 'def', file.data && callerChange(file.data, 'def')?.start_week),
     changeTile(file.data),
     healthTile(file.data),
-    nextGameTile(row),
+    nextGameTile(row && withStandings(row, code, league.data), league.data),
   ].filter((t): t is TileText => t != null)
 
   const settled = !teams.isPending && !league.isPending && !file.isPending
@@ -87,6 +88,7 @@ function Body({ code }: { code: string }) {
               ...(file.data?.health ? [{ id: 'health', label: 'Health', content: <Health file={file.data} /> }] : []),
               { id: 'tendencies', label: 'Tendencies', content: <Part q={file} what="Tendencies">{(f) => <Tendencies file={f} />}</Part> },
               { id: 'games', label: 'Games', content: <Games code={code} teams={teams.data} league={league.data} file={file.data} /> },
+              ...(similar.data && Object.hasOwn(similar.data.teams, code) ? [{ id: 'similar', label: 'Similar seasons', content: <TeamSimilar code={code} sim={similar.data} /> }] : []),
             ]}
           />
         </>

@@ -1,11 +1,12 @@
 import { Link } from 'react-router'
 import type { LeagueFile, TeamFile, TeamsFile } from '../../data/contract'
-import { resultText } from '../league/helpers'
+import { resultText, withByes, withStandings } from '../league/helpers'
 import { gameNotes, gamesThatMatter } from './games'
 
 /** Games that matter, then every game of the team (M18.6). `league` and `file` are undefined when those files are missing: what needs them drops. */
 export function Games({ code, teams, league, file }: { code: string; teams?: TeamsFile; league?: LeagueFile; file?: TeamFile }) {
-  const team = teams?.teams[code]
+  const row = teams?.teams[code]
+  const team = row ? withStandings(row, code, league) : undefined
   const matter = league ? gamesThatMatter(code, league) : []
   if (!team && matter.length === 0) return <p className="m-0 text-ink-2">The schedule appears after the next data update.</p>
   const notes = gameNotes(team?.games ?? [], file)
@@ -31,7 +32,8 @@ export function Games({ code, teams, league, file }: { code: string; teams?: Tea
       <section aria-label="Every game">
         <h3 className="text-[15px] font-medium text-ink">Every game</h3>
         <ul className="m-0 grid list-none gap-x-4 p-0 sm:grid-cols-2">
-          {team.games.map((g) => {
+          {withByes(team.games).map((g) => {
+            if ('bye' in g) return <li key={`bye-${g.week}`} className="flex items-baseline gap-2 border-b border-line py-1.5 text-ink-3"><span className="tabular w-12 shrink-0 whitespace-nowrap">Wk {g.week}</span> Bye</li>
             const res = resultText(g.pf, g.pa)
             const next = g.id === team.next_game_id
             const note = notes.get(g.id) ?? []

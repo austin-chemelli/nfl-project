@@ -14,7 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "6"  # v6 2026-11-05: wp_series and drives (ADR 0020)
+SCHEMA_VERSION = "7"  # v7 2026-11-16: the market graded at the lock; v6 2026-11-05: wp_series and drives (ADR 0020)
 # v5 2026-11-05: preview Elo on full history, new swing sentence; v4: the recap's bold calls
 # v3 2026-11-04: played-like inputs, the phase scorecard; game-only headlines
 

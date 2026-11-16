@@ -106,10 +106,16 @@ function ByeBox({ s, ctx, col }: { s: Seeded; ctx: Ctx; col: string }) {
   )
 }
 
-function Column({ title, children, right = false }: { title: string; children: ReactNode; right?: boolean }) {
+/** What each team's number means in a column, visible without a hover (the 2026-11-15 walk read "NE 24%" as the playoff chance). */
+const COLUMN_SUB: Record<Round, string> = { div: '% to reach the divisional round', conf: '% to reach the title game', sb: '% to reach the Super Bowl', champ: '% to win it' }
+
+function Column({ title, round, children, right = false }: { title: string; round: Round; children: ReactNode; right?: boolean }) {
   return (
     <div className="flex min-w-0 flex-col">
-      <div className={`mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-3 ${right ? 'text-right' : ''}`}>{title}</div>
+      <div className={`mb-1 ${right ? 'text-right' : ''}`}>
+        <div className="text-[11px] font-medium uppercase tracking-wide text-ink-3">{title}</div>
+        <div className="text-[11px] leading-tight text-ink-3">{COLUMN_SUB[round]}</div>
+      </div>
       <div className="flex flex-1 flex-col justify-around gap-2">{children}</div>
     </div>
   )
@@ -118,14 +124,14 @@ function Column({ title, children, right = false }: { title: string; children: R
 /** The three columns of one conference, in reading order or mirrored. */
 function confColumns(conf: Conf, b: ConfBracket, ctx: Ctx, mirror: boolean): ReactNode[] {
   const cols = [
-    <Column key="wc" title="Wild card" right={mirror}>
+    <Column key="wc" title="Wild card" round="div" right={mirror}>
       {b.bye.map((s) => <ByeBox key={s.team} s={s} ctx={ctx} col={`${conf}|0`} />)}
       {b.wildCard.map((g) => <GameBox key={g.a.team} g={g} round="div" ctx={ctx} col={`${conf}|0`} />)}
     </Column>,
-    <Column key="div" title="Divisional" right={mirror}>
+    <Column key="div" title="Divisional" round="conf" right={mirror}>
       {b.divisional.map((g) => <GameBox key={g.a.team} g={g} round="conf" ctx={ctx} col={`${conf}|1`} />)}
     </Column>,
-    <Column key="conf" title={`${conf} title game`} right={mirror}>
+    <Column key="conf" title={`${conf} title game`} round="sb" right={mirror}>
       <GameBox g={b.conference} round="sb" ctx={ctx} col={`${conf}|2`} />
     </Column>,
   ]
@@ -248,6 +254,7 @@ export function Bracket({ file, odds, was, decided = [], first = 'AFC' }: { file
   const sbBox = (
     <section aria-label="Projected Super Bowl" className="flex flex-col gap-1">
       <div className="text-center text-[11px] font-medium uppercase tracking-wide text-ink-3">Super Bowl</div>
+      <div className="text-center text-[11px] leading-tight text-ink-3">{COLUMN_SUB.champ}</div>
       <div className={`${BOX} divide-y divide-[var(--border)] border-2 border-[var(--accent)]`}>
         {[sb.afc, sb.nfc].map((s) => (
           <div key={s.team} className={s === sb.winner ? 'border-l-[3px] border-l-[var(--accent)]' : 'border-l-[3px] border-l-transparent'}>
@@ -263,6 +270,7 @@ export function Bracket({ file, odds, was, decided = [], first = 'AFC' }: { file
 
   return (
     <div ref={outer} className="min-w-0">
+      <p className="m-0 mb-3 text-[13px] text-ink-2">The number beside each team is its chance to win that game and reach the next round, not its playoff chance.</p>
       <div ref={lines} className="relative">
         <svg aria-hidden className="pointer-events-none absolute inset-0 z-0" width={w} height={h}>
           {paths.map((d, i) => (

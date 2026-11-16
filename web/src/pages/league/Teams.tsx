@@ -6,6 +6,7 @@ import { FinePrint } from '../../components/FinePrint'
 import { Help } from '../../components/Help'
 import { DataTable, Segmented, td, th } from '../../components/ui'
 import type { TeamFeature, TeamsFile } from '../../data/contract'
+import { useLeague } from '../../data/api'
 import { dash } from '../../lib/format'
 import { teamInfo } from '../../lib/teams'
 import {
@@ -18,6 +19,7 @@ import {
   quadrantsFor,
   rankText,
   recordText,
+  withStandings,
   resolveAxes,
   usableFeatures,
   type ColorMode,
@@ -53,6 +55,7 @@ function AxisSelect({ label, value, features, help, onChange }: { label: string;
 
 /** The Teams tab: every team on any two measures (ADR 0019). */
 export function Teams({ file }: { file: TeamsFile }) {
+  const league = useLeague()
   const [params, setParams] = useSearchParams()
   const update = (fn: (p: URLSearchParams) => void) =>
     setParams((prev) => { const n = new URLSearchParams(prev); fn(n); return n }, { replace: true })
@@ -106,7 +109,7 @@ export function Teams({ file }: { file: TeamsFile }) {
     if (!t) return null
     return (
       <>
-        <TipTitle note={`${t.division} · ${recordText(t)}`}>{teamInfo(key).name}</TipTitle>
+        <TipTitle note={`${t.division} · ${recordText(withStandings(t, key, league.data))}`}>{teamInfo(key).name}</TipTitle>
         {[x, y].map((f) => (
           <TipRow key={f.id} value={fmtValue(t.values[f.id], f)} label={[f.short, rankText(t, f)].filter(Boolean).join(' · ')} />
         ))}
@@ -210,7 +213,7 @@ export function Teams({ file }: { file: TeamsFile }) {
           ref={panel}
           compareRef={compareSelect}
           code={team}
-          team={file.teams[team]}
+          team={withStandings(file.teams[team], team, league.data)}
           onClose={() => { update((n) => { n.delete('team'); n.delete('vs') }); picker.current?.focus() }}
           compare={{
             options: rows.filter((c) => c !== team).map((c) => ({ code: c, name: teamInfo(c).name })),

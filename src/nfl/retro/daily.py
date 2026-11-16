@@ -2,7 +2,7 @@
 
 Ingest the current season's pbp and schedules, curate only that season's games and plays (other
 seasons' partitions are never rewritten), build the retros that are missing or stale, then the
-recaps for the weeks they touch and the site files. Builds the expectations first if the file is
+recaps for every week and the site files. Builds the expectations first if the file is
 missing.
 
 Old curated plays: DuckDB binds a `*/*.parquet` glob to the first file's schema, so a bucket
@@ -24,6 +24,7 @@ from nfl.retro.week import write_recap
 from nfl.site import write_retro
 
 PROBE_COLUMN = "third_down_converted"
+MAX_WEEK = 22  # regular season plus playoffs; write_recap skips a week with no retros
 
 
 @dataclass
@@ -70,7 +71,9 @@ def run(paths: Paths, season: int | None = None, fetch: bool = True) -> DailyRes
     if built:
         expectations.write(paths, expectations.build(paths))
     rep = build(paths, season)
-    for wk in sorted(rep.weeks):
+    # Every week's recap, not only the weeks rebuilt: a recap is a cheap summary of its retros,
+    # and a change to how it is computed then reaches every week the next morning.
+    for wk in range(1, MAX_WEEK + 1):
         write_recap(paths, season, wk)
     published = write_retro(paths, season)
     return DailyResult(

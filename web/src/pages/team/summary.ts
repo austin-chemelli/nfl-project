@@ -4,6 +4,7 @@ import { ordinal } from '../league/helpers'
 import { fmtProb } from '../league/playoffs'
 import { biggestChange } from './tendencies'
 import { outLine } from '../../lib/health'
+import { kickoffEt } from '../../lib/format'
 
 export type TileText = { label: string; value: string; sub: string; tab: string }
 
@@ -49,8 +50,14 @@ export function changeTile(file: TeamFile | undefined): TileText | null {
   return { label: 'Biggest change', value: m.label, sub: `${ordinal(m.team_last.rank)} last year, ${ordinal(m.observed.rank)} now`, tab: 'tendencies' }
 }
 
-export function nextGameTile(row: TeamRow | undefined): TileText | null {
+export function nextGameTile(row: TeamRow | undefined, league?: LeagueFile | null): TileText | null {
   const g = row?.games.find((x) => x.id === row.next_game_id)
-  if (!g) return null
-  return { label: 'Next game', value: `${g.home ? 'vs' : '@'} ${g.opp}`, sub: `Week ${g.week}`, tab: 'games' }
+  if (!row || !g) return null
+  // kickoff and the Student's chance from the league file, which lists every game still to play
+  const lg = league?.games.find((x) => x.game_id === g.id)
+  const team = g.home ? lg?.home : lg?.away
+  const p = lg && team && lg.p_student != null ? (g.home ? lg.p_student : 1 - lg.p_student) : null
+  const when = lg?.kickoff ? kickoffEt(lg.kickoff) : null
+  const pick = p == null ? null : `Student: ${team} ${fmtProb(p)}`
+  return { label: 'Next game', value: `${g.home ? 'vs' : '@'} ${g.opp}`, sub: [`Week ${g.week}`, when, pick].filter(Boolean).join(' · '), tab: 'games' }
 }
