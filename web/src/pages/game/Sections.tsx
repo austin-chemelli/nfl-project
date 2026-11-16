@@ -465,7 +465,7 @@ export function Injuries({ g }: { g: Game }) {
             })}
           </div>
         )}
-        {sides.some(([side]) => (full(side) ?? g.lineups?.[side]) && !(full(side) ?? g.lineups?.[side])!.reported) && (
+        {sides.some(([side]) => { const shown = full(side) ?? g.lineups?.[side]; return shown != null && !shown.reported }) && (
           <p className="mt-2 text-[13px] text-ink-2">{hasField ? 'No game statuses on this week\u2019s report yet: only reserve lists count, and a starter hurt in practice shows amber.' : 'No game statuses on this week\u2019s report yet, so every ring is drawn full: that means no report, not a healthy team.'}</p>
         )}
         {hasField && <div className="mt-4"><DepthFieldKey color="var(--text-muted)" /></div>}
