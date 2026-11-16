@@ -161,11 +161,19 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
       ),
     },
     {
-      id: 'news',
-      label: 'Injuries & news',
+      id: 'health',
+      label: 'Health',
       content: (
         <TabBody>
           <Injuries g={g} />
+        </TabBody>
+      ),
+    },
+    {
+      id: 'news',
+      label: 'News',
+      content: (
+        <TabBody>
           <NarrativeSection g={g} />
         </TabBody>
       ),

@@ -234,6 +234,7 @@ export const TeamAvailability = z.looseObject({
 
 // How far from full strength (M24.7): the full-strength starters, what each is expected to miss
 export const HealthStarter = z.looseObject({
+  gsis_id: nstr.optional(),
   slot: z.string(), unit: z.string(), player: z.string(), grp: nstr, value_pts: nnum,
   status: nstr, reserve: z.boolean().default(false), p_play: num, since_week: nnum.default(null),
   eligible_week: nnum.default(null), replaced_by: nstr.default(null), missing_pts: nnum,
@@ -262,7 +263,29 @@ export const TeamHealth = z.looseObject({
   rooms: z.array(RoomGrade).default([]),
 })
 const GameHealthSide = z.looseObject({ health: nnum, missing_pts: num, full_pts: num, ...counts, reported: z.boolean().default(false), starters: z.array(HealthStarter).default([]) })
-export const GameHealth = z.looseObject({ home: GameHealthSide.nullable().default(null), away: GameHealthSide.nullable().default(null) })
+// The Health tab's board (Austin 2026-11-15, nfl/players/mismatch.py): each offense's rooms against the defense's that face them
+const BoardRoom = z.looseObject({
+  team: z.string(), grp: z.string(), name: z.string(), rank: num, label: z.string(), now_rank: num, now_label: z.string(), health: nnum.default(null),
+  missing: z.array(z.looseObject({ player: z.string(), status: nstr, out: z.boolean(), key: z.boolean().default(false) })).default([]), // who isn't expected to play fully
+})
+export const BoardRow = z.looseObject({
+  offense: BoardRoom, defense: BoardRoom,
+  favours: nstr, // the team whose room ranks 6+ places better now; null reads even
+  moved: z.boolean(), // the injuries moved the gap by 8+ ranks
+  flag: z.boolean(), // 12+ ranks apart now, or moved
+  sentence: nstr, // a template line for a flagged pair
+})
+export type BoardRow = z.infer<typeof BoardRow>
+export const HealthBoard = z.looseObject({
+  sides: z.array(z.looseObject({ offense: z.string(), defense: z.string(), rows: z.array(BoardRow) })),
+  lede: nstr, notes: z.array(z.string()).default([]),
+  lede_kind: z.enum(['moved', 'gap']).nullable().default(null), // the lede is the pair injuries moved most, or the widest gap
+})
+export type HealthBoard = z.infer<typeof HealthBoard>
+export const GameHealth = z.looseObject({
+  home: GameHealthSide.nullable().default(null), away: GameHealthSide.nullable().default(null),
+  board: HealthBoard.nullable().optional(), // absent in older files
+})
 export type HealthStarter = z.infer<typeof HealthStarter>
 export type TeamHealth = z.infer<typeof TeamHealth>
 
@@ -343,6 +366,7 @@ export const Injury = z.looseObject({
   status: z.string(),
   practice: nstr,
   injury: nstr,
+  gsis_id: nstr.optional(), // matches a full-strength starter (the Health tab marks key players)
 })
 
 const Url = z.string()
