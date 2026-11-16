@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cardMove, etDay, fmtPts, pathSentence, windowWords } from './line'
+import { cardMove, etDay, fmtPts, foldEvents, pathSentence, windowWords } from './line'
 
 const move = (d: number | null) => ({ first_seen: '2026-10-27T22:46:59Z', latest: '2026-11-03T21:40:31Z', n_points: 10, lock_ts: null, since_first: d == null ? null : { spread_home: d, total: null, p_home: null, hours: 160 }, since_lock: null, last_day: null })
 
@@ -28,5 +28,28 @@ describe('line words', () => {
     expect(fmtPts(48.75)).toBe('48.75')
     expect(windowWords(0.1, 'BAL', 'JAX')).toBe('steady')
     expect(windowWords(-1.5, 'BAL', 'JAX')).toBe('1.5 toward JAX')
+  })
+})
+
+describe('foldEvents', () => {
+  const inj = (team: string, player: string, pos: string, status: string | null, ts = '2026-10-25T15:56:44Z') =>
+    ({ ts, kind: 'injury', team, text: `Injury report: ${player} (${pos}, ${team}) listed ${status}`, source_url: null, player, pos, status, was: null })
+  it('folds one team’s report changes at one time into one row, Out first', () => {
+    const rows = foldEvents([
+      inj('PHI', 'Landon Dickerson', 'G', 'Questionable'), inj('PHI', 'DeVonta Smith', 'WR', 'Out'),
+      inj('PHI', 'Nolan Smith', 'LB', 'Out'), inj('DAL', 'Dee Winters', 'LB', 'Out'),
+      inj('PHI', 'Saquon Barkley', 'RB', null, '2026-10-26T15:00:00Z'),
+    ])
+    expect(rows.map((r) => r.kind)).toEqual(['report', 'report', 'report'])
+    expect(rows[0]).toMatchObject({ team: 'PHI', groups: [{ label: 'Out', players: ['DeVonta Smith (WR)', 'Nolan Smith (LB)'] }, { label: 'Questionable', players: ['Landon Dickerson (G)'] }] })
+    expect(rows[1]).toMatchObject({ team: 'DAL', groups: [{ label: 'Out', players: ['Dee Winters (LB)'] }] })
+    expect(rows[2]).toMatchObject({ groups: [{ label: 'Off the report', players: ['Saquon Barkley (RB)'] }] })
+  })
+  it('reads older files from the text, and leaves other events alone', () => {
+    const old = { ts: 't', kind: 'injury', team: 'PHI', text: 'Injury report: DeVonta Smith (WR, PHI) now Out (was Questionable)', source_url: null }
+    const qb = { ts: 't', kind: 'qb', team: 'PHI', text: 'Depth chart: X listed as PHI’s starting QB', source_url: null }
+    const rows = foldEvents([old, qb])
+    expect(rows[0]).toMatchObject({ kind: 'report', groups: [{ label: 'Out', players: ['DeVonta Smith (WR)'] }] })
+    expect(rows[1]).toMatchObject({ kind: 'one', event: qb })
   })
 })

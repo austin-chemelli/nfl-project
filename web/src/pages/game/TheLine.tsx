@@ -3,7 +3,7 @@ import { Section } from '../../components/ui'
 import type { Game } from '../../data/contract'
 import { HEADLINE, SHORT } from '../../lib/models'
 import { pick, spreadLabel } from '../../lib/format'
-import { etStamp, fmtPts, pathSentence, windowWords } from './line'
+import { etStamp, fmtPts, foldEvents, pathSentence, windowWords } from './line'
 
 const ms = (iso: string) => new Date(iso).getTime()
 
@@ -75,22 +75,36 @@ export function TheLine({ g }: { g: Game }) {
 }
 
 function EventList({ title, events, num }: { title: string; events: Ev[]; num?: (ts: string) => number }) {
+  // one team's injury-report changes at one time are one row (Austin 2026-11-15)
+  const rows = foldEvents(events)
   return (
     <div className="mt-3">
       <h3 className="text-[13px] font-medium text-ink">{title}</h3>
       <ol className="mt-1 flex list-none flex-col gap-1.5 p-0 text-[13px]">
-        {events.map((e, i) => (
-          <li key={`${e.ts}-${i}`} className="flex gap-2">
+        {rows.map((r, i) => (
+          <li key={`${r.ts}-${i}`} className="flex gap-2" data-row={r.kind}>
             {num ? (
-              <span aria-hidden className="tabular inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-[var(--text-muted)] bg-surface-2 text-[9px]">{num(e.ts)}</span>
+              <span aria-hidden className="tabular inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-[var(--text-muted)] bg-surface-2 text-[9px]">{num(r.ts)}</span>
             ) : (
               <span aria-hidden className="mt-1.5 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--text-muted)]" />
             )}
-            <span className="min-w-0 break-words">
-              <span className="text-ink-3">{etStamp(e.ts)} · </span>
-              {e.text}
-              {e.source_url && <> <a href={e.source_url} target="_blank" rel="noopener noreferrer">source</a></>}
-            </span>
+            {r.kind === 'one' ? (
+              <span className="min-w-0 break-words">
+                <span className="text-ink-3">{etStamp(r.ts)} · </span>
+                {r.event.text}
+                {r.event.source_url && <> <a href={r.event.source_url} target="_blank" rel="noopener noreferrer">source</a></>}
+              </span>
+            ) : (
+              <span className="min-w-0 break-words">
+                <span className="text-ink-3">{etStamp(r.ts)} · </span>
+                <span className="font-medium">{r.team} injury report</span>
+                {r.groups.map((grp) => (
+                  <span key={grp.label} className="block">
+                    <span className={grp.label === 'Out' || grp.label === 'Doubtful' ? 'font-semibold' : 'text-ink-2'}>{grp.label}:</span> {grp.players.join(', ')}
+                  </span>
+                ))}
+              </span>
+            )}
           </li>
         ))}
       </ol>

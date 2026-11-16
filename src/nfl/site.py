@@ -872,6 +872,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
         for g in wk.iter_rows(named=True):
             row = _game_row(g, allrows, market, reg)
             row["card"] = _card(g, edges, injuries, now, **card_ctx)
+            row |= _header_qbs(row)
             points = lines.get(g["game_id"], [])
             row["line_move"] = _safe(_line_move, None, points, locks.get(g["game_id"]))
             slate_games.append(row)
@@ -883,6 +884,8 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["key_players"] = claims_by_game.get(g["game_id"])  # ADR 0027: context, M24.4
             detail["lineups"] = lineups.get(g["game_id"])  # ADR 0027: the formation map, M24.5
             detail["health"] = _game_health(health, g)  # M24.7
+            for c in lineup_conflicts(detail):  # the field and the report must agree
+                print(f"site: {g['game_id']}: lineup disagrees with the injury report: {c}")
             detail["today"] = today.get(g["game_id"])
             detail["matchups"] = _safe(game_matchups, None, matchup_ctx, g, conditions)
             detail["paths"] = _safe(game_paths, None, conditions, g)
@@ -1136,6 +1139,14 @@ def _contrast(ranks: dict, g: dict) -> dict | None:
                 best = (key, {"offense": off, "defense": dfn, "off_label": ol, "def_label": dl,
                               "off_rank": ro, "def_rank": rd})  # fmt: skip
     return None if best is None else best[1]
+
+
+def _header_qbs(row: dict) -> dict:
+    """The header's and slate's quarterbacks: the charted QB1 the model uses for a game not yet
+    kicked off, else the schedule's name (site checks 2026-11-15: the schedule named a reserve-list
+    QB on six games)."""
+    charted = (row.get("card") or {}).get("charted_qb") or {}
+    return {f"{s}_qb": charted.get(s) or row.get(f"{s}_qb") for s in ("home", "away")}
 
 
 def _qb_starts(games: pl.DataFrame) -> dict[str, list[tuple[datetime, str]]]:
@@ -1791,6 +1802,49 @@ def _game_health(health: dict, g: dict) -> dict | None:
             else None
         )
     return out if any(out.values()) else None
+
+
+def lineup_conflicts(detail: dict) -> list[str]:
+    """Where a game's lineups (the full-strength field, the men behind each starter, the depth-chart
+    map) show a game status that differs from the game's injury list, matched by player id. A
+    reserve list outranks the report and a practice doubt isn't a game status, so neither counts."""
+    from nfl.players import claims as pc
+    from nfl.players import health as ph
+
+    reserve = {*ph.RESERVE.values(), "Reserve list"}
+    listed = {i["gsis_id"]: i for i in detail.get("injuries") or [] if i.get("gsis_id")}
+    shown: list[tuple[str, dict]] = []
+    for side in ("home", "away"):
+        h = (detail.get("health") or {}).get(side) or {}
+        for s in h.get("starters", []):
+            if not s.get("reserve") and not s.get("doubt"):
+                shown.append((f"{side} {s['slot']}", s))
+            shown += [(f"{side} {s['slot']} depth", d) for d in s.get("depth", [])]
+        lu = (detail.get("lineups") or {}).get(side) or {}
+        shown += [
+            (f"{side} map {x['slot']}", x) for u in ("offense", "defense") for x in lu.get(u, [])
+        ]
+    out = []
+    # the man named to play for a starter who can't must not be ruled out by the same report
+    ruled_out = ("Out", "Doubtful")
+    for where, x in shown:
+        sub = x.get("steps_in_id") or next(
+            (d.get("gsis_id") for d in x.get("depth", []) if d.get("player") == x.get("steps_in")),
+            None,
+        )
+        if sub and (listed.get(sub) or {}).get("status") in ruled_out:
+            out.append(
+                f"{where}: {x.get('steps_in')} named to play, report {listed[sub]['status']!r}"
+            )
+    for where, x in shown:
+        g, st = x.get("gsis_id"), x.get("status")
+        if g is None or st in reserve:
+            continue
+        want = listed[g]["status"] if g in listed else None
+        game_st = st if st in pc.GAME_STATUSES else None
+        if game_st != want:
+            out.append(f"{where}: {x['player']} shown {st!r}, report {want!r}")
+    return out
 
 
 # ---------------------------------------------------------------------------------------- tracker

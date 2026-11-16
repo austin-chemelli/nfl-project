@@ -62,6 +62,14 @@ function edgeLabel(e: Game['edges'][string] | undefined): string {
   return !e.favors || e.strength_pct == null || e.strength_pct < 10 ? 'about even' : `${e.favors}, ${ordinal(edgePct(e.strength_pct))} pct`
 }
 
+/** The fit's home bonus is a constant, and the neutral-site discount sits in Venue & weather. Read apart,
+ * a neutral game shows a full home edge; so wherever home field is a row or a tile, that discount moves
+ * onto it (display only: the model's numbers are unchanged). */
+export const neutralDiscount = (g: Pick<Game, 'neutral_site'>, c: Contribution | undefined) =>
+  g.neutral_site ? (c?.groups.venue_weather?.features['environment.neutral_site'] ?? 0) : 0
+export const homeFieldPp = (g: Pick<Game, 'neutral_site'>, c: Contribution | undefined) =>
+  c?.home_field_pp == null ? null : c.home_field_pp + neutralDiscount(g, c)
+
 /**
  * Home field, then the groups in registry order. `pp` is the Global fit (what history says the edge
  * is worth); `overlay` is the chosen approach on the same row. A group neither side has is no row,
@@ -71,10 +79,8 @@ export function previewRows(g: Game, meta: Meta, approach: string | null): Previ
   const base = g.contributions.global
   const over = approach ? g.contributions[approach] : undefined
   if (!base) return []
-  // The fit's home bonus is a constant, and the neutral-site discount sits in Venue & weather. Read
-  // apart, a neutral game shows a full home edge; so that discount moves onto the home field row.
-  const discount = (c: Contribution | undefined) => (g.neutral_site ? (c?.groups.venue_weather?.features['environment.neutral_site'] ?? 0) : 0)
-  const homeField = (c: Contribution | undefined) => (c?.home_field_pp == null ? null : c.home_field_pp + discount(c))
+  const discount = (c: Contribution | undefined) => neutralDiscount(g, c)
+  const homeField = (c: Contribution | undefined) => homeFieldPp(g, c)
   const rows: PreviewRow[] = [{
     id: 'home_field', name: 'Home field',
     help: g.neutral_site ? 'A neutral site: the usual home edge after the neutral-site discount, as each reading prices it.' : 'The built-in edge the home team gets before anything else is considered.',

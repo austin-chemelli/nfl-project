@@ -32,7 +32,15 @@ describe('summaryTiles', () => {
 
   it('pregame: the factor tile names the Student and says pts of win chance', () => {
     const f = summaryTiles(game, meta, null).find((x) => x.id === 'factor')
-    expect(f?.sub).toMatch(/^\d+\.\d pts toward (GB|CAR), Student$/)
+    expect(f?.sub).toMatch(/^\d+\.\d win-chance pts toward (GB|CAR), Student$/)
+  })
+
+  it('pregame: at a neutral site the home field tile carries the neutral discount, as the Preview chart does', () => {
+    const c = game.contributions.student!
+    const contributions = { ...game.contributions, student: { ...c, home_field_pp: 7.1, groups: { venue_weather: { pp: -4.1, features: { 'environment.neutral_site': -4.1 } } } } }
+    const f = summaryTiles({ ...game, neutral_site: true, contributions }, meta, null).find((x) => x.id === 'factor')
+    expect(f).toMatchObject({ value: 'Home field' })
+    expect(f?.sub).toMatch(/^3\.0 win-chance pts toward \w+ \(7\.1, less 4\.1 for a neutral site\), Student$/)
   })
 
   it('pregame: the biggest edge is never a context-only group', () => {

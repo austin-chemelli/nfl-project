@@ -217,19 +217,7 @@ def absent(g: str, team: str, week: int, roster: dict, injuries: list[dict]) -> 
     return game is not None
 
 
-def chart_depth(depth: pl.DataFrame, team: str, cutoff: datetime) -> dict[tuple, list[tuple]]:
-    """(pos_abb, pos_slot) -> [(gsis_id, player)] in rank order on the latest chart before the
-    cutoff: the depth at each spot."""
-    d = L.with_chart_dt(
-        depth.filter((pl.col("team") == team) & pl.col("gsis_id").is_not_null())
-    ).filter(pl.col("chart_dt") < cutoff)
-    if d.is_empty():
-        return {}
-    d = d.filter(pl.col("chart_dt") == d["chart_dt"].max()).sort("pos_rank")
-    out: dict[tuple, list[tuple]] = {}
-    for r in d.iter_rows(named=True):
-        out.setdefault((r["pos_abb"], r["pos_slot"]), []).append((r["gsis_id"], r["player_name"]))
-    return out
+chart_depth = L.chart_depth  # shared with the depth-chart map
 
 
 def full_strength(
@@ -344,6 +332,11 @@ def _status(
     return {"status": None, "reserve": False, "p_play": 1.0, "since_week": None, "eligible_week": None}  # fmt: skip
 
 
+def ruled_out(st: dict) -> bool:
+    """Not stepping in for anyone: a reserve list, Out, Inactive (p_play 0) or Doubtful."""
+    return st["p_play"] == 0 or st["status"] == "Doubtful"
+
+
 def _no_doubt(st: dict) -> dict:
     return {"doubt": False, **st}
 
@@ -397,15 +390,27 @@ def team_week(
         value = val(s["gsis_id"])
         st = status(s["gsis_id"])
         missing = round(value * (1 - st["p_play"]), 2) if value is not None else None
-        # the chart at this spot after him: who plays if he can't, and the next man up
+        # the chart at this spot after him (a full-strength starter elsewhere isn't depth here)
         chain = [
-            {"player": n, "value_pts": val(g), "status": status(g)["status"]}
+            {"gsis_id": g, "player": n, "value_pts": val(g), "status": (bst := status(g))["status"],
+             "_out": ruled_out(bst)}
             for g, n in behind.get(slot_key[s["slot"]], [])
-            if g not in full_ids  # a full-strength starter elsewhere isn't depth here
-        ][:2]
+            if g not in full_ids
+        ]  # fmt: skip
+        # who plays if he can't: the first man behind him the same report doesn't rule out (Austin
+        # 2026-11-15: DAL showed P.J. Locke, himself Out, for Jalen Thompson)
+        up = next((i for i, d in enumerate(chain) if not d["_out"]), None)
+        steps_in = chain[up]["player"] if up is not None else None if chain else s["replaced_by"]
+        chain = [
+            {k: d[k] for k in ("gsis_id", "player", "value_pts", "status")}
+            for d in chain[
+                : max(2, (up or 0) + 1)
+            ]  # at least the next two, through the one who plays
+        ]
         grp = v["grp"] if v else SLOT_GROUP.get(s["slot"].rstrip("123"))
         starters.append({**s, "grp": grp, "value_pts": value, **st, "missing_pts": missing,
-                         "star": _star(v), "key": _star(v), "depth": chain})  # fmt: skip
+                         "star": _star(v), "key": _star(v), "depth": chain,
+                         "steps_in": steps_in})  # fmt: skip
     order = {k: i for i, k in enumerate((*L.OFFENSE_ORDER, *L.DEFENSE_ORDER))}
     starters.sort(key=lambda s: (s["unit"] != "offense", order.get(s["slot"], 99)))
     starters = weighted(starters)

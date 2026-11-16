@@ -143,8 +143,10 @@ def game_events(
             and i["week"] == game["week"]
             and (i["gsis_id"] in starters or i["pos"] == "QB")
         ):
+            # player fields let the page fold one report's changes into one row (Austin 2026-11-15)
             ev.append({"ts": i["ts"], "kind": "injury", "team": i["team"], "source_url": None,
-                       "text": _status_text(i)})  # fmt: skip
+                       "text": _status_text(i), "player": i["player"], "pos": i["pos"],
+                       "status": i["status"], "was": i["was"]})  # fmt: skip
     for r in finished or []:
         if r["team"] in teams:
             ev.append(

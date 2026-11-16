@@ -1,6 +1,6 @@
 import { TeamLink } from '../../components/TeamLink'
 import { useState } from 'react'
-import { DivergingBars, Dumbbell, FaceOff, HabitList, MatchupBand, ProbStrip } from '../../charts'
+import { DivergingBars, Dumbbell, FaceOff, HabitList, HabitRule, MatchupBand, ProbStrip } from '../../charts'
 import { DepthField, DepthFieldKey, FacingField } from '../../charts/DepthField'
 import { FormationKey, FormationMap } from '../../charts/FormationMap'
 import { outLine } from '../../lib/health'
@@ -170,7 +170,7 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
           )
         })}
       </div>
-      <DataTable summary="All four approaches, side by side">
+      <DataTable summary={`All ${opts.length} approaches, side by side`}>
         <table className="w-full border-collapse text-[14px]">
           <thead>
             <tr>
@@ -372,6 +372,7 @@ export function MatchupsSection({ g }: { g: Game; meta: Meta }) {
     >
       {m.lede && <p className="mb-4 max-w-3xl text-[14px] text-ink">{m.lede}</p>}
       <div className="flex flex-col gap-6">
+        <HabitRule />
         {m.sides.map((side) => (
           <Card key={`${side.offense}-${side.defense}`}>
             <h3 className="m-0 flex items-center gap-2 text-[15px] font-semibold" data-testid="side-title">
@@ -454,7 +455,7 @@ export function Injuries({ g }: { g: Game }) {
               )}
               {key.length > 0 && <KeyPlayers players={key} />}
               {rows.length === 0 ? (
-                <p className="mt-3 text-ink-2">{g.injuries.length === 0 ? 'No official report in our data yet.' : 'None listed.'}</p>
+                <p className="mt-3 text-ink-2">{g.injuries.length === 0 ? 'No game statuses on the official report yet (practice-only reports aren\u2019t listed here).' : 'None listed with a game status.'}</p>
               ) : (
                 <TableScroll>
                   <table className="mt-3 w-full border-collapse text-[14px]">

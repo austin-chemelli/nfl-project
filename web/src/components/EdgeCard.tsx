@@ -17,7 +17,8 @@ const ROLE_PLURAL: Record<EdgeSide['role'], string> = { underdog: 'Underdogs', f
 
 function roleLabel(s: EdgeSide): string {
   if (s.role === 'pick') return "pick'em"
-  return `${s.role} ${s.role === 'underdog' ? '+' : '−'}${s.size}`
+  // the schedule's spread (nflverse), which picks the history bucket; not the books' live line (site checks 2026-11-15)
+  return `${s.role} ${s.role === 'underdog' ? '+' : '−'}${s.size} on the schedule line`
 }
 
 function RankBar({ team, noun, rank, n, color }: { team: string; noun: string; rank: number; n: number; color: string }) {
@@ -117,7 +118,7 @@ export function EdgeCard({ side: s, colorOf, compact = false }: { side: EdgeSide
   return (
     <section data-testid={`edge-card-${s.team}`} data-role={s.role} className="min-w-0">
       <h3 className={`m-0 flex items-baseline gap-2 border-l-[3px] pl-2 font-semibold leading-tight ${compact ? 'text-[13.5px]' : 'text-[15px]'}`} style={{ borderColor: colorOf(s.team) }}>
-        Where {s.team} has the edge <span className="tabular text-[12px] font-normal text-ink-3">{roleLabel(s)}</span>
+        Where {s.team} has the edge <span className="tabular text-[12px] font-normal text-ink-3" title="The spread on nflverse's schedule, which picks the history these rates come from. The books' own line, and how it moved, is on The line tab.">{roleLabel(s)}</span>
       </h3>
       {!compact && (
         <p className="mb-3 mt-1 max-w-3xl text-[13px] text-ink-2">

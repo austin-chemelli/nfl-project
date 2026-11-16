@@ -6,6 +6,7 @@ import type { Game } from '../../data/contract'
 import { kickoffEt } from '../../lib/format'
 import { teamInfo } from '../../lib/teams'
 import { gameStatus } from '../slate/helpers'
+import { etStamp } from './line'
 import { TeamLink } from '../../components/TeamLink'
 
 /** The matchup as a banner: each team's color washing in from its own side. Works from the id alone, before the data arrives. */
@@ -30,7 +31,7 @@ function TeamSide({ team, color, right = false }: { team: string; color: string;
 }
 
 export function GameHeader({ g }: { g: Game }) {
-  const { status } = gameStatus(g)
+  const { status, lockTs } = gameStatus(g)
   const facts = [
     kickoffEt(g.kickoff_utc),
     g.stadium ? `${g.stadium}${g.roof ? ` (${g.roof})` : ''}` : null,
@@ -43,6 +44,7 @@ export function GameHeader({ g }: { g: Game }) {
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-3">
         <span>{facts.join(' · ')}</span>
         <StatusBadge status={status} />
+        {status === 'locked' && lockTs && <span data-testid="locked-at">{`at ${etStamp(lockTs)} ET`}</span>}
       </div>
       {r && r.home_score != null && r.away_score != null && (
         <div className="flex items-baseline gap-3 text-2xl font-semibold tabular" aria-label={`Final: ${g.away} ${r.away_score}, ${g.home} ${r.home_score}`}>

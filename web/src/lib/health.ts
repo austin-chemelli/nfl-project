@@ -35,8 +35,10 @@ export function badge(s: Pick<HealthStarter, 'status' | 'reserve' | 'doubt'>): s
   return ({ Out: 'O', Doubtful: 'D', Questionable: 'Q', Inactive: 'INA' } as Record<string, string>)[s.status] ?? '!'
 }
 
-/** Who plays if he can't: the next man on the chart at his spot, else the starter he displaced. */
-export const stepsIn = (s: HealthStarter): string | null => s.depth[0]?.player ?? s.replaced_by
+/** Who plays if he can't: the first man behind him on the chart whom the report doesn't rule out
+ * (the pipeline's `steps_in`); older files without it fall back to the next man on the chart. */
+export const stepsIn = (s: HealthStarter): string | null =>
+  s.steps_in !== undefined ? s.steps_in : (s.depth[0]?.player ?? s.replaced_by)
 
 /** "Puka Nacua" -> "Nacua"; keeps suffixes with the name ("Marvin Harrison Jr." -> "Harrison Jr."). */
 export function lastName(name: string): string {

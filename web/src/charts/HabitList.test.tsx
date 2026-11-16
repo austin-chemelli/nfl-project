@@ -19,7 +19,7 @@ describe('HabitList', () => {
     expect(quartile({ ...b, opp_rate: null })).toBeNull()
   })
 
-  it('one light line per habit, the defense first; the detail waits for the hover card', async () => {
+  it('one row per habit, the defense first, with its numbers and evidence under it', async () => {
     const side = g.matchups!.sides[0]
     render(<HabitList rows={side.rows} offense={side.offense} defense={side.defense} colorOf={colorOf} pass={{ team: side.offense, rate: 0.6, league: 0.58 }} />)
     expect(screen.getByTestId('habit-pass')).toHaveTextContent(`${side.offense} passes 60%`)
@@ -30,7 +30,12 @@ describe('HabitList', () => {
     expect(choosers.indexOf('offense') === -1 || choosers.lastIndexOf('defense') < choosers.indexOf('offense')).toBe(true)
     for (const r of shown) {
       const li = screen.getByTestId(`habit-${r.split}`)
-      expect(li.textContent).not.toMatch(/EPA|evidence|\d/) // no numbers or jargon on the line itself
+      // the numbers behind the row are on it (Austin 2026-11-15): the rate, the middle team's, the rate faced, the evidence
+      const nums = within(li).getByTestId('habit-numbers').textContent!
+      expect(nums).toContain(`${Math.round(100 * r.opp_rate!)}%`)
+      if (r.opp_rate_med != null) expect(nums).toContain(`middle team ${Math.round(100 * r.opp_rate_med)}%`)
+      if (r.rate_faced != null) expect(nums).toContain(`usually sees ${Math.round(100 * r.rate_faced)}%`)
+      expect(nums).toContain(EVIDENCE[r.reliability])
       const pill = within(li).getByTestId('habit-verdict')
       const fav = r.favours === 'offense' ? side.offense : side.defense
       if (r.edge_pts_pg != null && Math.abs(r.edge_pts_pg) >= 0.05) expect(pill).toHaveAttribute('data-team', fav)
@@ -40,7 +45,6 @@ describe('HabitList', () => {
     const r = shown[0]
     await userEvent.hover(screen.getByTestId(`habit-${r.split}`))
     fireEvent.pointerMove(screen.getByTestId(`habit-${r.split}`), { clientX: 10, clientY: 10 })
-    expect(await screen.findByText(EVIDENCE[r.reliability])).toBeInTheDocument()
-    expect(screen.getByText(`${Math.round(100 * r.opp_rate!)}%`)).toBeInTheDocument()
+    expect((await screen.findAllByText(EVIDENCE[r.reliability])).length).toBeGreaterThan(1)
   })
 })

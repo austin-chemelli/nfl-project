@@ -111,3 +111,22 @@ def test_only_games_not_yet_kicked_off_and_none_without_a_chart():
     ])  # fmt: skip
     out = L.lineups(games, DEPTH, VALUES, INJ, RATES, NOW)
     assert list(out) == ["g1"] and out["g1"]["away"] is None
+
+
+def test_an_out_starter_names_the_first_man_behind_him_the_report_doesnt_rule_out():
+    """The map's version of the DAL case (Austin 2026-11-15): starter Out, first backup Out, second
+    backup healthy."""
+    depth = pl.DataFrame(_chart(NEW, [
+        (D, "SS", 14, 1, "ss1", "Starter SS"), (D, "SS", 14, 2, "ss2", "Hurt Backup"),
+        (D, "SS", 14, 3, "ss3", "Healthy Third"),
+    ]))  # fmt: skip
+    inj = [
+        {"team": "HHH", "week": 11, "gsis_id": g, "pos": "S", "status": "Out"}
+        for g in ("ss1", "ss2")
+    ]
+    s = L.side(depth, "HHH", 11, NOW, VALUES, inj, RATES)
+    ss = next(x for x in s["defense"] if x["slot"] == "SS")
+    assert (ss["status"], ss["steps_in"], ss["steps_in_id"]) == ("Out", "Healthy Third", "ss3")
+    # a healthy or Questionable starter names nobody
+    s = L.side(depth, "HHH", 11, NOW, VALUES, [], RATES)
+    assert "steps_in" not in next(x for x in s["defense"] if x["slot"] == "SS")

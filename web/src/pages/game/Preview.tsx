@@ -28,7 +28,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
       help="Each bar is what that edge was worth in past games, in points (percentage points of win chance). The label under each name compares this matchup with every game since 2005."
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
-        How much each part of the game favors {g.away} or {g.home}, priced by history.{' '}
+        How much each part of the game favors {g.away} or {g.home}, priced by history, in win-chance points.{' '}
         <button type="button" onClick={() => setTab('approaches')} className="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-accent hover:underline">Each approach's reading →</button>
       </p>
       <DivergingBars
@@ -52,7 +52,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
           tip: (
             <>
               <TipTitle note={r.help}>{r.name}</TipTitle>
-              {r.pp != null && <TipRow color={side(r.pp)} value={ptsFor(r.pp)} label={`toward ${r.pp >= 0 ? g.home : g.away}, by history`} />}
+              {r.pp != null && <TipRow color={side(r.pp)} value={ptsFor(r.pp)} label={`win chance toward ${r.pp >= 0 ? g.home : g.away}, by history`} />}
               {r.pct != null && r.edge !== 'about even' && <TipNote>Bigger than {edgePct(r.pct)}% of matchups since 2005.</TipNote>}
             </>
           ),
