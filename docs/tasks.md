@@ -553,6 +553,10 @@ Plan: `.notes/plans/player-impact.md`. Worktree `~/dev/nfl-project-players`, bra
 - **Later, each with its trigger:** promotion of `value_lost` to the Health group at the next registry bump after a shadow line (ADR 0018's bar); the quarterback what-if generalised to listed players (after promotion); with/without splits and player cards (after a season of graded claims); props (a credit plan and the Odds API's redistribution terms); a lineup plus-minus on participation (offseason); Next Gen Stats (when a parquet asset exists, or a csv.gz loader); scored impact widened to more positions (Austin, 2026-11-09: "maybe expand to wide later"); a highlight of player prop lines that look unusually good or bad (after props).
 
 
+## Offseason refit: the Sharp at neutral sites (site checks, 2026-11-15)
+
+Deferred by Austin 2026-11-16 (not mid-season). The Sharp has no venue group, so it gives the designated home team its full home field (+7.2 win-chance points on average) at neutral sites, where the other approaches cancel it through `environment.neutral_site`. Over the 93 neutral-site games since 2005 its log loss there is 0.662, against 0.635 with no home edge (−0.0004 over all games). At the refit: give `sharp.yaml` the venue group (or the neutral-site member alone), refit, and report the paired Δ against the current Sharp in the journal. Measurement: `.notes/hub/plans/site-checks-2026-11-15.md` decision 1, script `.notes/site-checks/neutral_site.py`.
+
 ## UI backlog: site-walk leftovers (not started; wait for Austin's go)
 
 From `.notes/site-walk/2026-11-07-2/report.md` (items M21 didn't cover) and the 2026-11-05 round-2 notes:
