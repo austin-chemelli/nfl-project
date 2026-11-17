@@ -8,13 +8,14 @@ import { DataError } from '../data/api'
 
 const SITE = 'NFL approaches'
 
-export function Page({ title, docTitle, lede, children }: { title: ReactNode; docTitle?: string; lede?: ReactNode; children: ReactNode }) {
+export function Page({ title, docTitle, lede, kicker, children }: { title: ReactNode; docTitle?: string; lede?: ReactNode; kicker?: ReactNode; children: ReactNode }) {
   const name = docTitle ?? (typeof title === 'string' ? title : null)
   useEffect(() => {
     document.title = name ? `${name} · ${SITE}` : SITE
   }, [name])
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+      {kicker}
       <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
       {lede && <p className="mt-1 max-w-3xl text-ink-2">{lede}</p>}
       <div className="mt-6 flex flex-col gap-8">{children}</div>

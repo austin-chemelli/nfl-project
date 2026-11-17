@@ -57,6 +57,26 @@ describe('Game page', () => {
     fs.rmSync(root, { recursive: true, force: true })
   })
 
+  it('steps to the previous and next game of the week, keeping the tab', async () => {
+    renderRoute('/game/2026_08_ARI_DAL?tab=approaches')
+    await screen.findByText(/Not locked: no lock was recorded/)
+    const nav = screen.getByRole('navigation', { name: 'Games this week' })
+    expect(await within(nav).findByRole('link', { name: 'Previous game: CAR @ GB' })).toHaveAttribute('href', '/game/2026_08_CAR_GB?tab=approaches')
+    expect(within(nav).getByRole('link', { name: 'Next game: ATL @ TB' })).toHaveAttribute('href', '/game/2026_08_ATL_TB?tab=approaches')
+    expect(within(nav).getByRole('link', { name: /Week 8 · 2 of 14/ })).toBeInTheDocument()
+    // the left arrow goes back a game; the tab carries over
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' })
+    expect(await screen.findByText(/Lambeau Field/)).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Approaches' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('the first game of the week has no previous link', async () => {
+    renderRoute('/game/2026_08_CAR_GB')
+    const nav = screen.getByRole('navigation', { name: 'Games this week' })
+    expect(await within(nav).findByRole('link', { name: 'Next game: ARI @ DAL' })).toHaveAttribute('href', '/game/2026_08_ARI_DAL')
+    expect(within(nav).queryByRole('link', { name: /^Previous game/ })).toBeNull()
+  })
+
   it('switches approach', async () => {
     renderRoute('/game/2026_08_CAR_GB')
     await screen.findByText(/Lambeau Field/)

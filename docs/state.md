@@ -87,6 +87,7 @@ Live view, with the areas each chat has claimed: `.notes/hub/tracks/` (uncommitt
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
+| game-nav | `game-nav` | `~/.t3-fork/worktrees/nfl-project/game-nav-*` | previous / next game on the game page, same week, keeps the tab (Austin, 2026-11-17) | PR open 2026-11-17 | – |
 | bracket-fix | removed | removed | the League bracket's projected field: one winner per division in seeds 1-4, wild cards by playoff chance (Austin's NYG and DAL report) | merged 2026-11-15 (#59); worktree and branch removed, track archived | #59 |
 | site-checks | `site-checks`, `retro-market-lock` | removed | Site round (plan `site-round-2026-11-15`): walk the live site, number audit and cross-page checks (report `site-checks-2026-11-15`), then fixes: similar seasons on the team page, recap ranking, records from the standings, bracket labels, backlog items; retros grade the market at the lock | #60 merged 2026-11-16; #62 merged 2026-11-16 (retro schema 7), `nfl-retro` run by hand on 28fed3b: 149 retros on schema 7, audit clean of recap and retro flags. Sharp neutral-site fix deferred to the offseason refit (Austin; `tasks.md`). Worktree and branches removed, track archived | #60, #62 |
 | picks | removed | removed | M26 (ADR 0029): your own picks on the slate (browser-only), then the playoff what-if as a mode of the Playoff odds tab, fed by the same picks (plan `m26-playoff-whatif`) | M26.1 merged 2026-11-12 (#53); M26.2-M26.4 merged 2026-11-13 (#54: played results and ratings in `league.json`, the simulation in TypeScript, the What if mode, the face-off bracket as the Playoff odds default, market by default); worktrees and branches removed; the main CI run reran `nfl-site`. M26.5 site walk dropped 2026-11-13 (Austin); track closed | #53, #54 |
@@ -218,7 +219,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-13 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-08 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-08 |
-| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-13 |
+| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-17 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or your hub track file (every chat, at track boundaries) | 2026-11-10 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |
