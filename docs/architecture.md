@@ -207,7 +207,7 @@ flowchart LR
     R & W --> S[site/retro/*.json<br/>site/recap_*.json]
 ```
 
-Game retro sections: `result`; `predictions[]` (per approach: status, pick, right, log loss, spread error, best); `played_like` (home win % from the logistic); per team `efficiency[]` (metric, game, season to date, league) and `luck[]` (factor, actual, expected, swing points, sentence) with `luck_net`; `attribution` (per approach, per group: pp, drop-one log-loss value); `headlines[]` (template sentences).
+Game retro sections: `result`; `predictions[]` (per approach: status, pick, right, log loss, spread error, best); `played_like` (home win % from the logistic; kept for older pages); `deserved` (schema 8: the deserved-to-win meter, its deserved margin and factor points, garbage-time stamp; ADR 0016 amendment 2026-11-17); per team `efficiency[]` (metric, game, season to date, league) and `luck[]` (factor, actual, expected, swing points, sentence) with `luck_net`; `attribution` (per approach, per group: pp, drop-one log-loss value); `headlines[]` (template sentences).
 
 ### 3.6d League artifacts (ADR 0019, M14)
 

@@ -14,7 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "7"  # v7 2026-11-16: the market graded at the lock; v6 2026-11-05: wp_series and drives (ADR 0020)
+SCHEMA_VERSION = "8"  # v8 2026-11-17: the deserved-to-win meter
+# v7 2026-11-16: the market graded at the lock; v6 2026-11-05: wp_series and drives (ADR 0020)
 # v5 2026-11-05: preview Elo on full history, new swing sentence; v4: the recap's bold calls
 # v3 2026-11-04: played-like inputs, the phase scorecard; game-only headlines
 
@@ -54,6 +55,22 @@ class PlayedLikeFit(_Model):
     n: int
 
 
+class DeservedFit(_Model):
+    """The deserved-to-win meter (`nfl.retro.deserved`): points per unit of each home - away
+    difference, fit on the margin with no intercept, and the logistic scale `k` that turns the
+    deserved margin into a win chance. `wp_full`/`wp_zero` are the garbage-time weights' edges."""
+
+    b_efficiency: float  # points per EPA-per-play of difference
+    b_chances: float  # points per 100% of drives reaching the opponent's 40
+    b_giveaways: float  # points per giveaway (negative)
+    k: float
+    sigma: float  # sd of the margin around the fitted margin, points
+    r2: float
+    n: int
+    wp_full: float
+    wp_zero: float
+
+
 class Expectations(_Model):
     version: str
     built_at: str
@@ -71,6 +88,7 @@ class Expectations(_Model):
     special_teams_big_plays_pg: float  # return TDs + blocked kicks per team-game
     value_special_teams_big_play: float
     played_like: PlayedLikeFit
+    deserved: DeservedFit | None = None  # None on files before retro_exp_v3
 
 
 # ------------------------------------------------------------------------------------- game retro
@@ -133,6 +151,38 @@ class PlayedLike(_Model):
     home_success: float | None = None
     away_success: float | None = None
     p_base: float | None = None  # the home side's win chance before any plays: the fit's intercept
+
+
+class DeservedFactor(_Model):
+    """One input to the meter, both teams' values. `pts` is its part of the deserved margin, toward
+    home (None for a context row, which carries no weight)."""
+
+    factor: Literal["efficiency", "chances", "giveaways", "success", "third_share"]
+    label: str
+    note: str
+    home: float | None
+    away: float | None
+    pts: float | None
+    weighted: bool
+    leader: Side | None  # the better side on this factor; None when even or missing
+
+
+class Deserved(_Model):
+    """Deserved to win: who the plays said should have won, garbage time out and the bounces
+    evened (ADR 0016 amendment 2026-11-17). Replaces `played_like` on the page."""
+
+    p_home: float
+    winner: str  # team code the plays favored
+    margin_home: float  # deserved margin in points, home - away
+    matches_result: bool | None  # None for a tie
+    gap_home: float  # real margin - deserved margin, home view: bounces, kicks and finishing
+    factors: list[DeservedFactor]
+    garbage_t: int | None  # elapsed seconds when garbage time began for good; None if it never did
+    garbage_clock: str | None  # the same as "Q4 9:57"
+    snaps: int  # offensive snaps (passes and runs)
+    snaps_full: int  # of them, counted in full
+    snaps_weighted: int  # sum of the weights, rounded
+    sentence: str
 
 
 class Phase(_Model):
@@ -240,6 +290,7 @@ class RetroGame(_Model):
     expectations_version: str
     headlines: list[str] = Field(min_length=1, max_length=6)
     played_like: PlayedLike
+    deserved: Deserved | None = None  # None before v8, or without a fit for an earlier season
     phases: list[Phase] = []
     teams: dict[Side, TeamRetro]
     predictions: list[GradedPick]

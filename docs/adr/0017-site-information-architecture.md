@@ -41,7 +41,7 @@ Austin, after a day with the round 2 game page: the red and blue bars made him c
 
 The retro now reads as a story with the win-probability chart in it, and a finished game's page is long enough that the result scrolls away. This changes the game page's layout; the tabs, the summary strip and the tile rules stay as decided. The scroll-driven story rejected above stays rejected.
 
-- **Retro tab order:** headlines, How it unfolded (the curve, the possession strip, turning points), Drive by drive, played like, phases, efficiency, swing plays, forecasts, group values. What happened first, why next, how the forecasts did last.
+- **Retro tab order:** headlines, How it unfolded (the curve, the possession strip, turning points), Drive by drive, played like (from 2026-11-17 the deserved-to-win meter, at the top with the headlines instead; ADR 0016 amendment), phases, efficiency, swing plays, forecasts, group values. What happened first, why next, how the forecasts did last.
 - **A pinned result.** On a finished game, one line (the score, overtime, the result tile's verdict) sticks under the site header once the full summary strip has scrolled out. It's one line because five tiles at two per row are about 220 px on a phone, too tall to pin. It repeats what's in the header, so it's hidden from screen readers and has no controls. Pregame pages have no result to pin, so they don't get one.
 - It slides in through the motion tokens, so reduced motion shows it at once (ADR 0020).
 

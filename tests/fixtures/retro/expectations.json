@@ -1,5 +1,5 @@
 {
- "version": "retro_exp_v1",
+ "version": "retro_exp_v3",
  "built_at": "2026-11-03T11:00:00Z",
  "seasons": [
   2015,
@@ -169,5 +169,16 @@
   "b_epa": 14.5,
   "b_success": 0.0,
   "n": 2950
+ },
+ "deserved": {
+  "b_efficiency": 29.3718,
+  "b_chances": 10.364,
+  "b_giveaways": -2.9596,
+  "k": 0.3923,
+  "sigma": 6.8394,
+  "r2": 0.7588,
+  "n": 2895,
+  "wp_full": 0.05,
+  "wp_zero": 0.01
  }
 }

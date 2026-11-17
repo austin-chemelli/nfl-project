@@ -37,11 +37,13 @@ import numpy as np
 import polars as pl
 
 from nfl.config import Paths, current_season, now_utc
+from nfl.retro import deserved
 from nfl.retro.expectations import _in_bucket, expectations_path, load
 from nfl.retro.schema import (
     SCHEMA_VERSION,
     Attribution,
     Bucket,
+    Deserved,
     Drive,
     Efficiency,
     Expectations,
@@ -73,7 +75,7 @@ PLAY_COLS = [
     "return_touchdown", "td_team", "punt_blocked", "drive", "yardline_100", "touchdown",
     "qtr", "game_seconds_remaining", "desc", "season_type", "vegas_home_wp", "vegas_home_wpa",
     "fixed_drive", "fixed_drive_result", "drive_start_yard_line", "drive_end_yard_line",
-    "drive_play_count",
+    "drive_play_count", "wp",
 ]  # fmt: skip
 TEXT_COLS = {  # the rest are doubles; only matters for a column a partition lacks
     "game_id", "raw_snapshot_ts", "posteam", "defteam", "play_type", "field_goal_result",
@@ -867,8 +869,9 @@ def _swing_sentence(home: str, h: float, away: str, a: float, tail: str) -> str:
 
 
 def _headlines(
-    g: dict, names: dict[str, str], teams: dict[str, TeamRetro], pl_: PlayedLike
-) -> list[str]:
+    g: dict, names: dict[str, str], teams: dict[str, TeamRetro], pl_: PlayedLike,
+    meter: Deserved | None = None,
+) -> list[str]:  # fmt: skip
     out = []
     home, away = g["home_team"], g["away_team"]
     nm = lambda c: names.get(c, c)
@@ -888,7 +891,9 @@ def _headlines(
             f"{nm(away)}){tail}"
         )
 
-    out.append(pl_.sentence)
+    # the meter's own sentence sits above the list on the page, so the list leaves it out
+    if meter is None:
+        out.append(pl_.sentence)
 
     gaps = []
     for side, code in (("home", home), ("away", away)):
@@ -1182,9 +1187,14 @@ def build_game(
 
     margin = g["home_score"] - g["away_score"]
     played = _played_like(E, off_all.filter(in_game), g, names)
+    meter = None
+    if E.deserved is not None and deserved.applies_to(E.seasons, int(g["season"])):
+        meter = deserved.deserved(
+            E.deserved, game_plays, g, _alias(home), _alias(away), E.fumble_lost_share
+        )
     reg = ctx["registry"]
     picks, best_id, attribution = _predictions(rows, gid, margin, g, reg, ctx["groups"])
-    headlines = _headlines(g, names, teams, played)
+    headlines = _headlines(g, names, teams, played, meter)
     return RetroGame(
         game_id=gid,
         season=int(g["season"]),
@@ -1199,6 +1209,7 @@ def build_game(
         expectations_version=E.version,
         headlines=headlines,
         played_like=played,
+        deserved=meter,
         phases=_phases(game_plays, teams, home, away),
         teams=teams,  # type: ignore[arg-type]
         predictions=picks,

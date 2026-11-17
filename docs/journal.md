@@ -963,3 +963,16 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 **Findings.** Checked on the live data (Week 10 retros) at 1280 and 375 px wide: no horizontal overflow, the arrow key kept "What happened". No rerun needed after merge.
 
+## 2026-11-17: Deserved to win replaces "played like" (retro track)
+
+**Why.** Austin: "played like" rests on EPA per play alone; MIN's 30-10 win at GB read 58% MIN when it should be "way more drastic", and he wanted something like the "deserve to win meter" seen on Twitter, with garbage time handled, at the top of the retro.
+
+**Why MIN @ GB read close.** Not a bug, a thin measure. GB's offense gained a lot while down 17-20 in the second half (passes worth +2.4, +3.0, +2.6 EPA at a 4-6% win chance), all counted; GB's three turnovers (two lost fumbles, one on an aborted snap) were dropped from the fit's only input; and the home-field intercept started GB at 59%. EPA a play, turnover plays out: GB 0.015, MIN 0.092.
+
+**The screen** (2015-2025 regular seasons, fit 2015-2021, scored 2022-2025; scripts in the scratchpad, numbers in the ADR 0016 amendment). Fourteen single-game factors and six garbage-time rules. No set predicts the rest of the season better than another (r about 0.25 each, the final margin 0.259), so weights come from the margin. Efficiency with garbage time faded (5-95% full, 0 at 1/99%), scoring chances (drives reaching the opponent's 40) and giveaways with fumbles at the league's recovery odds explain 76% of the margin; success rate, explosive plays, sack rate, early downs, field position and capped EPA add nothing on top. Austin's third-down idea, checked: over a team-season fewer third downs goes with a better offense (r = −0.80 with EPA a play, −0.55 with margin), but within a game it adds nothing once success and scoring chances are in, so it shows as context. The 2026-11-04 worry that an in-doubt filter selects on the score: a hard 10-90% cut lost predictive power (0.241 vs 0.255), the soft one didn't (0.257).
+
+**What changed.** `retro/deserved.py`; the fit in `expectations.json` (`retro_exp_v3`); `RetroGame.deserved` (schema 8, additive; `played_like` kept). The daily job refits the expectations when their version changes, so the first `nfl-retro` run after the merge refits them and rebuilds every 2026 retro. The retro tab opens with What happened: the meter, what drove it in points, the plays' margin against the final and the rest, the key points. The tile is "Deserved to win". `nfl retro deserved --week W` prints the old and new side by side. In Weeks 9-10: MIN @ GB 58% → 97% (the plays MIN by 8.9; the other 11 of the 20 points were bounces and finishing); the deserved winner lost 4 of 29 (DEN @ CAR, TB @ CHI, MIA @ IND, WAS @ NYG).
+
+**Candidate.** The deserved margin could be a team-strength feature (a season-to-date average), but it forecasts no better than the score here; if tried, it goes through the candidates ledger, not straight into a group.
+
+**Rerun after merge:** `gcloud run jobs execute nfl-retro --region us-central1 --wait` (refits the expectations, rebuilds all 2026 retros on schema 8).

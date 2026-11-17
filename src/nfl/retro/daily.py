@@ -3,7 +3,7 @@
 Ingest the current season's pbp and schedules, curate only that season's games and plays (other
 seasons' partitions are never rewritten), build the retros that are missing or stale, then the
 recaps for every week and the site files. Builds the expectations first if the file is
-missing.
+missing or from an older version.
 
 Old curated plays: DuckDB binds a `*/*.parquet` glob to the first file's schema, so a bucket
 whose historical partitions predate M9.1 (no `third_down_converted` etc.) would fail in the
@@ -13,6 +13,7 @@ once (all seasons, plays only).
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 import duckdb
@@ -51,6 +52,19 @@ def plays_need_recurate(paths: Paths) -> bool:
     return False
 
 
+def expectations_stale(paths: Paths) -> bool:
+    """True when the expectations file is missing or from another version: a code change that
+    refits them (v3 added the deserved-to-win fit) then reaches the bucket on the next run, and
+    every retro rebuilds because its stamped version differs."""
+    p = expectations.expectations_path(paths)
+    if not p.exists():
+        return True
+    try:
+        return json.loads(p.read_text()).get("version") != expectations.VERSION
+    except OSError, ValueError:
+        return True
+
+
 def run(paths: Paths, season: int | None = None, fetch: bool = True) -> DailyResult:
     from nfl.curate import curate
     from nfl.ingest import ingest
@@ -67,7 +81,7 @@ def run(paths: Paths, season: int | None = None, fetch: bool = True) -> DailyRes
     if recurated:
         print("retro daily: old curated plays lack the retro columns; re-curating all plays once")
         curate(paths, tables=("plays",))
-    built = not expectations.expectations_path(paths).exists()
+    built = expectations_stale(paths)
     if built:
         expectations.write(paths, expectations.build(paths))
     rep = build(paths, season)

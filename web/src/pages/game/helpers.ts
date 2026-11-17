@@ -1,6 +1,6 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
 import type { DriveTip } from '../../charts'
-import type { Contribution, Drive, Game, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
+import type { Contribution, DeservedFactor, Drive, Game, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
 import { fmtUnit, kickoffEt, pct } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
 import { APPROACHES } from '../../lib/models'
@@ -234,6 +234,48 @@ export function phaseSummary(r: RetroGame): string {
   // a phase with no leader isn't a win for either side, so say the count is of the ones that were contested
   const total = home + away < r.phases.length ? `${home + away} contested phases` : `${r.phases.length} phases`
   return `${home > away ? r.home : r.away} won ${Math.max(home, away)} of ${total}`
+}
+
+// ------------------------------------------------------------------------------ deserved to win
+
+/** The meter's winner chance as shown: a whole percent held inside 1–99 (one game never proves 100). */
+export const meterPct = (p: number) => Math.min(99, Math.max(1, Math.round(100 * p)))
+export const DESERVED_TOSS_UP = 0.6
+
+/** A factor's value as the page prints it. */
+export function deservedValue(f: DeservedFactor, v: number | null): string {
+  if (v == null) return '–'
+  if (f.factor === 'efficiency') return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`
+  if (f.factor === 'giveaways') return v.toFixed(1)
+  return pct(v)
+}
+
+/** "MIN by 8.9", or "even" under a tenth of a point. */
+export const bySide = (m: number, home: string, away: string, digits = 1) =>
+  Math.abs(m) < 0.05 ? 'even' : `${m > 0 ? home : away} by ${Math.abs(m).toFixed(digits)}`
+
+/** The meter's numbers for the page, or null on a retro from before schema 8. */
+export function deservedView(r: RetroGame) {
+  const d = r.deserved
+  if (!d) return null
+  const pW = d.winner === r.home ? d.p_home : 1 - d.p_home
+  const gap = d.gap_home
+  return {
+    d,
+    pWinner: meterPct(pW),
+    pHome: meterPct(d.p_home),
+    tossUp: pW < DESERVED_TOSS_UP,
+    plays: bySide(d.margin_home, r.home, r.away),
+    final: bySide(r.result.margin, r.home, r.away, 0),
+    rest: Math.abs(gap) < 1 ? 'within a point of the plays' : `${gap > 0 ? r.home : r.away} +${Math.abs(gap).toFixed(1)}`,
+    weighted: d.factors.filter((f) => f.weighted),
+    context: d.factors.filter((f) => !f.weighted),
+    garbage: d.garbage_clock
+      ? `Garbage time from ${d.garbage_clock}; ${d.snaps_full} of ${d.snaps} snaps counted in full.`
+      : d.snaps_full < d.snaps
+        ? `${d.snaps_full} of ${d.snaps} snaps counted in full; the rest came with the game nearly decided.`
+        : 'No garbage time: every snap counted in full.',
+  }
 }
 
 /** The played-like verdict step by step, in win chances; null on a retro from before schema 3. */

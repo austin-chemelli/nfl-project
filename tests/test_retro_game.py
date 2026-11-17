@@ -270,7 +270,7 @@ def test_idempotent_force_and_staleness(tmp_path):
 
     # a new expectations version rewrites everything
     f = tree.marts / "retro" / "expectations.json"
-    f.write_text(f.read_text().replace('"retro_exp_v1"', '"retro_exp_v9"'))
+    f.write_text(f.read_text().replace('"retro_exp_v3"', '"retro_exp_v9"'))
     assert sorted(build_games(tree, 2026)) == ["g1", "g2"]
     assert read(tree, "g1")["expectations_version"] == "retro_exp_v9"
 

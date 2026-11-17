@@ -273,7 +273,7 @@ describe('Game page', () => {
     it('switches tabs from a summary tile', async () => {
       renderRoute('/game/2026_08_CAR_GB?tab=news', root)
       await screen.findByRole('tab', { name: 'News' })
-      await userEvent.click(within(screen.getByRole('group', { name: 'Game summary' })).getByText('Played like'))
+      await userEvent.click(within(screen.getByRole('group', { name: 'Game summary' })).getByText('Deserved to win'))
       expect(screen.getByRole('tab', { name: 'What happened' })).toHaveAttribute('aria-selected', 'true')
     })
 

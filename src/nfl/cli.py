@@ -916,6 +916,42 @@ def retro_build(
     )
 
 
+@retro_app.command("deserved")
+def retro_deserved(
+    season: int = typer.Option(None, help="Season (default: current)."),
+    weeks: Annotated[list[int] | None, typer.Option("--week", help="Weeks (repeatable).")] = None,
+) -> None:
+    """The deserved-to-win meter beside the old played-like and the score, from the built retros."""
+    import json
+
+    from nfl.config import current_season
+    from nfl.retro.game import retro_path
+
+    paths, season = get_paths(), season or current_season()
+    files = sorted(retro_path(paths, season, "x").parent.glob("*.json"))
+    t = Table(title=f"deserved to win, {season}")
+    for c in ("game", "score", "played like (old)", "deserved (new)", "deserved margin", "gap"):
+        t.add_column(c, justify="left" if c == "game" else "right")
+    for f in files:
+        r = json.loads(f.read_text())
+        if "played_like" not in r or (weeks and r["week"] not in weeks):  # recaps share the folder
+            continue
+        d, p = r.get("deserved"), r["played_like"]
+        pf = p["p_home"] if p["favored"] == r["home"] else 1 - p["p_home"]
+        res = r["result"]
+        score = f"{r['away']} {res['away_score']}-{res['home_score']} {r['home']}"
+        if d is None:
+            t.add_row(r["game_id"], score, f"{p['favored']} {pf:.0%}", "-", "-", "-")
+            continue
+        dw = d["p_home"] if d["winner"] == r["home"] else 1 - d["p_home"]
+        m = d["margin_home"]
+        t.add_row(
+            r["game_id"], score, f"{p['favored']} {pf:.0%}", f"{d['winner']} {dw:.0%}",
+            f"{r['home'] if m >= 0 else r['away']} by {abs(m):.1f}", f"{d['gap_home']:+.1f}",
+        )  # fmt: skip
+    console.print(t)
+
+
 @retro_app.command("daily")
 def retro_daily(
     season: int = typer.Option(None, help="Season (default: current)."),

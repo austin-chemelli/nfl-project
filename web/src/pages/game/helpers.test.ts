@@ -377,3 +377,13 @@ describe('liveBars', () => {
     expect(b!.lean).toBeLessThan(0)
   })
 })
+
+describe('deserved meter helpers', () => {
+  it('holds the meter inside 1–99% and names the side of a margin', async () => {
+    const { meterPct, bySide } = await import('./helpers')
+    expect([meterPct(0.9999), meterPct(0.001), meterPct(0.794)]).toEqual([99, 1, 79])
+    expect(bySide(-8.94, 'GB', 'MIN')).toBe('MIN by 8.9')
+    expect(bySide(20, 'GB', 'MIN', 0)).toBe('GB by 20')
+    expect(bySide(0.01, 'GB', 'MIN')).toBe('even')
+  })
+})
