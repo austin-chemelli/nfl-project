@@ -16,6 +16,7 @@ import { PreviewHub } from './game/PreviewHub'
 import { Books } from './game/Books'
 import { disagrees, hasBooks } from './game/books'
 import { Retro } from './game/Retro'
+import { GameNav } from './game/GameNav'
 import { summaryTiles } from './game/summary'
 import { gameStatus } from './slate/helpers'
 import { matchupVars } from '../lib/teamColors'
@@ -42,7 +43,7 @@ export default function GamePage() {
   const teams = teamsOf(id)
   return (
     <div data-matchup style={teams ? matchupVars(teams.away, teams.home) : undefined}>
-    <Page title={teams ? <GameTitle {...teams} /> : 'Game'} docTitle={q.data ? `${q.data.away} @ ${q.data.home}, Week ${q.data.week}` : undefined}>
+    <Page kicker={<GameNav id={id} />} title={teams ? <GameTitle {...teams} /> : 'Game'} docTitle={q.data ? `${q.data.away} @ ${q.data.home}, Week ${q.data.week}` : undefined}>
       {missing ? (
         <Card>
           <div className="font-medium">No detail file for this game yet.</div>
