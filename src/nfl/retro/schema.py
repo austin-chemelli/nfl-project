@@ -62,7 +62,9 @@ class DeservedFit(_Model):
 
     b_efficiency: float  # points per EPA-per-play of difference
     b_chances: float  # points per 100% of drives reaching the opponent's 40
-    b_giveaways: float  # points per giveaway (negative)
+    b_giveaways: (
+        float  # -1: giveaways are already points (v3 priced them; earlier fits counted them)
+    )
     k: float
     sigma: float  # sd of the margin around the fitted margin, points
     r2: float
@@ -70,6 +72,10 @@ class DeservedFit(_Model):
     wp_full: float
     wp_zero: float
     wp_floor: float = 0.0  # what a snap counts at or beyond wp_zero
+    int_rate: float = 0.0  # league interceptions per dropback over the fit window
+    int_keep: float = 1.0  # share of a game's interceptions counted; the rest at int_rate
+    v_interception: float = 1.0  # points an interception costs (expectations' value_interception)
+    v_fumble: float = 1.0  # points a lost fumble costs (expectations' value_fumble_lost)
 
 
 class Expectations(_Model):

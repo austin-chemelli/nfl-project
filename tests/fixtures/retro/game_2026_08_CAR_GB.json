@@ -47,7 +47,7 @@
   "factors": [
    {"factor": "efficiency", "label": "Efficiency", "note": "EPA per play, turnover plays out", "home": 0.081, "away": -0.008, "pts": 2.6, "weighted": true, "leader": "home"},
    {"factor": "chances", "label": "Scoring chances", "note": "drives reaching the opponent's 40", "home": 0.5, "away": 0.364, "pts": 1.4, "weighted": true, "leader": "home"},
-   {"factor": "giveaways", "label": "Giveaways", "note": "interceptions, plus fumbles at the league's recovery odds", "home": 1.44, "away": 1.24, "pts": -0.6, "weighted": true, "leader": "away"},
+   {"factor": "giveaways", "label": "Giveaways", "note": "points handed over: fumbles at the league's recovery odds, picks partly evened out", "home": 4.1, "away": 3.5, "pts": -0.6, "weighted": true, "leader": "away"},
    {"factor": "success", "label": "Success rate", "note": "plays that improved the scoring outlook", "home": 0.452, "away": 0.431, "pts": null, "weighted": false, "leader": "home"},
    {"factor": "third_share", "label": "Third downs faced", "note": "share of snaps that were third downs", "home": 0.21, "away": 0.262, "pts": null, "weighted": false, "leader": "home"}
   ]

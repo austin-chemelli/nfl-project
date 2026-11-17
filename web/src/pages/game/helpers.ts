@@ -246,7 +246,7 @@ export const DESERVED_TOSS_UP = 0.6
 export function deservedValue(f: DeservedFactor, v: number | null): string {
   if (v == null) return '–'
   if (f.factor === 'efficiency') return `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`
-  if (f.factor === 'giveaways') return v.toFixed(1)
+  if (f.factor === 'giveaways') return `${v.toFixed(1)} pts`
   return pct(v)
 }
 

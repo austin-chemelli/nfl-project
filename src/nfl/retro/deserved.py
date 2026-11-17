@@ -8,7 +8,7 @@ all, and home field moved the answer 9 points toward GB.
 The meter is a margin in points built from three factors, each measured on the plays that still
 mattered, and turned into a win chance:
 
-    deserved margin (home - away) = b_eff * d_efficiency + b_chance * d_chances + b_give * d_giveaways
+    deserved margin (home - away) = b_eff * d_efficiency + b_chance * d_chances - d_giveaways
     deserved to win (home)        = 1 / (1 + exp(-k * deserved margin))
 
 - **Garbage time.** Every play is weighted by how much the game was still in doubt, from
@@ -22,14 +22,23 @@ mattered, and turned into a win chance:
   lost fumbles left out (they are the third factor).
 - **Scoring chances**: the weighted share of drives that reached the opponent's 40 (a pass, run,
   field goal or punt snapped there), each drive weighted by its first snap.
-- **Giveaways, bounces evened out**: weighted interceptions plus fumbles times the league's lost
-  share, so who fell on the ball doesn't count, but putting it on the ground does.
+- **Giveaways, in points**: the expected points a team handed over, priced by what each
+  turnover costs on average (`value_interception`, `value_fumble_lost` in the expectations), not
+  fitted. Fumbles count at the league's lost share (who fell on the ball doesn't count, putting
+  it on the ground does). Interceptions are shrunk toward the league rate: 0.45 x interceptions
+  + 0.55 x league rate x dropbacks (Austin, 2026-11-18: some picks are tips, some bad throws
+  aren't caught). 0.45 is measured: on FTN's charting (2022-2025, 2,173 team-games) only 49% of
+  interception-worthy throws were picked and 14% of interceptions weren't charted as bad
+  throws; regressing a game's charted expected interceptions on its actual ones gives a slope of
+  0.45 (correlation 0.63). The price is fixed because a fitted one re-inflates: with picks
+  shrunk, the least-squares price per giveaway rose from 3.2 to 4.8 points and undid the change.
 - **Context, not weighted**: success rate and the share of snaps that were third downs. On
   2015-2025 games neither adds to the margin once efficiency and scoring chances are in (success
   rate's weight is about zero; third-down share's sign flips with the set). Over a season, though,
   fewer third downs goes with a better offense (team-season r = -0.80 with EPA per play).
 
-Weights are a least-squares fit of the final margin on the three differences, no intercept, so
+Efficiency and scoring-chance weights are a least-squares fit of the final margin less the
+giveaway points, no intercept, so
 the meter is symmetric and home field plays no part; `k` is a one-parameter logistic of the
 result on the fitted margin. Both are fit on the expectations window (regular seasons
 2015-2025) and used only for later seasons (principle 2; `applies_to`).
@@ -55,6 +64,7 @@ WP_FLOOR = 0.25  # what a garbage-time snap still counts
 CHANCE_YL = 40  # a scoring chance: the drive snapped at or inside the opponent's 40
 DRIVE_TYPES = ["pass", "run", "field_goal", "punt"]
 TOSS_UP = 0.6  # below this the meter calls it a toss-up
+INT_KEEP = 0.45  # share of a game's interceptions that is the throw (FTN 2022-2025; docstring)
 
 
 def garbage_weight() -> pl.Expr:
@@ -79,15 +89,33 @@ def _wmean(e: pl.Expr, cond: pl.Expr | None = None) -> pl.Expr:
     return pl.when(w.sum() > 0).then((e * w).sum() / w.sum()).otherwise(None)
 
 
-def team_factors(plays: pl.DataFrame, lost_share: float) -> pl.DataFrame:
+def league_int_rate(plays: pl.DataFrame) -> float:
+    """Interceptions per dropback over the offensive passes and runs of `plays`."""
+    off = plays.filter(
+        pl.col("play_type").is_in(["pass", "run"])
+        & pl.col("epa").is_not_null()
+        & (pl.col("qb_dropback").fill_null(0) == 1)
+    )
+    return float(off["interception"].fill_null(0).mean() or 0.0)  # type: ignore[arg-type]
+
+
+def team_factors(
+    plays: pl.DataFrame, lost_share: float, int_rate: float = 0.0, int_keep: float = 1.0,
+    v_int: float = 1.0, v_fum: float = 1.0,
+) -> pl.DataFrame:  # fmt: skip
     """One row per (game_id, posteam): the factors from that team's offensive snaps.
 
-    `plays` needs game_id, posteam, play_type, epa, success, wp, down, interception, fumble,
-    fumble_lost, fixed_drive, yardline_100 (nulls allowed). Team codes are compared as given, so
-    pass plays already canonical or all from one printing.
+    `plays` needs game_id, posteam, play_type, epa, success, wp, down, qb_dropback, interception,
+    fumble, fumble_lost, fixed_drive, yardline_100 (nulls allowed). Giveaways are expected points:
+    interceptions (`int_keep` of their number plus the rest at `int_rate` per dropback) times
+    `v_int`, plus fumbles times the lost share times `v_fum`. Team codes are compared as
+    given, so pass plays already canonical or all from one printing.
     """
     df = plays.filter(pl.col("posteam").is_not_null()).with_columns(garbage_weight())
     off = df.filter(pl.col("play_type").is_in(["pass", "run"]) & pl.col("epa").is_not_null())
+    ints = int_keep * pl.col("interception").fill_null(0) + (1 - int_keep) * int_rate * pl.col(
+        "qb_dropback"
+    ).fill_null(0)
     turnover = (pl.col("interception").fill_null(0) == 1) | (
         pl.col("fumble_lost").fill_null(0) == 1
     )
@@ -97,10 +125,7 @@ def team_factors(plays: pl.DataFrame, lost_share: float) -> pl.DataFrame:
         _wmean((pl.col("down") == 3).cast(pl.Float64), pl.col("down").is_not_null()).alias(
             "third_share"
         ),
-        (
-            (pl.col("interception").fill_null(0) + lost_share * pl.col("fumble").fill_null(0))
-            * pl.col("w")
-        )
+        ((v_int * ints + v_fum * lost_share * pl.col("fumble").fill_null(0)) * pl.col("w"))
         .sum()
         .alias("giveaways"),
         pl.col("interception").fill_null(0).sum().alias("ints"),
@@ -133,6 +158,7 @@ def team_factors(plays: pl.DataFrame, lost_share: float) -> pl.DataFrame:
 
 
 FACTORS = ("efficiency", "chances", "giveaways")
+FITTED = ("efficiency", "chances")  # giveaways are priced in points, not fitted
 
 
 def game_diffs(tf: pl.DataFrame, home_of: pl.DataFrame) -> pl.DataFrame:
@@ -149,31 +175,38 @@ def game_diffs(tf: pl.DataFrame, home_of: pl.DataFrame) -> pl.DataFrame:
 MIN_GAMES = 100  # fewer games with all three factors: no fit (the meter is left out)
 
 
-def fit(plays: pl.DataFrame, games: pl.DataFrame, lost_share: float) -> DeservedFit | None:
-    """Least squares of the margin on the three differences (no intercept), then the meter's
-    scale by a one-parameter logistic of the result on the fitted margin (ties out).
+def fit(
+    plays: pl.DataFrame, games: pl.DataFrame, lost_share: float, v_int: float, v_fum: float
+) -> DeservedFit | None:
+    """Least squares of the margin less the giveaway points on the efficiency and scoring-chance
+    differences (no intercept), then the meter's scale by a one-parameter logistic of the result
+    on the deserved margin (ties out). Giveaways are priced at `v_int` (an interception) and
+    `v_fum` (a lost fumble), in points, not fitted.
 
     `plays`: regular-season plays with the columns `team_factors` reads plus home_team,
     away_team; `games`: game_id, home_score, away_score."""
     from nfl.retro.expectations import fit_logistic
 
-    tf = team_factors(plays, lost_share)
+    int_rate = league_int_rate(plays)
+    tf = team_factors(plays, lost_share, int_rate, INT_KEEP, v_int, v_fum)
     home_of = plays.select("game_id", pl.col("home_team").alias("home"), pl.col("away_team").alias("away")).unique("game_id")  # fmt: skip
     df = game_diffs(tf, home_of).join(games, on="game_id")
     df = df.drop_nulls([f"d_{c}" for c in FACTORS] + ["home_score", "away_score"])
     if df.height < MIN_GAMES:
         return None
-    x = np.column_stack([df[f"d_{c}"].to_numpy() for c in FACTORS])
+    x = np.column_stack([df[f"d_{c}"].to_numpy() for c in FITTED])
+    give = df["d_giveaways"].to_numpy()
     y = (df["home_score"] - df["away_score"]).cast(pl.Float64).to_numpy()
-    b, *_ = np.linalg.lstsq(x, y, rcond=None)
-    m = x @ b
+    b, *_ = np.linalg.lstsq(x, y + give, rcond=None)
+    m = x @ b - give
     sigma = float(np.std(y - m))
     r2 = float(1 - ((y - m) ** 2).sum() / ((y - y.mean()) ** 2).sum())
     nz = y != 0
     k = float(fit_logistic(m[nz][:, None], (y[nz] > 0).astype(float))[0])
     return DeservedFit(
-        b_efficiency=float(b[0]), b_chances=float(b[1]), b_giveaways=float(b[2]), k=k,
+        b_efficiency=float(b[0]), b_chances=float(b[1]), b_giveaways=-1.0, k=k,
         sigma=sigma, r2=r2, n=len(y), wp_full=WP_FULL, wp_zero=WP_ZERO, wp_floor=WP_FLOOR,
+        int_rate=int_rate, int_keep=INT_KEEP, v_interception=v_int, v_fumble=v_fum,
     )  # fmt: skip
 
 
@@ -227,7 +260,10 @@ def _by(m: float) -> str:
 LABELS = {
     "efficiency": ("Efficiency", "EPA per play, turnover plays out"),
     "chances": ("Scoring chances", "drives reaching the opponent's 40"),
-    "giveaways": ("Giveaways", "interceptions, plus fumbles at the league's recovery odds"),
+    "giveaways": (
+        "Giveaways",
+        "points handed over: fumbles at the league's recovery odds, picks partly evened out",
+    ),
     "success": ("Success rate", "plays that improved the scoring outlook"),
     "third_share": ("Third downs faced", "share of snaps that were third downs"),
 }
@@ -238,7 +274,7 @@ def deserved(
     lost_share: float,
 ) -> Deserved | None:  # fmt: skip
     """The meter for one game. `home_code`/`away_code` are the codes as printed in the plays."""
-    tf = team_factors(game_plays, lost_share)
+    tf = team_factors(game_plays, lost_share, F.int_rate, F.int_keep, F.v_interception, F.v_fumble)
     rows = {r["posteam"]: r for r in tf.iter_rows(named=True)}
     h, a = rows.get(home_code), rows.get(away_code)
     if h is None or a is None:
@@ -295,7 +331,7 @@ def deserved(
 
 def _factor(name: str, hv: float | None, av: float | None, pts: float | None) -> DeservedFactor:
     label, note = LABELS[name]
-    nd = 2 if name == "giveaways" else 3
+    nd = 1 if name == "giveaways" else 3
     r = lambda v: None if v is None else round(float(v), nd)
     lead = None
     if hv is not None and av is not None and round(hv, nd) != round(av, nd):

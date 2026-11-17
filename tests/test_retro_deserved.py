@@ -18,6 +18,7 @@ COLS = {
     "interception": pl.Float64, "fumble": pl.Float64, "fumble_lost": pl.Float64,
     "fixed_drive": pl.Float64, "yardline_100": pl.Float64, "qtr": pl.Float64,
     "game_seconds_remaining": pl.Float64, "home_team": pl.Utf8, "away_team": pl.Utf8,
+    "qb_dropback": pl.Float64,
 }  # fmt: skip
 _id = [0]
 
@@ -61,6 +62,22 @@ def test_factors_drop_garbage_time_and_turnover_plays():
     assert r["success"] == pytest.approx(1 / 5.25)
 
 
+def test_interceptions_shrink_toward_the_league_rate():
+    rows = [p(qb_dropback=1.0) for _ in range(39)] + [
+        p(epa=-5.0, interception=1.0, qb_dropback=1.0)
+    ]
+    r = D.team_factors(df(rows), LOST, int_rate=0.02, int_keep=0.45).row(0, named=True)
+    assert r["giveaways"] == pytest.approx(0.45 * 1 + 0.55 * 0.02 * 40)
+    priced = D.team_factors(df(rows), LOST, 0.02, 0.45, v_int=4.6, v_fum=4.2).row(0, named=True)
+    assert priced["giveaways"] == pytest.approx(4.6 * (0.45 + 0.55 * 0.02 * 40))  # in points
+    clean = D.team_factors(df(rows[:39] + [p(qb_dropback=1.0)]), LOST, 0.02, 0.45).row(
+        0, named=True
+    )
+    assert clean["giveaways"] == pytest.approx(0.55 * 0.02 * 40)  # no pick: still some risk
+    assert r["giveaways"] - clean["giveaways"] == pytest.approx(0.45)  # a pick counts 0.45
+    assert D.league_int_rate(df(rows)) == pytest.approx(1 / 40)
+
+
 def test_scoring_chances_by_drive_weighted_by_first_snap():
     rows = [
         p(fixed_drive=1.0, yardline_100=60.0), p(fixed_drive=1.0, yardline_100=38.0),  # a chance
@@ -87,24 +104,31 @@ def _season(n_games, seed=1):
                 plays.append(p(gid, team, epa=e, fixed_drive=float(d), yardline_100=30.0 if d < c else 70.0))  # fmt: skip
             for _ in range(gv):
                 plays.append(p(gid, team, epa=-5.0, interception=1.0, fixed_drive=0.0))
-        margin = 30 * (e_h - e_a) + 10 * (c_h - c_a) / 10 - 3 * (g_h - g_a) + rng.gauss(0, 2)
+        # a pick priced at 3 points, kept at INT_KEEP (no dropbacks here, so no rate term)
+        margin = (
+            30 * (e_h - e_a)
+            + 10 * (c_h - c_a) / 10
+            - 3 * D.INT_KEEP * (g_h - g_a)
+            + rng.gauss(0, 2)
+        )
         games.append({"game_id": gid, "home_score": 20 + round(margin), "away_score": 20})
     return df(plays), pl.DataFrame(games)
 
 
 def test_fit_recovers_planted_weights_and_needs_enough_games():
     plays, games = _season(400)
-    f = D.fit(plays, games, LOST)
+    f = D.fit(plays, games, LOST, v_int=3.0, v_fum=4.0)
     assert f.b_efficiency == pytest.approx(30, rel=0.1)
     assert f.b_chances == pytest.approx(10, rel=0.15)
-    assert f.b_giveaways == pytest.approx(-3, rel=0.15)
+    assert f.b_giveaways == -1.0  # priced, not fitted
+    assert (f.v_interception, f.v_fumble) == (3.0, 4.0)
     assert (
         f.k > 0
         and f.n == 400
         and (f.wp_full, f.wp_zero, f.wp_floor) == (D.WP_FULL, D.WP_ZERO, 0.25)
     )
     small_p, small_g = _season(D.MIN_GAMES - 1)
-    assert D.fit(small_p, small_g, LOST) is None
+    assert D.fit(small_p, small_g, LOST, 3.0, 4.0) is None
 
 
 FIT = DeservedFit(b_efficiency=30, b_chances=10, b_giveaways=-3, k=0.4, sigma=7, r2=0.75, n=1, wp_full=0.05, wp_zero=0.01)  # fmt: skip

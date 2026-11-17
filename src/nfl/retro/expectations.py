@@ -269,7 +269,7 @@ def build(paths: Paths, seasons: tuple[int, int] = (2015, 2025)) -> Expectations
         special_teams_big_plays_pg=st_pg,
         value_special_teams_big_play=st_val,
         played_like=_played_like(plays, games),
-        deserved=deserved.fit(plays, games, fumble_share),
+        deserved=deserved.fit(plays, games, fumble_share, value_int, value_fumble),
     )
 
 

@@ -171,15 +171,19 @@
   "n": 2950
  },
  "deserved": {
-  "b_efficiency": 33.6344,
-  "b_chances": 10.6587,
-  "b_giveaways": -3.1972,
-  "k": 0.3595,
-  "sigma": 6.2435,
-  "r2": 0.7963,
+  "b_efficiency": 32.6178,
+  "b_chances": 12.9048,
+  "b_giveaways": -1.0,
+  "k": 0.361,
+  "sigma": 6.3329,
+  "r2": 0.7915,
   "n": 2895,
   "wp_full": 0.05,
   "wp_zero": 0.01,
-  "wp_floor": 0.25
+  "wp_floor": 0.25,
+  "int_rate": 0.0206,
+  "int_keep": 0.45,
+  "v_interception": 4.5801,
+  "v_fumble": 4.2314
  }
 }
