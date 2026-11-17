@@ -21,6 +21,7 @@ from nfl.retro.game import (
     _metric_exprs,
     _metrics,
     _phases,
+    _weighted,
     _wp_series,
     build,
     build_games,
@@ -478,7 +479,7 @@ def test_league_bands_match_metrics_per_team():
         schema_overrides={"epa": pl.Float64},
     )
     per_team = {t: _metrics(plays.filter(pl.col("posteam") == t)) for t in ("HOM", "AWY")}
-    grouped = plays.group_by("posteam").agg(*_metric_exprs())
+    grouped = _weighted(plays).group_by("posteam").agg(*_metric_exprs())
     for row in grouped.iter_rows(named=True):
         for k, v in per_team[row["posteam"]].items():
             assert row[k] == pytest.approx(v) if v is not None else row[k] is None
@@ -867,3 +868,16 @@ def test_load_plays_season_partition_predating_the_columns(tmp_path):
 def test_load_plays_missing_partition_is_empty_with_the_columns(tmp_path):
     df = _load_plays(Paths(tmp_path), 2026)
     assert df.is_empty() and {"vegas_home_wp", "posteam", "game_id"} <= set(df.columns)
+
+
+def test_efficiency_weights_garbage_time_and_keeps_every_snap():
+    """Game, season and league count garbage-time snaps at a quarter, as the meter does;
+    `game_all` is the game with every snap in full."""
+    rows = [play("g1", "HOM", "AWY", "pass", -0.5, wp=0.5) for _ in range(10)]
+    rows += [play("g1", "HOM", "AWY", "pass", 1.5, wp=0.005) for _ in range(10)]  # garbage time
+    df = pl.DataFrame(rows, schema_overrides={"epa": pl.Float64}).with_columns(
+        pl.col("wp").cast(pl.Float64)
+    )
+    weighted, every = _metrics(df), _metrics(df, garbage=False)
+    assert every["epa_play"] == pytest.approx(0.5)
+    assert weighted["epa_play"] == pytest.approx((10 * -0.5 + 0.25 * 10 * 1.5) / 12.5)

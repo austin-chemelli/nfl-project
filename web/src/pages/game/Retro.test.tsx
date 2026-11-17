@@ -34,7 +34,8 @@ describe('Retro', () => {
     expect(m).toHaveTextContent('FinalCAR by 3')
     expect(m).toHaveTextContent(/The rest.*CAR \+6\.4/)
     expect(screen.getByText('No garbage time: every snap counted in full.')).toBeInTheDocument()
-    expect(screen.getAllByText('context')).toHaveLength(2) // success rate and third downs carry no weight
+    expect(screen.queryAllByText('context')).toHaveLength(0) // success rate and third downs aren't in the meter
+    expect(screen.queryByText('Third downs faced')).toBeNull()
     expect(screen.getByText('Key points')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /^Played like/ })).toBeNull()
     expect(screen.getByText(/that is garbage time/)).toBeInTheDocument()

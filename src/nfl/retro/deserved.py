@@ -32,7 +32,8 @@ mattered, and turned into a win chance:
   throws; regressing a game's charted expected interceptions on its actual ones gives a slope of
   0.45 (correlation 0.63). The price is fixed because a fitted one re-inflates: with picks
   shrunk, the least-squares price per giveaway rose from 3.2 to 4.8 points and undid the change.
-- **Context, not weighted**: success rate and the share of snaps that were third downs. On
+- **Left out**: success rate and the share of snaps that came on third down (both are in the
+  retro's Efficiency section, against the season and the league). On
   2015-2025 games neither adds to the margin once efficiency and scoring chances are in (success
   rate's weight is about zero; third-down share's sign flips with the set). Over a season, though,
   fewer third downs goes with a better offense (team-season r = -0.80 with EPA per play).
@@ -264,8 +265,6 @@ LABELS = {
         "Giveaways",
         "points handed over: fumbles at the league's recovery odds, picks partly evened out",
     ),
-    "success": ("Success rate", "plays that improved the scoring outlook"),
-    "third_share": ("Third downs faced", "share of snaps that were third downs"),
 }
 
 
@@ -289,8 +288,6 @@ def deserved(
             pts = weights[name] * (hv - av)
             total += pts
         factors.append(_factor(name, hv, av, None if pts is None else round(pts, 1)))
-    for name in ("success", "third_share"):
-        factors.append(_factor(name, h.get(name), a.get(name), None))
     p_home = 1 / (1 + math.exp(-F.k * total))
     home, away = g["home_team"], g["away_team"]
     winner = home if total >= 0 else away
@@ -335,7 +332,7 @@ def _factor(name: str, hv: float | None, av: float | None, pts: float | None) ->
     r = lambda v: None if v is None else round(float(v), nd)
     lead = None
     if hv is not None and av is not None and round(hv, nd) != round(av, nd):
-        better_high = name not in ("giveaways", "third_share")
+        better_high = name != "giveaways"
         lead = "home" if (hv > av) == better_high else "away"
     return DeservedFactor(
         factor=name, label=label, note=note, home=r(hv), away=r(av), pts=pts,  # type: ignore[arg-type]

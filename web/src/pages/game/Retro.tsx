@@ -10,7 +10,7 @@ import type { Efficiency, GradedPick, RetroGame, TeamRetro, WpPlay } from '../..
 import { DivergingBars, DriveField, PossessionStrip, RangeRow, TipNote, TipRow, TipTitle, WpChart, type RangeRowData } from '../../charts'
 import { withCodes } from '../../lib/teams'
 import { dash, fmtEff, pct, pts, ptsFor, ptsSide } from '../../lib/format'
-import { deservedValue, deservedView, driveLede, driveText, factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
+import { deservedValue, deservedView, driveLede, garbageLede, driveText, factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
 
 export function Retro({ r }: { r: RetroGame }) {
   return (
@@ -26,7 +26,7 @@ export function Retro({ r }: { r: RetroGame }) {
       <Groups key={r.game_id} r={r} />
       <FinePrint>
         {r.deserved && (
-          <p>Deserved to win adds up three things in points. Efficiency (EPA per play, turnover plays left out) and scoring chances (the share of drives that reached the opponent's 40) are weighted by a fit on the 2015–2025 regular seasons. Giveaways are the points a team handed over, at what a turnover costs on average: fumbles at the league's odds of losing one, so who fell on the ball doesn't count, and interceptions at a bit under half, the rest spread as risk over every dropback, because some picks are tips and some bad throws aren't caught. A snap counts in full while the offense's win chance is between 5% and 95%, and its weight fades to a quarter at 1% or 99%: that is garbage time, which still says a little about a team. The meter is how often teams with that margin in points won. It leaves out home field, kicks, return plays and fumble bounces, and success rate and third downs are shown only as context. One game is a small sample: as a forecast of a team's next games, the meter does no better than the final score.</p>
+          <p>Deserved to win adds up three things in points. Efficiency (EPA per play, turnover plays left out) and scoring chances (the share of drives that reached the opponent's 40) are weighted by a fit on the 2015–2025 regular seasons. Giveaways are the points a team handed over, at what a turnover costs on average: fumbles at the league's odds of losing one, so who fell on the ball doesn't count, and interceptions at a bit under half, the rest spread as risk over every dropback, because some picks are tips and some bad throws aren't caught. A snap counts in full while the offense's win chance is between 5% and 95%, and its weight fades to a quarter at 1% or 99%: that is garbage time, which still says a little about a team. The meter is how often teams with that margin in points won. It leaves out home field, kicks, return plays and fumble bounces; success rate and the share of snaps on third down add nothing once these are in, so they are under Efficiency instead. One game is a small sample: as a forecast of a team's next games, the meter does no better than the final score.</p>
         )}
         <p>The retrospective describes the game; it does not prove why it went that way. Every number is computed from play-by-play, and every sentence is filled in from those numbers.</p>
         <p>"Expected" comes from league rates in the same situations (2015–2025; for 3rd and 4th downs, adjusted for both teams' form this season). Efficiency compares each unit with its season before this game, the band being the middle 80% of teams. Swing plays and efficiency overlap on purpose: a third down counts in both, asked a different way. Swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played, so they are variance rather than luck.</p>
@@ -130,12 +130,12 @@ function WhatHappened({ r }: { r: RetroGame }) {
                   <tr><th className={th}>Factor</th><th className={th}>{r.away}</th><th className={th}>{r.home}</th><th className={th}>Points</th></tr>
                 </thead>
                 <tbody>
-                  {d.factors.map((f) => (
-                    <tr key={f.factor} className={f.weighted ? undefined : 'text-ink-3'}>
-                      <td className={td}><Help text={`${f.note}.${f.weighted ? '' : ' Context only: it adds nothing to the margin once the weighted factors are in, so it carries no weight.'}`}>{f.label}</Help></td>
+                  {v.weighted.map((f) => (
+                    <tr key={f.factor}>
+                      <td className={td}><Help text={`${f.note}.`}>{f.label}</Help></td>
                       <td className={`${td} tabular`}>{deservedValue(f, f.away)}</td>
                       <td className={`${td} tabular`}>{deservedValue(f, f.home)}</td>
-                      <td className={`${td} tabular`}>{f.pts == null ? (f.weighted ? dash : 'context') : ptsSide(f.pts, r.home, r.away)}</td>
+                      <td className={`${td} tabular`}>{f.pts == null ? dash : ptsSide(f.pts, r.home, r.away)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -405,8 +405,9 @@ function EfficiencySection({ r }: { r: RetroGame }) {
   return (
     <Section
       title="Efficiency"
-      help="Each unit in this game (dot) against its season so far. The band is the league's middle 80%, the tick its average. Green beat its season, red fell short."
+      help="Each unit in this game (dot) against its season so far. The band is the league's middle 80%, the tick its average. Garbage-time snaps count a quarter everywhere, as in the meter; hover a row for every snap in full."
     >
+      {garbageLede(r) && <p className="mb-3 text-[15px]">{withCodes(garbageLede(r)!, [r.away, r.home])}</p>}
       <div className="mb-3">
         <Segmented
           label="Team"
@@ -477,6 +478,7 @@ function TeamEfficiency({ t }: { t: TeamRetro }) {
                     <>
                       <TipTitle note={VERDICT_TEXT[v]}>{e.label}</TipTitle>
                       <TipRow color={v === 'better' ? 'var(--good)' : v === 'worse' ? 'var(--critical)' : undefined} value={fmtEff(e.game, u)} label="this game" />
+                      {e.game_all != null && e.game_all !== e.game && <TipRow value={fmtEff(e.game_all, u)} label="this game, every snap in full" />}
                       <TipRow color="var(--text-secondary)" value={fmtEff(e.season, u)} label={`season to date (${e.season_games} games)`} />
                       <TipNote>League average {fmtEff(e.league, u)}{e.league_lo != null && e.league_hi != null ? `; most teams ${fmtEff(e.league_lo, u)} to ${fmtEff(e.league_hi, u)}` : ''}.</TipNote>
                     </>

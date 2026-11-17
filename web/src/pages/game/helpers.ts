@@ -1,7 +1,7 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
 import type { DriveTip } from '../../charts'
-import type { Contribution, DeservedFactor, Drive, Game, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
-import { fmtUnit, kickoffEt, pct } from '../../lib/format'
+import type { Contribution, DeservedFactor, Drive, Efficiency, Game, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
+import { fmtEff, fmtUnit, kickoffEt, pct } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
 import { APPROACHES } from '../../lib/models'
 
@@ -268,14 +268,44 @@ export function deservedView(r: RetroGame) {
     plays: bySide(d.margin_home, r.home, r.away),
     final: bySide(r.result.margin, r.home, r.away, 0),
     rest: Math.abs(gap) < 1 ? 'within a point of the plays' : `${gap > 0 ? r.home : r.away} +${Math.abs(gap).toFixed(1)}`,
+    // only what the meter adds up; success rate and third-down share live in Efficiency
     weighted: d.factors.filter((f) => f.weighted),
-    context: d.factors.filter((f) => !f.weighted),
     garbage: d.garbage_clock
       ? `Garbage time from ${d.garbage_clock}; ${d.snaps_full} of ${d.snaps} snaps counted in full.`
       : d.snaps_full < d.snaps
         ? `${d.snaps_full} of ${d.snaps} snaps counted in full; the rest came with the game nearly decided.`
         : 'No garbage time: every snap counted in full.',
   }
+}
+
+/** Metrics where garbage time can flatter or hide a unit, in the order a tie is broken. */
+const GARBAGE_METRICS = ['epa_dropback', 'epa_play', 'epa_rush', 'success']
+/** Below this share of the league's typical range, the every-snap value isn't worth a sentence. */
+export const GARBAGE_MIN_GAP = 0.25
+
+/**
+ * Where garbage time moved a number most: the offense metric whose every-snap value is furthest
+ * from the weighted one, measured against the league's range. Null when nothing moved enough
+ * (or on a retro from before schema 8).
+ */
+export function garbageLede(r: RetroGame): string | null {
+  let top: { team: string; e: Efficiency; z: number } | null = null
+  for (const t of [r.teams.away, r.teams.home]) {
+    for (const e of t.efficiency) {
+      const m = e.metric.replace(/^off_/, '')
+      if (e.unit_side !== 'off' || !GARBAGE_METRICS.includes(m) || e.game == null || e.game_all == null) continue
+      const width = e.league_lo != null && e.league_hi != null ? e.league_hi - e.league_lo : null
+      if (!width) continue
+      const z = Math.abs(e.game_all - e.game) / width
+      if (z >= GARBAGE_MIN_GAP && (!top || z > top.z)) top = { team: t.team, e, z }
+    }
+  }
+  if (!top) return null
+  const { e } = top
+  const flattered = (e.game_all! > e.game!) === e.higher_is_better
+  // "Success rate" -> "success rate", but "EPA per dropback" keeps its capitals
+  const what = /^[A-Z][a-z]/.test(e.label) ? e.label.charAt(0).toLowerCase() + e.label.slice(1) : e.label
+  return `Garbage time ${flattered ? 'flattered' : 'hid'} ${top.team}'s ${what}: ${fmtEff(e.game, e.unit)} while the game was in doubt, ${fmtEff(e.game_all, e.unit)} counting every snap in full.`
 }
 
 /** The played-like verdict step by step, in win chances; null on a retro from before schema 3. */

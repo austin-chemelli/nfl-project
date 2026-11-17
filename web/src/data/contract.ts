@@ -638,7 +638,8 @@ export const Efficiency = z.looseObject({
   label: z.string(),
   unit: z.string(),
   higher_is_better: z.boolean(),
-  game: nnum,
+  game: nnum, // from schema 8, garbage-time snaps count a quarter (as in season and league)
+  game_all: nnum.default(null), // this game with every snap in full; schema 8
   season: nnum,
   league: nnum,
   league_lo: nnum.default(null),

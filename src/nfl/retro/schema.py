@@ -116,7 +116,10 @@ class Efficiency(_Model):
     label: str
     unit: Unit
     higher_is_better: bool  # from this team's view (defensive EPA allowed: False)
-    game: float | None
+    game: (
+        float | None
+    )  # garbage-time snaps weighted as in the deserved meter (v8), as are season/league
+    game_all: float | None = None  # this game with every snap in full (v8)
     season: float | None
     league: float | None
     # 10th/90th percentile of the teams' season-to-date values before this game; None when fewer
@@ -162,9 +165,9 @@ class PlayedLike(_Model):
 
 class DeservedFactor(_Model):
     """One input to the meter, both teams' values. `pts` is its part of the deserved margin, toward
-    home (None for a context row, which carries no weight)."""
+    home (None when a side has no value, e.g. no drives)."""
 
-    factor: Literal["efficiency", "chances", "giveaways", "success", "third_share"]
+    factor: Literal["efficiency", "chances", "giveaways"]
     label: str
     note: str
     home: float | None
