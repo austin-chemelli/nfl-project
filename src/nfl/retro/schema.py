@@ -58,7 +58,7 @@ class PlayedLikeFit(_Model):
 class DeservedFit(_Model):
     """The deserved-to-win meter (`nfl.retro.deserved`): points per unit of each home - away
     difference, fit on the margin with no intercept, and the logistic scale `k` that turns the
-    deserved margin into a win chance. `wp_full`/`wp_zero` are the garbage-time weights' edges."""
+    deserved margin into a win chance. `wp_full`/`wp_zero`/`wp_floor` set the garbage-time weights."""
 
     b_efficiency: float  # points per EPA-per-play of difference
     b_chances: float  # points per 100% of drives reaching the opponent's 40
@@ -69,6 +69,7 @@ class DeservedFit(_Model):
     n: int
     wp_full: float
     wp_zero: float
+    wp_floor: float = 0.0  # what a snap counts at or beyond wp_zero
 
 
 class Expectations(_Model):
@@ -168,7 +169,7 @@ class DeservedFactor(_Model):
 
 
 class Deserved(_Model):
-    """Deserved to win: who the plays said should have won, garbage time out and the bounces
+    """Deserved to win: who the plays said should have won, garbage time down-weighted and the bounces
     evened (ADR 0016 amendment 2026-11-17). Replaces `played_like` on the page."""
 
     p_home: float

@@ -38,7 +38,7 @@ def df(rows):
 
 @pytest.mark.parametrize(
     "wp, w",
-    [(0.5, 1.0), (0.05, 1.0), (0.95, 1.0), (0.03, 0.5), (0.97, 0.5), (0.01, 0.0), (0.999, 0.0), (None, 1.0)],
+    [(0.5, 1.0), (0.05, 1.0), (0.95, 1.0), (0.03, 0.625), (0.97, 0.625), (0.01, 0.25), (0.999, 0.25), (None, 1.0)],
 )  # fmt: skip
 def test_garbage_weight(wp, w):
     got = pl.DataFrame({"wp": [wp]}, schema={"wp": pl.Float64}).select(D.garbage_weight())["w"][0]
@@ -52,13 +52,13 @@ def test_factors_drop_garbage_time_and_turnover_plays():
         p(epa=-6.0, interception=1.0),  # a giveaway, not efficiency
         p(epa=-4.0, fumble=1.0, fumble_lost=1.0),  # counts as half a giveaway (LOST = 0.5)
         p(epa=-1.0, fumble=1.0, fumble_lost=0.0),  # recovered: still half a giveaway
-        p(epa=9.0, wp=0.005, fumble=1.0, down=3.0),  # garbage time: counts nowhere
+        p(epa=9.0, wp=0.005, fumble=1.0, down=3.0),  # garbage time: counts a quarter
     ]
     r = D.team_factors(df(rows), LOST).row(0, named=True)
-    assert r["efficiency"] == pytest.approx((0.4 - 0.2 - 1.0) / 3)
-    assert r["giveaways"] == pytest.approx(1 + 0.5 + 0.5)
-    assert r["third_share"] == 0.0
-    assert r["success"] == pytest.approx(1 / 5)
+    assert r["efficiency"] == pytest.approx((0.4 - 0.2 - 1.0 + 0.25 * 9.0) / 3.25)
+    assert r["giveaways"] == pytest.approx(1 + 0.5 + 0.5 + 0.25 * 0.5)
+    assert r["third_share"] == pytest.approx(0.25 / 5.25)
+    assert r["success"] == pytest.approx(1 / 5.25)
 
 
 def test_scoring_chances_by_drive_weighted_by_first_snap():
@@ -66,10 +66,10 @@ def test_scoring_chances_by_drive_weighted_by_first_snap():
         p(fixed_drive=1.0, yardline_100=60.0), p(fixed_drive=1.0, yardline_100=38.0),  # a chance
         p(fixed_drive=2.0, yardline_100=80.0, play_type="punt"),  # no chance
         p(fixed_drive=3.0, yardline_100=30.0, play_type="field_goal"),  # a chance
-        p(fixed_drive=4.0, yardline_100=20.0, wp=0.005),  # garbage time: not counted
+        p(fixed_drive=4.0, yardline_100=20.0, wp=0.005),  # garbage time: counts a quarter
     ]  # fmt: skip
     r = D.team_factors(df(rows), LOST).row(0, named=True)
-    assert r["chances"] == pytest.approx(2 / 3)
+    assert r["chances"] == pytest.approx(2.25 / 3.25)
     assert r["drives"] == 4 and r["chance_drives"] == 3
 
 
@@ -98,7 +98,11 @@ def test_fit_recovers_planted_weights_and_needs_enough_games():
     assert f.b_efficiency == pytest.approx(30, rel=0.1)
     assert f.b_chances == pytest.approx(10, rel=0.15)
     assert f.b_giveaways == pytest.approx(-3, rel=0.15)
-    assert f.k > 0 and f.n == 400 and (f.wp_full, f.wp_zero) == (D.WP_FULL, D.WP_ZERO)
+    assert (
+        f.k > 0
+        and f.n == 400
+        and (f.wp_full, f.wp_zero, f.wp_floor) == (D.WP_FULL, D.WP_ZERO, 0.25)
+    )
     small_p, small_g = _season(D.MIN_GAMES - 1)
     assert D.fit(small_p, small_g, LOST) is None
 

@@ -742,7 +742,7 @@ export const DeservedFactor = z.looseObject({
   leader: z.enum(['home', 'away']).nullable(),
 })
 
-/** Deserved to win (retro schema 8): who the plays said should have won, garbage time out and the bounces evened. */
+/** Deserved to win (retro schema 8): who the plays said should have won, garbage time down-weighted and the bounces evened. */
 export const Deserved = z.looseObject({
   p_home: num,
   winner: z.string(),

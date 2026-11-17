@@ -26,7 +26,7 @@ export function Retro({ r }: { r: RetroGame }) {
       <Groups key={r.game_id} r={r} />
       <FinePrint>
         {r.deserved && (
-          <p>Deserved to win turns three things into points, using weights fitted on the 2015–2025 regular seasons: efficiency (EPA per play, turnover plays left out), scoring chances (the share of drives that reached the opponent's 40) and giveaways (interceptions, plus fumbles at the league's odds of losing one, so who fell on the ball doesn't count). A snap counts in full while the offense's win chance is between 5% and 95%. Its weight then fades to nothing at 1% or 99%: that is garbage time. The meter is how often teams with that margin in points won. It leaves out home field, kicks, return plays and fumble bounces, and success rate and third downs are shown only as context. One game is a small sample: as a forecast of a team's next games, the meter does no better than the final score.</p>
+          <p>Deserved to win turns three things into points, using weights fitted on the 2015–2025 regular seasons: efficiency (EPA per play, turnover plays left out), scoring chances (the share of drives that reached the opponent's 40) and giveaways (interceptions, plus fumbles at the league's odds of losing one, so who fell on the ball doesn't count). A snap counts in full while the offense's win chance is between 5% and 95%, and its weight fades to a quarter at 1% or 99%: that is garbage time, which still says a little about a team. The meter is how often teams with that margin in points won. It leaves out home field, kicks, return plays and fumble bounces, and success rate and third downs are shown only as context. One game is a small sample: as a forecast of a team's next games, the meter does no better than the final score.</p>
         )}
         <p>The retrospective describes the game; it does not prove why it went that way. Every number is computed from play-by-play, and every sentence is filled in from those numbers.</p>
         <p>"Expected" comes from league rates in the same situations (2015–2025; for 3rd and 4th downs, adjusted for both teams' form this season). Efficiency compares each unit with its season before this game, the band being the middle 80% of teams. Swing plays and efficiency overlap on purpose: a third down counts in both, asked a different way. Swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played, so they are variance rather than luck.</p>
@@ -68,7 +68,7 @@ function WhatHappened({ r }: { r: RetroGame }) {
   return (
     <Section
       title="What happened"
-      help="Deserved to win: who the plays said should have won. Efficiency, scoring chances and giveaways in points, garbage time out and fumble bounces evened. Method in the fine print."
+      help="Deserved to win: who the plays said should have won. Efficiency, scoring chances and giveaways in points, garbage time down-weighted and fumble bounces evened. Method in the fine print."
     >
       <Card>
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

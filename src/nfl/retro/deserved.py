@@ -13,9 +13,11 @@ mattered, and turned into a win chance:
 
 - **Garbage time.** Every play is weighted by how much the game was still in doubt, from
   nflfastR's win probability for the offense before the snap (`wp`, the model without the
-  spread): weight 1 while it is between 5% and 95%, falling linearly to 0 at 1% and 99%. A
-  play with no `wp` counts fully. Tested on 2015-2025 against no weighting and stricter rules
-  (10/90 hard, 15/85): this one fit the result and the rest of the season best.
+  spread): weight 1 while it is between 5% and 95%, falling linearly to a quarter at 1% and 99%
+  (a garbage-time snap still says a little about a team). A play with no `wp` counts fully.
+  Tested on 2015-2025 against no weighting, stricter rules (10/90 hard, 15/85) and floors of 0,
+  0.1, 0.25 and 0.5: the soft rule fit the result best, and the quarter floor held the same fit
+  and carried slightly more to the rest of the season (r 0.259 against 0.255 with no floor).
 - **Efficiency**: weighted EPA per play over the offense's passes and runs, interceptions and
   lost fumbles left out (they are the third factor).
 - **Scoring chances**: the weighted share of drives that reached the opponent's 40 (a pass, run,
@@ -48,7 +50,8 @@ import polars as pl
 from nfl.retro.schema import Deserved, DeservedFactor, DeservedFit
 
 WP_FULL = 0.05  # weight 1 while the offense's win chance is in [5%, 95%]
-WP_ZERO = 0.01  # weight 0 at or beyond 1% / 99%; linear between
+WP_ZERO = 0.01  # weight WP_FLOOR at or beyond 1% / 99%; linear between
+WP_FLOOR = 0.25  # what a garbage-time snap still counts
 CHANCE_YL = 40  # a scoring chance: the drive snapped at or inside the opponent's 40
 DRIVE_TYPES = ["pass", "run", "field_goal", "punt"]
 TOSS_UP = 0.6  # below this the meter calls it a toss-up
@@ -63,8 +66,8 @@ def garbage_weight() -> pl.Expr:
         .when(lo >= WP_FULL)
         .then(1.0)
         .when(lo <= WP_ZERO)
-        .then(0.0)
-        .otherwise((lo - WP_ZERO) / (WP_FULL - WP_ZERO))
+        .then(WP_FLOOR)
+        .otherwise(WP_FLOOR + (1 - WP_FLOOR) * (lo - WP_ZERO) / (WP_FULL - WP_ZERO))
         .alias("w")
     )
 
@@ -170,7 +173,7 @@ def fit(plays: pl.DataFrame, games: pl.DataFrame, lost_share: float) -> Deserved
     k = float(fit_logistic(m[nz][:, None], (y[nz] > 0).astype(float))[0])
     return DeservedFit(
         b_efficiency=float(b[0]), b_chances=float(b[1]), b_giveaways=float(b[2]), k=k,
-        sigma=sigma, r2=r2, n=len(y), wp_full=WP_FULL, wp_zero=WP_ZERO,
+        sigma=sigma, r2=r2, n=len(y), wp_full=WP_FULL, wp_zero=WP_ZERO, wp_floor=WP_FLOOR,
     )  # fmt: skip
 
 

@@ -171,14 +171,15 @@
   "n": 2950
  },
  "deserved": {
-  "b_efficiency": 29.3718,
-  "b_chances": 10.364,
-  "b_giveaways": -2.9596,
-  "k": 0.3923,
-  "sigma": 6.8394,
-  "r2": 0.7588,
+  "b_efficiency": 33.6344,
+  "b_chances": 10.6587,
+  "b_giveaways": -3.1972,
+  "k": 0.3595,
+  "sigma": 6.2435,
+  "r2": 0.7963,
   "n": 2895,
   "wp_full": 0.05,
-  "wp_zero": 0.01
+  "wp_zero": 0.01,
+  "wp_floor": 0.25
  }
 }
