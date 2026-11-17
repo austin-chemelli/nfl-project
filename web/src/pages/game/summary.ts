@@ -12,7 +12,7 @@ import type { Efficiency, Game, Meta, RetroGame, TeamRetro } from '../../data/co
 import { pct, spreadLabel } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf } from '../../lib/meta'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
-import { homeFieldPp, injuryRank, neutralDiscount, sortInjuries } from './helpers'
+import { deservedView, homeFieldPp, injuryRank, neutralDiscount, sortInjuries } from './helpers'
 import { etStamp, fmtPts } from './line'
 
 export type TabId = 'retro' | 'preview' | 'approaches' | 'tendencies' | 'details' | 'health' | 'news'
@@ -200,19 +200,31 @@ function finishedTiles(g: Game, r: RetroGame): TileSpec[] {
   }
   const tiles: TileSpec[] = [
     resultTile(g, 'retro'),
-    plP - 0.5 < TOSS_UP
+    deservedTile(r) ?? (plP - 0.5 < TOSS_UP
       ? { id: 'played', label: 'Played like', tab: 'retro', value: 'About even', sub: `${pl.favored} ${pct(plP)} by efficiency` }
       : {
           id: 'played', label: 'Played like', tab: 'retro', team: pl.favored,
           value: `${pl.favored} ${pct(plP)}`,
           sub: pl.matches_result == null ? 'the better side; a tie' : pl.matches_result ? 'the better side, and won' : 'the better side, but lost',
-        },
+        }),
     swingTile(r),
   ]
   const s = surpriseTile(r)
   if (s) tiles.push(s)
   tiles.push(right_) // the game first, the approaches last
   return tiles
+}
+
+/** Deserved to win (retro schema 8); null on an older retro, which keeps the played-like tile. */
+function deservedTile(r: RetroGame): TileSpec | null {
+  const v = deservedView(r)
+  if (!v) return null
+  const { d } = v
+  return {
+    id: 'played', label: 'Deserved to win', tab: 'retro', team: v.tossUp ? undefined : d.winner,
+    value: v.tossUp ? 'Toss-up' : `${d.winner} ${v.pWinner}%`,
+    sub: d.matches_result == null ? `${v.plays} on the plays; a tie` : d.matches_result ? `${v.plays} on the plays, and won` : `${v.plays} on the plays, but lost`,
+  }
 }
 
 /**

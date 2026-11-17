@@ -377,3 +377,37 @@ describe('liveBars', () => {
     expect(b!.lean).toBeLessThan(0)
   })
 })
+
+describe('deserved meter helpers', () => {
+  it('holds the meter inside 1–99% and names the side of a margin', async () => {
+    const { meterPct, bySide } = await import('./helpers')
+    expect([meterPct(0.9999), meterPct(0.001), meterPct(0.794)]).toEqual([99, 1, 79])
+    expect(bySide(-8.94, 'GB', 'MIN')).toBe('MIN by 8.9')
+    expect(bySide(20, 'GB', 'MIN', 0)).toBe('GB by 20')
+    expect(bySide(0.01, 'GB', 'MIN')).toBe('even')
+  })
+})
+
+describe('garbageLede', () => {
+  const base = () => RetroGame.parse(JSON.parse(JSON.stringify(retroJson)))
+  const set = (r: RetroGame, team: 'home' | 'away', metric: string, game: number, all: number) =>
+    Object.assign(r.teams[team].efficiency.find((e) => e.metric === metric)!, { game, game_all: all })
+
+  it('names the unit garbage time moved most, against the league range', async () => {
+    const { garbageLede } = await import('./helpers')
+    const r = base()
+    set(r, 'home', 'off_epa_dropback', -0.31, -0.02) // range −0.12..0.16: 1.0 of it
+    set(r, 'away', 'off_epa_play', 0.1, 0.05) // 0.23 of the range: not enough on its own
+    expect(garbageLede(r)).toBe("Garbage time flattered GB's EPA per dropback: −0.31 while the game was in doubt, −0.02 counting every snap in full.")
+    set(r, 'home', 'off_epa_dropback', 0.2, 0.05)
+    expect(garbageLede(r)).toMatch(/^Garbage time hid GB's EPA per dropback: \+0\.20/)
+  })
+
+  it('says nothing when garbage time moved little, or on an older retro', async () => {
+    const { garbageLede } = await import('./helpers')
+    const r = base()
+    set(r, 'home', 'off_epa_dropback', 0.1, 0.12)
+    expect(garbageLede(r)).toBeNull()
+    expect(garbageLede(base())).toBeNull() // no game_all before schema 8
+  })
+})

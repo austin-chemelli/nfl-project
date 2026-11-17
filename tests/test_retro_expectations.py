@@ -20,7 +20,8 @@ COLS = {
     "field_goal_attempt": pl.Float64, "field_goal_result": pl.Utf8, "kick_distance": pl.Float64,
     "extra_point_attempt": pl.Float64, "extra_point_result": pl.Utf8, "penalty_team": pl.Utf8,
     "penalty_yards": pl.Float64, "return_touchdown": pl.Float64, "punt_blocked": pl.Float64,
-    "special_teams_play": pl.Float64,
+    "special_teams_play": pl.Float64, "play_id": pl.Float64, "wp": pl.Float64,
+    "fixed_drive": pl.Float64, "yardline_100": pl.Float64,
 }  # fmt: skip
 
 
@@ -158,4 +159,4 @@ def test_roundtrip(tmp_path, exp):
     paths = Paths(tmp_path)
     out = write(paths, exp)
     assert out == tmp_path / "marts" / "retro" / "expectations.json"
-    assert load(paths) == exp and exp.version == "retro_exp_v2"
+    assert load(paths) == exp and exp.version == "retro_exp_v3"

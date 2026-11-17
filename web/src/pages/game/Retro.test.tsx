@@ -22,18 +22,44 @@ describe('Retro', () => {
     expect(within(market).getByText('reference')).toBeInTheDocument()
   })
 
-  it('shows played-like with what goes into it, and leaves it out on a record from before schema 3', () => {
-    const { unmount } = render(<Retro r={r} />)
+  it('opens with the deserved-to-win meter, what drove it and the key points', () => {
+    render(<Retro r={r} />)
+    expect(screen.getByTestId('deserved-headline')).toHaveTextContent('GB 79%')
+    expect(screen.getByRole('img', { name: 'Deserved to win: GB 79%, CAR 21%' })).toBeInTheDocument()
+    expect(screen.getByText('✓ won')).toBeInTheDocument() // CAR won the game
+    expect(screen.getByText(/GB deserved to win: 79%, the plays were worth 3\.4 points to GB, but CAR won by 3\./)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'What drove the deserved margin, in points' })).toBeInTheDocument()
+    const m = screen.getByTestId('deserved-margins')
+    expect(m).toHaveTextContent('The playsGB by 3.4')
+    expect(m).toHaveTextContent('FinalCAR by 3')
+    expect(m).toHaveTextContent(/The rest.*CAR \+6\.4/)
+    expect(screen.getByText('No garbage time: every snap counted in full.')).toBeInTheDocument()
+    expect(screen.queryAllByText('context')).toHaveLength(0) // success rate and third downs aren't in the meter
+    expect(screen.queryByText('Third downs faced')).toBeNull()
+    expect(screen.getByText('Key points')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /^Played like/ })).toBeNull()
+    expect(screen.getByText(/that is garbage time/)).toBeInTheDocument()
+  })
+
+  it('keeps played-like on a retro from before schema 8, and its inputs only from schema 3', () => {
+    const v7 = { ...r, deserved: undefined }
+    const { unmount } = render(<Retro r={v7} />)
     expect(screen.getByRole('img', { name: /Played like: GB 61%, CAR 39%/ })).toBeInTheDocument()
-    expect(screen.getByText('✓ won')).toBeInTheDocument()
     expect(screen.getByText('decides it')).toBeInTheDocument()
-    expect(screen.getByText('context')).toBeInTheDocument()
     expect(screen.getByText(/Before any plays, the home side wins 59% of the time\. GB's edge of 0\.009 EPA a play moves GB to 61%\./)).toBeInTheDocument()
+    expect(screen.queryByTestId('deserved-headline')).toBeNull()
     unmount()
-    const old = structuredClone(r)
+    const old = structuredClone(v7)
     Object.assign(old.played_like, { home_epa: null, away_epa: null, home_success: null, away_success: null, p_base: null })
     render(<Retro r={old} />)
     expect(screen.queryByText('decides it')).toBeNull()
+  })
+
+  it('names when garbage time began', () => {
+    const late = structuredClone(r)
+    Object.assign(late.deserved!, { garbage_clock: 'Q4 9:15', garbage_t: 3045, snaps_full: 95, snaps: 118 })
+    render(<Retro r={late} />)
+    expect(screen.getByText('Garbage time from Q4 9:15; 95 of 118 snaps counted in full.')).toBeInTheDocument()
   })
 
   it('splits the swing plays into variance and pure luck, and hides Global', () => {
@@ -81,8 +107,9 @@ describe('Retro', () => {
   it('puts "How it unfolded" right after the headlines, with the turning points matching the marks', () => {
     const { container } = render(<Retro r={r} />)
     const heads = [...container.querySelectorAll('h2')].map((h) => h.textContent)
-    const order = ['What happened', 'How it unfolded', 'Played like']
-    expect(heads.slice(0, 3).map((t, i) => t?.startsWith(order[i]))).toEqual([true, true, true])
+    const order = ['What happened', 'How it unfolded']
+    expect(heads.slice(0, 2).map((t, i) => t?.startsWith(order[i]))).toEqual([true, true])
+    expect(heads.some((t) => t?.startsWith('Played like'))).toBe(false)
     expect(screen.getByText(/CAR won 23–20 after its win chance fell to 16% in Q2\./)).toBeInTheDocument()
     const items = screen.getAllByRole('listitem').filter((li) => li.closest('ol'))
     const marks = screen.getAllByTestId('wp-mark')

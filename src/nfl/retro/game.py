@@ -37,11 +37,13 @@ import numpy as np
 import polars as pl
 
 from nfl.config import Paths, current_season, now_utc
+from nfl.retro import deserved
 from nfl.retro.expectations import _in_bucket, expectations_path, load
 from nfl.retro.schema import (
     SCHEMA_VERSION,
     Attribution,
     Bucket,
+    Deserved,
     Drive,
     Efficiency,
     Expectations,
@@ -73,7 +75,7 @@ PLAY_COLS = [
     "return_touchdown", "td_team", "punt_blocked", "drive", "yardline_100", "touchdown",
     "qtr", "game_seconds_remaining", "desc", "season_type", "vegas_home_wp", "vegas_home_wpa",
     "fixed_drive", "fixed_drive_result", "drive_start_yard_line", "drive_end_yard_line",
-    "drive_play_count",
+    "drive_play_count", "wp",
 ]  # fmt: skip
 TEXT_COLS = {  # the rest are doubles; only matters for a column a partition lacks
     "game_id", "raw_snapshot_ts", "posteam", "defteam", "play_type", "field_goal_result",
@@ -84,6 +86,7 @@ TEXT_COLS = {  # the rest are doubles; only matters for a column a partition lac
 OFF_LABELS = {
     "epa_play": ("EPA per play", "epa"),
     "success": ("Success rate", "pct"),
+    "third_share": ("Snaps on third down", "pct"),
     "epa_dropback": ("EPA per dropback", "epa"),
     "epa_rush": ("EPA per rush", "epa"),
     "explosive": ("Explosive-play rate", "pct"),
@@ -93,6 +96,7 @@ OFF_LABELS = {
 DEF_LABELS = {
     "epa_play": "EPA per play allowed",
     "success": "Success rate allowed",
+    "third_share": "Snaps on third down (forced)",
     "epa_dropback": "EPA per dropback allowed",
     "epa_rush": "EPA per rush allowed",
     "explosive": "Explosive plays allowed",
@@ -224,8 +228,9 @@ def _offense(plays: pl.DataFrame) -> pl.DataFrame:
 
 
 def _metric_exprs() -> list[pl.Expr]:
-    """The seven efficiency aggregations, aliased by metric (shared by `_metrics` and the
-    per-team league bands, so both give identical numbers)."""
+    """The eight efficiency aggregations, aliased by metric (shared by `_metrics` and the
+    per-team league bands, so both give identical numbers). Each is a mean weighted by the `w`
+    column (`_weighted`): garbage-time snaps count what they count in the deserved-to-win meter."""
     db = pl.col("qb_dropback").fill_null(0) == 1
     run = pl.col("play_type") == "run"
     yards = pl.col("yards_gained")
@@ -235,26 +240,45 @@ def _metric_exprs() -> list[pl.Expr]:
         .otherwise(((~run) & (yards >= 20)) | (run & (yards >= 10)))
         .cast(pl.Float64)
     )
+    w = pl.col("w")
+
+    def wm(x: pl.Expr, cond: pl.Expr | None = None) -> pl.Expr:
+        ok = x.is_not_null() if cond is None else (x.is_not_null() & cond)
+        den = w.filter(ok).sum()
+        return pl.when(den > 0).then((x * w).filter(ok).sum() / den).otherwise(None)
+
     return [
-        pl.col("epa").mean().alias("epa_play"),
-        pl.col("success").mean().alias("success"),
-        pl.col("epa").filter(db).mean().alias("epa_dropback"),
-        pl.col("epa").filter(run & ~db).mean().alias("epa_rush"),
-        explosive.mean().alias("explosive"),
-        (pl.col("sack").fill_null(0).filter(db).sum() / db.sum()).alias("sack_rate"),
-        pl.col("pass_oe").mean().alias("proe"),
+        wm(pl.col("epa")).alias("epa_play"),
+        wm(pl.col("success").cast(pl.Float64)).alias("success"),
+        # share of snaps that came on third down: an offense that moves the chains on early
+        # downs faces fewer (team-season r = -0.80 with EPA a play, 2015-2025)
+        wm((pl.col("down") == 3).cast(pl.Float64)).alias("third_share"),
+        wm(pl.col("epa"), db).alias("epa_dropback"),
+        wm(pl.col("epa"), run & ~db).alias("epa_rush"),
+        wm(explosive).alias("explosive"),
+        wm(pl.col("sack").fill_null(0).cast(pl.Float64), db).alias("sack_rate"),
+        wm(pl.col("pass_oe")).alias("proe"),
     ]
+
+
+def _weighted(df: pl.DataFrame, garbage: bool = True) -> pl.DataFrame:
+    """`df` with the weight column `_metric_exprs` reads: the meter's garbage-time weight, or 1
+    for every snap."""
+    if not garbage or "wp" not in df.columns:
+        return df.with_columns(pl.lit(1.0).alias("w"))
+    return df.with_columns(deserved.garbage_weight())
 
 
 def _clean(v: object) -> float | None:
     return None if v is None or (isinstance(v, float) and math.isnan(v)) else float(v)  # type: ignore[arg-type]
 
 
-def _metrics(df: pl.DataFrame) -> dict[str, float | None]:
-    """The seven efficiency metrics over a frame of offensive plays (pass/run with epa)."""
+def _metrics(df: pl.DataFrame, garbage: bool = True) -> dict[str, float | None]:
+    """The eight efficiency metrics over a frame of offensive plays (pass/run with epa),
+    garbage time weighted as in the meter (`garbage=False`: every snap in full)."""
     if df.is_empty():
         return dict.fromkeys(OFF_LABELS)
-    r = df.select(_metric_exprs()).row(0, named=True)
+    r = _weighted(df, garbage).select(_metric_exprs()).row(0, named=True)
     return {k: _clean(v) for k, v in r.items()}
 
 
@@ -268,7 +292,9 @@ def _league_bands(before: pl.DataFrame, col: str) -> dict[str, tuple[float | Non
     none = (None, None)
     if before.is_empty():
         return dict.fromkeys(OFF_LABELS, none)
-    per_team = before.filter(pl.col(col).is_not_null()).group_by(col).agg(_metric_exprs())
+    per_team = (
+        _weighted(before.filter(pl.col(col).is_not_null())).group_by(col).agg(_metric_exprs())
+    )
     out: dict[str, tuple[float | None, float | None]] = {}
     for metric in OFF_LABELS:
         vals = [v for v in map(_clean, per_team[metric].to_list()) if v is not None]
@@ -287,21 +313,22 @@ def _round_metric(metric: str, v: float | None) -> float | None:
 
 
 def _efficiency(off: pl.DataFrame, team: str, before: pl.DataFrame, gid: str) -> list[Efficiency]:
-    """`off` = all offensive plays of the season; `before` = those of games kicked off earlier."""
+    """`off` = all offensive plays of the season; `before` = those of games kicked off earlier.
+    Game, season and league values all weight garbage time as the meter does (a quarter at the
+    extremes), so they compare like with like; `game_all` is this game with every snap in full."""
     league = _metrics(before)
     n_games = {}
     out = []
     for side, col in (("off", "posteam"), ("def", "defteam")):
-        game = _metrics(off.filter((pl.col("game_id") == gid) & (pl.col(col) == team)))
+        unit = off.filter((pl.col("game_id") == gid) & (pl.col(col) == team))
+        game, every = _metrics(unit), _metrics(unit, garbage=False)
         prior = before.filter(pl.col(col) == team)
         n_games[side] = prior["game_id"].n_unique()
         season = _metrics(prior)
         bands = _league_bands(before, col)
         for metric, (label, unit) in OFF_LABELS.items():
-            if side == "off":
-                better = metric != "sack_rate"
-            else:
-                better = metric == "sack_rate"
+            lower = metric in ("sack_rate", "third_share")  # lower is better for an offense
+            better = not lower if side == "off" else lower
             out.append(
                 Efficiency(
                     metric=f"{side}_{metric}",
@@ -310,6 +337,7 @@ def _efficiency(off: pl.DataFrame, team: str, before: pl.DataFrame, gid: str) ->
                     unit=unit,  # type: ignore[arg-type]
                     higher_is_better=better,
                     game=_round_metric(metric, game[metric]),
+                    game_all=_round_metric(metric, every[metric]),
                     season=_round_metric(metric, season[metric]),
                     league=_round_metric(metric, league[metric]),
                     league_lo=bands[metric][0],
@@ -867,8 +895,9 @@ def _swing_sentence(home: str, h: float, away: str, a: float, tail: str) -> str:
 
 
 def _headlines(
-    g: dict, names: dict[str, str], teams: dict[str, TeamRetro], pl_: PlayedLike
-) -> list[str]:
+    g: dict, names: dict[str, str], teams: dict[str, TeamRetro], pl_: PlayedLike,
+    meter: Deserved | None = None,
+) -> list[str]:  # fmt: skip
     out = []
     home, away = g["home_team"], g["away_team"]
     nm = lambda c: names.get(c, c)
@@ -888,7 +917,9 @@ def _headlines(
             f"{nm(away)}){tail}"
         )
 
-    out.append(pl_.sentence)
+    # the meter's own sentence sits above the list on the page, so the list leaves it out
+    if meter is None:
+        out.append(pl_.sentence)
 
     gaps = []
     for side, code in (("home", home), ("away", away)):
@@ -1182,9 +1213,14 @@ def build_game(
 
     margin = g["home_score"] - g["away_score"]
     played = _played_like(E, off_all.filter(in_game), g, names)
+    meter = None
+    if E.deserved is not None and deserved.applies_to(E.seasons, int(g["season"])):
+        meter = deserved.deserved(
+            E.deserved, game_plays, g, _alias(home), _alias(away), E.fumble_lost_share
+        )
     reg = ctx["registry"]
     picks, best_id, attribution = _predictions(rows, gid, margin, g, reg, ctx["groups"])
-    headlines = _headlines(g, names, teams, played)
+    headlines = _headlines(g, names, teams, played, meter)
     return RetroGame(
         game_id=gid,
         season=int(g["season"]),
@@ -1199,6 +1235,7 @@ def build_game(
         expectations_version=E.version,
         headlines=headlines,
         played_like=played,
+        deserved=meter,
         phases=_phases(game_plays, teams, home, away),
         teams=teams,  # type: ignore[arg-type]
         predictions=picks,

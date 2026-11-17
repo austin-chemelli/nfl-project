@@ -32,6 +32,24 @@
   "away_success": 0.452,
   "p_base": 0.5911
  },
+ "deserved": {
+  "p_home": 0.7942,
+  "winner": "GB",
+  "margin_home": 3.4,
+  "matches_result": false,
+  "gap_home": -6.4,
+  "garbage_t": null,
+  "garbage_clock": null,
+  "snaps": 128,
+  "snaps_full": 128,
+  "snaps_weighted": 128,
+  "sentence": "GB deserved to win: 79%, the plays were worth 3.4 points to GB, but CAR won by 3.",
+  "factors": [
+   {"factor": "efficiency", "label": "Efficiency", "note": "EPA per play, turnover plays out", "home": 0.081, "away": -0.008, "pts": 2.6, "weighted": true, "leader": "home"},
+   {"factor": "chances", "label": "Scoring chances", "note": "drives reaching the opponent's 40", "home": 0.5, "away": 0.364, "pts": 1.4, "weighted": true, "leader": "home"},
+   {"factor": "giveaways", "label": "Giveaways", "note": "points handed over: fumbles at the league's recovery odds, picks partly evened out", "home": 4.1, "away": 3.5, "pts": -0.6, "weighted": true, "leader": "away"}
+  ]
+ },
  "teams": {
   "home": {
    "team": "GB",

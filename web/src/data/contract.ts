@@ -638,7 +638,8 @@ export const Efficiency = z.looseObject({
   label: z.string(),
   unit: z.string(),
   higher_is_better: z.boolean(),
-  game: nnum,
+  game: nnum, // from schema 8, garbage-time snaps count a quarter (as in season and league)
+  game_all: nnum.default(null), // this game with every snap in full; schema 8
   season: nnum,
   league: nnum,
   league_lo: nnum.default(null),
@@ -731,6 +732,33 @@ export const Drive = z.looseObject({
   result: nstr,
 })
 
+export const DeservedFactor = z.looseObject({
+  factor: z.string(),
+  label: z.string(),
+  note: z.string(),
+  home: nnum,
+  away: nnum,
+  pts: nnum, // part of the deserved margin toward home; null on a context row
+  weighted: z.boolean(),
+  leader: z.enum(['home', 'away']).nullable(),
+})
+
+/** Deserved to win (retro schema 8): who the plays said should have won, garbage time down-weighted and the bounces evened. */
+export const Deserved = z.looseObject({
+  p_home: num,
+  winner: z.string(),
+  margin_home: num,
+  matches_result: z.boolean().nullable(),
+  gap_home: num,
+  factors: z.array(DeservedFactor),
+  garbage_t: nnum,
+  garbage_clock: nstr,
+  snaps: num,
+  snaps_full: num,
+  snaps_weighted: num,
+  sentence: z.string(),
+})
+
 export const RetroGame = z.looseObject({
   schema_version: z.string(),
   game_id: z.string(),
@@ -749,6 +777,7 @@ export const RetroGame = z.looseObject({
     // what went in; retros from before schema 3 lack them
     home_epa: nnum.default(null), away_epa: nnum.default(null), home_success: nnum.default(null), away_success: nnum.default(null), p_base: nnum.default(null),
   }),
+  deserved: Deserved.nullish(), // retros from before schema 8 lack it
   phases: z.array(Phase).default([]), // retros from before schema 3 lack it
   teams: z.looseObject({ home: TeamRetro, away: TeamRetro }),
   predictions: z.array(GradedPick),
@@ -1006,6 +1035,8 @@ export type DiyMatrix = z.infer<typeof DiyMatrix>
 export type SeasonFile = z.infer<typeof SeasonFile>
 export type Audit = z.infer<typeof Audit>
 export type RetroGame = z.infer<typeof RetroGame>
+export type Deserved = z.infer<typeof Deserved>
+export type DeservedFactor = z.infer<typeof DeservedFactor>
 export type WpSeries = z.infer<typeof WpSeries>
 export type WpPlay = z.infer<typeof WpPlay>
 export type Drive = z.infer<typeof Drive>

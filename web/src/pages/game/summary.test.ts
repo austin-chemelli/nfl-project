@@ -88,7 +88,7 @@ describe('summaryTiles', () => {
     expect(t.map((x) => x.id)).toEqual(['result', 'played', 'swing', 'surprise', 'right'])
     expect(t.every((x) => x.tab === 'retro')).toBe(true)
     expect(t[0]).toMatchObject({ value: 'Upset', sub: expect.stringMatching(/^CAR won as a \d+% underdog (before kickoff|at lock)$/) })
-    expect(t[1]).toMatchObject({ value: 'GB 61%', sub: 'the better side, but lost' })
+    expect(t[1]).toMatchObject({ label: 'Deserved to win', value: 'GB 79%', sub: 'GB by 3.4 on the plays, but lost', team: 'GB' })
     // GB net −9.6, CAR +5.3: the swing plays went to CAR by 14.9 net; underneath, each team's own pure luck
     expect(t[2].value).toBe('CAR +14.9 pts net')
     // each team's own pure luck, signed like the headline sentence and the recap, not the gap between them
@@ -96,6 +96,12 @@ describe('summaryTiles', () => {
     expect(t[2].sub).toBe(`pure luck CAR ${signed(pureLuck(retro.teams.away))}, GB ${signed(pureLuck(retro.teams.home))}`)
     expect(t[3].sub).toMatch(/^(better|worse) than its season by \d\.\d\d EPA a (play|dropback|rush)$/)
     expect(t[4]).toMatchObject({ value: '0 of 4', sub: 'best read: Traditionalist', modelId: 'traditionalist' })
+  })
+
+  it('post-game: the played-like tile on a retro from before schema 8, and a toss-up meter', () => {
+    expect(summaryTiles(final, meta, { ...retro, deserved: undefined })[1]).toMatchObject({ label: 'Played like', value: 'GB 61%', sub: 'the better side, but lost' })
+    const close = { ...retro, deserved: { ...retro.deserved!, p_home: 0.55, margin_home: 0.6 } }
+    expect(summaryTiles(final, meta, close)[1]).toMatchObject({ value: 'Toss-up', team: undefined, sub: 'GB by 0.6 on the plays, but lost' })
   })
 
   it('post-game: a tie has no "right" count', () => {

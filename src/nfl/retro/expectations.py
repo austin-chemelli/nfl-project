@@ -31,6 +31,8 @@ Definitions (regular season only, `season_type = 'REG'`):
   Logistic (maximum likelihood, Newton) of home win on [1, d_epa]. Success rate is left out
   (`b_success = 0`): on 2015-2025 it correlates 0.74 with EPA and its coefficient turns negative
   once EPA is in (EPA alone +8.9, success alone +10.3, both +9.7 / -2.4), i.e. it adds noise.
+- deserved (v3): the deserved-to-win meter's weights and scale, fit on the same games
+  (`nfl.retro.deserved`). Used only for seasons after the window.
 """
 
 from __future__ import annotations
@@ -43,9 +45,10 @@ import numpy as np
 import polars as pl
 
 from nfl.config import Paths, now_utc
+from nfl.retro import deserved
 from nfl.retro.schema import Bucket, Expectations, PlayedLikeFit
 
-VERSION = "retro_exp_v2"
+VERSION = "retro_exp_v3"  # v3 2026-11-17: the deserved-to-win fit
 
 DIST_BUCKETS: list[tuple[str, float, float | None]] = [
     ("1", 1, 1),
@@ -79,7 +82,8 @@ def _plays(paths: Paths, seasons: tuple[int, int]) -> pl.DataFrame:
                aborted_play, third_down_converted, third_down_failed, fourth_down_converted,
                fourth_down_failed, field_goal_attempt, field_goal_result, kick_distance,
                extra_point_attempt, extra_point_result, penalty_team, penalty_yards,
-               return_touchdown, special_teams_play, punt_blocked
+               return_touchdown, special_teams_play, punt_blocked, play_id, wp, fixed_drive,
+               yardline_100
         from read_parquet('{glob}', hive_partitioning=true)
         where season_type = 'REG' and season between {int(seasons[0])} and {int(seasons[1])}
         """
@@ -265,6 +269,7 @@ def build(paths: Paths, seasons: tuple[int, int] = (2015, 2025)) -> Expectations
         special_teams_big_plays_pg=st_pg,
         value_special_teams_big_play=st_val,
         played_like=_played_like(plays, games),
+        deserved=deserved.fit(plays, games, fumble_share, value_int, value_fumble),
     )
 
 

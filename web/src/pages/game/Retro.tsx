@@ -10,25 +10,28 @@ import type { Efficiency, GradedPick, RetroGame, TeamRetro, WpPlay } from '../..
 import { DivergingBars, DriveField, PossessionStrip, RangeRow, TipNote, TipRow, TipTitle, WpChart, type RangeRowData } from '../../charts'
 import { withCodes } from '../../lib/teams'
 import { dash, fmtEff, pct, pts, ptsFor, ptsSide } from '../../lib/format'
-import { driveLede, driveText, factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
+import { deservedValue, deservedView, driveLede, garbageLede, driveText, factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
 
 export function Retro({ r }: { r: RetroGame }) {
   return (
     <div className="flex flex-col gap-8">
-      <Headlines r={r} />
+      {r.deserved ? <WhatHappened r={r} /> : <Headlines r={r} />}
       <Unfolded r={r} />
       <DriveByDrive r={r} />
-      <PlayedLike r={r} />
+      {!r.deserved && <PlayedLike r={r} />}
       <Phases r={r} />
       <EfficiencySection r={r} />
       <SwingSection r={r} />
       <Forecasts r={r} />
       <Groups key={r.game_id} r={r} />
       <FinePrint>
+        {r.deserved && (
+          <p>Deserved to win adds up three things in points. Efficiency (EPA per play, turnover plays left out) and scoring chances (the share of drives that reached the opponent's 40) are weighted by a fit on the 2015–2025 regular seasons. Giveaways are the points a team handed over, at what a turnover costs on average: fumbles at the league's odds of losing one, so who fell on the ball doesn't count, and interceptions at a bit under half, the rest spread as risk over every dropback, because some picks are tips and some bad throws aren't caught. A snap counts in full while the offense's win chance is between 5% and 95%, and its weight fades to a quarter at 1% or 99%: that is garbage time, which still says a little about a team. The meter is how often teams with that margin in points won. It leaves out home field, kicks, return plays and fumble bounces; success rate and the share of snaps on third down add nothing once these are in, so they are under Efficiency instead. One game is a small sample: as a forecast of a team's next games, the meter does no better than the final score.</p>
+        )}
         <p>The retrospective describes the game; it does not prove why it went that way. Every number is computed from play-by-play, and every sentence is filled in from those numbers.</p>
         <p>"Expected" comes from league rates in the same situations (2015–2025; for 3rd and 4th downs, adjusted for both teams' form this season). Efficiency compares each unit with its season before this game, the band being the middle 80% of teams. Swing plays and efficiency overlap on purpose: a third down counts in both, asked a different way. Swings are priced in points by what such events are worth on average. Fumble recoveries, kicks and return plays are mostly luck; conversions, interceptions and penalties also reflect how the team played, so they are variance rather than luck.</p>
         <p>In the forecast table, dimmed rows are references (the market and simple baselines), not entrants, and cannot be "best". One game is a very noisy score for any model.</p>
-        <p>Phases are a count, not a score: they aren't worth the same as each other, and none of them feeds the played-like verdict. Some overlap with the swing plays below.</p>
+        <p>Phases are a count, not a score: they aren't worth the same as each other, and none of them feeds the deserved-to-win meter. Some overlap with the swing plays below.</p>
         <p>The win probability curve is nflfastR's model with the pregame spread, not one of this site's approaches. Its quirks, such as the step at the end of a tied regulation and blowouts flattening at 99.9%, are the model's. The band under the chart shows who had the ball, with a line at each score. Its kickoff number differs from this site's forecasts. Play text is from nflverse.</p>
         <p>Group values overlap and do not add up to anything: read their order, not their size.</p>
       </FinePrint>
@@ -47,6 +50,110 @@ function Headlines({ r }: { r: RetroGame }) {
           <li key={h}>{withCodes(h, [r.away, r.home])}</li>
         ))}
       </ul>
+    </Section>
+  )
+}
+
+// ------------------------------------------------------------------------- what happened: deserved
+
+/** The top of the retro (schema 8): who deserved to win, what drove it, then the key points. */
+function WhatHappened({ r }: { r: RetroGame }) {
+  const v = deservedView(r)
+  if (!v) return null
+  const { d } = v
+  const winnerVar = d.winner === r.home ? 'var(--team-home)' : 'var(--team-away)'
+  const m = r.result.margin
+  const won = m > 0 ? r.home : m < 0 ? r.away : null
+  const domain = Math.max(3, ...v.weighted.map((f) => Math.abs(f.pts ?? 0)))
+  return (
+    <Section
+      title="What happened"
+      help="Deserved to win: who the plays said should have won. Efficiency, scoring chances and giveaways in points, garbage time down-weighted and fumble bounces evened. Method in the fine print."
+    >
+      <Card>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h3 className="text-[12px] font-medium uppercase tracking-wide text-ink-3">Deserved to win</h3>
+          <span className="text-[13px] text-ink-3">{v.garbage}</span>
+        </div>
+        <p className="mt-1 text-[22px] font-semibold leading-tight" data-testid="deserved-headline">
+          {v.tossUp ? <>Toss-up <span className="tabular text-ink-2">· {d.winner} {v.pWinner}%</span></> : <><span style={{ color: winnerVar }}>{d.winner}</span> <span className="tabular">{v.pWinner}%</span></>}
+        </p>
+        <div className="mt-2 flex items-center justify-between text-[13px]">
+          <span className="font-medium">{r.away} {100 - v.pHome}%{won === r.away && <span className="ml-1 text-[var(--good)]">✓ won</span>}</span>
+          <span className="font-medium">{won === r.home && <span className="mr-1 text-[var(--good)]">won ✓</span>}{r.home} {v.pHome}%</span>
+        </div>
+        <div className="relative mt-1 flex h-4 overflow-hidden rounded" role="img" aria-label={`Deserved to win: ${r.home} ${v.pHome}%, ${r.away} ${100 - v.pHome}%`}>
+          <div style={{ width: `${100 - v.pHome}%`, background: 'var(--team-away)' }} />
+          <div style={{ width: `${v.pHome}%`, background: 'var(--team-home)' }} />
+          <div aria-hidden className="absolute inset-y-0 left-1/2 w-px bg-[var(--surface)]" />
+        </div>
+        <p className="mt-3 text-[15px]">{withCodes(d.sentence, [r.away, r.home])}</p>
+
+        <div className="mt-4 border-t border-line pt-3">
+          <h3 className="mb-1 text-[12px] font-medium uppercase tracking-wide text-ink-3">
+            <Help text="Each factor's part of the deserved margin, in points. They add up to the plays' margin; the final score also holds what the meter leaves out.">What drove it</Help>
+          </h3>
+          <DivergingBars
+            leftLabel={`toward ${r.away}`}
+            rightLabel={`toward ${r.home}`}
+            leftColor="var(--team-away)"
+            rightColor="var(--team-home)"
+            format={ptsFor}
+            domain={domain}
+            labelWidth={150}
+            ariaLabel="What drove the deserved margin, in points"
+            rows={v.weighted.map((f) => ({
+              key: f.factor, label: f.label, value: f.pts,
+              tip: (
+                <>
+                  <TipTitle note={f.note}>{f.label}</TipTitle>
+                  <TipRow color="var(--team-away)" value={deservedValue(f, f.away)} label={r.away} />
+                  <TipRow color="var(--team-home)" value={deservedValue(f, f.home)} label={r.home} />
+                  {f.pts != null && <TipNote>{ptsFor(f.pts)} toward {f.pts >= 0 ? r.home : r.away}</TipNote>}
+                </>
+              ),
+            }))}
+          />
+          <dl className="mt-3 grid grid-cols-3 gap-2 text-[13px]" data-testid="deserved-margins">
+            <div><dt className="text-ink-3">The plays</dt><dd className="tabular font-medium">{v.plays}</dd></div>
+            <div><dt className="text-ink-3">Final</dt><dd className="tabular font-medium">{v.final}</dd></div>
+            <div>
+              <dt className="text-ink-3"><Help text="Final margin minus the plays' margin: fumble bounces, kicks, return plays, red-zone finishing and home field. Swing plays below prices the luck part.">The rest</Help></dt>
+              <dd className="tabular font-medium">{v.rest}</dd>
+            </div>
+          </dl>
+          <details className="mt-3 border-t border-line pt-2 text-[13px]">
+            <summary className="cursor-pointer text-ink-3 hover:text-ink">The numbers</summary>
+            <TableScroll>
+              <table className="mt-2 w-full border-collapse text-[14px]">
+                <thead>
+                  <tr><th className={th}>Factor</th><th className={th}>{r.away}</th><th className={th}>{r.home}</th><th className={th}>Points</th></tr>
+                </thead>
+                <tbody>
+                  {v.weighted.map((f) => (
+                    <tr key={f.factor}>
+                      <td className={td}><Help text={`${f.note}.`}>{f.label}</Help></td>
+                      <td className={`${td} tabular`}>{deservedValue(f, f.away)}</td>
+                      <td className={`${td} tabular`}>{deservedValue(f, f.home)}</td>
+                      <td className={`${td} tabular`}>{f.pts == null ? dash : ptsSide(f.pts, r.home, r.away)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+          </details>
+        </div>
+      </Card>
+      {r.headlines.length > 0 && (
+        <>
+          <h3 className="mb-1 mt-4 text-[12px] font-medium uppercase tracking-wide text-ink-3">Key points</h3>
+          <ul className="list-disc space-y-1.5 pl-5 text-[15px]">
+            {r.headlines.map((h) => (
+              <li key={h}>{withCodes(h, [r.away, r.home])}</li>
+            ))}
+          </ul>
+        </>
+      )}
     </Section>
   )
 }
@@ -298,8 +405,9 @@ function EfficiencySection({ r }: { r: RetroGame }) {
   return (
     <Section
       title="Efficiency"
-      help="Each unit in this game (dot) against its season so far. The band is the league's middle 80%, the tick its average. Green beat its season, red fell short."
+      help="Each unit in this game (dot) against its season so far. The band is the league's middle 80%, the tick its average. Garbage-time snaps count a quarter everywhere, as in the meter; hover a row for every snap in full."
     >
+      {garbageLede(r) && <p className="mb-3 text-[15px]">{withCodes(garbageLede(r)!, [r.away, r.home])}</p>}
       <div className="mb-3">
         <Segmented
           label="Team"
@@ -370,6 +478,7 @@ function TeamEfficiency({ t }: { t: TeamRetro }) {
                     <>
                       <TipTitle note={VERDICT_TEXT[v]}>{e.label}</TipTitle>
                       <TipRow color={v === 'better' ? 'var(--good)' : v === 'worse' ? 'var(--critical)' : undefined} value={fmtEff(e.game, u)} label="this game" />
+                      {e.game_all != null && e.game_all !== e.game && <TipRow value={fmtEff(e.game_all, u)} label="this game, every snap in full" />}
                       <TipRow color="var(--text-secondary)" value={fmtEff(e.season, u)} label={`season to date (${e.season_games} games)`} />
                       <TipNote>League average {fmtEff(e.league, u)}{e.league_lo != null && e.league_hi != null ? `; most teams ${fmtEff(e.league_lo, u)} to ${fmtEff(e.league_hi, u)}` : ''}.</TipNote>
                     </>
