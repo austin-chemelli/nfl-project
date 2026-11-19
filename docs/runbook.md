@@ -93,7 +93,7 @@ From the switch-over the passes run on Claude Code on Austin's Max login, from a
 cd ~/dev/nfl-project && git switch main && git pull --ff-only
 bash scripts/desktop-setup.sh                     # until it says "All set"
 bash scripts/desktop-setup.sh --test-game <a game id of the coming week>   # one real game, not stored, ~3 min
-bash scripts/desktop-setup.sh --enable            # the switch: timer on, Windows task nfl-narrative off
+bash scripts/desktop-setup.sh --enable            # the switch: timer on, Windows task nfl-narrative off, and a pass now
 ```
 It checks: systemd and lingering in WSL (job-search's host setup already did both on this PC), the "JobSearch WSL" Windows task that keeps WSL running from sign-in, the checkout on `main`, uv, gcloud reading the bucket, Claude Code logged in to claude.ai (not an API key). If Claude isn't logged in: open Ubuntu, run `claude`, then `/login` with the Max account. `--disable` turns the timer off and the Windows task back on.
 

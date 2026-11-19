@@ -5,7 +5,8 @@
 #
 #   scripts/desktop-setup.sh                 check everything, install the systemd units (timer off)
 #   scripts/desktop-setup.sh --test-game ID  also research one game now, without storing it
-#   scripts/desktop-setup.sh --enable        turn the timer on and the old Windows task off (the switch)
+#   scripts/desktop-setup.sh --enable        the switch: timer on, old Windows task off, and a pass now
+#                                            (every game not yet kicked off; ~15 min; uploads and rebuilds the site)
 #   scripts/desktop-setup.sh --disable       the reverse: timer off, Windows task back on
 #
 # What it can't do for you (it says so when it finds them missing): log in to Claude Code
@@ -125,6 +126,10 @@ case "$mode" in
         need "could not disable the Windows task: in PowerShell, Disable-ScheduledTask -TaskName nfl-narrative"
     fi
     systemctl --user list-timers nfl-narrative.timer --no-legend | sed 's/^/  next: /'
+    # a pass now, off schedule: every game not yet kicked off (games stored in this pass window are
+    # skipped), then the upload and the site rebuild
+    systemctl --user start --no-block nfl-narrative.service && ok "a pass started now (about 15 minutes)"
+    echo "  follow it: journalctl --user -u nfl-narrative -f"
     ;;
   disable)
     step "6. Back: the timer off, the Windows task on"
