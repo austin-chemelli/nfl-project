@@ -1000,3 +1000,14 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Decided (Austin, 2026-11-19).** The Max login via `claude -p` (D35); a failed login or usage limit fails and emails, no local fallback (D36); the switch lands in Week 11 with a catch-up pass for every remaining game as soon as the desktop is set up, published off schedule (D37); this track does the switch only, and previews, evals and the league note are evaluated afterwards (D38).
 
 **Switched (2026-11-18 evening).** #66 merged; Austin ran `desktop-setup.sh` and `--enable` on the desktop. The catch-up pass stored `claude_max` records for all 13 Week 11 games between 02:30 and 02:51Z on 2026-11-19 and `nfl-site` published them by 02:57Z (every game file now reads `producer: claude_max`, `claude_v1`). The stopped local pass had uploaded two records first (ARI @ KC, IND @ HOU); the pass skipped those games as already stored this window, and a second run replaced them, so the newer Claude records supersede. Spot check: PHI's record has Joe Milton starting with Hurts on IR, the depth chart's projection confirmed from cited pages. Thursday 2026-11-19's lock is the first with `claude_max` inputs.
+
+
+## 2026-11-19: Hub cleanup, open items checked against what was built (hub-cleanup)
+
+**Why.** The hub's Board counted nine things waiting on Austin, and the Plans tab listed finished plans as open. Austin asked to keep only what really waits on him, in the hub's new format (one Board item per plan, option cards, status read by its first word).
+
+**What changed.** Every plan in `.notes/hub/plans/` has a short title, a `summary:` and a status starting with a standard word. In state.md: D2 decided (the team page already shows tendencies on the league's scale, `TendencyRow`, #27); D3 and D11 dropped as superseded by ADR 0030; D12 dropped on the 2026-11-05 measurement (a boosted model lost to the Student, so no learned line); D1 and D14 reworded. In the plans: the deserved-to-win meter's two open calls were decided by the #65 merge (plan accepted); value boards become their own milestone if ever built, unscheduled.
+
+**Findings.** The hub reads a state.md row as closed only from a bold `**decided|dropped|closed …**`; D3 said "superseded" and so still counted as open. Board count 9 before; 4 after the merge (D1, D14, player value screening, the scheduled Claude jobs plan).
+
+**Lesson.** A track that closes should mark its plan's items itself; the retro track merged with two items still `open`.
