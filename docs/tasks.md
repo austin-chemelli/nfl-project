@@ -141,7 +141,15 @@ Deviations from the specs below: λ grid is `[1, 10, 100, 1000, 10000]` on the s
 - **M6.4 LLM evals report.** Touches `src/nfl/llm/evals.py`. Deps: M6.2, M6.3. Weekly: faithfulness pass rate, citation validity (URL resolves, date before lock), conflict rate between narrative claims and the tendency store (e.g. "they blitz a lot" vs `blitz_rate`), cost and latency per job. Writes `marts/llm_evals.parquet` and a tracker section. **P** with M6.5
 - **M6.5 Narrative approach in shadow.** Touches `src/nfl/approaches/configs/narrative.yaml`, `src/nfl/lock.py`. Deps: M6.2, M2.2. Persona flavor only (no history to fit); scored and shown with "weeks tracked", excluded from the ensemble and from the headline scorecard in 2026. **P** with M6.4
 
-### Future research plans (parked 2026-11-05)
+- **M6.8 Narrative research on headless Claude Code** *(2026-11-18, ADR 0030; plan `.notes/hub/plans/narrative-claude.md`)*. Touches `src/nfl/llm/claude_research.py`, `src/nfl/llm/checks.py`, `src/nfl/llm/prompts/claude_research_v1.md`, `src/nfl/llm/narrative.py` (producer `claude_max`, `PASS_PRODUCERS`), `src/nfl/llm/client.py` (log columns), `src/nfl/cli.py` (`nfl narrative claude`), `scripts/desktop-narrative.sh` (`--producer`, `--dry-run`, login guard), `scripts/desktop-setup.sh`, `deploy/nfl-narrative.{service,timer}`, `tests/test_claude_research.py`.
+  - *M6.8a (built 2026-11-18):* the producer, the checks (opened URLs, code's page dates and window, rosters, standings, line; numbers on the page flagged only), one repair turn, the run log, the CLI, the script and units, the setup script. Acceptance: tests with a fake `claude` (repair turn, failure, lockdown flags, login refusal); one real game end to end from the laptop.
+  - *M6.8b (Austin, on the desktop):* `bash scripts/desktop-setup.sh` until "All set", then `--test-game <id>`.
+  - *M6.8c switch-over (decision 3):* `scripts/desktop-setup.sh --enable` at a week boundary; first lock on `claude_max` records noted in the journal; after a few weeks, retire Ollama, SearXNG and Tavily (a separate change).
+  - *M6.8d:* decide whether numbers-on-the-page drops (`checks.Context.on_page_drops`) after measuring the flags on a full week (part of M6.4).
+
+### Future research plans (parked 2026-11-05; superseded 2026-11-18 by M6.8)
+
+M6.6 and M6.7 are superseded: Claude Code follows leads natively (M6.6's goal) and M6.8 is M6.7's agent on the Max login on the desktop instead of an API key in the cloud. Kept for the record.
 
 Two options for making the narrative research smarter. Neither is scheduled, and they answer the same weakness: the queries are fixed before anything is read, so a run can't follow a lead, and the 9B combines sources poorly. M6.7 would replace most of what M6.6 adds, so the choice between them is open decision D3 in `docs/state.md`.
 

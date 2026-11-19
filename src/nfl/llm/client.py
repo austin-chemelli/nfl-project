@@ -53,6 +53,13 @@ LOG_SCHEMA: dict[str, Any] = {
     "energy_wh": pl.Float64,
     "latency_ms": pl.Int64,
     "ts": pl.Datetime("us", "UTC"),
+    # headless Claude Code runs (ADR 0030): one row per game session, null for the desktop model
+    "cache_write_tokens": pl.Int64,
+    "turns": pl.Int32,
+    "searches": pl.Int32,
+    "pages": pl.Int32,
+    "dropped": pl.Int32,
+    "api_equiv_usd": pl.Float64,  # what the same tokens would cost on the API; nothing is billed
 }
 
 
@@ -117,16 +124,18 @@ def calls_path(paths: Paths) -> Path:
 
 def read_calls(paths: Paths) -> pl.DataFrame:
     p = calls_path(paths)
-    return pl.read_parquet(p) if p.exists() else pl.DataFrame(schema=LOG_SCHEMA)
+    if not p.exists():
+        return pl.DataFrame(schema=LOG_SCHEMA)
+    return pl.concat([pl.DataFrame(schema=LOG_SCHEMA), pl.read_parquet(p)], how="diagonal_relaxed")
 
 
 def append_call(paths: Paths, row: dict) -> None:
     """Append one row (the log is small: a few hundred rows a week). Written to a temp file and
     renamed, so a crash mid-write never truncates the log."""
     p = calls_path(paths)
-    new = pl.DataFrame([row], schema=LOG_SCHEMA)
-    if p.exists():
-        new = pl.concat([pl.read_parquet(p), new], how="vertical_relaxed")
+    new = pl.DataFrame([{k: row.get(k) for k in LOG_SCHEMA}], schema=LOG_SCHEMA)
+    if p.exists():  # diagonal: logs written before a column existed lack it
+        new = pl.concat([pl.read_parquet(p), new], how="diagonal_relaxed").select(list(LOG_SCHEMA))
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".parquet.tmp")
     new.write_parquet(tmp)

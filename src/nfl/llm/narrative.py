@@ -1,8 +1,9 @@
 """Narrative records: the contract between the research step and the pipeline (ideas note §3).
 
 One JSON record per game per research run, in marts/narrative/season=YYYY/week=WW/<game_id>_<ts>.json.
-`producer` says who did the research: 'claude_code' (the /nfl-narrative skill, development) or
-'local' (the desktop model, production; 'api' is unused). The pipeline treats them identically;
+`producer` says who did the research: 'claude_code' (the /nfl-narrative skill, development),
+'local' (the desktop's open-weight model, ADR 0014) or 'claude_max' (headless Claude Code on
+Austin's Max login on the desktop, ADR 0030); 'api' is unused. The pipeline treats them identically;
 `nfl.features.narrative` turns records into feature rows stamped with the record's `known_as_of`.
 
 Rules enforced here: every claim is dated at or before `known_as_of`; the record is stamped before
@@ -111,7 +112,8 @@ class GameNarrative(BaseModel):
     kickoff_utc: datetime
     known_as_of: datetime
     reported_finished_at: datetime | None = None  # what the producer said; known_as_of is the clock
-    producer: Literal["claude_code", "api", "local"]  # local = desktop open-weight model (ADR 0014)
+    # local = desktop open-weight model (ADR 0014); claude_max = headless Claude Code (ADR 0030)
+    producer: Literal["claude_code", "api", "local", "claude_max"]
     model: str
     prompt_version: str = PROMPT_VERSION
     home: TeamNarrative
@@ -239,17 +241,21 @@ def upcoming_week(paths: Paths, now: datetime) -> tuple[int, int]:
     return next_week(games_frame(paths), now)
 
 
+# Producers the scheduled passes write; the skill's `claude_code` records are development only.
+PASS_PRODUCERS = ("local", "claude_max")
+
+
 def stored_since(paths: Paths, season: int, week: int, since: datetime) -> set[str]:
-    """Games of the week with a `local` record from `since` on."""
+    """Games of the week with a record from a scheduled pass's producer from `since` on."""
     return {
         r.game_id
         for r in load_records(paths, (season, season))
-        if r.week == week and r.producer == "local" and r.known_as_of >= since
+        if r.week == week and r.producer in PASS_PRODUCERS and r.known_as_of >= since
     }
 
 
 def missing_records(paths: Paths, now: datetime) -> tuple[int, int, datetime, list[str]]:
-    """The upcoming week's games, not yet kicked off, with no `local` record stored since the last
+    """The upcoming week's games, not yet kicked off, with no pass record stored since the last
     scheduled pass started: (season, week, pass start, game ids). Empty when the pass ran."""
     season, week = upcoming_week(paths, now)
     since = last_pass(now)

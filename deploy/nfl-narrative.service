@@ -1,0 +1,15 @@
+[Unit]
+Description=NFL narrative pass: headless Claude Code on the Max login (ADR 0030)
+# Started by nfl-narrative.timer on the desktop (WSL, systemd user unit). scripts/desktop-narrative.sh
+# updates the checkout, runs `nfl narrative claude`, uploads the records and starts nfl-site; it
+# logs to Cloud Logging (nfl-desktop-narrative), which emails on failure. docs/runbook.md.
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/dev/nfl-project
+Environment=NARRATIVE_PRODUCER=claude
+# a login shell, so uv, gcloud and claude are on PATH as in a terminal
+ExecStart=/usr/bin/env bash -lc 'exec scripts/desktop-narrative.sh'
+Nice=5
+# a pass is about 15 minutes; each game's session stops itself after 30
+TimeoutStartSec=3h

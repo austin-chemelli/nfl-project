@@ -328,6 +328,49 @@ def narrative_run(
         raise typer.Exit(1)
 
 
+@narrative_app.command("claude")
+def narrative_claude(
+    season: int,
+    week: int,
+    game_ids: Annotated[
+        list[str] | None, typer.Argument(help="Default: every game not yet kicked off.")
+    ] = None,
+    model: str = typer.Option(
+        None, help="Claude model alias (default sonnet, NARRATIVE_CLAUDE_MODEL)."
+    ),
+    parallel: int = typer.Option(3, help="Games researched at once."),
+    store: bool = typer.Option(
+        True, help="Ingest the records (--no-store keeps them under raw/ only)."
+    ),
+) -> None:
+    """Research games with headless Claude Code on the Max login (ADR 0030) and ingest them."""
+    from nfl.llm import claude_research as cr
+
+    try:
+        runs = cr.run_week(get_paths(), season, week, game_ids, model=model or cr.MODEL,
+                           parallel=parallel, store=store)  # fmt: skip
+    except cr.LoginError as e:
+        print(f"FAILED login: {e}")
+        raise typer.Exit(1) from e
+    t = Table(title=f"{season} week {week}: Claude narrative research")
+    for c in ("game_id", "result", "pages", "searches", "dropped", "flags", "minutes"):
+        t.add_column(c)
+    for r in runs:
+        t.add_row(
+            r.game_id,
+            "stored" if r.stored else ("ok (not stored)" if r.ok else f"[red]{r.error}[/red]"),
+            str(r.pages), str(r.searches), str(sum(r.dropped.values())),
+            str(sum(r.flags.values())), f"{r.seconds / 60:.1f}",
+        )  # fmt: skip
+    console.print(t)
+    console.print(cr.summarize(runs))
+    for r in runs:  # plain lines: scripts/desktop-narrative.sh puts them in the failure email
+        if not r.ok:
+            print(f"FAILED {r.game_id.split('_', 2)[2]}: {r.error}")
+    if not all(r.ok for r in runs):
+        raise typer.Exit(1)
+
+
 @narrative_app.command("week")
 def narrative_week() -> None:
     """Print '<season> <week>' of the earliest game not yet kicked off (for scripts)."""
@@ -340,14 +383,14 @@ def narrative_week() -> None:
 
 @narrative_app.command("check")
 def narrative_check() -> None:
-    """Exit 1 if an upcoming game has no local record since the last scheduled desktop pass
+    """Exit 1 if an upcoming game has no pass record since the last scheduled desktop pass
     (cloud job before each lock: the desktop was off, asleep or failed). Never touches the lock."""
     from nfl.config import now_utc
     from nfl.llm.narrative import missing_records
 
     season, week, since, missing = missing_records(get_paths(), now_utc().replace(tzinfo=None))
     if missing:
-        console.print(f"[red]{season} week {week}: no local record since the pass at {since:%a %H:%M} UTC for {len(missing)} game(s): {', '.join(missing)}[/red]")  # fmt: skip
+        console.print(f"[red]{season} week {week}: no pass record since the pass at {since:%a %H:%M} UTC for {len(missing)} game(s): {', '.join(missing)}[/red]")  # fmt: skip
         raise typer.Exit(1)
     console.print(f"{season} week {week}: every upcoming game has a record since {since:%a %H:%M} UTC")  # fmt: skip
 
