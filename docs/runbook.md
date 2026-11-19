@@ -112,7 +112,7 @@ Two passes a week on the desktop, which has the models (docs/desktop-llm-setup.m
 
 `scripts/desktop-narrative.sh` does one pass:
 1. Reset the checkout to `origin/main` and `uv sync`. This clone only runs passes: a local edit is saved as `local-edits-*.patch` in the pass log folder, logged as a WARNING, and dropped.
-2. Download `curated/games`, `curated/lines` and `curated/rosters_weekly` from the bucket (the schedule, starting QBs, lines and rosters the research reads).
+2. Download `curated/games`, `curated/lines`, `curated/rosters_weekly` and this season's `curated/depth_charts` from the bucket (the schedule, lines, rosters, and the projected QB: the depth chart's QB1, else the schedule's).
 3. `nfl narrative run <season> <week>` for every game not yet kicked off and not already stored in this pass. It prints one line per game, so `tail -f` on the pass log shows progress. If every search engine is blocked it waits 10 minutes and retries, up to 80 minutes per pass.
 4. Upload `marts/narrative/season=S/week=WW/` to the bucket (rsync, never deletes) and start `nfl-site` (rebuild and publish).
 

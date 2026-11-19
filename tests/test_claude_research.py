@@ -303,3 +303,31 @@ def test_the_call_log_reads_files_written_before_the_new_columns(tmp_path):
     append_call(paths, {"run_id": "r1", "job": "research_claude", "ok": True, "turns": 20, "api_equiv_usd": 0.6})  # fmt: skip
     log = read_calls(paths)
     assert log.columns == list(LOG_SCHEMA) and log["turns"].to_list() == [None, 20]
+
+
+def test_the_slate_projects_the_charted_qb_and_says_where_it_came_from(tmp_path, monkeypatch):
+    from nfl.llm import narrative as nar
+
+    paths = _games(tmp_path)
+    g = tmp_path / "curated" / "games" / "season=2026" / "g.parquet"
+    df = pl.read_parquet(g).with_columns(
+        pl.lit(None, pl.Float64).alias(c) for c in ("spread_line", "total_line")
+    ).with_columns(
+        pl.lit("Lamar Jackson").alias("away_qb_name"), pl.lit("Josh Allen").alias("home_qb_name"),
+        *(pl.lit(None, pl.String).alias(c) for c in ("roof", "stadium", "away_coach", "home_coach")),
+    )  # fmt: skip
+    df.write_parquet(g)
+    monkeypatch.setattr(
+        nar, "charted_qbs", lambda *a: {("2026_08_BAL_BUF", "BAL"): "Jacoby Brissett"}
+    )
+    row = nar.slate(paths, 2026, 8, now=datetime(2026, 10, 28)).row(0, named=True)
+    assert (row["away_qb_name"], row["away_qb_source"]) == ("Jacoby Brissett", "depth chart")
+    assert (row["home_qb_name"], row["home_qb_source"]) == ("Josh Allen", "schedule")
+    folder = tmp_path / "f"
+    cr.prepare(paths, row, folder, "sonnet", datetime(2026, 10, 28, 20))
+    ctx = json.loads((folder / "context.json").read_text())
+    assert ctx["away"]["projected_qb"] == "Jacoby Brissett"
+    assert (
+        "depth chart" in ctx["away"]["projected_qb_from"]
+        and "not a fact" in ctx["away"]["projected_qb_from"]
+    )

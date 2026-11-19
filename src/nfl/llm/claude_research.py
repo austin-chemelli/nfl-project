@@ -115,8 +115,11 @@ def prepare(paths: Paths, row: dict, folder: Path, model: str, now: datetime) ->
 
     def team(t: str, side: str) -> dict:
         wk, lines = _roster_lines(paths, g.season, g.week, t)
+        src = row.get(f"{side}_qb_source") or "schedule"
         return {"abbr": t, "name": names.get(t, t), "head_coach": row.get(f"{side}_coach"),
-                "schedule_qb": row.get(f"{side}_qb_name"), "roster_week": wk, "roster": lines}  # fmt: skip
+                "projected_qb": row.get(f"{side}_qb_name"),
+                "projected_qb_from": f"{'the depth chart' if src == 'depth chart' else 'the schedule'}'s first QB as of {now:%Y-%m-%d}: a projection to confirm, not a fact",
+                "roster_week": wk, "roster": lines}  # fmt: skip
 
     kick = g.kickoff_utc.replace(tzinfo=UTC)
     home, away = team(g.home, "home"), team(g.away, "away")

@@ -2,7 +2,7 @@
 # One desktop narrative pass. Runs in the desktop's WSL on Wednesday evening (every game) and
 # Saturday morning (the Sunday and Monday games: games already kicked off are skipped); the times
 # are PASSES in src/nfl/llm/narrative.py. Setup: docs/runbook.md, "Narrative on the desktop".
-#   1. update the checkout and the schedule/lines/rosters data the research step reads
+#   1. update the checkout and the schedule, lines, rosters and depth charts the research reads
 #   2. research every upcoming game of the week
 #   3. upload the records to the data bucket and rebuild the site (cloud job nfl-site)
 #
@@ -105,6 +105,10 @@ fi
 
 read -r season week < <(uv run nfl narrative week) || fail "no upcoming week in the schedule"
 wk=$(printf '%02d' "$week")
+if [ "$dry" = 0 ]; then  # the projected QB in the research input is the depth chart's QB1
+  gcloud storage rsync -r "$BUCKET/curated/depth_charts/season=$season" "data/curated/depth_charts/season=$season" -q ||
+    log WARNING "could not download curated/depth_charts: the research gets the schedule's QB names"
+fi
 if [ "$dry" = 1 ]; then
   echo "--dry-run: checks passed; would research $season week $week with producer $producer"
   exit 0
