@@ -82,17 +82,41 @@ gcloud storage rsync -r gs://nfl-project-prod-data ./data       # pull the cloud
 - Infra changes: edit `infra/*.tf`, open a PR (the `infra` workflow posts the plan in the run summary), merge to apply.
 - Locks run in the cloud; don't also lock from the laptop. If a cloud lock fails, rerun the job by hand (`gcloud run jobs execute nfl-lock-thu --region us-central1 --wait`) before kickoff, or lock from the laptop as a fallback. Pull `main` in the primary checkout afterwards: the lock commit lands from the cloud.
 
-## Narrative on the desktop (M6.2u, from Week 9)
+## Narrative on the desktop (M6.2u from Week 9; on Claude Code from the switch-over, ADR 0030)
+
+### On headless Claude Code (`nfl-narrative.timer`)
+
+From the switch-over the passes run on Claude Code on Austin's Max login, from a systemd user timer in the desktop's WSL, instead of the Windows task below. Same times, same script, same upload, log and email; only the research step differs (`nfl narrative claude`, about 3.5 minutes a game, three at once, so about 15 minutes a pass). Nothing heavy runs on the desktop.
+
+**Setup, once, in the desktop's WSL Ubuntu.** Step by step with a fix for every NEED: [desktop-narrative-setup.md](desktop-narrative-setup.md). In short (`scripts/desktop-setup.sh` is idempotent: it says NEED for anything missing and installs what it can):
+```
+cd ~/dev/nfl-project && git switch main && git pull --ff-only
+bash scripts/desktop-setup.sh                     # until it says "All set"
+bash scripts/desktop-setup.sh --test-game <a game id of the coming week>   # one real game, not stored, ~3 min
+bash scripts/desktop-setup.sh --enable            # the switch: timer on, Windows task nfl-narrative off, and a pass now
+```
+It checks: systemd and lingering in WSL (job-search's host setup already did both on this PC), the "JobSearch WSL" Windows task that keeps WSL running from sign-in, the checkout on `main`, uv, gcloud reading the bucket, Claude Code logged in to claude.ai (not an API key). If Claude isn't logged in: open Ubuntu, run `claude`, then `/login` with the Max account. `--disable` turns the timer off and the Windows task back on.
+
+**Each pass:** `scripts/desktop-narrative.sh` with `NARRATIVE_PRODUCER=claude` unsets every API-key variable, refuses unless `claude auth status` reports a claude.ai login (ERROR, email) and logs a WARNING when the login expires within 3 days, then runs `nfl narrative claude`. A pass missed while the PC was off runs when WSL next starts (`Persistent=true`); games already kicked off are skipped. Check: `systemctl --user list-timers nfl-narrative.timer`; run one now: `systemctl --user start nfl-narrative.service`; output: `journalctl --user -u nfl-narrative -n 80` and `data/raw/narrative_claude/passes/`; each game's session (prompt, transcript, record, what the checks dropped) is in `data/raw/narrative_claude/season=S/week=WW/`. `bash scripts/desktop-narrative.sh --producer claude --dry-run` runs every check without researching.
+
+| Email | What to do |
+|---|---|
+| Claude is not logged in on the desktop | Open Ubuntu there, `claude`, `/login` with the Max account, then `systemctl --user start nfl-narrative.service` |
+| the Claude login on the desktop expires in N day(s) | Same, before it happens |
+| Claude is signed in with '...', not the claude.ai Max login | An API key or token is set: remove it from the environment and `~/.claude/settings.json`, then `claude /login` |
+| some games failed (usage limit, a page loop, a timeout) | `systemctl --user start nfl-narrative.service` resumes (stored games are skipped); the game's folder under `raw/narrative_claude/` says why |
+
+### On the local model (Windows task `nfl-narrative`, until the switch-over)
 
 Two passes a week on the desktop, which has the models (docs/desktop-llm-setup.md): Wednesday 18:00 ET for every game (the Thursday game's final reports are out by then; the rest get an early preview) and Saturday 07:00 ET for the Sunday and Monday games (after Friday's injury designations, done before the 12:00 lock). Each pass stores new records; nothing is overwritten. The site shows a game's newest record, and features and locks use the newest one from before their own time (`known_as_of`). The pass times are `PASSES` in `src/nfl/llm/narrative.py`; the cloud check uses them, so change both together.
 
 `scripts/desktop-narrative.sh` does one pass:
 1. Reset the checkout to `origin/main` and `uv sync`. This clone only runs passes: a local edit is saved as `local-edits-*.patch` in the pass log folder, logged as a WARNING, and dropped.
-2. Download `curated/games` and `curated/lines` from the bucket (the schedule, starting QBs and lines the research reads).
+2. Download `curated/games`, `curated/lines`, `curated/rosters_weekly` and this season's `curated/depth_charts` from the bucket (the schedule, lines, rosters, and the projected QB: the depth chart's QB1, else the schedule's).
 3. `nfl narrative run <season> <week>` for every game not yet kicked off and not already stored in this pass. It prints one line per game, so `tail -f` on the pass log shows progress. If every search engine is blocked it waits 10 minutes and retries, up to 80 minutes per pass.
 4. Upload `marts/narrative/season=S/week=WW/` to the bucket (rsync, never deletes) and start `nfl-site` (rebuild and publish).
 
-Failures go to Cloud Logging (log `nfl-desktop-narrative`, ERROR) and email Austin, with each failed game and its error. To finish a failed pass, run it again (`Start-ScheduledTask nfl-narrative`): stored games are skipped. Naming games (`nfl narrative run 2026 9 <game_id>...`) redoes them even if stored, and uploads nothing. A pass that never runs (desktop off, asleep, signed out) is caught by `nfl-narrative-check` at 08:30 Thursday and 11:30 Saturday, which fails, and so emails, if an upcoming game has no `local` record since the last pass started. The check never touches the locks.
+Failures go to Cloud Logging (log `nfl-desktop-narrative`, ERROR) and email Austin, with each failed game and its error. To finish a failed pass, run it again (`Start-ScheduledTask nfl-narrative`): stored games are skipped. Naming games (`nfl narrative run 2026 9 <game_id>...`) redoes them even if stored, and uploads nothing. A pass that never runs (desktop off, asleep, signed out) is caught by `nfl-narrative-check` at 08:30 Thursday and 11:30 Saturday, which fails, and so emails, if an upcoming game has no `local` or `claude_max` record since the last pass started. The check never touches the locks.
 
 **One-time desktop setup** (WSL Ubuntu on the desktop):
 ```

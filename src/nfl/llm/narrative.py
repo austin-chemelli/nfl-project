@@ -1,8 +1,9 @@
 """Narrative records: the contract between the research step and the pipeline (ideas note §3).
 
 One JSON record per game per research run, in marts/narrative/season=YYYY/week=WW/<game_id>_<ts>.json.
-`producer` says who did the research: 'claude_code' (the /nfl-narrative skill, development) or
-'local' (the desktop model, production; 'api' is unused). The pipeline treats them identically;
+`producer` says who did the research: 'claude_code' (the /nfl-narrative skill, development),
+'local' (the desktop's open-weight model, ADR 0014) or 'claude_max' (headless Claude Code on
+Austin's Max login on the desktop, ADR 0030); 'api' is unused. The pipeline treats them identically;
 `nfl.features.narrative` turns records into feature rows stamped with the record's `known_as_of`.
 
 Rules enforced here: every claim is dated at or before `known_as_of`; the record is stamped before
@@ -111,7 +112,8 @@ class GameNarrative(BaseModel):
     kickoff_utc: datetime
     known_as_of: datetime
     reported_finished_at: datetime | None = None  # what the producer said; known_as_of is the clock
-    producer: Literal["claude_code", "api", "local"]  # local = desktop open-weight model (ADR 0014)
+    # local = desktop open-weight model (ADR 0014); claude_max = headless Claude Code (ADR 0030)
+    producer: Literal["claude_code", "api", "local", "claude_max"]
     model: str
     prompt_version: str = PROMPT_VERSION
     home: TeamNarrative
@@ -239,17 +241,21 @@ def upcoming_week(paths: Paths, now: datetime) -> tuple[int, int]:
     return next_week(games_frame(paths), now)
 
 
+# Producers the scheduled passes write; the skill's `claude_code` records are development only.
+PASS_PRODUCERS = ("local", "claude_max")
+
+
 def stored_since(paths: Paths, season: int, week: int, since: datetime) -> set[str]:
-    """Games of the week with a `local` record from `since` on."""
+    """Games of the week with a record from a scheduled pass's producer from `since` on."""
     return {
         r.game_id
         for r in load_records(paths, (season, season))
-        if r.week == week and r.producer == "local" and r.known_as_of >= since
+        if r.week == week and r.producer in PASS_PRODUCERS and r.known_as_of >= since
     }
 
 
 def missing_records(paths: Paths, now: datetime) -> tuple[int, int, datetime, list[str]]:
-    """The upcoming week's games, not yet kicked off, with no `local` record stored since the last
+    """The upcoming week's games, not yet kicked off, with no pass record stored since the last
     scheduled pass started: (season, week, pass start, game ids). Empty when the pass ran."""
     season, week = upcoming_week(paths, now)
     since = last_pass(now)
@@ -260,15 +266,40 @@ def missing_records(paths: Paths, now: datetime) -> tuple[int, int, datetime, li
     return season, week, since, [g for g in games["game_id"].to_list() if g not in have]
 
 
-def slate(paths: Paths, season: int, week: int) -> pl.DataFrame:
-    """What the research step needs per game: teams, kickoff, the current consensus line."""
+def charted_qbs(paths: Paths, games: pl.DataFrame, season: int, now: datetime) -> dict[tuple[str, str], str]:  # fmt: skip
+    """(game_id, team) -> the depth chart's QB1 as of `now` for games not yet kicked off: the
+    source the model and the site use (`site._depth_context`). Empty without depth charts."""
+    from nfl.site import _depth_context
+
+    try:
+        return _depth_context(paths, games, season, now)[0]
+    except Exception as e:  # noqa: BLE001  (no charts on this machine: the schedule's names stay)
+        print(f"(no charted QBs: {type(e).__name__}: {e})")
+        return {}
+
+
+def slate(paths: Paths, season: int, week: int, now: datetime | None = None) -> pl.DataFrame:
+    """What the research step needs per game: teams, kickoff, the current consensus line, and the
+    projected QB per team: the depth chart's QB1 as of `now` (2026-11-19: the schedule's QB column
+    still named Huntley for BAL and Minshew for ARI after both had lost the job), else the
+    schedule's. `*_qb_source` says which; either is a projection for the research to confirm."""
     from nfl import odds
+    from nfl.config import now_utc
     from nfl.features.store import games_frame
 
     g = games_frame(paths).filter((pl.col("season") == season) & (pl.col("week") == week))
     cols = ["game_id", "kickoff_utc", "away_team", "home_team", "roof", "stadium", "spread_line",
             "total_line", "away_qb_name", "home_qb_name", "away_coach", "home_coach"]  # fmt: skip
     out = g.select(cols)
+    now = now or now_utc().replace(tzinfo=None)
+    charted = charted_qbs(paths, g, season, now) if not g.is_empty() else {}
+    for side in ("home", "away"):
+        names = [charted.get((gid, t)) for gid, t in zip(out["game_id"], out[f"{side}_team"], strict=True)]  # fmt: skip
+        c = pl.Series(f"{side}_qb_charted", names, dtype=pl.String)
+        out = out.with_columns(
+            pl.when(c.is_not_null()).then(pl.lit("depth chart")).otherwise(pl.lit("schedule")).alias(f"{side}_qb_source"),
+            pl.coalesce(c, pl.col(f"{side}_qb_name")).alias(f"{side}_qb_name"),
+        )  # fmt: skip
     lines = odds.read_lines(paths)
     if not lines.is_empty():
         c = odds.consensus(lines).sort("snapshot_ts").group_by("game_id").last()
