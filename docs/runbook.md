@@ -88,7 +88,7 @@ gcloud storage rsync -r gs://nfl-project-prod-data ./data       # pull the cloud
 
 From the switch-over the passes run on Claude Code on Austin's Max login, from a systemd user timer in the desktop's WSL, instead of the Windows task below. Same times, same script, same upload, log and email; only the research step differs (`nfl narrative claude`, about 3.5 minutes a game, three at once, so about 15 minutes a pass). Nothing heavy runs on the desktop.
 
-**Setup, once, in the desktop's WSL Ubuntu** (`scripts/desktop-setup.sh` is idempotent: it says NEED for anything missing and installs what it can):
+**Setup, once, in the desktop's WSL Ubuntu.** Step by step with a fix for every NEED: [desktop-narrative-setup.md](desktop-narrative-setup.md). In short (`scripts/desktop-setup.sh` is idempotent: it says NEED for anything missing and installs what it can):
 ```
 cd ~/dev/nfl-project && git switch main && git pull --ff-only
 bash scripts/desktop-setup.sh                     # until it says "All set"

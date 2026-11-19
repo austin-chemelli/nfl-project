@@ -228,6 +228,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-08 |
 | [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-17 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or your hub track file (every chat, at track boundaries) | 2026-11-10 |
+| [desktop-narrative-setup.md](desktop-narrative-setup.md) | setting up or fixing the desktop's narrative timer on Claude Code (ADR 0030): steps, NEED fixes, emails | 2026-11-19 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
 | [local-llm-narrative.md](local-llm-narrative.md) | what the local model can and can't do; prompt and model experiments | 2026-11-05 |
 | [feature-groups.md](feature-groups.md) | adding a feature to a group or a group to a persona (M23.5 adds members; registry v7 at M23.7 and M25.10) | 2026-11-12 |
