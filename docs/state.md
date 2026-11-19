@@ -87,7 +87,7 @@ Live view, with the areas each chat has claimed: `.notes/hub/tracks/` (uncommitt
 
 | Track | Branch | Worktree | Goal | Status (date) | PR |
 |---|---|---|---|---|---|
-| hub-cleanup | `hub-cleanup` | T3 worktree | the hub's records in its new format (Austin, 2026-11-19): plan summaries, short titles and status words; open decisions checked against what was built and closed where the code or a measurement already answered them (D2, D3, D11, D12) | PR open 2026-11-19 | |
+| hub-cleanup | removed | removed | the hub's records in its new format (Austin, 2026-11-19): plan summaries, short titles and status words; open decisions checked against what was built and closed where the code or a measurement already answered them (D2, D3, D11, D12) | merged 2026-11-19 (#67); worktree and branch removed, track archived | #67 |
 | narrative-claude | removed | removed | narrative research on headless Claude Code on Austin's Max login on the desktop (ADR 0030, M6.8): producer `claude_max`, code checks (opened URLs, page dates, rosters, standings, line), systemd timer, setup script; the earlier LLM ideas re-judged (D35-D38) | merged 2026-11-18 (#66); Austin switched the desktop the same evening, catch-up pass stored all 13 Week 11 games; worktree and branch removed, track archived | #66 |
 | game-nav | removed | removed | previous / next game on the game page, same week, keeps the tab (Austin, 2026-11-17) | merged 2026-11-17 (#64); worktree and branch removed, track archived | #64 |
 | bracket-fix | removed | removed | the League bracket's projected field: one winner per division in seeds 1-4, wild cards by playoff chance (Austin's NYG and DAL report) | merged 2026-11-15 (#59); worktree and branch removed, track archived | #59 |
