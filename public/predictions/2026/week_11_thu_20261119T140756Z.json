@@ -1,0 +1,68 @@
+{
+ "code_version": "ba9e634",
+ "conventions": "p_home = home win probability; spread_home > 0 = home favored (points)",
+ "data_snapshot": "20261119T140152Z",
+ "games": [
+  {
+   "away": "IND",
+   "game_id": "2026_11_IND_HOU",
+   "home": "HOU",
+   "kickoff_utc": "2026-11-20T01:15:00Z",
+   "market": {
+    "as_of": "2026-11-19T14:02:25Z",
+    "p_home_vigfree": 0.8467,
+    "source": "odds_api",
+    "spread_home": 12.5,
+    "total": 44.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.801,
+     "spread_home": 11.4105
+    },
+    "elo_v0": {
+     "p_home": 0.7316,
+     "spread_home": 6.968
+    },
+    "global": {
+     "p_home": 0.7084,
+     "spread_home": 7.4082
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.8467,
+     "spread_home": 12.5
+    },
+    "sharp": {
+     "p_home": 0.8189,
+     "spread_home": 12.301
+    },
+    "student": {
+     "p_home": 0.7996,
+     "spread_home": 11.3441
+    },
+    "student_v2": {
+     "p_home": 0.7886,
+     "spread_home": 10.8232
+    },
+    "traditionalist": {
+     "p_home": 0.7666,
+     "spread_home": 9.8219
+    }
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 44.6586
+   }
+  }
+ ],
+ "lock_ts": "2026-11-19T14:07:56Z",
+ "odds_snapshot": "20261119T140225Z",
+ "schema_version": "1",
+ "season": 2026,
+ "slot": "thu",
+ "week": 11
+}
