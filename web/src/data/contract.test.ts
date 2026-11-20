@@ -22,6 +22,8 @@ function schemaFor(rel: string) {
   if (base === 'teams.json') return C.TeamsFile
   if (base === 'league.json') return C.LeagueFile
   if (base === 'similar.json') return C.SimilarFile
+  if (base === 'betting_math.json') return C.BettingMath
+  if (base === 'betting_week.json') return C.BettingWeek
   return null
 }
 
@@ -42,7 +44,7 @@ function check(root: string, rel: string) {
   const raw = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'))
   const parsed = schema.safeParse(raw)
   // GameRow forgives a bad card at runtime, so drift has to fail here
-  for (const row of rel.startsWith('game/') ? [raw] : (raw.games ?? [])) {
+  for (const row of rel.startsWith('game/') ? [raw] : Array.isArray(raw.games) ? raw.games : []) {
     if (row.card == null) continue
     expect(C.CardData.safeParse(row.card).error?.issues).toBeUndefined()
     // these default to false, so a renamed flag would parse and quietly empty every card
@@ -285,3 +287,30 @@ describe('contract: team files', () => {
   })
 })
 
+
+describe('contract: the betting guide files', () => {
+  const read = (f: string) => JSON.parse(fs.readFileSync(path.join(FIX, f), 'utf8'))
+
+  it('parses the math fixture: seven bands, four parlay lengths, the walk-forward search', () => {
+    const m = C.BettingMath.parse(read('betting_math.json'))
+    expect(m.bands).toHaveLength(7)
+    expect(m.parlays.map((p) => p.legs)).toEqual([1, 2, 3, 4])
+    expect(m.walk_forward.rules_tried).toBeGreaterThan(0)
+  })
+
+  it('parses the week fixture: a card, its record and the closing lines', () => {
+    const w = C.BettingWeek.parse(read('betting_week.json'))
+    expect(w.card.games.some((g) => g.verdict === 'look')).toBe(true)
+    expect(w.closing.length).toBeGreaterThan(0)
+  })
+
+  it('fails when a field is renamed', () => {
+    const m = read('betting_math.json')
+    m.bands[0].win_rate_x = m.bands[0].win_rate
+    delete m.bands[0].win_rate
+    expect(C.BettingMath.safeParse(m).success).toBe(false)
+    const w = read('betting_week.json')
+    delete w.card.games[0].needed
+    expect(C.BettingWeek.safeParse(w).success).toBe(false)
+  })
+})

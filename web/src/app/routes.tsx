@@ -35,6 +35,8 @@ export const routes: RouteObject[] = [
       { path: 'hypotheses', element: page(() => import('../pages/Hypotheses')) },
       { path: 'coaches', element: hidable('/coaches', () => import('../pages/Coaches')) },
       { path: 'build', element: hidable('/build', () => import('../pages/Build')) },
+      { path: 'betting', element: page(() => import('../pages/Betting')) },
+      { path: 'betting/week', element: page(() => import('../pages/BettingWeek')) },
       { path: 'season/:year', element: page(() => import('../pages/Season')) },
       { path: 'method', element: page(() => import('../pages/Method')) },
       // the nav's labels as URLs, which visitors type (both personas, 2026-11-15 walk)
