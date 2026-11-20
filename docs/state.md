@@ -139,6 +139,7 @@ Live view, with the areas each chat has claimed: `.notes/hub/tracks/` (uncommitt
 | M24 Player value and scored impact claims | M24.0–M24.2 live (#33, #34); M24.4 scored claims live 2026-11-12 (#40); M24.5 pages live 2026-11-12 (#49); M24.6 docs and site-walk fixes live 2026-11-12 (#50); M24.7 team health in progress; screening (M24.3) waits on M23 phase 0 |
 | M25 Matchups and paths to an upset | planned 2026-11-09 (ADR 0028): situation splits as a SQL model and a matchup engine (edges in points, shrunk toward the league effect, badged), paths to an upset as conditions and plausibility (pre-game rates predict a game's turnover margin with r 0.00, so never a probability), market leans from the ledger, a Matchups tab, `UpsetPaths` and `MatchupGrid`; phases 0-2 are site work in season, phase 3 (a `matchup` approach beside the Student) is offseason and gated; **done 2026-11-12** (Austin): M25.0-M25.6 merged (#41, #42, #46, #47, #48, #51, #52; the lean stays in the data, not on a page). M25.7 dropped (situation gaps shrink to the league: within 0.01 EPA/play on 13 of 17 splits in 2026) and M25.8-M25.12 parked; plans kept in tasks.md to revisit |
 | M26 Your picks and the playoff what-if | live 2026-11-13 (ADR 0029): picks on the slate and game pages (#53), the playoff what-if and projected bracket on the League page (#54); finished (M26.5 site walk dropped); accounts and leaderboard later |
+| M29 Betting guide (ADR 0033) | built 2026-11-20 (PR open): study (`nfl betting study`), the weekly card and its record, Betting math page public, card and bet log unlisted |
 | Feature wave (M1.13 FTN extras and matchup interactions, Matchup approach) | parked for the offseason |
 
 ## Open decisions
@@ -222,10 +223,10 @@ Current docs, what each is for, and when it was last verified against the code o
 
 | Doc | Read it when | Verified |
 |---|---|---|
-| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-13 |
-| [adr/](adr/) | before re-opening a decision; ADR 0030 is the newest (0028 matchups and paths to an upset, 0029 visitor picks in the browser, 0030 narrative on Claude Code) | 2026-11-12 |
-| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-13 |
-| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-13 |
+| [architecture.md](architecture.md) | changing components, the data model, flows or point-in-time rules | 2026-11-20 |
+| [adr/](adr/) | before re-opening a decision; ADR 0033 is the newest (0029 visitor picks in the browser, 0030 narrative on Claude Code, 0033 the betting guide) | 2026-11-12 |
+| [tasks.md](tasks.md) | picking up planned work; progress lives in the journal and here, not in its frozen table | 2026-11-20 |
+| [journal.md](journal.md) | understanding why something is the way it is | 2026-11-20 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-08 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-08 |
 | [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-17 |

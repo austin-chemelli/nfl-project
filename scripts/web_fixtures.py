@@ -65,8 +65,21 @@ def _slice_columns(d: dict, keys: list[str], idx: slice) -> None:
         d[k] = d[k][idx]
 
 
+def betting_fixtures(src: Path) -> None:
+    """The betting guide's files (ADR 0033): the math as is; the week with its closing map cut to
+    weeks with a final score and two upcoming ones, so the bet log has games to grade."""
+    if not (src / "betting_math.json").exists():
+        return
+    _dump(_load(src, "betting_math.json"), "betting_math.json")
+    week = _load(src, "betting_week.json")
+    wk = week["card"]["week"]
+    week["closing"] = [g for g in week["closing"] if g["week"] in (wk - 1, wk)]
+    _dump(week, "betting_week.json")
+
+
 def main() -> None:
     src = get_paths().site
+    betting_fixtures(src)
     # Hand-built to match the slate fixture's game ids and to hold edge cases, so they survive a rerun.
     kept = {
         n: (OUT / n).read_bytes() for n in ("league.json", "similar.json") if (OUT / n).exists()
