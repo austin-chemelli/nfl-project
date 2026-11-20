@@ -30,6 +30,20 @@ P_CLIP = 1e-6
 NEUTRAL = "environment.neutral_site"
 
 
+def venue_gate(z: np.ndarray, features: list[str], g: np.ndarray) -> np.ndarray:
+    """Venue & weather's game-level members only shift home advantage, so at a neutral site they
+    are zero too (ADR 0031): their standardized columns are multiplied by the gate."""
+    from nfl.features.groups import GROUPS
+
+    venue = set(GROUPS["venue_weather"].features)
+    idx = [i for i, f in enumerate(features) if f in venue]
+    if not idx or z.shape[1] == 0:
+        return z
+    z = z.copy()
+    z[:, idx] *= g[:, None]
+    return z
+
+
 def gate(wide: pl.DataFrame) -> np.ndarray:
     """1 − neutral_site per row (1 when the column is missing or null)."""
     if NEUTRAL not in wide.columns:
@@ -119,6 +133,8 @@ class Model:
         z = self.scaler.transform(wide)
         w = np.asarray(self.weights, dtype=float)
         g = gate(wide) if self.neutral_gate else np.ones(wide.height)
+        if self.neutral_gate:
+            z = venue_gate(z, self.features, g)
         logit = self.calib_a * self.raw_logit(z, g) + self.calib_c * g
         p = np.clip(expit(logit), P_CLIP, 1 - P_CLIP)
         contrib = self.calib_a * z * w  # (n, k)

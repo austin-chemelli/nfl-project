@@ -15,12 +15,19 @@ from nfl.approaches.schema import Approach, FitSpec, Weight
 GLOBAL_ID = "global"
 ENSEMBLE_ID = "ensemble"
 HEADLINE_ID = "student"
-# weather joined Venue & weather in model wave 3 (ADR 0031), so the global fit reads it too
-EXCLUDED_FAMILIES = {"market", "narrative"}
+# weather (ADR 0024) is context: training would see observed kickoff weather and a lock only a
+# forecast, so it stays out of every fit (ADR 0031, review finding)
+EXCLUDED_FAMILIES = {"market", "narrative", "weather"}
+# the neutral-site flag is a rule (engine.NEUTRAL), never a fitted member: it would count twice
+EXCLUDED_FEATURES = {"environment.neutral_site"}
 
 
 def global_approach(known_features: set[str]) -> Approach:
-    feats = sorted(f for f in known_features if f.split(".", 1)[0] not in EXCLUDED_FAMILIES)
+    feats = sorted(
+        f
+        for f in known_features
+        if f.split(".", 1)[0] not in EXCLUDED_FAMILIES and f not in EXCLUDED_FEATURES
+    )
     return Approach(
         id=GLOBAL_ID,
         name="Global fit",

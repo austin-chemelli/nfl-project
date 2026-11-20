@@ -51,6 +51,14 @@ def refresh(paths: Paths, console: Console, odds: bool = True) -> None:
         )
     step("curate", lambda: curate(paths))
     step("tendencies", lambda: build_tendencies(paths))
+
+    def _split_model():
+        from nfl.sql import runner
+
+        runner.build(paths, "team_split_week")
+
+    # the matchup family reads team_split_week: rebuild it before the features (ADR 0031)
+    step("split model", _split_model)
     step("features", lambda: build_all(paths))
     step("score unscored", lambda: _score_unscored(paths, season, console))
     step("grade", lambda: grade(paths, console))

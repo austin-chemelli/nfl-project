@@ -140,7 +140,7 @@ def test_existing_approach_hashes_are_pinned():
     the four live approaches. Changing a persona on purpose: update the pin and follow the
     runbook's cutover (refit, backfill, upload in one go)."""
     # re-pinned 2026-11-20 for model wave 3 (ADR 0031): every config changed on purpose
-    pins = {"traditionalist": "c5bbd23735cb", "analyst": "16608e26c57c",
+    pins = {"traditionalist": "905cad48df9e", "analyst": "16608e26c57c",
             "sharp": "bbc096a2fd16", "student": "cf0e91518f1c"}  # fmt: skip
     got = {k: fit.config_hash(a) for k, a in schema.load_all().items() if k in pins}
     assert got == pins
@@ -199,3 +199,15 @@ def test_season_weights_halve_per_half_life():
     assert w[0] / w[1] == pytest.approx(0.5)
     assert w.mean() == pytest.approx(1.0)
     assert fit.season_weights(np.array([2020]), None) is None
+
+
+def test_venue_modifiers_are_zero_at_a_neutral_site():
+    """Venue & weather only shifts home field, so at a neutral site its members count for nothing
+    (review finding, ADR 0031); other features still count."""
+    from nfl.approaches.engine import NEUTRAL
+
+    sc = fit.Scaler(["environment.is_dome", "f"], [0.0, 0.0], [1.0, 1.0])
+    m = fit.Model("x", ["environment.is_dome", "f"], 0.0, [0.5, 0.5], sc, neutral_gate=True)
+    wide = pl.DataFrame({"game_id": ["a", "b"], "environment.is_dome": [1.0, 1.0],
+                         "f": [1.0, 1.0], NEUTRAL: [0.0, 1.0]})  # fmt: skip
+    assert m.score(wide)["logit"].to_list() == pytest.approx([1.0, 0.5])

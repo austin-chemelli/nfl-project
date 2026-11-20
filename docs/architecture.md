@@ -122,7 +122,6 @@ Families and first features (builders in `nfl/features/<family>.py`):
 |---|---|---|
 | `strength` | `elo_pre` (team), `epa_off`, `epa_def`, `success_off`, `success_def`, `point_diff_pg` (team, season-to-date, shrunk toward prior season / league) | elo, pbp |
 | `environment` | `rest_days`, `travel_km`, `tz_shift` (team); `is_dome`, `is_turf`, `div_game`, `primetime`, `neutral_site` (game; `neutral_site` drives the home-field rule, not a group) | schedules, stadiums |
-| `weather` | `temp_f`, `wind_mph`, `precip_pct` (game; observed for played games, Open-Meteo forecasts for upcoming) | schedules, Open-Meteo |
 | `matchup` | `net_edge_pg` (in Offense since wave 3), `edge_<split>` for the seven FTN situations (context) | the matchup engine (§3.9), 2022+ |
 | `weather` (ADR 0024) | `temp_f`, `wind_mph`, `precip_pct` (game; open-air only; played games from nflverse, upcoming from each forecast at its fetch time). Read by the total and the swing list only, never an approach | schedules, Open-Meteo |
 | `form` | `last3_win_pct`, `last3_margin`, `streak` (team) | games |

@@ -34,7 +34,7 @@ from nfl import catalog, io
 from nfl.config import Paths
 from nfl.models.elo import TEAM_ALIASES
 
-SCREEN_VERSION = "1"
+SCREEN_VERSION = "2"  # 2: the shadow gate and the `model` verdict (ADR 0031)
 MIN_WEEK = 4
 BOOTSTRAPS = 400
 SEED = 7
@@ -111,16 +111,16 @@ def verdict(
       'context': it can't be known at a lock, so it can't go to the shadow approach.
     - 'model': the fourth gate. `shadow` = (lo, hi) is the 90% CI of the paired Δ log loss against
       today's Student (None when no shadow was run). hi < 0 means the Student is better with the
-      feature: it passes every gate and may join a group at a registry bump (a pregame candidate
-      only). A candidate whose shadow ran and whose CI is not below 0 can't be 'use': it becomes
+      feature; only a candidate the first three gates call 'use' becomes 'model' (it passes every
+      gate and may join a group at a registry bump). A candidate whose shadow ran and whose CI is not below 0 can't be 'use': it becomes
       'context' ('luck' and 'none' stay).
     """
-    if shadow is not None and shadow[1] < 0 and pregame:
-        return "model"
     v = _gate_verdict(
         split_half, luck=luck, kind=kind, future_partial_lo=future_partial_lo,
         resid_st=resid_st, resid_mk=resid_mk, pregame=pregame,
     )  # fmt: skip
+    if v == "use" and shadow is not None and shadow[1] < 0:
+        return "model"  # the gates are sequential: only a 'use' candidate can reach 'model'
     return "context" if v == "use" and shadow is not None else v
 
 

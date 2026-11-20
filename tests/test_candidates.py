@@ -140,7 +140,7 @@ def test_unchanged_rerun_appends_nothing_and_the_ledger_is_append_only(tmp_path,
     assert both.height == 2 and both.head(1).equals(first)
     assert cs.latest(paths)["note"].to_list() == ["a new note"]
     # a new screen version appends too
-    monkeypatch.setattr(cs, "SCREEN_VERSION", "2")
+    monkeypatch.setattr(cs, "SCREEN_VERSION", "3")
     assert cs.run(paths, only="net_epa", season_from=2020) == 1
     assert pl.read_parquet(cs.ledger_path(paths)).height == 3
 
@@ -399,7 +399,8 @@ def test_unchanged_rerun_with_shadow_columns_appends_nothing(tmp_path, monkeypat
 
     monkeypatch.setattr(sh, "backtest", lambda *a, **k: None)
     assert cs.run(paths, only="value_lost", season_from=2020) == 1
-    assert cs.latest(paths)["verdict"].to_list() == ["model"]
+    # a shadow pass alone never makes `model`: the first three gates said `none` here
+    assert cs.latest(paths)["verdict"].to_list() == ["none"]
     assert cs.run(paths, only="value_lost", season_from=2020) == 0
     # --no-shadow carries the last shadow numbers instead of nulling them (so no new row)
     assert cs.run(paths, only="value_lost", season_from=2020, shadow_on=False) == 0
@@ -407,3 +408,16 @@ def test_unchanged_rerun_with_shadow_columns_appends_nothing(tmp_path, monkeypat
     old = pl.read_parquet(cs.ledger_path(paths)).drop(cs.SHADOW_COLS)
     old.write_parquet(cs.ledger_path(paths))
     assert cs.latest(paths)["shadow_delta"].to_list() == [None]
+
+
+def test_model_needs_the_first_three_gates_too():
+    """The gates are sequential (ADR 0026/0031): a luck or unstable candidate with a lucky shadow
+    pass stays where the first gates put it; only `use` + a passing shadow becomes `model`."""
+    kw = {"kind": "spread", "future_partial_lo": None, "resid_st": None, "pregame": True}
+    passing = (-0.001, -0.0001)
+    assert cs.verdict(0.05, luck=True, resid_mk=None, shadow=passing, **kw) == "luck"
+    assert cs.verdict(None, luck=False, resid_mk=(-0.1, 0.2), shadow=passing, **kw) == "none"
+    assert cs.verdict(None, luck=False, resid_mk=(0.1, 0.5), shadow=passing, **kw) == "model"
+    assert (
+        cs.verdict(None, luck=False, resid_mk=(0.1, 0.5), shadow=(-0.001, 0.001), **kw) == "context"
+    )

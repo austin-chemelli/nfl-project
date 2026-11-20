@@ -311,7 +311,6 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
     <Section
       title="Tendencies: offense vs the other side's defense"
       help="How each offense has played this season next to how the opposing defense has been played against, with the league average for scale."
-      aside={<ScoredTag scored={false} />}
     >
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">Where an offense and the defense it faces sit far apart, expect a mismatch.</p>
       <p className="mb-3 text-[13px] text-ink-2">

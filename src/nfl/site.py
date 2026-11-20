@@ -1866,7 +1866,7 @@ MODEL_CHANGE_LABELS: dict[str, str] = {
     "cf0e91518f1c": "Model wave 3: one Student, home field from the last ten seasons",  # student
     "16608e26c57c": "Model wave 3: no venue modifiers, neutral sites level",  # analyst
     "bbc096a2fd16": "Model wave 3: neutral sites level",  # sharp
-    "c5bbd23735cb": "Model wave 3: real weather, neutral sites level",  # traditionalist
+    "905cad48df9e": "Model wave 3: neutral sites level",  # traditionalist
 }
 MODEL_CHANGE_DEFAULT = "New model version"
 

@@ -224,6 +224,8 @@ def test_weekly_builds_the_models_before_the_site():
     src = inspect.getsource(weekly.refresh)
     assert src.index('step("models"') < src.index('step("site"')
     assert src.index('step("features"') < src.index('step("models"')
+    # the matchup features read the split model, so it is rebuilt before them (ADR 0031)
+    assert src.index('step("split model"') < src.index('step("features"')
 
 
 def test_edge_cards_for_both_teams_and_null_without_a_line(tmp_path):

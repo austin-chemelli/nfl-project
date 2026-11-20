@@ -107,10 +107,12 @@ STEPS: list[Step] = [
     Step("curate", _curate),
     Step("forecast", _forecast, optional=True),
     Step("tendencies", _tendencies),
+    # before features: the matchup family reads team_split_week (ADR 0031); the site's matchups and
+    # paths read them too (ADR 0028)
+    Step("models", _models, optional=True),
     Step("features", _features),
     Step("previews", _previews, optional=True),
     Step("player claims", _claims, optional=True),
-    Step("models", _models, optional=True),  # the site's matchups and paths read them (ADR 0028)
     Step("site", _site),
 ]
 

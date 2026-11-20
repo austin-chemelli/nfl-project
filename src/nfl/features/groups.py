@@ -18,9 +18,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# v7 2026-11-20 (model wave 3, ADR 0031): every member is now built or removed on purpose. Venue &
-# weather holds real kickoff weather (`weather.*`) instead of the planned `environment.temp_c` and
-# `wind_kph`; the FTN receiver and QB charting rates (drops, contested catches, risky throws) are built
+# v7 2026-11-20 (model wave 3, ADR 0031): every member is now built or removed on purpose. The planned
+# `environment.temp_c` and `wind_kph` are removed: the store has kickoff weather (`weather.*`), but
+# observed for played games and forecast at a lock, so it stays out of every fit (context for the
+# total and the swing list) until archived forecasts exist (M23.14); the FTN receiver and QB charting rates (drops, contested catches, risky throws) are built
 # but out of the weighted groups (together they cost 0.0013 log loss since 2022, ledger rows); the
 # seven planned matchup interactions are replaced by the engine's edges (ADR 0028): the net edge
 # passed every ledger gate and joined Offense, the per-situation edges stay context; `decisions.hc_ats_career` (an against-the-spread record, which doesn't
@@ -205,8 +206,6 @@ _GROUPS = [
               M("environment.primetime", 1, "Primetime", "flag", "Kickoff at 7pm ET or later, or a Thursday or Monday game."),
               M("environment.is_dome", 1, "Dome", "flag", "Played under a closed roof."),
               M("environment.is_turf", 1, "Artificial turf", "flag", "Played on an artificial surface."),
-              M("weather.temp_f", 0, "Temperature", "degf", "Kickoff temperature at open-air stadiums: nflverse's record for played games, the latest forecast before the lock for upcoming ones."),
-              M("weather.wind_mph", 0, "Wind", "mph", "Kickoff wind speed at open-air stadiums: recorded for played games, forecast for upcoming ones."),
               M("narrative.weather_concern", -1, "Weather concern (news)", "index", "From the forecast: 0 dome or mild, 0.5 strong wind or rain, 1 severe."),
           ), game_level=True),
     Group("coaching", "Coaching", "The sidelines", "Decision quality and staff stability",

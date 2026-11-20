@@ -32,7 +32,7 @@ import polars as pl
 from scipy.optimize import minimize
 from scipy.special import expit
 
-from nfl.approaches.engine import NEUTRAL, Model, Scaler, gate, persona_model
+from nfl.approaches.engine import NEUTRAL, Model, Scaler, gate, persona_model, venue_gate
 from nfl.approaches.schema import Approach
 from nfl.config import FIRST_SCORED_SEASON, Paths
 from nfl.features import store
@@ -118,13 +118,18 @@ def fit_platt(
 SHIFT_SEASONS = {"shift_10": 10}  # calibration value -> training seasons the offset is fitted on
 
 
-def fit_shift(logit: np.ndarray, y: np.ndarray, g: np.ndarray | None = None) -> float:
+def fit_shift(
+    logit: np.ndarray, y: np.ndarray, g: np.ndarray | None = None, sw: np.ndarray | None = None
+) -> float:
     """The one offset c with p = σ(logit + c·g), maximum likelihood (ADR 0026, M23.1)."""
     g = np.ones(len(y)) if g is None else g
 
     def f(t):
         eta = logit + t[0] * g
-        return _nll(eta, y), np.array([(expit(eta) - y) @ g])
+        r = expit(eta) - y
+        if sw is not None:
+            r = sw * r
+        return _nll(eta, y, sw), np.array([r @ g])
 
     res = minimize(f, np.array([0.0]), jac=True, method="L-BFGS-B")
     return float(res.x[0])
@@ -242,6 +247,7 @@ def fit_flavors(
         "config_hash": config_hash(approach),
     }
     g = gate(train)
+    z = venue_gate(z, feats, g)  # venue modifiers only shift home field: none at a neutral site
     if approach.grouped:
         res = _fit_grouped(approach, train, feats, scaler, z, y, lam, meta, g)
     else:
@@ -254,16 +260,17 @@ def fit_flavors(
 
 def _fit_flat(approach, train, feats, scaler, z, y, lam, meta, g) -> FitResult:
     seasons = train.get_column("season").to_numpy()
+    sw = season_weights(seasons, DECAY_HALF_LIFE)
 
     persona = persona_model(approach, scaler)
     if approach.calibration == "platt":
-        persona.calib_a, persona.calib_c = fit_platt(persona.raw_logit(z, g), y, g=g)
+        persona.calib_a, persona.calib_c = fit_platt(persona.raw_logit(z, g), y, sw, g)
     persona.meta = meta | {"flavor": "persona"}
 
     w0 = np.array([approach.weights[f].w for f in feats], dtype=float)
     if not approach.fit.shrink_to_persona:
         w0 = np.zeros_like(w0)
-    b, w = fit_ridge(z, y, w0, lam, b0=approach.intercept.w, g=g)
+    b, w = fit_ridge(z, y, w0, lam, b0=approach.intercept.w, sw=sw, g=g)
     fitted = Model(
         model_id=f"{approach.id}.fitted",
         features=feats,
@@ -272,7 +279,7 @@ def _fit_flat(approach, train, feats, scaler, z, y, lam, meta, g) -> FitResult:
         scaler=scaler,
         meta=meta | {"flavor": "fitted", "lambda": lam},
     )
-    return FitResult(persona, fitted, _public_from(approach, fitted, None, z, y, seasons, g=g))
+    return FitResult(persona, fitted, _public_from(approach, fitted, None, z, y, seasons, sw, g))
 
 
 def _public_from(
@@ -302,7 +309,8 @@ def _public_from(
         recent = seasons > seasons.max() - SHIFT_SEASONS[approach.calibration]
         pub.calib_a = 1.0
         gg = np.ones(len(y)) if g is None else g
-        pub.calib_c = fit_shift(pub.raw_logit(z, gg)[recent], y[recent], gg[recent])
+        ws = None if sw is None else sw[recent]
+        pub.calib_c = fit_shift(pub.raw_logit(z, gg)[recent], y[recent], gg[recent], ws)
         pub.meta |= {"calibration": approach.calibration, "calib_seasons": int(recent.sum())}
     return pub
 

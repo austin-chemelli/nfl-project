@@ -413,6 +413,11 @@ def refresh(paths: Paths, season: int, odds: bool = True) -> str | None:
         weather.snapshot(paths, store.games_frame(paths).filter(pl.col("season") == season))
     except Exception as e:  # noqa: BLE001
         warnings.warn(f"weather forecast skipped: {e!r}", stacklevel=2)
+    # the matchup family reads the split model: rebuild it from the fresh plays and charting first,
+    # so the Student's net matchup edge (Offense, ADR 0031) is as of this lock
+    from nfl.sql import runner
+
+    runner.build(paths, "team_split_week")
     build_all(paths)
     return snap
 

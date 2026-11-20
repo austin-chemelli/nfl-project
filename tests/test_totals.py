@@ -112,12 +112,14 @@ def test_expected_score_splits_the_locked_total_by_the_headline_spread():
     assert site._expected_score(None, {}) is None
 
 
-def test_the_weather_family_is_in_the_global_fit_since_wave_3():
-    """Weather joined Venue & weather in model wave 3 (ADR 0031), so the global fit and the
-    Hypotheses page read it too; market and narrative stay out."""
+def test_the_weather_family_and_the_neutral_flag_stay_out_of_the_global_fit():
+    """Weather: training would see observed kickoff weather and a lock only a forecast. The
+    neutral-site flag: a rule, not a member (ADR 0031)."""
     from nfl.approaches import ensemble
 
-    a = ensemble.global_approach({"strength.epa_off", "weather.wind_mph", "narrative.hype"})
-    assert "weather" not in ensemble.EXCLUDED_FAMILIES
+    a = ensemble.global_approach(
+        {"strength.epa_off", "weather.wind_mph", "narrative.hype", "environment.neutral_site"}
+    )
     dumped = a.model_dump_json()
-    assert "weather.wind_mph" in dumped and "narrative.hype" not in dumped
+    assert "strength.epa_off" in dumped
+    assert not any(f in dumped for f in ("weather.", "narrative.", "environment.neutral_site"))

@@ -168,9 +168,8 @@ def load_inputs(paths: Paths) -> tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
 
     inj = con.sql(
         'select cast(season as bigint) as season, cast(week as bigint) as "week", team, gsis_id, '
-        "report_status from read_parquet('"
-        + glob("injuries")
-        + "', hive_partitioning=true, union_by_name=true)"
+        "report_status, timezone('UTC', date_modified) as date_modified, position "
+        "from read_parquet('" + glob("injuries") + "', hive_partitioning=true, union_by_name=true)"
     ).pl()
     depth = load_depth(paths)
     plays = con.sql(
