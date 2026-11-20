@@ -12,6 +12,7 @@ Numbers are ROI per 1 unit staked (profit / stake). Ranges are 90% normal interv
 from __future__ import annotations
 
 import math
+from datetime import UTC, datetime
 from itertools import combinations
 
 import numpy as np
@@ -384,12 +385,20 @@ def vig_compounding(hold_rates: tuple[float, ...] = (0.0455, 0.025)) -> list[dic
 # 5. stake sizing ---------------------------------------------------------------------------------
 
 
-def _weekly_bets(s: pl.DataFrame, model: str, per_week: int, w: float | None) -> list[list[tuple]]:
+def _weekly_bets(
+    s: pl.DataFrame, model: str, per_week: int, w_by_season: dict[int, float] | None
+) -> list[list[tuple]]:
     """Per (season, week), the `per_week` sides the model likes most against the market,
-    as (p_model_for_kelly, decimal_odds, won)."""
+    as (p_model_for_kelly, decimal_odds, won). With `w_by_season`, the chance is the logit blend
+    of guide.blend with that season's walk-forward weight (fitted on earlier seasons only)."""
     d = lean_sides(_hist(s), model).filter(pl.col("season").is_between(2011, 2025))
-    mk = pl.col("p_mkt")
-    pk = pl.col(f"p_{model}") if w is None else mk + w * (pl.col(f"p_{model}") - mk)
+    if w_by_season is None:
+        pk = pl.col(f"p_{model}")
+    else:
+        lm = (pl.col("p_mkt") / (1 - pl.col("p_mkt"))).log()
+        lx = (pl.col(f"p_{model}") / (1 - pl.col(f"p_{model}"))).log()
+        w = pl.col("season").replace_strict(w_by_season, default=0.0, return_dtype=pl.Float64)
+        pk = 1 / (1 + (-(lm + w * (lx - lm))).exp())
     d = d.with_columns(pk.alias("pk"), (1 + pl.col("win_units")).alias("dec"))
     weeks = []
     for (_season, _week), g in d.sort("season", "week").group_by(
@@ -400,16 +409,18 @@ def _weekly_bets(s: pl.DataFrame, model: str, per_week: int, w: float | None) ->
     return weeks
 
 
-def staking(s: pl.DataFrame, model: str, blend_w: float, n_sims: int = 4000) -> list[dict]:
+def staking(
+    s: pl.DataFrame, model: str, w_by_season: dict[int, float], n_sims: int = 4000
+) -> list[dict]:
     """Bankroll paths over an 18-week season for flat stakes and fractions of Kelly, at 3, 6 and
     10 bets a week. Weeks are resampled from 2011-2025 (bootstrap), stakes are set from the
     bankroll at the start of each week. Kelly is computed two ways: on the model's own chance,
-    and on the chance shrunk toward the market by the walk-forward blend weight."""
+    and on the chance shrunk toward the market by each season's walk-forward blend weight."""
     rng = np.random.default_rng(SEED)
     rows = []
     for per_week in (3, 6, 10):
         raw = _weekly_bets(s, model, per_week, None)
-        shrunk = _weekly_bets(s, model, per_week, blend_w)
+        shrunk = _weekly_bets(s, model, per_week, w_by_season)
         strategies = [
             ("flat_1", "Flat 1% of the starting bankroll", raw, ("flat", 0.01)),
             ("flat_2", "Flat 2%", raw, ("flat", 0.02)),
@@ -586,9 +597,10 @@ def targeted_bar(games: pl.DataFrame, model: str) -> list[dict]:
         o = pl.col(col).cast(pl.Float64).fill_null(-110.0)
         return pl.when(o > 0).then(o / 100).otherwise(100 / -o)
 
-    def under(k: int) -> pl.DataFrame:
+    def under(k: int, below: int = 999) -> pl.DataFrame:
         return g.filter(
-            pl.col("roof").is_in(["outdoors", "open"]) & (pl.col("wind") >= k) & pl.col("total_line").is_not_null()
+            pl.col("roof").is_in(["outdoors", "open"]) & pl.col("wind").is_between(k, below, closed="left")
+            & pl.col("total_line").is_not_null()
         ).with_columns(
             pl.when(pl.col("total") < pl.col("total_line")).then(wu("under_odds"))
             .when(pl.col("total") > pl.col("total_line")).then(-1.0).otherwise(0.0).alias("profit")
@@ -616,7 +628,7 @@ def targeted_bar(games: pl.DataFrame, model: str) -> list[dict]:
             "under_wind_15",
             "Under when the recorded wind is 15 mph or more (outdoors)",
             under(15),
-            under(10),
+            under(10, 15),  # the disjoint step below, not a superset of the rule
         ),
         (
             "ats_gap_5",
@@ -745,6 +757,8 @@ def _shopping(ml: pl.DataFrame, lines: pl.DataFrame) -> dict:
         .with_columns(pl.when(pl.col("side") == "home").then("p_home_vigfree")
                       .otherwise(1 - pl.col("p_home_vigfree")).alias("fair"))
     )  # fmt: skip
+    if t.is_empty():
+        return {}
     return {
         "prices": t.height,
         "ev_best": round(float((t["best"] * t["fair"] - 1).mean()), 4),
@@ -781,13 +795,13 @@ def live_lines(paths, model: str) -> dict:
         .filter(pl.col("books") >= 4)
         .with_columns(((pl.col("best") / pl.col("med")) - 1).alias("gain"))
     )
-    shop_out = {
-        "snapshots": int(shop.select("game_id", "snapshot_ts").unique().height),
-        "best_vs_median_return": round(float(shop["gain"].mean()), 4),
-        "best_vs_median_return_p90": round(float(shop["gain"].quantile(0.9)), 4),
-        "us_books": list(US_BOOKS),
-        "us": shop_us,
-    }
+    shop_out = {"us_books": list(US_BOOKS), "us": shop_us}
+    if not shop.is_empty():
+        shop_out |= {
+            "snapshots": int(shop.select("game_id", "snapshot_ts").unique().height),
+            "best_vs_median_return": round(float(shop["gain"].mean()), 4),
+            "best_vs_median_return_p90": round(float(shop["gain"].quantile(0.9)), 4),
+        }
     # CLV of the model's lean at each live lock
     cons = odds.consensus(lines).filter(pl.col("p_home_vigfree").is_not_null())
     kick = lines.select("game_id", "kickoff_utc").unique()
@@ -795,7 +809,12 @@ def live_lines(paths, model: str) -> dict:
         cons.join(kick, on="game_id").filter(pl.col("snapshot_ts") < pl.col("kickoff_utc"))
         .sort("snapshot_ts").group_by("game_id").last().select("game_id", pl.col("p_home_vigfree").alias("p_close"))
     )  # fmt: skip
-    preds = existing(paths).filter((pl.col("model_id") == model) & ~pl.col("is_backfill"))
+    played = kick.filter(pl.col("kickoff_utc") < datetime.now(UTC).replace(tzinfo=None))["game_id"]
+    preds = existing(paths).filter(
+        (pl.col("model_id") == model)
+        & ~pl.col("is_backfill")
+        & pl.col("game_id").is_in(played.to_list())
+    )  # only games that kicked off: their last snapshot is the close
     at_lock = (
         preds.sort("lock_ts")
         .join_asof(cons.sort("snapshot_ts"), left_on="lock_ts", right_on="snapshot_ts", by="game_id", strategy="backward", check_sortedness=False)
@@ -823,6 +842,7 @@ def run(paths, model: str = "student", models: tuple[str, ...] = history.APPROAC
     games = history.game_table(paths, allm)
     s = history.sides(games, allm)
     w = blend_weight(s, model, 2025)
+    path = blend_path(s, model)
     return {
         "model": model,
         "model_versions": history.model_versions(paths, allm),
@@ -833,10 +853,10 @@ def run(paths, model: str = "student", models: tuple[str, ...] = history.APPROAC
         "gap": by_gap(s, allm),
         "agreement": agreement(s, models),
         "walk_forward": walk_forward(s, models),
-        "blend": {"w_through_2025": w, "path": blend_path(s, model)},
+        "blend": {"w_through_2025": w, "path": path},
         "parlays": parlays(s, model),
         "vig_compounding": vig_compounding(),
-        "staking": staking(s, model, w),
+        "staking": staking(s, model, {r["season"]: r["w"] for r in path}),
         "spreads_totals": spreads_totals(games, model),
         "targeted": targeted_bar(games, model),
         "guide_rule": guide_rule(s, model),

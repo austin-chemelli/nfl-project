@@ -242,3 +242,29 @@ def test_blend_weight_tracks_information():
     s = _sides(per=200)
     # a model that is the market plus noise earns little weight
     assert study.blend_weight(s, "student", 2030) < 0.4
+
+
+def test_record_caps_looks_per_week_like_the_card():
+    lock = datetime(2026, 11, 19, 14)
+    n = guide.MAX_LOOKS + 2
+    ids = [f"g{i}" for i in range(n)]
+    p = pl.DataFrame(
+        {
+            "game_id": ids,
+            "week": [11] * n,
+            "lock_ts": [lock] * n,
+            "p_home": [0.9] * n,
+            "result": [7] * n,
+        }
+    )
+    cons = pl.DataFrame({"game_id": ids, "snapshot_ts": [lock - timedelta(hours=1)] * n, "p_home_vigfree": [0.82] * n,
+                         "home_ml": [-500.0] * n, "away_ml": [400.0] * n})  # fmt: skip
+    rows = guide.grade_at_locks(p, cons)
+    assert sum(r["verdict"] == "look" for r in rows) == guide.MAX_LOOKS
+
+
+def test_under_never_names_an_unlicensed_book():
+    snap = datetime(2026, 11, 20)
+    lines = _lines([("g1", snap, snap, "bovada", "totals", "under", -105.0, 44.5)])
+    u = guide._total_under(lines, "g1", snap)
+    assert u["line"] == 44.5 and u["best_book"] is None and u["best_price"] is None

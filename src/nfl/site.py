@@ -955,7 +955,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
                 paths, games, allrows, season_lines, feats, current_week, now, bstudy
             ),
         )
-    except Exception as e:  # noqa: BLE001
+    except (Exception, pl.exceptions.PanicException) as e:  # noqa: BLE001
         print(f"site: betting files failed, continuing: {e!r}")
     try:  # additive page data (ADR 0019): a failure must never stop the site build
         teams = teams_file(feats, games, now, current_week)

@@ -80,8 +80,8 @@ export function ShortAnswers({ m }: { m: BettingMath }) {
 
       <Answer q="How much should I stake?" a="1% of your bankroll a bet.">
         <p>
-          Kelly sizes a bet by the edge. With no proven edge it says bet nothing:{' '}
-          {shrunk && <span className="tabular">on the chance shrunk toward the market it averaged {shrunk.avg_stake_pct?.toFixed(2)}% of the bankroll a bet. </span>}
+          Kelly sizes a bet by the edge, so it is only as good as the edge you feed it.{' '}
+          {shrunk && <span className="tabular">Fed the honest chance (the market plus the small share of our model history says to keep), it staked about {shrunk.avg_stake_pct?.toFixed(1)}% a bet and still ended the typical season at {chance(shrunk.median_end)} of the bankroll. </span>}
           {kellyFull && <span className="tabular">Kelly fed the model&apos;s own confidence lost half the bankroll in {chance(kellyFull.p_lose_half)} of seasons (6 bets a week).</span>}
         </p>
       </Answer>

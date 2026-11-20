@@ -7,7 +7,7 @@ bet log grades against; an unlisted page). Numbers come from `study.run()`, cach
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 import polars as pl
 
@@ -26,7 +26,9 @@ def study_path(paths: Paths):
 
 def run_study(paths: Paths, model: str = MODEL) -> dict:
     """Run the study and store it (`nfl betting study`)."""
-    out = study.run(paths, model) | {"generated_at": datetime.now().isoformat(timespec="seconds")}
+    out = study.run(paths, model) | {
+        "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
     f = study_path(paths)
     f.parent.mkdir(parents=True, exist_ok=True)
     tmp = f.with_suffix(".tmp")
@@ -39,11 +41,20 @@ def ensure_study(paths: Paths, model: str = MODEL) -> dict:
     """The stored study, rerun first if missing or built on another version of the models."""
     f = study_path(paths)
     current = history.model_versions(paths, tuple(dict.fromkeys((*history.APPROACHES, model))))
-    if f.exists():
-        s = json.loads(f.read_text())
-        if s.get("model") == model and s.get("model_versions") == current:
-            return s
-    return run_study(paths, model)
+    stored = json.loads(f.read_text()) if f.exists() else None
+    if stored and stored.get("model") == model and stored.get("model_versions") == current:
+        return stored
+    if stored and stored.get("failed_versions") == current:
+        return stored  # this version already failed once: don't pay the rerun on every build
+    try:
+        return run_study(paths, model)
+    except Exception:
+        if stored is None:
+            raise
+        stored["failed_versions"] = current  # keep serving the last good study
+        f.write_text(json.dumps(stored, indent=1, default=str))
+        print("betting: study rerun failed; serving the stored study")
+        return stored
 
 
 def math_file(s: dict) -> dict:
@@ -71,7 +82,7 @@ def math_file(s: dict) -> dict:
         "lands_on_3": s["spreads_totals"]["lands_on_3_when_spread_near_3"],
         "fees": s["fees"],
         "exchange_fee": s["kalshi_fee"],
-        "shopping": s["live"].get("us") if s.get("live") else None,
+        "shopping": (s.get("live") or {}).get("us") or None,
         "guide_rule": s["guide_rule"],
     }  # fmt: skip
 

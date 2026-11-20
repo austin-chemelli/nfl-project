@@ -33,7 +33,13 @@ WIND_MPH = 15
 STAKE_PCT = 0.01
 EXCHANGE_FEE = 0.07
 APPROACHES = ("traditionalist", "analyst", "sharp", "student")
+BANDS_ORDER = [b[2] for b in BANDS]
 OPEN_AIR = ("outdoors", "open")
+
+
+def _price(x: float | None) -> float | None:
+    """Consensus prices are medians in decimal odds; round off the float noise (-619.9999...)."""
+    return None if x is None else float(round(x))
 
 
 def band_of(p: float) -> str:
@@ -134,18 +140,20 @@ def _total_under(lines: pl.DataFrame, game_id: str, snapshot_ts) -> dict | None:
     )  # fmt: skip
     if t.is_empty():
         return None
+    line = float(t["point"].median())
     us = t.filter(pl.col("book").is_in(list(US_BOOKS)))
-    pick = (us if not us.is_empty() else t).with_columns(
+    if us.is_empty():  # never show an unlicensed book's price (ADR 0033 §6)
+        return {"line": line, "best_point": None, "best_price": None, "best_book": None}
+    pick = us.with_columns(
         pl.col("price_american").map_elements(prices.decimal, return_dtype=pl.Float64).alias("dec")
     )
-    line = float(pick["point"].median())
     at = (
         pick.filter(pl.col("point") == pick["point"].max())
         .sort("dec", descending=True)
         .row(0, named=True)
     )
-    return {"line": line, "best_point": at["point"], "best_price": at["price_american"],
-            "best_book": at["book"] if at["book"] in US_BOOKS else None}  # fmt: skip
+    return {"line": line, "best_point": at["point"], "best_price": round(at["price_american"]),
+            "best_book": at["book"]}  # fmt: skip
 
 
 def card(
@@ -184,7 +192,7 @@ def card(
         if mk is not None and mk.get("p_home_vigfree") is not None:
             item["market"] = {
                 "as_of": mk["snapshot_ts"].isoformat() + "Z", "p_home": round(mk["p_home_vigfree"], 4),
-                "home_ml": mk["home_ml"], "away_ml": mk["away_ml"],
+                "home_ml": _price(mk["home_ml"]), "away_ml": _price(mk["away_ml"]),
                 "spread_home": mk.get("spread_home"), "total": mk.get("total"),
             }  # fmt: skip
         if hp is not None and item["market"] is not None:
@@ -214,7 +222,7 @@ def card(
             )
             if not b.is_empty():
                 br = b.row(0, named=True)
-                item["best"] = {"price": br["price_american"], "book": br["book"]}
+                item["best"] = {"price": _price(br["price_american"]), "book": br["book"]}
                 item["clears"] = prices.ev(pb, br["price_american"]) >= 0
         mph = wind.get(gid)
         if (
@@ -226,22 +234,29 @@ def card(
             tb = next((t for t in study.get("targeted", []) if t["key"] == "under_wind_15"), {})
             item["total"] = {
                 "side": "under", "wind_mph": round(mph), "line": under["line"] if under else (mk or {}).get("total"),
-                "best": {"point": under["best_point"], "price": under["best_price"], "book": under["best_book"]} if under else None,
+                "best": {"point": under["best_point"], "price": under["best_price"], "book": under["best_book"]} if under and under["best_book"] else None,
                 "needed": {"american": -110},
                 "reason": (f"Forecast wind {round(mph)} mph in the open air: unders in 15+ mph wind returned "
                            f"{_pctf(tb.get('roi'))} since {study['seasons'][0]} ({tb.get('n', 0)} games), "
                            "measured on the wind at kickoff, so the real edge is smaller."),
             }  # fmt: skip
-        if started:
-            item["verdict"] = "started" if item["verdict"] is not None else None
         out.append(item)
-    # at most MAX_LOOKS: cheapest band first, then the best price against the needed price
-    looks = [x for x in out if x["verdict"] == "look"]
-    looks.sort(key=lambda x: (order.index(x["pick"]["band"]), x["kickoff_utc"]))
+    # at most MAX_LOOKS a week, counted over every game including those already played, so the
+    # short list doesn't change once a game kicks off: cheapest band first, then kickoff
+    cap_looks(out, lambda x: (order.index(x["pick"]["band"]), x["kickoff_utc"]))
+    for x in out:
+        if x["started"] and x["verdict"] is not None:
+            x["verdict"] = "started"
+    return {"week": week, "games": out, "blend_w": w}
+
+
+def cap_looks(items: list[dict], key) -> None:
+    """Demote every 'look' past MAX_LOOKS (in `key` order) to 'fun', in place."""
+    looks = sorted((x for x in items if x["verdict"] == "look"), key=key)
     for x in looks[MAX_LOOKS:]:
         x["verdict"] = "fun"
-        x["reason"] += f" Left off the short list: the card keeps {MAX_LOOKS} a week."
-    return {"week": week, "games": out, "blend_w": w}
+        if x.get("reason"):
+            x["reason"] += f" Left off the short list: the card keeps {MAX_LOOKS} a week."
 
 
 # ---------------------------------------------------------------- record of the card at the locks
@@ -304,7 +319,12 @@ def grade_at_locks(p: pl.DataFrame, cons: pl.DataFrame) -> list[dict]:
         won = 1.0 if margin > 0 else 0.0 if margin < 0 else 0.5
         units = (prices.decimal(price) - 1) if won == 1 else (-1.0 if won == 0 else 0.0)
         rows.append({"game_id": r["game_id"], "week": r["week"], "verdict": verdict(px, pm), "side": side,
-                     "price": price, "won": won, "units": round(units, 3)})  # fmt: skip
+                     "price": round(price), "won": won, "units": round(units, 3),
+                     "_key": (BANDS_ORDER.index(band_of(pm)), r.get("kickoff_utc") or r["lock_ts"])})  # fmt: skip
+    for wk in {r["week"] for r in rows}:  # the card's weekly cap, as on the card
+        cap_looks([r for r in rows if r["week"] == wk], lambda x: x["_key"])
+    for r in rows:
+        del r["_key"]
     return rows
 
 
@@ -329,7 +349,7 @@ def closing_map(games: pl.DataFrame, lines: pl.DataFrame) -> list[dict]:
             "close": None if cr is None else {
                 "as_of": cr["snapshot_ts"].isoformat() + "Z",
                 "p_home": None if cr["p_home_vigfree"] is None else round(cr["p_home_vigfree"], 4),
-                "home_ml": cr["home_ml"], "away_ml": cr["away_ml"],
+                "home_ml": _price(cr["home_ml"]), "away_ml": _price(cr["away_ml"]),
                 "spread_home": cr.get("spread_home"), "total": cr.get("total"),
             },
         })  # fmt: skip
