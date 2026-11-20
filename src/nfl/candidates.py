@@ -25,6 +25,10 @@ Fields that steer the gates:
 - `pregame`: False when the value uses something known only after kickoff (observed wind, the
   game's actual passer). Such a candidate can't be `use`: at best it's `context` until a pregame
   version exists (a forecast, the depth chart's starter).
+- `frame='features'` (ADR 0031): the value is a feature-store feature (`feature`) as of the synthetic
+  lock, home minus away (game-level features as is); no team-week halves. `group` is the registry
+  group it would join (`good` is its member sign); with both set, the fourth gate (the shadow
+  backtest, `candidate_screen.shadow_gate`) runs.
 - `in_model`: the stat is already a member of a weighted group (a baseline, not a new idea); the site
   says so instead of presenting it as a find.
 """
@@ -78,6 +82,10 @@ class Candidate:
     frame: str = "team_week"
     split: str = ""
     side: str = "off"
+    feature: str = (
+        ""  # a feature-store name (frame 'features'; or the store twin of a team_week stat)
+    )
+    group: str = ""  # the registry group it would join (shadow gate)
 
 
 def _wind(k: int) -> Callable[[], pl.Expr]:
@@ -162,6 +170,7 @@ CANDIDATES: tuple[Candidate, ...] = (
         "spread", "plays", 2006, "epa_off", True,
         "The one clear market residual in the 15 screened (+0.63 points per SD).",
         lambda: ratio("o_succ", "o_n"), outcome="off", in_model=True,
+        feature="strength.success_off", group="offense",
     ),
     Candidate(
         "sack_off", "Sacks taken per dropback",
@@ -223,6 +232,98 @@ CANDIDATES: tuple[Candidate, ...] = (
     ),
 )  # fmt: skip
 
+# ---- feature-store candidates (ADR 0031): the value is a stored feature at the synthetic lock.
+
+
+def _feature_candidate(
+    id: str, feature: str, group: str, good: int, label: str, sentence: str, source: str,
+    first_season: int, note: str = "", *, luck: bool = False, level: str = "team",
+    pregame: bool = True, interesting: bool = True,
+) -> Candidate:  # fmt: skip
+    return Candidate(
+        id=id, label=label, sentence=sentence,
+        kind="total" if level == "game" else "spread", source=source, first_season=first_season,
+        replaces="", interesting=interesting, note=note, value=lambda: pl.lit(None),
+        good=good, luck=luck, halves=False, level=level, pregame=pregame, frame="features",
+        feature=feature, group=group,
+    )  # fmt: skip
+
+
+_MATCHUP_EDGES = ("blitz", "box_light", "box_heavy", "play_action", "motion", "screen", "rpo")
+
+FEATURE_CANDIDATES: tuple[Candidate, ...] = (
+    _feature_candidate(
+        "value_lost", "availability.value_lost", "health", -1, "Player value lost to injuries",
+        "Value of the players ruled out or doubtful, weighted by how likely they are to play.",
+        "player value x status-to-play", 2013,
+    ),
+    _feature_candidate(
+        "ol_weakest", "availability.ol_weakest", "health", 1, "Weakest offensive line spot",
+        "How good the weakest healthy starter on the offensive line is.",
+        "player value x status-to-play", 2013,
+    ),
+    _feature_candidate(
+        "epa_off_noto", "strength.epa_off_noto", "offense", 1, "Offense EPA without turnovers",
+        "Offense EPA per play with interceptions and lost fumbles taken out.", "plays", 2006,
+    ),
+    _feature_candidate(
+        "epa_def_noto", "strength.epa_def_noto", "defense", -1, "Defense EPA without turnovers",
+        "EPA per play the defense allowed, with turnovers taken out.", "plays", 2006,
+    ),
+    _feature_candidate(
+        "takeaway_rate", "strength.takeaway_rate", "defense", 1, "Takeaway rate",
+        "Interceptions and fumble recoveries the defense forced per play faced.", "plays", 2006,
+    ),
+    _feature_candidate(
+        "fum_luck_feature", "strength.fum_luck", "quality", -1, "Fumble luck (as a feature)",
+        "Fumbles recovered above a coin flip, season to date, as the store carries it.",
+        "plays", 2006, "The luck term for Quality, tested as a model member.", luck=True,
+    ),
+    _feature_candidate(
+        "one_score_luck_feature", "decisions.one_score_luck", "quality", -1,
+        "One-score-game luck (as a feature)",
+        "Wins in one-score games above half of them, season to date, as the store carries it.",
+        "games", 2006, "The luck term for Quality, tested as a model member.", luck=True,
+    ),
+    _feature_candidate(
+        "weather_temp", "weather.temp_f", "venue_weather", 1, "Game temperature",
+        "Temperature at kickoff in degrees Fahrenheit.", "weather", 2006,
+        "Training uses observed weather; a live lock has only a forecast, so it never passes as a model feature.",
+        level="game", pregame=False,
+    ),
+    _feature_candidate(
+        "weather_wind", "weather.wind_mph", "venue_weather", -1, "Game wind",
+        "Wind speed at kickoff in miles per hour.", "weather", 2006,
+        "Training uses observed weather; a live lock has only a forecast, so it never passes as a model feature.",
+        level="game", pregame=False,
+    ),
+    _feature_candidate(
+        "drop_rate", "front.drop_rate", "offense", -1, "Receivers' drop rate",
+        "Share of catchable passes the offense dropped.", "FTN charting", 2022,
+    ),
+    _feature_candidate(
+        "contested_rate", "front.contested_rate", "offense", 1, "Contested-catch rate",
+        "Share of the offense's targets that were contested.", "FTN charting", 2022,
+    ),
+    _feature_candidate(
+        "int_worthy_rate", "front.int_worthy_rate", "quarterback", -1, "Interception-worthy throws",
+        "Share of the quarterback's passes charted as interception-worthy.", "FTN charting", 2022,
+    ),
+    _feature_candidate(
+        "edge_net", "matchup.net_edge_pg", "offense", 1, "Net matchup edge",
+        "Points per game the offense's strengths gain against this defense's weaknesses, summed over situations.",
+        "plays + FTN charting", 2022, "M25.8: the matchups' own test for joining a group.",
+    ),
+    *(
+        _feature_candidate(
+            f"edge_{sp}", f"matchup.edge_{sp}", "offense", 1, f"Matchup edge: {sp.replace('_', ' ')}",
+            f"Points per game the offense gains from the {sp.replace('_', ' ')} situation against this defense.",
+            "plays + FTN charting", 2022, "M25.8: tested one situation at a time.",
+        )
+        for sp in _MATCHUP_EDGES
+    ),
+)  # fmt: skip
+
 # ---- situation splits (ADR 0028, M25.2): generated from splits.SPLITS so the two can't drift.
 # One candidate per split: the raw with-minus-without EPA-per-play gap of the unit that does NOT choose
 # the situation (the offense when the defense chooses: blitz, box; the defense when the offense does:
@@ -272,6 +373,6 @@ def _split_candidate(sp: splits.Split) -> Candidate:
 
 
 SPLIT_CANDIDATES: tuple[Candidate, ...] = tuple(_split_candidate(sp) for sp in splits.SPLITS)
-CANDIDATES = CANDIDATES + SPLIT_CANDIDATES
+CANDIDATES = CANDIDATES + SPLIT_CANDIDATES + FEATURE_CANDIDATES
 
 BY_ID = {c.id: c for c in CANDIDATES}

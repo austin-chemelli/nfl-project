@@ -32,6 +32,7 @@ team code printed on the game.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 
 import duckdb
@@ -40,6 +41,8 @@ import polars as pl
 from nfl.config import Paths
 from nfl.features import store
 from nfl.models.elo import TEAM_ALIASES
+
+log = logging.getLogger(__name__)
 
 SOURCE = "injuries"
 VERSION = "1"
@@ -50,6 +53,8 @@ FEATURES = (
     "availability.injury_impact",
     "availability.ol_starters_out",
     "availability.report_count",
+    "availability.value_lost",
+    "availability.ol_weakest",
 )
 
 POS_MAP: dict[str, str | None] = {
@@ -94,11 +99,23 @@ POS_MAP: dict[str, str | None] = {
     "SS": "S",
     "DB": "S",
 }
+_REPORT_GROUP = {  # injury-report position -> group, as `players.status.POS_GROUP`
+    "QB": "QB", "RB": "RB", "FB": "RB", "WR": "WR", "TE": "TE", "T": "OL", "G": "OL", "C": "OL",
+    "DE": "DL", "DT": "DL", "LB": "LB", "CB": "DB", "S": "DB",
+}  # fmt: skip
 SPECIAL_TEAMS = ["K", "PK", "P", "H", "LS", "KO", "PR", "KR"]
 OL = ["C", "G", "T"]
 WEIGHT = {"QB": 5.0, "T": 2.0, "DE": 2.0, "OLB": 2.0}
 TOP_WEIGHTED = {"CB": 2.0, "WR": 2.0}  # only the first-listed starter at these positions
 OUT_STATUSES = ["Out", "Doubtful"]
+# chart position -> the injury report's position group (`players.status.POS_GROUP`), the fallback
+# when the report row carries no position
+CHART_GROUP = {
+    "QB": "QB", "RB": "RB", "FB": "RB", "WR": "WR", "TE": "TE", "T": "OL", "G": "OL", "C": "OL",
+    "DE": "DL", "DT": "DL", "OLB": "LB", "LB": "LB", "CB": "DB", "NB": "DB", "S": "DB",
+}  # fmt: skip
+ERA_FROM = 2016  # status_to_play's eras: Probable dropped, Questionable redefined
+EXPECTED_TO_PLAY_BELOW = 0.5  # ol_weakest skips a starter more likely out than in
 
 _DEPTH_COLS = {
     "season": pl.Int64,
@@ -321,6 +338,121 @@ def _chart_aggregates(gt: pl.DataFrame, charts: pl.DataFrame, inj: pl.DataFrame)
     return agg.join(qb, on=["game_id", "team"], how="left")
 
 
+def load_value_inputs(paths: Paths) -> tuple[pl.DataFrame | None, pl.DataFrame | None]:
+    """(player values, status-to-play rates) from `marts/derived/`, or None for a missing table
+    (the player features are then null; build them with `nfl players value` / `nfl players status`)."""
+    from nfl.players import status as status_mod
+    from nfl.players import value as value_mod
+
+    vp, rp = value_mod.out_path(paths), status_mod.out_path(paths)
+    values = (
+        pl.read_parquet(vp, columns=["season", "week", "gsis_id", "value_pts"])
+        if vp.exists()
+        else None
+    )
+    rates = pl.read_parquet(rp) if rp.exists() else None
+    if values is None or rates is None:
+        log.warning("availability: %s missing; value_lost and ol_weakest are null", vp.name)
+    return values, rates
+
+
+def _value_features(
+    gt: pl.DataFrame,
+    charts: pl.DataFrame,
+    inj: pl.DataFrame,
+    values: pl.DataFrame,
+    rates: pl.DataFrame,
+) -> pl.DataFrame:
+    """(game_id, team, value_lost, ol_weakest, values_ready) for each game-team with a chart."""
+    ctx = gt.select("game_id", "team", "season", "week", "franchise", "cutoff")
+    key = pl.col("season") * 100 + pl.col("week")
+    v = (
+        values.select(
+            pl.col("gsis_id"),
+            (pl.col("season").cast(pl.Int64) * 100 + pl.col("week").cast(pl.Int64)).alias("vkey"),
+            pl.col("value_pts").fill_null(0.0).alias("value"),
+        )
+        .unique(["gsis_id", "vkey"], keep="first")
+        .sort("vkey")
+    )
+    first_slice = v["vkey"].min() if v.height else None
+    # the report rows a lock could see: stamped before the game's cutoff (no stamp: kept)
+    if "date_modified" not in inj.columns:
+        inj = inj.with_columns(pl.lit(None, dtype=pl.Datetime("us")).alias("date_modified"))
+    if "position" not in inj.columns:
+        inj = inj.with_columns(pl.lit(None, dtype=pl.Utf8).alias("position"))
+    r = rates.select("era", "status", "pos_group", (1.0 - pl.col("rate")).alias("p_out"))
+    rep = (
+        inj.filter(pl.col("gsis_id").is_not_null())
+        .with_columns(_franchise("team").alias("franchise"))
+        .select(
+            "season", "week", "franchise", "gsis_id", "report_status", "position", "date_modified"
+        )
+        .join(ctx, on=["season", "week", "franchise"])
+        .filter(pl.col("date_modified").is_null() | (pl.col("date_modified") < pl.col("cutoff")))
+        .select(
+            "game_id",
+            "team",
+            "gsis_id",
+            pl.col("report_status").alias("status"),
+            pl.col("position")
+            .str.to_uppercase()
+            .replace_strict(_REPORT_GROUP, default=None)
+            .alias("rep_group"),
+            pl.when(pl.col("season") >= ERA_FROM)
+            .then(pl.lit(f"{ERA_FROM}+"))
+            .otherwise(pl.lit("2013-2015"))
+            .alias("era"),
+        )
+    )
+    c = (
+        charts.join(ctx, on=["game_id", "team"])
+        .with_columns(pl.col("pos").replace_strict(CHART_GROUP, default=None).alias("chart_group"))
+        .join(rep, on=["game_id", "team", "gsis_id"], how="left")
+        .with_columns(
+            pl.coalesce("rep_group", "chart_group").alias("pos_group"),
+            pl.when(pl.col("season") >= ERA_FROM)
+            .then(pl.lit(f"{ERA_FROM}+"))
+            .otherwise(pl.lit("2013-2015"))
+            .alias("era"),
+            key.alias("gkey"),
+        )
+    )
+    # P(does not play): the group's rate, else the status's "all" rate; no status or no rate: 0
+    c = (
+        c.join(r.rename({"p_out": "p_grp"}), on=["era", "status", "pos_group"], how="left")
+        .join(
+            r.filter(pl.col("pos_group") == "all").drop("pos_group").rename({"p_out": "p_all"}),
+            on=["era", "status"],
+            how="left",
+        )
+        .with_columns(pl.coalesce("p_grp", "p_all").fill_null(0.0).alias("p_out"))
+        # a player listed twice (two report rows): the larger chance out
+        .group_by("game_id", "team", "gsis_id", "pos", "gkey", maintain_order=True)
+        .agg(pl.col("p_out").max())
+        .sort("gkey")
+        .join_asof(
+            v,
+            left_on="gkey",
+            right_on="vkey",
+            by="gsis_id",
+            strategy="backward",
+            allow_exact_matches=False,
+            check_sortedness=False,
+        )
+        .with_columns(pl.col("value").fill_null(0.0))
+    )
+    ready = pl.lit(first_slice is not None) & (pl.col("gkey") > (first_slice or 0))
+    return c.group_by("game_id", "team").agg(
+        (pl.col("value") * pl.col("p_out")).sum().alias("value_lost"),
+        pl.col("value")
+        .filter(pl.col("pos").is_in(OL) & (pl.col("p_out") < EXPECTED_TO_PLAY_BELOW))
+        .min()
+        .alias("ol_weakest"),
+        ready.first().alias("values_ready"),
+    )
+
+
 def _prev_passer(gt: pl.DataFrame, plays: pl.DataFrame) -> pl.DataFrame:
     """Primary passer (most dropbacks) of the franchise's latest earlier game with plays."""
     primary = (
@@ -375,6 +507,8 @@ def compute(
     depth: pl.DataFrame,
     plays: pl.DataFrame,
     build_ts: datetime,
+    values: pl.DataFrame | None = None,
+    rates: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
     """Pure core. Returns (game_id, team, feature, value) for every game-team and feature."""
     gt = _game_teams(games, build_ts)
@@ -394,8 +528,21 @@ def compute(
             .alias("report_count"),
         )
     )
+    if values is not None and rates is not None:
+        vf = _value_features(gt, charts, injuries, values, rates)
+    else:
+        vf = pl.DataFrame(
+            schema={
+                "game_id": gt.schema["game_id"],
+                "team": gt.schema["team"],
+                "value_lost": pl.Float64,
+                "ol_weakest": pl.Float64,
+                "values_ready": pl.Boolean,
+            }
+        )
     j = (
         gt.join(agg, on=["game_id", "team"], how="left")
+        .join(vf, on=["game_id", "team"], how="left")
         .join(reports, on=["season", "week", "franchise"], how="left")
         .join(_prev_passer(gt, plays), on=["game_id", "team"], how="left")
     )
@@ -419,11 +566,20 @@ def compute(
         gated("injury_impact").alias("availability.injury_impact"),
         gated("ol_starters_out").alias("availability.ol_starters_out"),
         pl.col("report_count").cast(pl.Float64).alias("availability.report_count"),
+        pl.when(ok & pl.col("values_ready").fill_null(False))
+        .then(pl.col("value_lost"))
+        .otherwise(None)
+        .alias("availability.value_lost"),
+        pl.when(ok & pl.col("values_ready").fill_null(False))
+        .then(pl.col("ol_weakest"))
+        .otherwise(None)
+        .alias("availability.ol_weakest"),
     )
     return wide.unpivot(index=["game_id", "team"], variable_name="feature", value_name="value")
 
 
 def build(paths: Paths, games: pl.DataFrame, build_ts: datetime) -> pl.DataFrame:
     inj, depth, plays = load_inputs(paths)
-    values = compute(games, inj, depth, plays, build_ts)
+    pv, rates = load_value_inputs(paths)
+    values = compute(games, inj, depth, plays, build_ts, pv, rates)
     return store.from_team_values(values, games, source=SOURCE, version=VERSION, build_ts=build_ts)

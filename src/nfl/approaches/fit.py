@@ -32,7 +32,7 @@ import polars as pl
 from scipy.optimize import minimize
 from scipy.special import expit
 
-from nfl.approaches.engine import Model, Scaler, persona_model
+from nfl.approaches.engine import NEUTRAL, Model, Scaler, gate, persona_model
 from nfl.approaches.schema import Approach
 from nfl.config import FIRST_SCORED_SEASON, Paths
 from nfl.features import store
@@ -49,6 +49,9 @@ INNER_PRIOR = 0.05  # inner weights shrink toward sign * INNER_PRIOR, not toward
 # visible, history still nudges them.
 PUBLIC_RIDGE = 1.0
 MIN_HISTORY = 200  # non-null training games before a member's inner weight is fitted
+# Season decay for every fit inside fit_flavors: a game s seasons before the newest training season
+# counts 0.5 ** (s / DECAY_HALF_LIFE). None = every season counts the same (the wave 2 behavior).
+DECAY_HALF_LIFE: float | None = None
 SYNTHETIC_LOCK = pl.duration(hours=1)
 
 
@@ -65,6 +68,7 @@ def load_dataset(paths: Paths, features: list[str], seasons: tuple[int, int]) ->
         & (pl.col("result") != 0)
     )
     locks = games.select("game_id", (pl.col("kickoff_utc") - SYNTHETIC_LOCK).alias("lock_ts"))
+    features = list(features) + ([NEUTRAL] if NEUTRAL not in features else [])
     fams = sorted({f.split(".", 1)[0] for f in features})
     feats = store.read_features(paths, seasons=seasons, families=fams)
     vec = store.game_vectors(store.as_of(feats, locks))
@@ -81,17 +85,31 @@ def load_dataset(paths: Paths, features: list[str], seasons: tuple[int, int]) ->
 # ------------------------------------------------------------------------------------- estimators
 
 
-def _nll(eta: np.ndarray, y: np.ndarray) -> float:
-    return float(np.sum(np.logaddexp(0.0, eta) - y * eta))
+def _nll(eta: np.ndarray, y: np.ndarray, sw: np.ndarray | None = None) -> float:
+    ll = np.logaddexp(0.0, eta) - y * eta
+    return float(np.sum(ll if sw is None else sw * ll))
 
 
-def fit_platt(logit: np.ndarray, y: np.ndarray) -> tuple[float, float]:
-    """p = σ(a·logit + c), maximum likelihood."""
+def season_weights(seasons: np.ndarray, half_life: float | None) -> np.ndarray | None:
+    """Per-row fitting weights from DECAY_HALF_LIFE (None: unweighted), mean 1."""
+    if half_life is None:
+        return None
+    w = 0.5 ** ((seasons.max() - seasons) / half_life)
+    return w / w.mean()
+
+
+def fit_platt(
+    logit: np.ndarray, y: np.ndarray, sw: np.ndarray | None = None, g: np.ndarray | None = None
+) -> tuple[float, float]:
+    """p = σ(a·logit + c·g), maximum likelihood (g: the neutral-site gate, 1 = home field counts)."""
+    g = np.ones(len(y)) if g is None else g
 
     def f(t):
-        eta = t[0] * logit + t[1]
+        eta = t[0] * logit + t[1] * g
         r = expit(eta) - y
-        return _nll(eta, y), np.array([r @ logit, r.sum()])
+        if sw is not None:
+            r = sw * r
+        return _nll(eta, y, sw), np.array([r @ logit, r @ g])
 
     res = minimize(f, np.array([1.0, 0.0]), jac=True, method="L-BFGS-B")
     return float(res.x[0]), float(res.x[1])
@@ -100,30 +118,41 @@ def fit_platt(logit: np.ndarray, y: np.ndarray) -> tuple[float, float]:
 SHIFT_SEASONS = {"shift_10": 10}  # calibration value -> training seasons the offset is fitted on
 
 
-def fit_shift(logit: np.ndarray, y: np.ndarray) -> float:
-    """The one offset c with p = σ(logit + c), maximum likelihood (ADR 0026, M23.1)."""
+def fit_shift(logit: np.ndarray, y: np.ndarray, g: np.ndarray | None = None) -> float:
+    """The one offset c with p = σ(logit + c·g), maximum likelihood (ADR 0026, M23.1)."""
+    g = np.ones(len(y)) if g is None else g
 
     def f(t):
-        eta = logit + t[0]
-        return _nll(eta, y), np.array([(expit(eta) - y).sum()])
+        eta = logit + t[0] * g
+        return _nll(eta, y), np.array([(expit(eta) - y) @ g])
 
     res = minimize(f, np.array([0.0]), jac=True, method="L-BFGS-B")
     return float(res.x[0])
 
 
 def fit_ridge(
-    z: np.ndarray, y: np.ndarray, w0: np.ndarray, lam: float, b0: float = 0.0
+    z: np.ndarray,
+    y: np.ndarray,
+    w0: np.ndarray,
+    lam: float,
+    b0: float = 0.0,
+    sw: np.ndarray | None = None,
+    g: np.ndarray | None = None,
 ) -> tuple[float, np.ndarray]:
-    """Logistic regression with penalty λ‖w − w0‖² and a free intercept. Returns (b, w)."""
+    """Logistic regression with penalty λ‖w − w0‖² and a free intercept b·g. Returns (b, w).
+    `sw`: optional per-row weights (mean 1, so λ keeps its scale); `g`: the neutral-site gate."""
     k = z.shape[1]
+    g = np.ones(len(y)) if g is None else g
 
     def f(t):
         b, w = t[0], t[1:]
-        eta = b + z @ w
+        eta = b * g + z @ w
         r = expit(eta) - y
+        if sw is not None:
+            r = sw * r
         d = w - w0
-        val = _nll(eta, y) + lam * float(d @ d)
-        grad = np.concatenate([[r.sum()], z.T @ r + 2.0 * lam * d])
+        val = _nll(eta, y, sw) + lam * float(d @ d)
+        grad = np.concatenate([[r @ g], z.T @ r + 2.0 * lam * d])
         return val, grad
 
     res = minimize(f, np.concatenate([[b0], w0]).astype(float), jac=True, method="L-BFGS-B")
@@ -148,7 +177,13 @@ class FitResult:
 
 
 def inner_weights(
-    approach: Approach, train: pl.DataFrame, feats: list[str], z: np.ndarray, y: np.ndarray
+    approach: Approach,
+    train: pl.DataFrame,
+    feats: list[str],
+    z: np.ndarray,
+    y: np.ndarray,
+    sw: np.ndarray | None = None,
+    g: np.ndarray | None = None,
 ) -> dict[str, dict[str, float]]:
     """Per group: {feature: v}, composite rescaled to unit variance on the training window."""
     col = {f: i for i, f in enumerate(feats)}
@@ -169,7 +204,7 @@ def inner_weights(
             prior = np.array([m.sign * INNER_PRIOR for m in members], dtype=float)
             v = np.zeros(len(members))
             if fitted.any():
-                _, w = fit_ridge(zg[:, fitted], y, prior[fitted], INNER_LAMBDA)
+                _, w = fit_ridge(zg[:, fitted], y, prior[fitted], INNER_LAMBDA, sw=sw, g=g)
                 v[fitted] = w
             scale = float(np.mean(np.abs(v[fitted]))) if fitted.any() else 1.0
             for i, m in enumerate(members):
@@ -206,19 +241,29 @@ def fit_flavors(
         "n_games": train.height,
         "config_hash": config_hash(approach),
     }
+    g = gate(train)
     if approach.grouped:
-        return _fit_grouped(approach, train, feats, scaler, z, y, lam, meta)
+        res = _fit_grouped(approach, train, feats, scaler, z, y, lam, meta, g)
+    else:
+        res = _fit_flat(approach, train, feats, scaler, z, y, lam, meta, g)
+    for m in (res.persona, res.fitted, res.public):
+        if m is not None:
+            m.neutral_gate = True
+    return res
+
+
+def _fit_flat(approach, train, feats, scaler, z, y, lam, meta, g) -> FitResult:
     seasons = train.get_column("season").to_numpy()
 
     persona = persona_model(approach, scaler)
     if approach.calibration == "platt":
-        persona.calib_a, persona.calib_c = fit_platt(persona.raw_logit(z), y)
+        persona.calib_a, persona.calib_c = fit_platt(persona.raw_logit(z, g), y, g=g)
     persona.meta = meta | {"flavor": "persona"}
 
     w0 = np.array([approach.weights[f].w for f in feats], dtype=float)
     if not approach.fit.shrink_to_persona:
         w0 = np.zeros_like(w0)
-    b, w = fit_ridge(z, y, w0, lam, b0=approach.intercept.w)
+    b, w = fit_ridge(z, y, w0, lam, b0=approach.intercept.w, g=g)
     fitted = Model(
         model_id=f"{approach.id}.fitted",
         features=feats,
@@ -227,11 +272,18 @@ def fit_flavors(
         scaler=scaler,
         meta=meta | {"flavor": "fitted", "lambda": lam},
     )
-    return FitResult(persona, fitted, _public_from(approach, fitted, None, z, y, seasons))
+    return FitResult(persona, fitted, _public_from(approach, fitted, None, z, y, seasons, g=g))
 
 
 def _public_from(
-    approach: Approach, fitted: Model, light: Model | None, z, y, seasons: np.ndarray
+    approach: Approach,
+    fitted: Model,
+    light: Model | None,
+    z,
+    y,
+    seasons: np.ndarray,
+    sw: np.ndarray | None = None,
+    g: np.ndarray | None = None,
 ) -> Model:
     """The public line: `light` (calibrated) for personas, or the fitted model for public: fitted.
     `shift_10` re-fits only the offset on the last ten training seasons (`seasons` = each row's)."""
@@ -245,20 +297,22 @@ def _public_from(
         meta=dict(src.meta) | {"flavor": "public", "public": approach.public},
     )
     if src is light and approach.calibration == "platt":
-        pub.calib_a, pub.calib_c = fit_platt(pub.raw_logit(z), y)
+        pub.calib_a, pub.calib_c = fit_platt(pub.raw_logit(z, g), y, sw, g)
     elif approach.calibration in SHIFT_SEASONS:
         recent = seasons > seasons.max() - SHIFT_SEASONS[approach.calibration]
         pub.calib_a = 1.0
-        pub.calib_c = fit_shift(pub.raw_logit(z)[recent], y[recent])
+        gg = np.ones(len(y)) if g is None else g
+        pub.calib_c = fit_shift(pub.raw_logit(z, gg)[recent], y[recent], gg[recent])
         pub.meta |= {"calibration": approach.calibration, "calib_seasons": int(recent.sum())}
     return pub
 
 
-def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta) -> FitResult:
+def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta, g) -> FitResult:
     seasons = train.get_column("season").to_numpy()
-    inner = inner_weights(approach, train, feats, z, y)
-    gids = [g for g in approach.groups if inner.get(g)]
-    W_persona = {g: approach.groups[g].w for g in gids}
+    sw = season_weights(seasons, DECAY_HALF_LIFE)
+    inner = inner_weights(approach, train, feats, z, y, sw, g)
+    gids = [k for k in approach.groups if inner.get(k)]
+    W_persona = {k: approach.groups[k].w for k in gids}
     gmeta = meta | {"registry_version": REGISTRY_VERSION, "inner": inner}
 
     w_p = _flat(feats, inner, W_persona)
@@ -271,16 +325,16 @@ def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta) -> FitResult:
         meta=gmeta | {"flavor": "persona", "group_weights": W_persona},
     )
     if approach.calibration == "platt":
-        persona.calib_a, persona.calib_c = fit_platt(persona.raw_logit(z), y)
+        persona.calib_a, persona.calib_c = fit_platt(persona.raw_logit(z, g), y, sw, g)
 
-    comp = np.column_stack([z @ _flat(feats, {g: inner[g]}, {g: 1.0}) for g in gids])
+    comp = np.column_stack([z @ _flat(feats, {k: inner[k]}, {k: 1.0}) for k in gids])
     W0 = (
-        np.array([W_persona[g] for g in gids])
+        np.array([W_persona[k] for k in gids])
         if approach.fit.shrink_to_persona
         else np.zeros(len(gids))
     )
-    b, W = fit_ridge(comp, y, W0, lam, b0=approach.intercept.w)
-    W_fit = {g: float(x) for g, x in zip(gids, W, strict=True)}
+    b, W = fit_ridge(comp, y, W0, lam, b0=approach.intercept.w, sw=sw, g=g)
+    W_fit = {k: float(x) for k, x in zip(gids, W, strict=True)}
     fitted = Model(
         model_id=f"{approach.id}.fitted",
         features=feats,
@@ -292,9 +346,15 @@ def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta) -> FitResult:
     # public "light" line: shrunk hard toward the persona (it keeps its biases), then calibrated
     lam_pub = PUBLIC_RIDGE * 0.22 * len(y)
     bl, Wl = fit_ridge(
-        comp, y, np.array([W_persona[g] for g in gids]), lam_pub, b0=approach.intercept.w
+        comp,
+        y,
+        np.array([W_persona[k] for k in gids]),
+        lam_pub,
+        b0=approach.intercept.w,
+        sw=sw,
+        g=g,
     )
-    W_light = {g: float(x) for g, x in zip(gids, Wl, strict=True)}
+    W_light = {k: float(x) for k, x in zip(gids, Wl, strict=True)}
     light = Model(
         model_id=approach.id,
         features=feats,
@@ -304,7 +364,7 @@ def _fit_grouped(approach, train, feats, scaler, z, y, lam, meta) -> FitResult:
         meta=gmeta
         | {"lambda": lam_pub, "group_weights": W_light, "persona_group_weights": W_persona},
     )
-    return FitResult(persona, fitted, _public_from(approach, fitted, light, z, y, seasons))
+    return FitResult(persona, fitted, _public_from(approach, fitted, light, z, y, seasons, sw, g))
 
 
 def config_hash(approach: Approach) -> str:
@@ -314,7 +374,8 @@ def config_hash(approach: Approach) -> str:
 
 
 def _score(model: Model, df: pl.DataFrame) -> np.ndarray:
-    return model.score(df.select("game_id", *model.features))["p_home"].to_numpy()
+    cols = ["game_id", *(c for c in model.inputs if c in df.columns)]
+    return model.score(df.select(cols))["p_home"].to_numpy()
 
 
 def select_lambda(

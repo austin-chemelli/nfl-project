@@ -146,7 +146,7 @@ def score_approaches(
     ids = slate.select("game_id")
     out = []
     for mid, m in models:
-        wide = ids.join(store.to_wide(vec, m.features), on="game_id", how="left")
+        wide = ids.join(store.to_wide(vec, m.inputs), on="game_id", how="left")
         sc = m.score(wide)
         out.append(Scored(mid, f"{m.meta.get('config_hash', '')}", sc))
     return out

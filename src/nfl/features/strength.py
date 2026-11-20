@@ -22,6 +22,13 @@ Extras (M1.11), same strictly-earlier rule:
                   [0.1, 0.9]): same shrinkage as epa_off with n0 = 180 / 120 / 300 / 300 plays.
   sack_rate_{off,def}  sacks / dropbacks, n0 = 150 dropbacks, same previous-season prior blend.
   epa_{off,def}_adj    weekly ridge, see `_adjusted`.
+  epa_{off,def}_noto   EPA per play over pass/run plays with no interception and no lost fumble
+                  (denominator: those plays), n0 = 300, same prior blend as epa_off / epa_def.
+  takeaway_rate        (interceptions + opponent fumbles lost) per defensive pass/run play, n0 = 1200
+                  (4 x the epa_def n0), prior blend default 0.025.
+  fum_luck             per game to date: (own fumbles recovered by the team - 0.5 * own fumbles)
+                  + (opponent fumbles recovered by this defense - 0.5 * opponent fumbles). Unshrunk;
+                  null before the team's first game of the season. Higher = luckier.
   qb_epa, qb_cpoe      follow the projected starter, see `nfl.features.qb`.
 """
 
@@ -38,7 +45,7 @@ from nfl.features import availability, qb, store
 from nfl.models.elo import TEAM_ALIASES, pregame_ratings
 
 SOURCE = "pbp"
-VERSION = "4"
+VERSION = "5"
 
 N0_PLAYS = 300.0
 N0_GAMES = 4.0
@@ -52,6 +59,8 @@ SOS_PRIOR = 1505.0
 N0_PASS = 180.0  # n0 = 300 plays split 60/40 pass/run
 N0_RUN = 120.0
 N0_DROPBACKS = 150.0
+N0_TAKEAWAY = 4 * N0_PLAYS
+PRIOR_TAKEAWAY = 0.025
 RIDGE_LAMBDA = 20.0  # games' worth of pull toward the previous-season adjusted value
 WP_LO, WP_HI = 0.1, 0.9
 ST_TYPES = ["kickoff", "punt", "field_goal", "extra_point", "other"]
@@ -69,6 +78,9 @@ _RATES = [
     ("strength.epa_rush_def", "def", "epa", PRIOR_EPA, N0_RUN, "run"),
     ("strength.epa_early_off", "off", "epa", PRIOR_EPA, N0_PLAYS, "early"),
     ("strength.epa_nongarbage_off", "off", "epa", PRIOR_EPA, N0_PLAYS, "nongarbage"),
+    ("strength.epa_off_noto", "off", "epa", PRIOR_EPA, N0_PLAYS, "noto"),
+    ("strength.epa_def_noto", "def", "epa", PRIOR_EPA, N0_PLAYS, "noto"),
+    ("strength.takeaway_rate", "def", "takeaway", PRIOR_TAKEAWAY, N0_TAKEAWAY, "base"),
     ("strength.sack_rate_off", "off", "sack", PRIOR_SACK, N0_DROPBACKS, "dropbacks"),
     ("strength.sack_rate_def", "def", "sack", PRIOR_SACK, N0_DROPBACKS, "dropbacks"),
 ]
@@ -97,7 +109,8 @@ def load_plays_all(paths: Paths, min_season: int) -> pl.DataFrame:
         'cast("pass" as double) is_pass, cast(sack as double) sack, '
         "cast(qb_dropback as double) qb_dropback, cast(special_teams_play as double) "
         "special_teams_play, passer_player_id, passer_player_name, cast(qb_epa as double) qb_epa, "
-        "cast(cpoe as double) cpoe "
+        "cast(cpoe as double) cpoe, cast(interception as double) interception, "
+        "cast(fumble as double) fumble, cast(fumble_lost as double) fumble_lost "
         f"from read_parquet('{glob}', hive_partitioning=true) "
         f"where season >= {min_season} and posteam is not null and defteam is not null"
     ).pl()
@@ -176,6 +189,38 @@ def _shrunk(tg: pl.DataFrame, frames: dict[str, pl.DataFrame]) -> pl.DataFrame:
             ((pl.col("_cs") + n0 * prior_expr) / (pl.col("_cn") + n0)).alias(feat)
         ).drop("_s", "_n", "_cs", "_cn", "_tv", "_lg")
     return out
+
+
+def _fum_luck(tg: pl.DataFrame, base: pl.DataFrame) -> pl.DataFrame:
+    """fum_luck: season-to-date mean per game of (own fumbles kept - 0.5 * own fumbles) + (opponent
+    fumbles recovered by this defense - 0.5 * opponent fumbles); a game counts once it has plays.
+    Fumbles are credited to the posteam (nflfastR's `fumble` / `fumble_lost`), pass/run plays."""
+    grp = ["team", "season"]
+    o = base.group_by("game_id", _canon("posteam").alias("ckey")).agg(
+        pl.col("fumble").sum().alias("_of"), pl.col("fumble_lost").sum().alias("_ol")
+    )
+    d = base.group_by("game_id", _canon("defteam").alias("ckey")).agg(
+        pl.col("fumble").sum().alias("_df"), pl.col("fumble_lost").sum().alias("_dl")
+    )
+    out = tg.join(o, on=["game_id", "ckey"], how="left").join(d, on=["game_id", "ckey"], how="left")
+    has = pl.col("_of").is_not_null() | pl.col("_df").is_not_null()
+    out = out.with_columns(
+        has.cast(pl.Float64).alias("_g"),
+        (
+            0.5 * pl.col("_of").fill_null(0.0) - pl.col("_ol").fill_null(0.0)
+            + pl.col("_dl").fill_null(0.0) - 0.5 * pl.col("_df").fill_null(0.0)
+        ).alias("_l"),
+    )  # fmt: skip
+    out = out.with_columns(
+        (pl.col("_l").cum_sum().over(grp) - pl.col("_l")).alias("_cl"),
+        (pl.col("_g").cum_sum().over(grp) - pl.col("_g")).alias("_cg"),
+    )
+    return out.with_columns(
+        pl.when(pl.col("_cg") > 0)
+        .then(pl.col("_cl") / pl.col("_cg"))
+        .otherwise(None)
+        .alias("strength.fum_luck")
+    ).drop("_of", "_ol", "_df", "_dl", "_g", "_l", "_cl", "_cg")
 
 
 def _point_diff(tg: pl.DataFrame) -> pl.DataFrame:
@@ -499,12 +544,21 @@ def compute(
         .with_columns(_canon().alias("ckey"))
         .sort("team", "season", "kickoff_utc", "game_id", nulls_last=True)
     )
-    base = plays.filter(pl.col("play_type").is_in(["pass", "run"]) & pl.col("epa").is_not_null())
+    for c in ("interception", "fumble", "fumble_lost"):  # absent in hand-built test frames
+        if c not in plays.columns:
+            plays = plays.with_columns(pl.lit(0.0).alias(c))
+    plays = plays.with_columns(
+        pl.col(c).fill_null(0.0) for c in ("interception", "fumble", "fumble_lost")
+    )
+    base = plays.filter(
+        pl.col("play_type").is_in(["pass", "run"]) & pl.col("epa").is_not_null()
+    ).with_columns((pl.col("interception") + pl.col("fumble_lost")).alias("takeaway"))
     is_pass = pl.col("is_pass").fill_null(0.0) == 1
     frames = {
         "base": base,
         "pass": base.filter(is_pass),
         "run": base.filter(~is_pass),
+        "noto": base.filter(pl.col("takeaway") == 0),
         "early": base.filter(pl.col("down").is_in([1.0, 2.0])),
         "nongarbage": base.filter(pl.col("wp").is_between(WP_LO, WP_HI)),
         "dropbacks": plays.filter(pl.col("qb_dropback") == 1).with_columns(
@@ -512,6 +566,7 @@ def compute(
         ),
     }
     tg = _shrunk(tg, frames)
+    tg = _fum_luck(tg, base)
     tg = _point_diff(tg)
     tg = _results(tg, games)
     tg = _special_teams(tg, plays, games)
@@ -521,6 +576,7 @@ def compute(
         "strength.point_diff_pg",
         "strength.pythag_win_pct",
         "strength.luck",
+        "strength.fum_luck",
         "strength.sos",
         "strength.st_epa_pg",
         "strength.st_kicking_epa_pg",

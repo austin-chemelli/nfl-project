@@ -124,7 +124,7 @@ def test_shift_10_fits_its_offset_on_the_last_ten_training_seasons_only():
     logit = rng.standard_normal(seasons.size)
     home = np.where(seasons > 2015, -0.3, 0.3)  # recent seasons: the model over-states home field
     y = (rng.random(seasons.size) < 1 / (1 + np.exp(-(logit + home)))).astype(float)
-    a = schema.load_all()["student_v2"]
+    a = schema.load_all()["student"]
     assert a.calibration == "shift_10"
     m = fit.Model(model_id="x", features=["f"], intercept=0.0, weights=[1.0],
                   scaler=fit.Scaler(["f"], [0.0], [1.0]))  # fmt: skip
@@ -139,8 +139,9 @@ def test_existing_approach_hashes_are_pinned():
     every config's serialized form (a new field with a default) would stop every lock; this pins
     the four live approaches. Changing a persona on purpose: update the pin and follow the
     runbook's cutover (refit, backfill, upload in one go)."""
-    pins = {"traditionalist": "be7c85737c30", "analyst": "e48221c40daa",
-            "sharp": "a00612aec0b3", "student": "38b91b6e4ee1"}  # fmt: skip
+    # re-pinned 2026-11-20 for model wave 3 (ADR 0031): every config changed on purpose
+    pins = {"traditionalist": "c5bbd23735cb", "analyst": "16608e26c57c",
+            "sharp": "bbc096a2fd16", "student": "cf0e91518f1c"}  # fmt: skip
     got = {k: fit.config_hash(a) for k, a in schema.load_all().items() if k in pins}
     assert got == pins
 
@@ -151,6 +152,50 @@ def test_only_keeps_just_the_named_approaches(tmp_path, monkeypatch):
 
     monkeypatch.setattr(run, "known_features", lambda paths: {"strength.epa_off"})
     paths = Paths(tmp_path)
-    assert [a.id for a in run.scored_approaches(paths, {"student_v2"})] == ["student_v2"]
+    assert [a.id for a in run.scored_approaches(paths, {"sharp"})] == ["sharp"]
     every = [a.id for a in run.scored_approaches(paths)]
-    assert {"student", "student_v2", ensemble.GLOBAL_ID} <= set(every)
+    assert {"student", "sharp", ensemble.GLOBAL_ID} <= set(every)
+    assert "student_v2" not in every  # folded into the Student (ADR 0031)
+
+
+# ------------------------------------------------- neutral sites and season weights (ADR 0031)
+
+
+def test_home_field_is_zero_at_a_neutral_site():
+    """The neutral-site rule: a gated model's home-field term (intercept and calibration offset)
+    is multiplied by 1 − neutral_site, for every approach; contributions still sum to the logit."""
+    import json
+
+    from nfl.approaches.engine import NEUTRAL
+
+    sc = fit.Scaler(["f"], [0.0], [1.0])
+    m = fit.Model("x", ["f"], 0.4, [0.5], sc, calib_a=1.0, calib_c=-0.1, neutral_gate=True)
+    assert m.inputs == ["f", NEUTRAL]
+    wide = pl.DataFrame({"game_id": ["a", "b"], "f": [1.0, 1.0], NEUTRAL: [0.0, 1.0]})
+    out = m.score(wide)
+    assert out["logit"].to_list() == pytest.approx([0.8, 0.5])
+    for row in out.iter_rows(named=True):
+        assert sum(json.loads(row["contributions"]).values()) == pytest.approx(row["logit"])
+    ungated = fit.Model("x", ["f"], 0.4, [0.5], sc, calib_c=-0.1)
+    assert ungated.score(wide)["logit"].to_list() == pytest.approx([0.8, 0.8])
+    assert fit.Model.from_dict(m.to_dict()).neutral_gate is True
+
+
+def test_the_fitted_intercept_ignores_neutral_games():
+    """Home field is learned from games with a home crowd only: neutral games don't dilute it."""
+    rng = np.random.default_rng(5)
+    n = 8000
+    neutral = (rng.random(n) < 0.3).astype(float)
+    g = 1.0 - neutral
+    y = (rng.random(n) < 1 / (1 + np.exp(-0.4 * g))).astype(float)
+    b, _ = fit.fit_ridge(np.zeros((n, 0)), y, np.zeros(0), 1.0, g=g)
+    assert b == pytest.approx(0.4, abs=0.08)
+    b_pooled, _ = fit.fit_ridge(np.zeros((n, 0)), y, np.zeros(0), 1.0)
+    assert b_pooled < b - 0.05
+
+
+def test_season_weights_halve_per_half_life():
+    w = fit.season_weights(np.array([2020, 2024, 2024]), 4.0)
+    assert w[0] / w[1] == pytest.approx(0.5)
+    assert w.mean() == pytest.approx(1.0)
+    assert fit.season_weights(np.array([2020]), None) is None

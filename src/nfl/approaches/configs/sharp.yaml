@@ -2,6 +2,8 @@
 # never an input. The Sharp reads how the market *behaves* (capped at 20% of the budget) and
 # otherwise trusts what the public underrates. Line movement and public betting exist live only, so
 # its historical record is mostly its football weights; its market-reading identity shows up live.
+# Model wave 3 (ADR 0031): home field is zero at neutral sites by rule, which fixes the +7 points the
+# Sharp used to give a designated home team in London or the Super Bowl (site checks 2026-11-15).
 id: sharp
 name: The Sharp
 blurb: >-
@@ -23,3 +25,4 @@ groups:
 overrides:
   # His read of the market: moves toward a team are information; a crowded public side is not.
   market: {market.line_move_pts: 1.0, narrative.public_bet_pct_home: -1.0}
+fit: {shrink_to_persona: false}

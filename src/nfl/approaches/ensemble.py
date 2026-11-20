@@ -15,8 +15,8 @@ from nfl.approaches.schema import Approach, FitSpec, Weight
 GLOBAL_ID = "global"
 ENSEMBLE_ID = "ensemble"
 HEADLINE_ID = "student"
-# weather (ADR 0024) is context for the total and the swing list until model wave 3
-EXCLUDED_FAMILIES = {"market", "narrative", "weather"}
+# weather joined Venue & weather in model wave 3 (ADR 0031), so the global fit reads it too
+EXCLUDED_FAMILIES = {"market", "narrative"}
 
 
 def global_approach(known_features: set[str]) -> Approach:

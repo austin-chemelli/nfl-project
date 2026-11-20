@@ -121,7 +121,7 @@ def _score(
             model = fit.load(paths, mid, season - 1)
             # the artifact's own feature list: grouped approaches resolve against the store
             wide = g.select("game_id").join(
-                store.to_wide(vec, model.features), on="game_id", how="left"
+                store.to_wide(vec, model.inputs), on="game_id", how="left"
             )
             scored_df = model.score(wide)
             version = f"{sha}+{model.meta.get('config_hash', '')}"

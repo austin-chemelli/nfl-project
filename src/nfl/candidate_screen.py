@@ -14,6 +14,11 @@ Gates (same math as the throwaway screen of 2026-11-08):
    `predictions` rows with model_id 'student' and is_backfill. Candidates are oriented by `good`, so a
    positive spread slope means "helps".
 
+4. Shadow (ADR 0026, ADR 0031): a candidate with a stored `feature` and a registry `group` is added to
+   (or, when it is already a member, removed from) today's Student in memory, walked forward 2005-2025
+   with `nfl.approaches.shadow`, and paired against the unchanged Student: Δ log loss (negative = the
+   feature helps), 2016 onward, season-block bootstrap 90% CI. Nothing is written but the ledger row.
+
 Verdicts are constants documented on `verdict` and match ADR 0026.
 """
 
@@ -61,8 +66,9 @@ GATE_COLS = [
     "future_partial", "future_partial_lo", "future_partial_hi", "future_n",
     "resid_st", "resid_st_lo", "resid_st_hi",
     "resid_mk", "resid_mk_lo", "resid_mk_hi", "resid_n",
+    "shadow_delta", "shadow_lo", "shadow_hi", "shadow_n", "shadow_from",
 ]  # fmt: skip
-_INT_COLS = {"split_n", "future_n", "resid_n"}
+_INT_COLS = {"split_n", "future_n", "resid_n", "shadow_n", "shadow_from"}
 SCHEMA: dict[str, pl.DataType] = {
     "candidate": pl.String, "screen_version": pl.String, "run_at": pl.Datetime("us"),
     "label": pl.String, "kind": pl.String, "interesting": pl.Boolean, "note": pl.String,
@@ -88,8 +94,9 @@ def verdict(
     resid_st: tuple[float, float] | None,
     resid_mk: tuple[float, float] | None,
     pregame: bool = True,
+    shadow: tuple[float, float] | None = None,
 ) -> str:
-    """One of 'use', 'context', 'luck', 'none' (ADR 0026).
+    """One of 'model', 'use', 'context', 'luck', 'none' (ADR 0026).
 
     - 'luck': split-half r < LUCK_BELOW (0.1) and the measure is a luck-type candidate: failing the
       stability gate is the point; it becomes a regression or a luck readout, not a rating.
@@ -102,7 +109,22 @@ def verdict(
       it). **'use' means "go to the shadow approach" (the fourth gate), not "ship".**
     - A candidate that isn't `pregame` (observed wind, the game's actual passer) is capped at
       'context': it can't be known at a lock, so it can't go to the shadow approach.
+    - 'model': the fourth gate. `shadow` = (lo, hi) is the 90% CI of the paired Δ log loss against
+      today's Student (None when no shadow was run). hi < 0 means the Student is better with the
+      feature: it passes every gate and may join a group at a registry bump (a pregame candidate
+      only). A candidate whose shadow ran and whose CI is not below 0 can't be 'use': it becomes
+      'context' ('luck' and 'none' stay).
     """
+    if shadow is not None and shadow[1] < 0 and pregame:
+        return "model"
+    v = _gate_verdict(
+        split_half, luck=luck, kind=kind, future_partial_lo=future_partial_lo,
+        resid_st=resid_st, resid_mk=resid_mk, pregame=pregame,
+    )  # fmt: skip
+    return "context" if v == "use" and shadow is not None else v
+
+
+def _gate_verdict(split_half, *, luck, kind, future_partial_lo, resid_st, resid_mk, pregame) -> str:
     if split_half is not None:
         if luck and split_half < LUCK_BELOW:
             return "luck"
@@ -373,10 +395,19 @@ def game_sample(con, season_from: int) -> pl.DataFrame:
     """).pl()
 
 
-def residual_gates(c: cand.Candidate, games: pl.DataFrame, asof: pl.DataFrame, qb=None) -> dict:
-    """Gate 3: slopes of the Student's and the market's residual on the standardized candidate."""
+def residual_gates(
+    c: cand.Candidate, games: pl.DataFrame, asof: pl.DataFrame, qb=None, fdata=None
+) -> dict:
+    """Gate 3: slopes of the Student's and the market's residual on the standardized candidate.
+    A features-frame candidate reads its stored feature from `fdata` (game_id + feature columns,
+    home - away at the synthetic lock), oriented by `good` unless it is game-level."""
     games = games.filter(pl.col("week") >= MIN_WEEK)
-    if c.level == "game":
+    if c.frame == "features":
+        games = games.join(fdata.select("game_id", pl.col(c.feature).alias("_x")), on="game_id")
+        x = games["_x"].to_numpy().astype(float)
+        if c.level != "game":
+            x = x * float(c.good)
+    elif c.level == "game":
         games = games.with_columns(c.value().alias("_x"))
         x = games["_x"].to_numpy().astype(float)
     else:
@@ -404,11 +435,84 @@ def residual_gates(c: cand.Candidate, games: pl.DataFrame, asof: pl.DataFrame, q
     }  # fmt: skip
 
 
+# ---- the shadow gate
+
+
+SHADOW_FROM = 2016
+SHADOW_COLS = ["shadow_delta", "shadow_lo", "shadow_hi", "shadow_n", "shadow_from"]
+
+
+def shadow_dataset(paths: Paths, chosen: list[cand.Candidate]):
+    """(student, data, known): the Student's config, and one dataset holding its features plus
+    every chosen candidate's feature, as of the synthetic lock. Loaded once for all candidates."""
+    from nfl.approaches import run as approach_run
+    from nfl.approaches import shadow
+    from nfl.approaches.schema import load_all
+
+    known = approach_run.known_features(paths)
+    student = load_all()["student"]
+    wanted = {c.feature for c in chosen if c.feature and c.feature in known}
+    data = shadow.dataset(paths, [*student.resolve(known), *sorted(wanted)])
+    return student, data, known
+
+
+def shadow_gate(paths: Paths, c: cand.Candidate, data: pl.DataFrame, base, student=None) -> dict:
+    """Gate 4 for one candidate: Δ log loss of the Student with the candidate's feature added to
+    `c.group` against the unchanged Student (`base`, its backtest on `data`, run once by the caller).
+    A feature already in a group the Student weighs is dropped instead for the baseline: the
+    unchanged Student (with it) against the Student without it. Returns the `shadow_*` columns (all
+    None when the candidate has no feature+group, the feature isn't in `data`, or the Student
+    doesn't weigh the target group)."""
+    from nfl.approaches import shadow
+    from nfl.approaches.schema import load_all
+    from nfl.features import groups as reg
+    from nfl.features.groups import Member
+
+    none = dict.fromkeys(SHADOW_COLS)
+    if not (c.feature and c.group) or c.feature not in data.columns:
+        return none
+    if data[c.feature].null_count() == data.height:
+        return none
+    student = student or load_all()["student"]
+    seasons_from = max(SHADOW_FROM, c.first_season)
+    # in the line = a member of a group the Student weighs; a member of a context-only group (or of
+    # a group the Student doesn't weigh) is tested by moving it into `c.group`
+    weighed = {g for g in student.groups if not reg.GROUPS[g].context_only}
+    if c.group not in weighed:
+        return none  # the Student doesn't weigh the target group (e.g. Venue & weather since v7)
+    scored = any(c.feature in reg.GROUPS[g].features for g in weighed)
+    if scored:
+        with shadow.registry(drop={c.feature}):
+            without = shadow.backtest(student, data)
+        alt, ref = base, without
+    else:
+        m = Member(c.feature, c.good, c.label, "index", c.sentence)
+        with shadow.registry({c.group: [m]}, drop={c.feature}):
+            alt = shadow.backtest(student, data)
+        ref = base
+    r = shadow.paired(alt, ref, seasons_from=seasons_from)
+    return {
+        "shadow_delta": r["delta"], "shadow_lo": r["lo"], "shadow_hi": r["hi"],
+        "shadow_n": r["n"], "shadow_from": seasons_from,
+    }  # fmt: skip
+
+
 # ---- ledger
 
 
-def screen(con, season_from: int = 2006, only: str | None = None) -> list[dict]:
-    """Run the gates for every candidate (or `only` one); returns ledger rows (without run_at)."""
+def screen(
+    con,
+    season_from: int = 2006,
+    only: str | None = None,
+    paths: Paths | None = None,
+    shadow_on: bool = True,
+    carry: dict[str, dict] | None = None,
+) -> list[dict]:
+    """Run the gates for every candidate (or `only` one); returns ledger rows (without run_at).
+
+    `paths` enables the feature-store candidates and the shadow gate (both need the feature store);
+    without it they are skipped. `shadow_on=False` skips the slow shadow backtests: a candidate's
+    shadow numbers are then carried from `carry[id]` (its latest ledger row) when there is one."""
     if "team_week" not in {d["name"] for d in catalog.describe(con)}:
         raise ValueError("no team_week table: run `nfl models build` first")
     if only and only not in cand.BY_ID:
@@ -428,6 +532,10 @@ def screen(con, season_from: int = 2006, only: str | None = None) -> list[dict]:
                 raise ValueError("no team_split_week table: run `nfl models build` first")
         else:
             chosen = [c for c in chosen if c.frame != "team_split_week"]
+    if paths is None:
+        if only and cand.BY_ID[only].frame == "features":
+            raise ValueError("feature candidates need the feature store (paths)")
+        chosen = [c for c in chosen if c.frame != "features"]
     need_split = any(c.frame == "team_split_week" for c in chosen)
     tsw = (
         con.sql(
@@ -440,6 +548,14 @@ def screen(con, season_from: int = 2006, only: str | None = None) -> list[dict]:
     split_cols = SUM_COLS + SPLIT_COLS
     games = game_sample(con, season_from)
     qb = qb_sack_frame(con, season_from) if any(c.id == "qb_sack_rate" for c in chosen) else None
+    st = data = base = None
+    fdata = None
+    if any(c.feature for c in chosen) and paths is not None:
+        st, data, known = shadow_dataset(paths, [c for c in chosen if c.feature])
+        fdata = data
+        if only and cand.BY_ID[only].frame == "features" and cand.BY_ID[only].feature not in known:
+            raise ValueError(f"feature {cand.BY_ID[only].feature!r} is not in the store")
+        chosen = [c for c in chosen if c.frame != "features" or c.feature in known]
     rows = []
     for c in chosen:
         g: dict = {k: None for k in GATE_COLS}
@@ -452,7 +568,16 @@ def screen(con, season_from: int = 2006, only: str | None = None) -> list[dict]:
             c_asof = asof_frame(ctg, split_cols)
         elif c.level == "team" and c.halves:
             g |= team_gates(c, tg)
-        g |= residual_gates(c, games, c_asof, qb if c.id == "qb_sack_rate" else None)
+        g |= residual_gates(c, games, c_asof, qb if c.id == "qb_sack_rate" else None, fdata)
+        if c.feature and c.group and data is not None:
+            if shadow_on:
+                if base is None:
+                    from nfl.approaches import shadow
+
+                    base = shadow.backtest(st, data)
+                g |= shadow_gate(paths, c, data, base, st)
+            elif carry and c.id in carry:
+                g |= {k: carry[c.id].get(k) for k in SHADOW_COLS}
         g = {k: _clean(v) if k not in _INT_COLS else v for k, v in g.items()}
         rows.append(
             {
@@ -465,6 +590,7 @@ def screen(con, season_from: int = 2006, only: str | None = None) -> list[dict]:
                     luck=c.luck, kind=c.kind, future_partial_lo=g["future_partial_lo"],
                     resid_st=_interval(g, "resid_st"), resid_mk=_interval(g, "resid_mk"),
                     pregame=c.pregame,
+                    shadow=None if g["shadow_lo"] is None else (g["shadow_lo"], g["shadow_hi"]),
                 ),
             }
         )  # fmt: skip
@@ -489,12 +615,15 @@ def _same(a, b) -> bool:
     return a == b
 
 
-def run(paths: Paths, only: str | None = None, season_from: int = 2006) -> int:
+def run(
+    paths: Paths, only: str | None = None, season_from: int = 2006, shadow_on: bool = True
+) -> int:
     """Screen and append rows that differ from the candidate's latest row (same screen_version and
-    identical numbers, label, kind, flag and note append nothing). Returns rows appended."""
+    identical numbers, label, kind, flag and note append nothing). Returns rows appended.
+    `shadow_on=False` skips the shadow backtests and keeps each candidate's last shadow numbers."""
     con = catalog.connect(paths)
-    rows = screen(con, season_from, only)
     prev = {r["candidate"]: r for r in latest(paths).iter_rows(named=True)}
+    rows = screen(con, season_from, only, paths=paths, shadow_on=shadow_on, carry=prev)
     now = datetime.now(UTC).replace(tzinfo=None)
     new = []
     for r in rows:

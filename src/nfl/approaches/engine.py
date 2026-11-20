@@ -24,6 +24,18 @@ from nfl.features.groups import FEATURE_CAPS
 
 SD_MARGIN = 13.5
 P_CLIP = 1e-6
+# Home field is zero at a neutral site (model wave 3, ADR 0031): a rule, not a fitted member. A model
+# with `neutral_gate` multiplies its home-field term (intercept and calibration offset) by
+# 1 − neutral_site, so a game in London or the Super Bowl starts level for every approach.
+NEUTRAL = "environment.neutral_site"
+
+
+def gate(wide: pl.DataFrame) -> np.ndarray:
+    """1 − neutral_site per row (1 when the column is missing or null)."""
+    if NEUTRAL not in wide.columns:
+        return np.ones(wide.height)
+    x = wide.get_column(NEUTRAL).cast(pl.Float64).fill_null(0.0).to_numpy()
+    return 1.0 - np.clip(x, 0.0, 1.0)
 
 
 @dataclass
@@ -88,25 +100,35 @@ class Model:
     calib_a: float = 1.0
     calib_c: float = 0.0
     meta: dict = field(default_factory=dict)
+    neutral_gate: bool = False
 
-    def raw_logit(self, z: np.ndarray) -> np.ndarray:
-        return self.intercept + z @ np.asarray(self.weights, dtype=float)
+    @property
+    def inputs(self) -> list[str]:
+        """Columns `score` reads: the features, plus the neutral-site flag when gated."""
+        if self.neutral_gate and NEUTRAL not in self.features:
+            return [*self.features, NEUTRAL]
+        return list(self.features)
+
+    def raw_logit(self, z: np.ndarray, g: np.ndarray | None = None) -> np.ndarray:
+        b = self.intercept if g is None else self.intercept * g
+        return b + z @ np.asarray(self.weights, dtype=float)
 
     def score(self, wide: pl.DataFrame) -> pl.DataFrame:
         """wide: game_id + feature columns (store.to_wide). Returns game_id, p_home, spread_home,
         logit, contributions (JSON string, final logit units)."""
         z = self.scaler.transform(wide)
         w = np.asarray(self.weights, dtype=float)
-        logit = self.calib_a * self.raw_logit(z) + self.calib_c
+        g = gate(wide) if self.neutral_gate else np.ones(wide.height)
+        logit = self.calib_a * self.raw_logit(z, g) + self.calib_c * g
         p = np.clip(expit(logit), P_CLIP, 1 - P_CLIP)
         contrib = self.calib_a * z * w  # (n, k)
-        base = self.calib_a * self.intercept + self.calib_c
+        base = (self.calib_a * self.intercept + self.calib_c) * g
         blobs = [
             json.dumps(
-                {"home_field": round(base, 6)}
+                {"home_field": round(float(b), 6)}
                 | {f: round(float(v), 6) for f, v in zip(self.features, row, strict=True)}
             )
-            for row in contrib
+            for b, row in zip(base, contrib, strict=True)
         ]
         return pl.DataFrame(
             {
@@ -128,6 +150,7 @@ class Model:
             "calib_a": self.calib_a,
             "calib_c": self.calib_c,
             "meta": self.meta,
+            "neutral_gate": self.neutral_gate,
         }
 
     @classmethod
@@ -141,6 +164,7 @@ class Model:
             calib_a=d.get("calib_a", 1.0),
             calib_c=d.get("calib_c", 0.0),
             meta=d.get("meta", {}),
+            neutral_gate=d.get("neutral_gate", False),
         )
 
 

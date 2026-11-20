@@ -24,10 +24,14 @@ SCHEDULE = [
     ("g4", 2024, 2, 372, "B", "A"),
 ]
 PLAYS_CODE = {"OAK": "LV"}
+COACHES = {"A": "X", "B": "Y", "C": "Z", "D": "W", "OAK": "V"}
 
-_BOOL = ("is_motion", "is_play_action", "is_rpo", "is_screen_pass", "has_ftn")
-_STR = ("game_id", "posteam", "defteam", "play_type", "qb_location")
-_FLOAT = ("epa", "success", "pass_oe")
+_BOOL = (
+    "is_motion", "is_play_action", "is_rpo", "is_screen_pass", "has_ftn", "is_no_huddle",
+    "is_drop", "is_catchable_ball", "is_contested_ball", "is_interception_worthy",
+)  # fmt: skip
+_STR = ("game_id", "posteam", "defteam", "play_type", "qb_location", "penalty_team")
+_FLOAT = ("epa", "success", "pass_oe", "game_seconds_remaining", "wp", "penalty_yards")
 
 
 def games_frame():
@@ -40,6 +44,8 @@ def games_frame():
             "home_team": [s[4] for s in SCHEDULE],
             "away_team": [s[5] for s in SCHEDULE],
             "result": [1.0] * len(SCHEDULE),
+            "home_coach": [COACHES[s[4]] for s in SCHEDULE],
+            "away_coach": [COACHES[s[5]] for s in SCHEDULE],
         }
     )
 
@@ -52,6 +58,7 @@ def make_plays(rows: list[dict]) -> pl.DataFrame:
         "season", "week", "down", "ydstogo", "yardline_100", "pass", "shotgun", "no_huddle",
         "qb_dropback", "yards_gained", "interception", "fumble_lost", "n_blitzers",
         "n_pass_rushers", "n_defense_box", "qtr", "score_differential", "half_seconds_remaining",
+        "drive", "play_id", "penalty",
         *_BOOL, *_STR, *_FLOAT,
     }  # fmt: skip
     for n in names:
@@ -60,7 +67,7 @@ def make_plays(rows: list[dict]) -> pl.DataFrame:
             else pl.Int64
         )  # fmt: skip
         vals = [r.get(n, False if n == "has_ftn" else None) for r in rows]
-        if n in ("posteam", "defteam"):
+        if n in ("posteam", "defteam", "penalty_team"):
             vals = [PLAYS_CODE.get(v, v) for v in vals]
         cols[n] = pl.Series(n, vals, dtype=dtype)
     return pl.DataFrame(cols)
@@ -266,8 +273,8 @@ def test_build_rows_through_store(tmp_path):
     paths = write_plays(tmp_path, make_plays(base_plays()))
     rows = decisions.build(paths, games_frame(), BUILD)
     store.validate(rows)
-    assert rows.height == len(SCHEDULE) * 2 * 5
-    assert set(rows["source"]) == {"pbp"} and set(rows["version"]) == {"1"}
+    assert rows.height == len(SCHEDULE) * 2 * 12
+    assert set(rows["source"]) == {"pbp"} and set(rows["version"]) == {"3"}
     assert rows.filter(pl.col("game_id") == "g1")["known_as_of"].n_unique() == 1
 
 
@@ -292,3 +299,107 @@ def test_real_data():
     go = rows.filter(pl.col("feature") == "decisions.fourth_go_rate_oe")
     by_season = go.group_by("season").agg(pl.col("value").mean().alias("m"))
     assert by_season["m"].abs().max() < 0.03, by_season.sort("m")
+
+
+def _clock(
+    gid, season, week, team, deff, drive, play_id, secs, *, wp=0.5, qtr=1, ptype="pass", **kw
+):
+    return P(gid, season, week, team, deff, drive=drive, play_id=play_id, game_seconds_remaining=secs,
+             wp=wp, qtr=qtr, play_type=ptype, **kw)  # fmt: skip
+
+
+def new_plays(g2_extra=()):
+    ed = {"down": 1, "ydstogo": 10, "yardline_100": 50}
+    r = [  # g1: A's drive 1 snaps at 3600, 3560, 3510, 3470 -> gaps 40, 50, 40 count
+        _clock("g1", 2023, 1, "A", "B", 1, 1, 3600.0),
+        _clock("g1", 2023, 1, "A", "B", 1, 2, 3560.0),
+        _clock("g1", 2023, 1, "A", "B", 1, 3, 3510.0, ptype="run"),
+        _clock("g1", 2023, 1, "A", "B", 1, 4, 3470.0),
+        # excluded: gap 70, new drive (no gap), wp 0.9, quarter 4, punt
+        _clock("g1", 2023, 1, "A", "B", 1, 5, 3400.0),
+        _clock("g1", 2023, 1, "A", "B", 2, 6, 3300.0),
+        _clock("g1", 2023, 1, "A", "B", 2, 7, 3260.0, wp=0.9),
+        _clock("g1", 2023, 1, "A", "B", 2, 8, 3220.0, ptype="punt"),
+        _clock("g1", 2023, 1, "A", "B", 3, 9, 900.0, qtr=4),
+        _clock("g1", 2023, 1, "A", "B", 3, 10, 860.0, qtr=4),
+        # penalties: A penalized for 10 (on an offensive play) and 5 (special teams, no posteam);
+        # B penalized for 15 on A's play
+        P("g1", 2023, 1, "A", "B", penalty=1, penalty_team="A", penalty_yards=10.0, play_type="pass"),
+        P("g1", 2023, 1, "A", "B", penalty=1, penalty_team="B", penalty_yards=15.0, play_type="run"),
+        P("g1", 2023, 1, "B", "A", penalty=1, penalty_team="A", penalty_yards=5.0, play_type="punt"),
+        P("g1", 2023, 1, "B", "A", penalty=0, penalty_team="B", penalty_yards=99.0, play_type="run"),
+        # pass_oe by score: A leads by 10 (+6), trails by 8 (-3), by 3 (ignored); down 3 ignored
+        P("g1", 2023, 1, "A", "B", **ed, play_type="pass", pass_oe=6.0, score_differential=10),
+        P("g1", 2023, 1, "A", "B", **{**ed, "down": 2}, play_type="run", pass_oe=-3.0, score_differential=-8),
+        P("g1", 2023, 1, "A", "B", **ed, play_type="pass", pass_oe=40.0, score_differential=3),
+        P("g1", 2023, 1, "A", "B", **{**ed, "down": 3}, play_type="pass", pass_oe=40.0, score_differential=14),
+    ]  # fmt: skip
+    return r + list(g2_extra)
+
+
+def test_pace_penalty_proe_splits(tmp_path):
+    vals, _ = run(tmp_path, new_plays())
+    # 2023: no previous season -> priors 28 s, 55 yds, 0 pp
+    assert feat(vals, "g1", "A", "decisions.pace") == pytest.approx(28.0)
+    assert feat(vals, "g2", "A", "decisions.pace") == pytest.approx((130 + 150 * 28) / (3 + 150))
+    assert feat(vals, "g2", "B", "decisions.pace") == pytest.approx(28.0)  # B had no plays
+    assert feat(vals, "g2", "A", "decisions.penalty_yds_pg") == pytest.approx((15 + 4 * 55) / 5)
+    assert feat(vals, "g2", "B", "decisions.penalty_yds_pg") == pytest.approx((15 + 4 * 55) / 5)
+    assert feat(vals, "g2", "A", "decisions.proe_leading") == pytest.approx(6 / 101)
+    assert feat(vals, "g2", "A", "decisions.proe_trailing") == pytest.approx(-3 / 101)
+    assert feat(vals, "g2", "B", "decisions.proe_leading") == 0.0
+    # 2024 week 1: prior = 0.7 * team's 2023 mean + 0.3 * league 2023 mean (A: 130 s over 3 plays)
+    assert feat(vals, "g3", "A", "decisions.pace") == pytest.approx(0.7 * 130 / 3 + 0.3 * 130 / 3)
+
+
+def test_new_decisions_no_leakage(tmp_path):
+    base, _ = run(tmp_path / "a", new_plays())
+    extra = [
+        _clock("g2", 2023, 2, "A", "B", 1, 1, 3600.0),
+        _clock("g2", 2023, 2, "A", "B", 1, 2, 3590.0),
+        P("g2", 2023, 2, "A", "B", penalty=1, penalty_team="A", penalty_yards=50.0, play_type="pass"),
+        P("g2", 2023, 2, "A", "B", down=1, play_type="pass", pass_oe=70.0, score_differential=14),
+        P("g2", 2023, 2, "A", "B", down=1, play_type="pass", pass_oe=-70.0, score_differential=-14),
+    ]  # fmt: skip
+    mut, _ = run(tmp_path / "b", new_plays(extra))
+    names = [n for n in base["feature"].unique().to_list()]
+    for gid, teams in (("g1", "AB"), ("g2", "AB"), ("h1", "CD")):
+        for t in teams:
+            for n in names:
+                assert feat(base, gid, t, n) == pytest.approx(feat(mut, gid, t, n)), (gid, t, n)
+    for n in ("pace", "penalty_yds_pg", "proe_leading", "proe_trailing"):
+        f = f"decisions.{n}"  # the next season's prior does see g2
+        assert feat(base, "g3", "A", f) != feat(mut, "g3", "A", f), n
+
+
+def test_coach_tenure():
+    def g(gid, season, home, hc, ac, k):
+        return (gid, season, home, "Z", hc, ac, datetime(season, 9, 10) + timedelta(days=k))
+
+    rows = [
+        g("a1", 2000, "A", "P", "Q", 0), g("a2", 2001, "A", "P", "Q", 0),
+        g("a3", 2002, "A", "R", "Q", 0),  # P replaced by R: tenure 1, new
+        g("a4", 2002, "A", None, "Q", 7),  # name missing: previous game's coach R, same season
+        g("a5", 2003, "A", "R", "Q", 0), g("a6", 2004, "A", "R", "Q", 0),
+        g("a7", 2005, "A", "P", "Q", 0),  # P returns: a new run
+    ]  # fmt: skip
+    games = pl.DataFrame(
+        {
+            "game_id": [r[0] for r in rows], "season": [r[1] for r in rows],
+            "home_team": [r[2] for r in rows], "away_team": [r[3] for r in rows],
+            "home_coach": [r[4] for r in rows], "away_coach": [r[5] for r in rows],
+            "kickoff_utc": [r[6] for r in rows],
+        }
+    )  # fmt: skip
+    out = decisions._coach_tenure(games).filter(pl.col("team") == "A")
+    got = {
+        r[0]: (r[1], r[2])
+        for r in out.select("game_id", "decisions.hc_tenure", "decisions.hc_new").iter_rows()
+    }
+    # P's run starts in the first season of the table (2000): tenure unknown
+    assert got["a1"] == (None, None) and got["a2"] == (None, None)
+    assert got["a3"] == (1.0, 1.0) and got["a4"] == (1.0, 1.0)
+    assert got["a5"] == (2.0, 0.0) and got["a6"] == (3.0, 0.0)
+    assert got["a7"] == (1.0, 1.0)
+    q = decisions._coach_tenure(games).filter(pl.col("team") == "Z")
+    assert q.filter(pl.col("game_id") == "a6")["decisions.hc_tenure"][0] is None  # Q since 2000

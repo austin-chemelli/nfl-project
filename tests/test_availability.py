@@ -305,7 +305,9 @@ def test_real_data_coverage_and_known_qb_out():
     reg = r.filter(
         pl.col("season").is_between(2010, 2024)
         & (pl.col("game_type") == "REG")
-        & (pl.col("feature") != "availability.qb_change")
+        & ~pl.col("feature").is_in(
+            ["availability.qb_change", "availability.value_lost", "availability.ol_weakest"]
+        )  # the player-value features start in 2013 (tests/test_value_lost.py)
     )
     null_share = reg["value"].null_count() / reg.height
     assert null_share < 0.05, null_share

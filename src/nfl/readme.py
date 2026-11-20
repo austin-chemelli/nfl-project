@@ -20,7 +20,6 @@ SHOW = [
     "analyst",
     "sharp",
     "student",
-    "student_v2",
     "elo_v0",
     "home_naive",
 ]
@@ -30,7 +29,6 @@ LABELS = {
     "analyst": "The Analyst",
     "sharp": "The Sharp",
     "student": "The Student",
-    "student_v2": "The Student v2",
     "elo_v0": "Elo",
     "home_naive": "Home team 57%",
 }

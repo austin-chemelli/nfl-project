@@ -172,6 +172,7 @@ def test_registry_is_consistent():
         "net_epa_noto", "fum_luck", "success_off", "net_wepa", "wind_15", "one_score_luck",
         "split_blitz_gap", "split_box_light_gap", "split_box_heavy_gap", "split_play_action_gap",
         "split_vs_top10_def_gap", "split_vs_top10_off_gap",
+        *(c.id for c in cand.FEATURE_CANDIDATES if c.interesting),
     }  # fmt: skip
 
 
@@ -280,3 +281,129 @@ def test_existing_candidates_are_screened_identically_with_split_candidates_regi
     assert len(rows) == 1 and rows[0]["split_n"] is not None
     with pytest.raises(ValueError, match="team_split_week"):
         cs.screen(catalog.connect(paths), season_from=2020, only="split_blitz_gap")
+
+
+# ---- feature-store candidates and the shadow gate (ADR 0031)
+
+
+def test_feature_candidates_are_registered_with_a_feature_and_group():
+    from nfl.features.groups import GROUPS
+
+    feats = [c for c in cand.CANDIDATES if c.frame == "features"]
+    assert {c.id for c in feats} >= {"value_lost", "weather_wind", "edge_net", "edge_rpo"}
+    for c in feats:
+        assert c.feature and c.group in GROUPS and not c.halves and c.sentence
+        assert c.good in (-1, 1)
+    assert cand.BY_ID["success_off"].feature == "strength.success_off"
+    assert not cand.BY_ID["weather_temp"].pregame and cand.BY_ID["weather_temp"].level == "game"
+
+
+def _feature_world(tmp_path, signal=1.0, seed=4):
+    """The synthetic league plus a home-minus-away feature that moves the market residual."""
+    paths, _, _games = prepare(tmp_path, weeks=18)
+    con = catalog.connect(paths)
+    g = con.sql("select game_id, result, spread_line from games where game_type = 'REG'").pl()
+    rng = np.random.default_rng(seed)
+    x = rng.normal(size=g.height)
+    resid = signal * x + rng.normal(size=g.height)
+    g = g.with_columns(pl.Series("availability.value_lost", x))
+    return paths, con, g.select("game_id", "availability.value_lost"), resid
+
+
+def test_feature_candidate_residual_is_a_walk_forward_slope_on_the_stored_value(tmp_path):
+    _paths, con, fdata, _ = _feature_world(tmp_path)
+    c = cand.BY_ID["value_lost"]  # good = -1: a higher value lost hurts the home team
+    games = cs.game_sample(con, 2020)
+    # plant: the market misses -x (home loses when it loses more value), 1 point per SD
+    rng = np.random.default_rng(1)
+    games = games.join(fdata, on="game_id").with_columns(
+        (pl.col("spread_line") - pl.col("availability.value_lost")
+         + pl.Series(rng.normal(size=games.height) * 0.5)).alias("result")
+    )  # fmt: skip
+    out = cs.residual_gates(c, games, None, None, fdata)
+    assert out["resid_n"] > 100
+    assert out["resid_mk"] > 0.5 and out["resid_mk_lo"] > 0  # oriented by good: positive = helps
+
+
+def test_screen_runs_a_feature_candidate_and_skips_them_without_a_store(tmp_path, monkeypatch):
+    paths, con, fdata, _ = _feature_world(tmp_path)
+    assert all(r["candidate"] != "value_lost" for r in cs.screen(con, season_from=2020))
+    with pytest.raises(ValueError, match="feature"):
+        cs.screen(con, season_from=2020, only="value_lost")
+    monkeypatch.setattr(
+        cs, "shadow_dataset", lambda p, ch: (None, fdata, {"availability.value_lost"})
+    )
+    monkeypatch.setattr(cs, "shadow_gate", lambda *a, **k: dict.fromkeys(cs.SHADOW_COLS))
+    (row,) = cs.screen(con, season_from=2020, only="value_lost", paths=paths, shadow_on=False)
+    assert row["resid_n"] > 0 and row["split_half"] is None and row["shadow_delta"] is None
+    assert row["verdict"] in ("use", "context", "none")
+
+
+def test_verdict_model_only_when_the_shadow_ci_is_below_zero():
+    kw = {"luck": False, "kind": "spread", "future_partial_lo": None, "resid_st": None,
+          "resid_mk": (0.2, 0.9)}  # fmt: skip
+    assert cs.verdict(None, **kw, shadow=(-0.004, -0.001)) == "model"
+    assert cs.verdict(None, **kw, shadow=(-0.004, 0.0005)) == "context"  # 'use' needs the shadow
+    assert cs.verdict(None, **kw, shadow=(0.001, 0.004)) == "context"
+    assert cs.verdict(None, **kw) == "use"  # no shadow run: the first three gates decide
+    assert cs.verdict(None, **kw, shadow=(-0.004, -0.001), pregame=False) == "context"
+    assert cs.verdict(0.0, **{**kw, "luck": True}, shadow=(0.0, 0.1)) == "luck"
+    assert cs.verdict(0.2, **kw, shadow=(0.0, 0.1)) == "none"
+
+
+def test_shadow_gate_pairs_the_student_with_and_without_a_member():
+    from nfl.approaches import shadow
+    from nfl.approaches.schema import load_all
+
+    from .test_fit import toy_data
+
+    st = load_all()["student"]
+    data = toy_data(st, seasons=range(2012, 2026), per=200)
+    rng = np.random.default_rng(5)
+    data = data.with_columns(pl.Series("front.int_worthy_rate", rng.standard_normal(data.height)))
+    base = shadow.backtest(st, data, scored=(2016, 2025), lam=100.0)
+    c = cand.BY_ID["int_worthy_rate"]
+    seen = {}
+    real = shadow.backtest
+    seen["calls"] = 0
+
+    def counting(*a, **k):
+        seen["calls"] += 1
+        return real(*a, **k | {"scored": (2016, 2025), "lam": 100.0})
+
+    import pytest as _p
+
+    mp = _p.MonkeyPatch()
+    mp.setattr(shadow, "backtest", counting)
+    try:
+        out = cs.shadow_gate(None, c, data, base, st)
+    finally:
+        mp.undo()
+    assert seen["calls"] == 1  # only the variant; the base is the caller's
+    assert out["shadow_lo"] <= out["shadow_delta"] <= out["shadow_hi"]
+    assert out["shadow_from"] == 2022 and out["shadow_n"] > 0
+    # a feature the data lacks (or that is all null) has no shadow
+    nulled = data.with_columns(pl.lit(None, dtype=pl.Float64).alias("front.int_worthy_rate"))
+    assert cs.shadow_gate(None, c, nulled, base, st)["shadow_delta"] is None
+
+
+def test_unchanged_rerun_with_shadow_columns_appends_nothing(tmp_path, monkeypatch):
+    paths, _con, fdata, _ = _feature_world(tmp_path)
+    monkeypatch.setattr(
+        cs, "shadow_dataset", lambda p, ch: (None, fdata, {"availability.value_lost"})
+    )
+    fake = {"shadow_delta": -0.002, "shadow_lo": -0.004, "shadow_hi": -0.0005,
+            "shadow_n": 1000, "shadow_from": 2016}  # fmt: skip
+    monkeypatch.setattr(cs, "shadow_gate", lambda *a, **k: dict(fake))
+    import nfl.approaches.shadow as sh
+
+    monkeypatch.setattr(sh, "backtest", lambda *a, **k: None)
+    assert cs.run(paths, only="value_lost", season_from=2020) == 1
+    assert cs.latest(paths)["verdict"].to_list() == ["model"]
+    assert cs.run(paths, only="value_lost", season_from=2020) == 0
+    # --no-shadow carries the last shadow numbers instead of nulling them (so no new row)
+    assert cs.run(paths, only="value_lost", season_from=2020, shadow_on=False) == 0
+    # old ledgers without the shadow columns read with nulls
+    old = pl.read_parquet(cs.ledger_path(paths)).drop(cs.SHADOW_COLS)
+    old.write_parquet(cs.ledger_path(paths))
+    assert cs.latest(paths)["shadow_delta"].to_list() == [None]

@@ -1,6 +1,8 @@
 # Group weights (ADR 0012): logit units per 1 SD of each group's unit-variance composite; positive
 # favors the home team's edge in that group. Inner weights come from history unless overridden.
 # Proposed by Claude 2026-10-27 at group level, for Austin's review. Flat v1: .notes/persona-flat-v1/
+# Model wave 3 (ADR 0031): Venue & weather now holds real kickoff weather (temperature, wind), which
+# suits him; neutral sites are a rule for every approach. Weights unchanged: the biases are the point.
 id: traditionalist
 name: The Traditionalist
 blurb: >-
@@ -13,7 +15,7 @@ groups:
   quality:       {w: 0.45, why: "Wins, who you beat, and winning the turnover battle"}
   form:          {w: 0.30, why: "Momentum is real; hot teams stay hot"}
   rest_travel:   {w: 0.20, why: "Fresh legs win late in the year; cross-country trips wear teams down"}
-  venue_weather: {w: 0.15, why: "Crowds, domes and weather decide games"}
+  venue_weather: {w: 0.15, why: "Crowds, domes, cold and wind decide games"}
   stakes:        {w: 0.15, why: "Teams play to what's on the line"}
   defense:       {w: 0.12, why: "Defense wins championships"}
   health:        {w: 0.10, why: "You play who's healthy"}
@@ -21,3 +23,4 @@ groups:
   offense:       {w: 0.05, why: "Has heard of EPA, doesn't really trust it"}
   buzz:          {w: 0.05, why: "Listens to the talk shows"}
   special_teams: {w: 0.10, why: "Field position and a kicker you can trust win close games"}
+fit: {shrink_to_persona: false}

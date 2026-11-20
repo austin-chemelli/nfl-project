@@ -582,3 +582,36 @@ def test_header_qb_prefers_the_charted_starter_over_the_schedule():
            "card": {"charted_qb": {"home": "Jacoby Brissett", "away": None}}}  # fmt: skip
     assert site._header_qbs(row) == {"home_qb": "Jacoby Brissett", "away_qb": "Bryce Young"}
     assert site._header_qbs({"home_qb": "A", "away_qb": "B", "card": None}) == {"home_qb": "A", "away_qb": "B"}  # fmt: skip
+
+
+def _mc_pred(model, version, lock, live=True, week=9, game="g1"):
+    return {
+        "game_id": game, "season": 2026, "week": week, "model_id": model, "model_version": version,
+        "lock_ts": lock, "data_snapshot_ts": None, "p_home": 0.5, "spread_home": 0.0, "total": None,
+        "sd_margin": None, "is_backfill": not live, "slot": "thu" if live else "backfill", "contributions": None,
+    }  # fmt: skip
+
+
+def test_model_changes_marks_the_first_live_row_with_a_new_config_hash():
+    rows = [
+        _mc_pred("student", "aaa+h1", datetime(2026, 10, 29, 14), week=8),
+        _mc_pred("student", "bbb+h1", datetime(2026, 11, 5, 14), week=9),
+        _mc_pred("student", "ccc+h2", datetime(2026, 11, 12, 14), week=10),
+        _mc_pred("student", "ccc+h2", datetime(2026, 11, 12, 14), week=10, game="g2"),
+        _mc_pred("student", "ddd+h3", datetime(2026, 1, 1), live=False),  # backfill: never a change
+        _mc_pred("analyst", "aaa+h1", datetime(2026, 10, 29, 14), week=8),
+        _mc_pred("student_v2", "aaa+x1", datetime(2026, 10, 29, 14), week=8),
+        _mc_pred("student_v2", "aaa+x2", datetime(2026, 11, 5, 14), week=9),
+    ]  # fmt: skip
+    preds = pl.DataFrame(rows, schema=PRED_SCHEMA)
+    got = site.model_changes(preds, ["student", "analyst"])
+    assert got == [
+        {
+            "model_id": "student",
+            "season": 2026,
+            "week": 10,
+            "lock_ts": "2026-11-12T14:00:00Z",
+            "label": "New model version",
+        }
+    ]
+    assert site.model_changes(pl.DataFrame(), ["student"]) == []

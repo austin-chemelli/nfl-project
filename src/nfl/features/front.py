@@ -6,6 +6,13 @@ strictly before it, same season). In 2022 week 1 there is no prior, so the value
   front.box_8plus_rate    defense: runs faced with >= 8 in the box (tendencies `box_8plus_vs_run_rate`)
   front.motion_rate       offense: pass/run plays with pre-snap motion
   front.play_action_rate  offense: pass plays with play action
+  front.rpo_rate          offense: pass/run plays that are RPOs
+  front.screen_rate       offense: pass plays that are screens
+  front.under_center_rate offense: pass/run plays with the QB under center (`qb_location` = 'U')
+  front.no_huddle_rate    offense: pass/run plays with FTN `is_no_huddle` (2022+)
+  front.drop_rate         offense: catchable-ball passes that were dropped (`is_drop`)
+  front.contested_rate    offense: catchable-ball passes that were contested (`is_contested_ball`)
+  front.int_worthy_rate   offense: passes charted interception-worthy
 """
 
 from __future__ import annotations
@@ -21,13 +28,20 @@ from nfl.features.strength import team_games
 from nfl.tendencies import rates_asof, weekly_aggregates
 
 SOURCE = "ftn"
-VERSION = "1"
+VERSION = "2"
 
 SPECS = [
     ("front.blitz_rate", "def", "all", "blitz_rate"),
     ("front.box_8plus_rate", "def", "all", "box_8plus_vs_run_rate"),
     ("front.motion_rate", "off", "all", "motion_rate"),
     ("front.play_action_rate", "off", "all", "play_action_rate"),
+    ("front.rpo_rate", "off", "all", "rpo_rate"),
+    ("front.screen_rate", "off", "all", "screen_rate"),
+    ("front.under_center_rate", "off", "all", "under_center_rate"),
+    ("front.no_huddle_rate", "off", "all", "ftn_no_huddle_rate"),
+    ("front.drop_rate", "off", "all", "drop_rate"),
+    ("front.contested_rate", "off", "all", "contested_rate"),
+    ("front.int_worthy_rate", "off", "all", "int_worthy_rate"),
 ]
 
 
