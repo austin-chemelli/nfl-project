@@ -73,8 +73,9 @@ def reason(why: str, study: dict, model_name: str, team: str, p_model: float, p_
     pts = f"{100 * (p_model - p_market):.0f}"
     if why == "lean_dog":
         return (f"The {model_name} gives {team} {us} to win, the market {them}: a small lean on an underdog. "
-                f"Since {since} that spot returned {roi} ({n:,} bets), but only "
-                f"{_pctf(st.get('roi_2021_2025'))} in 2021-2025.")  # fmt: skip
+                f"Since {since} that spot returned {roi} ({n:,} bets), "
+                + (f"but only {_pctf(st.get('roi_2021_2025'))} in 2021-2025." if (st.get("roi_2021_2025") or 0) >= 0
+                   else f"but it lost {100 * abs(st['roi_2021_2025']):.1f}% in 2021-2025: a hunch, not an edge."))  # fmt: skip
     if why == "lean":
         return (f"The {model_name} gives {team} {us}, the market {them}: a small lean at a fair price. "
                 f"Small leans like this returned {roi} since {since} ({n:,} bets).")  # fmt: skip

@@ -25,11 +25,15 @@ export function ShortAnswers({ m }: { m: BettingMath }) {
   const pts = (x: number) => Math.round(x * 100)
   return (
     <div className="grid gap-3 lg:grid-cols-2">
-      <Answer q="Which bets are worth making?" a="Small leans, and underdogs from +120 to +185 most of all.">
+      <Answer q="Which bets are worth making?" a={r.lean_dog_bar.passes ? 'Small leans, and underdogs from +120 to +185 most of all.' : 'Nothing for sure. Small leans cost least, underdogs from +120 to +185 most of all.'}>
         <p className="tabular">
           Where the Student likes a team {pts(lim.lean_min)} to {pts(lim.lean_max)} points of win chance more than the market, bets returned {signedPct(r.target.roi)} on {r.target.n.toLocaleString('en-US')} bets since 2006. Underdogs at +120 to +185 did best: {signedPct(r.lean_dog.roi)} on {r.lean_dog.n.toLocaleString('en-US')} bets.
         </p>
-        <p className="tabular">Even that spot returned {signedPct(r.lean_dog.roi_2021_2025)} in 2021–2025: a small, fading edge, not a sure thing.</p>
+        <p className="tabular">
+          {(r.lean_dog.roi_2021_2025 ?? 0) >= 0
+            ? <>Even that spot returned only {signedPct(r.lean_dog.roi_2021_2025)} in 2021–2025: a small, fading edge, not a sure thing.</>
+            : <>But that spot lost {pct(Math.abs(r.lean_dog.roi_2021_2025 ?? 0), 1)} in 2021–2025, and it doesn&apos;t clear our bar for a real edge: treat it as a hunch, not a system.</>}
+        </p>
       </Answer>
 
       <Answer q="What should I stay away from?" a="Middle favorites, long shots, and big disagreements with the market.">

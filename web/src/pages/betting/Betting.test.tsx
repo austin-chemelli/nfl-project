@@ -17,7 +17,10 @@ describe('Betting math, on the Method page', () => {
     const tabs = await screen.findAllByRole('tab', {}, { timeout: 15000 })
     expect(tabs.map((t) => t.textContent)).toEqual(['How it works', 'Betting math', 'Limits and mistakes', 'Data'])
     expect(await screen.findByRole('heading', { level: 3, name: 'Which bets are worth making?' })).toBeInTheDocument()
-    expect(screen.getByText(/12\.5% on 344 bets/)).toBeInTheDocument()
+    expect(screen.getByText(/7\.2% on 368 bets/)).toBeInTheDocument()
+    // on the wave-3 Student the underdog spot fails the bar: the copy says so
+    expect(screen.getByText(/Nothing for sure/)).toBeInTheDocument()
+    expect(screen.getByText(/doesn.t clear our bar for a real edge/)).toBeInTheDocument()
   })
 
   it('cites the model audit with the limit from the data', async () => {
@@ -64,7 +67,7 @@ describe("This week's bets page", () => {
     renderRoute('/betting')
     expect(await screen.findByRole('heading', { level: 1, name: "This week's bets" })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { level: 3, name: 'How to call your shot' })).toBeInTheDocument()
-    expect(await screen.findByText(/The best spot is an underdog at \+120 to \+185: \+12\.5% on 344 bets since 2006/)).toBeInTheDocument()
+    expect(await screen.findByText(/The best spot is an underdog at \+120 to \+185: \+7\.2% on 368 bets since 2006/)).toBeInTheDocument()
     expect(screen.getByText(/in 2021-2025/)).toBeInTheDocument()
     const heads = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent)
     expect(heads.map((h) => h?.split('?')[0])).toEqual(['Targeted bets', 'Stay away', 'The whole slate'])
@@ -76,7 +79,7 @@ describe("This week's bets page", () => {
     renderRoute('/betting')
     const dal = (await screen.findByRole('heading', { level: 3, name: 'DAL to beat TEN' })).closest('div')!.parentElement!
     expect(within(dal).getByText('Price too short')).toBeInTheDocument()
-    expect(within(dal).getByText('Only at −329 or better')).toBeInTheDocument()
+    expect(within(dal).getByText('Only at −331 or better')).toBeInTheDocument()
     expect(within(dal).getByText(/on an exchange, 75¢ or less/)).toBeInTheDocument()
     expect(within(dal).getByText(/Student 80% · market 77%/)).toBeInTheDocument()
     expect(within(dal).getByText(/Stake: 1% of your bankroll/)).toBeInTheDocument()
@@ -92,7 +95,7 @@ describe("This week's bets page", () => {
     expect(within(slate).getAllByRole('row')).toHaveLength(14) // header + 13 games
     expect(within(slate).getAllByText('Target')).toHaveLength(1)
     expect(within(slate).getAllByText('Avoid').length).toBeGreaterThan(3)
-    expect(within(slate).getByText(/Untagged sides cost about the cut \(−1\.1%\)/)).toBeInTheDocument()
+    expect(within(slate).getByText(/Untagged sides cost about the cut \(−1\.3%\)/)).toBeInTheDocument()
   })
 
   it('names no sportsbook', async () => {
@@ -217,7 +220,7 @@ describe("This week's bets page", () => {
     expect(await screen.findByText('Targets against avoids, one unit a bet at the consensus price at each lock.')).toBeInTheDocument()
     expect(screen.getByText('Targets')).toBeInTheDocument()
     expect(screen.getByText('Avoids')).toBeInTheDocument()
-    expect(screen.getByRole('row', { name: /Underdog lean 344/ })).toBeInTheDocument()
+    expect(screen.getByRole('row', { name: /Underdog lean 368/ })).toBeInTheDocument()
     expect(screen.getByRole('row', { name: /The Student's pick everywhere/ })).toBeInTheDocument()
   })
 })

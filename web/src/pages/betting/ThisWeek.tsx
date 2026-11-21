@@ -35,7 +35,9 @@ function Strategy({ w }: { w: BettingWeek }) {
         <li>Only bet at the price needed or better, and stake {pct(w.stake_pct, 0)} of your bankroll a bet.</li>
       </ol>
       <p className="tabular mt-3 text-[13px] text-ink-3">
-        Even the best spot returned only {signedPct(r.lean_dog.roi_2021_2025)} in 2021-2025, and betting the Student&apos;s pick in every game lost {pct(Math.abs(r.model_pick.roi ?? 0), 1)}. It&apos;s a fun test, not income.
+        {(r.lean_dog.roi_2021_2025 ?? 0) >= 0
+          ? <>Even the best spot returned only {signedPct(r.lean_dog.roi_2021_2025)} in 2021-2025, and betting</>
+          : <>Even the best spot lost {pct(Math.abs(r.lean_dog.roi_2021_2025 ?? 0), 1)} in 2021-2025 (it doesn&apos;t clear our bar for a real edge), and betting</>}{' '} the Student&apos;s pick in every game lost {pct(Math.abs(r.model_pick.roi ?? 0), 1)}. It&apos;s a fun test, not income.
       </p>
     </Card>
   )
