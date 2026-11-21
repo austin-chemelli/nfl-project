@@ -2,7 +2,6 @@ import { Section, TableScroll, td, th } from '../../components/ui'
 import type { BettingMath } from '../../data/contract'
 import { american, signedPct } from '../../lib/format'
 import { Lede } from './common'
-import { chance } from './facts'
 import { TexasBox } from './TexasBox'
 
 const POOLS: Record<string, string> = {
@@ -14,7 +13,6 @@ const POOLS: Record<string, string> = {
 
 /** What the same bets return at a book, a worse book, and an exchange. */
 export function Where({ m }: { m: BettingMath }) {
-  const sh = m.shopping
   return (
     <>
       <Section title="Where you bet changes the cost" help="Return on the same bets at a licensed book, at a book whose price is 10 or 20 cents worse, on an exchange, and with a fee of 2% or 4% of the stake.">
@@ -68,14 +66,6 @@ export function Where({ m }: { m: BettingMath }) {
             </tbody>
           </table>
         </TableScroll>
-      </Section>
-
-      <Section title="Shopping for the best price" help="Across the licensed books in our odds feed, how the best, median and worst prices returned.">
-        <Lede>
-          <span className="tabular">
-            Across {sh.prices.toLocaleString('en-US')} prices, the best licensed book returned {signedPct(sh.ev_best)}, the median {signedPct(sh.ev_median)} and the worst {signedPct(sh.ev_worst)}; the best price beat the fair price {chance(sh.best_beats_fair_share)} of the time.
-          </span>
-        </Lede>
       </Section>
 
       <TexasBox />

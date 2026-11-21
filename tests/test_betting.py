@@ -10,7 +10,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from nfl.betting import guide, prices, study
+from nfl.betting import guide, prices, rules, study
 
 # ------------------------------------------------------------------ prices
 
@@ -53,18 +53,20 @@ def test_parlay_and_shade_and_exchange():
 # ------------------------------------------------------------------ the card's rules
 
 
-def test_bands_and_verdicts():
-    assert guide.band_of(0.9) == "heavy_fav"
-    assert guide.band_of(0.7) == "big_fav"
-    assert guide.band_of(0.6) == "fav"
-    assert guide.band_of(0.5) == "coin"
-    assert guide.band_of(0.1) == "long"
-    assert guide.verdict(0.75, 0.70) == "look"  # big favorite, model at least the market
-    assert guide.verdict(0.68, 0.70) == "fun"  # big favorite the model rates lower
-    assert guide.verdict(0.52, 0.50) == "fun"  # coin flip
-    assert guide.verdict(0.65, 0.60) == "skip"  # -120 to -185 favorite
-    assert guide.verdict(0.55, 0.40) == "fun"  # the model's upset pick
-    assert guide.verdict(0.55, 0.30) == "skip"  # big underdog
+def test_bands_and_side_views():
+    assert rules.band_of(0.9) == "heavy_fav"
+    assert rules.band_of(0.7) == "big_fav"
+    assert rules.band_of(0.6) == "fav"
+    assert rules.band_of(0.5) == "coin"
+    assert rules.band_of(0.1) == "long"
+    v = rules.side_view
+    assert v(0.43, 0.40) == ("target", "lean_dog")  # an underdog the model likes a little more
+    assert v(0.74, 0.70) == ("target", "lean")  # a big favorite, small lean
+    assert v(0.51, 0.50) == ("none", "no_view")  # agrees with the market
+    assert v(0.66, 0.70) == ("none", "no_view")  # rates it lower
+    assert v(0.48, 0.40) == ("avoid", "big_gap")  # 8 points above the market: trust the market
+    assert v(0.64, 0.60) == ("avoid", "mid_fav")  # -120 to -185, whatever the model says
+    assert v(0.33, 0.30) == ("avoid", "long")  # +185 or longer
 
 
 def test_blend_and_exchange_cents():
@@ -86,7 +88,10 @@ STUDY = {
             for b in study.BANDS
         ]
     },
-    "pick_winners": [{"band": "dog", "roi": -0.03, "n": 50}],
+    "rules": {
+        k: {"roi": -0.02, "n": 100, "roi_second": -0.05, "roi_2021_2025": 0.01}
+        for k in ("lean_dog", "lean", "mid_fav", "long", "big_gap", "no_view")
+    },
     "targeted": [{"key": "under_wind_15", "roi": 0.09, "n": 400}],
 }
 
@@ -115,75 +120,78 @@ def _game_lines(gid, snap, kick, home_ml, away_ml, books=("draftkings", "fanduel
     return out
 
 
-def test_card_verdicts_best_us_price_and_wind():
+def _card_games(ids, kicks, homes, aways, roofs):
+    n = len(ids)
+    return pl.DataFrame({"game_id": ids, "season": [2026] * n, "week": [11] * n, "kickoff_utc": kicks,
+                         "home_team": homes, "away_team": aways, "roof": roofs})  # fmt: skip
+
+
+def _student(ids, p_home):
+    return pl.DataFrame({"game_id": ids, "model_id": ["student"] * len(ids), "p_home": p_home,
+                         "status": ["preview"] * len(ids)})  # fmt: skip
+
+
+def test_card_views_both_sides_and_wind():
     now = datetime(2026, 11, 20, 12)
     kick = now + timedelta(days=2)
-    games = pl.DataFrame({
-        "game_id": ["g1", "g2", "g3"], "season": [2026] * 3, "week": [11] * 3,
-        "kickoff_utc": [kick, kick, now - timedelta(hours=1)], "home_team": ["BUF", "LAC", "HOU"],
-        "away_team": ["MIA", "NYJ", "IND"], "roof": ["outdoors", "dome", "outdoors"],
-    })  # fmt: skip
-    allrows = pl.DataFrame({
-        "game_id": ["g1", "g2", "g3"], "model_id": ["student"] * 3, "p_home": [0.85, 0.62, 0.8],
-        "status": ["preview"] * 3,
-    })  # fmt: skip
+    games = _card_games(
+        ["g1", "g2"], [kick, kick], ["BUF", "LAC"], ["MIA", "NYJ"], ["outdoors", "dome"]
+    )
+    # g1: market about 59% on BUF (-150/+130): BUF is a -120 to -185 favorite (avoid);
+    # the Student gives MIA 44% against about 41%: a small lean on an underdog (target)
+    # g2: market about 59% on LAC, the Student 70%: avoid twice over (mid favorite)
     snap = now - timedelta(hours=3)
-    rows = _game_lines("g1", snap, kick, -400.0, 320.0) + _game_lines(
+    rows = _game_lines("g1", snap, kick, -150.0, 130.0) + _game_lines(
         "g2", snap, kick, -150.0, 130.0
     )
-    rows += _game_lines("g3", snap, now - timedelta(hours=1), -400.0, 320.0)
-    # an offshore book with the best price must never be the "best licensed" price
-    rows += [
-        ("g1", snap, kick, "bovada", "h2h", "home", -200.0, None),
-        ("g1", snap, kick, "bovada", "h2h", "away", 320.0, None),
-    ]
-    c = guide.card(games, allrows, _lines(rows), {"g1": 18.0}, STUDY, 11, now)
-    by = {g["game_id"]: g for g in c["games"]}
-    assert by["g1"]["verdict"] == "look"
-    assert by["g1"]["best"]["book"] in study.US_BOOKS
-    assert by["g1"]["best"]["price"] == -400.0
-    assert by["g1"]["needed"]["american"] < -300
-    assert by["g1"]["total"]["side"] == "under" and by["g1"]["total"]["wind_mph"] == 18
-    assert by["g2"]["verdict"] == "skip" and by["g2"]["total"] is None
-    assert by["g3"]["verdict"] == "started"
-
-
-def test_card_caps_looks():
-    now = datetime(2026, 11, 20, 12)
-    kick = now + timedelta(days=2)
-    n = guide.MAX_LOOKS + 2
-    ids = [f"g{i}" for i in range(n)]
-    games = pl.DataFrame({"game_id": ids, "season": [2026] * n, "week": [11] * n, "kickoff_utc": [kick] * n,
-                          "home_team": ["BUF"] * n, "away_team": ["MIA"] * n, "roof": ["dome"] * n})  # fmt: skip
-    allrows = pl.DataFrame(
-        {
-            "game_id": ids,
-            "model_id": ["student"] * n,
-            "p_home": [0.9] * n,
-            "status": ["preview"] * n,
-        }
+    c = guide.card(
+        games, _student(["g1", "g2"], [0.56, 0.70]), _lines(rows), {"g1": 18.0}, STUDY, 11, now
     )
+    by = {g["game_id"]: {x["team"]: x for x in g["sides"]} for g in c["games"]}
+    assert by["g1"]["MIA"]["view"] == "target" and by["g1"]["MIA"]["why"] == "lean_dog"
+    assert by["g1"]["BUF"]["view"] == "avoid" and by["g1"]["BUF"]["why"] == "mid_fav"
+    assert by["g1"]["MIA"]["needed"]["american"] > 100 and by["g1"]["MIA"]["reason"]
+    assert "best" not in by["g1"]["MIA"]  # no book names on the card
+    g1 = next(g for g in c["games"] if g["game_id"] == "g1")
+    assert g1["total"]["side"] == "under" and g1["total"]["wind_mph"] == 18
+    assert next(g for g in c["games"] if g["game_id"] == "g2")["total"] is None
+    assert by["g2"]["LAC"]["view"] == "avoid"
+
+
+def test_card_caps_targets_and_counts_started_games():
+    now = datetime(2026, 11, 20, 12)
+    n = rules.MAX_TARGETS + 2
+    ids = [f"g{i}" for i in range(n)]
+    # the two earliest games already kicked off; they still count toward the cap
+    kicks = [now - timedelta(hours=2)] * 2 + [now + timedelta(days=2)] * (n - 2)
+    games = _card_games(ids, kicks, ["BUF"] * n, ["MIA"] * n, ["dome"] * n)
+    snap = now - timedelta(hours=5)
     rows = [
-        r for gid in ids for r in _game_lines(gid, now - timedelta(hours=1), kick, -400.0, 320.0)
+        r
+        for gid, k in zip(ids, kicks, strict=True)
+        for r in _game_lines(gid, snap, k, -150.0, 130.0)
     ]
-    c = guide.card(games, allrows, _lines(rows), {}, STUDY, 11, now)
-    assert sum(g["verdict"] == "look" for g in c["games"]) == guide.MAX_LOOKS
+    c = guide.card(games, _student(ids, [0.56] * n), _lines(rows), {}, STUDY, 11, now)
+    t = [x for g in c["games"] for x in g["sides"] if x["view"] == "target"]
+    assert len(t) == rules.MAX_TARGETS
+    assert sum(x["why"] == "over_cap" for g in c["games"] for x in g["sides"]) == 2
 
 
 def test_record_uses_only_odds_known_at_the_lock():
     lock = datetime(2026, 11, 19, 14)
     p = pl.DataFrame(
-        {"game_id": ["g1"], "week": [11], "lock_ts": [lock], "p_home": [0.9], "result": [7]}
+        {"game_id": ["g1"], "week": [11], "lock_ts": [lock], "p_home": [0.85], "result": [7]}
     )
     cons = pl.DataFrame({
         "game_id": ["g1", "g1"], "snapshot_ts": [lock - timedelta(hours=2), lock + timedelta(hours=2)],
-        # before the lock: a heavy favorite (look); after: a coin flip that must not be used
+        # before the lock: a heavy favorite with a small lean (target); after: a coin flip that
+        # would make the home side a big disagreement (avoid) and must not be used
         "p_home_vigfree": [0.82, 0.5], "home_ml": [-500.0, -105.0], "away_ml": [400.0, -105.0],
     })  # fmt: skip
-    rows = guide.grade_at_locks(p, cons)
-    assert len(rows) == 1
-    assert rows[0]["verdict"] == "look" and rows[0]["price"] == -500.0
-    assert rows[0]["units"] == pytest.approx(0.2)
+    rows = {r["side"]: r for r in guide.grade_at_locks(p, cons)}
+    assert rows["home"]["view"] == "target" and rows["home"]["price"] == -500.0
+    assert rows["home"]["units"] == pytest.approx(0.2)
+    assert rows["away"]["view"] == "avoid" and rows["away"]["units"] == -1.0
 
 
 # ------------------------------------------------------------------ the study
@@ -244,27 +252,29 @@ def test_blend_weight_tracks_information():
     assert study.blend_weight(s, "student", 2030) < 0.4
 
 
-def test_record_caps_looks_per_week_like_the_card():
+def test_record_caps_targets_per_week_like_the_card():
     lock = datetime(2026, 11, 19, 14)
-    n = guide.MAX_LOOKS + 2
+    n = rules.MAX_TARGETS + 2
     ids = [f"g{i}" for i in range(n)]
-    p = pl.DataFrame(
-        {
-            "game_id": ids,
-            "week": [11] * n,
-            "lock_ts": [lock] * n,
-            "p_home": [0.9] * n,
-            "result": [7] * n,
-        }
-    )
+    p = pl.DataFrame({"game_id": ids, "week": [11] * n, "lock_ts": [lock] * n, "p_home": [0.85] * n,
+                      "result": [7] * n})  # fmt: skip
     cons = pl.DataFrame({"game_id": ids, "snapshot_ts": [lock - timedelta(hours=1)] * n, "p_home_vigfree": [0.82] * n,
                          "home_ml": [-500.0] * n, "away_ml": [400.0] * n})  # fmt: skip
     rows = guide.grade_at_locks(p, cons)
-    assert sum(r["verdict"] == "look" for r in rows) == guide.MAX_LOOKS
+    assert sum(r["view"] == "target" for r in rows) == rules.MAX_TARGETS
 
 
-def test_under_never_names_an_unlicensed_book():
-    snap = datetime(2026, 11, 20)
-    lines = _lines([("g1", snap, snap, "bovada", "totals", "under", -105.0, 44.5)])
-    u = guide._total_under(lines, "g1", snap)
-    assert u["line"] == 44.5 and u["best_book"] is None and u["best_price"] is None
+def test_side_rules_match_the_card_rule():
+    s = _sides(per=120)
+    out = study.side_rules(s, "student")
+    d = s.filter(pl.col("p_student").is_not_null())
+    views = [rules.side_view(a, b) for a, b in zip(d["p_student"], d["p_mkt"], strict=True)]
+    assert out["target"]["n"] == sum(v[0] == "target" for v in views)
+    assert out["lean_dog"]["n"] + out["lean"]["n"] == out["target"]["n"]
+    assert out["avoid"]["n"] == out["mid_fav"]["n"] + out["long"]["n"] + out["big_gap"]["n"]
+    assert set(out["lean_dog_bar"]["checks"]) == {
+        "both_halves",
+        "range_above_zero",
+        "recent",
+        "neighbour_agrees",
+    }

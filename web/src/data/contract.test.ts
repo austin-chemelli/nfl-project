@@ -300,7 +300,8 @@ describe('contract: the betting guide files', () => {
 
   it('parses the week fixture: a card, its record and the closing lines', () => {
     const w = C.BettingWeek.parse(read('betting_week.json'))
-    expect(w.card.games.some((g) => g.verdict === 'look')).toBe(true)
+    expect(w.card.games.some((g) => g.sides.some((x) => x.view === 'target'))).toBe(true)
+    expect(w.rules.limits.lean_max).toBe(0.06)
     expect(w.closing.length).toBeGreaterThan(0)
   })
 
@@ -310,7 +311,7 @@ describe('contract: the betting guide files', () => {
     delete m.bands[0].win_rate
     expect(C.BettingMath.safeParse(m).success).toBe(false)
     const w = read('betting_week.json')
-    delete w.card.games[0].needed
+    delete w.card.games[0].sides[0].needed
     expect(C.BettingWeek.safeParse(w).success).toBe(false)
   })
 })

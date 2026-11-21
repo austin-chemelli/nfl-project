@@ -1,7 +1,7 @@
 import { TableScroll, td, th } from '../../components/ui'
 import type { BettingWeek } from '../../data/contract'
 import { signedPct, signedUnits } from '../../lib/format'
-import { VERDICT_NAMES } from './weekFacts'
+import { VIEW_NAMES } from './weekFacts'
 
 /** The card's own paper record at the locks, by verdict: one unit a bet at the consensus price. */
 export function PaperRecord({ w }: { w: BettingWeek }) {
@@ -12,7 +12,7 @@ export function PaperRecord({ w }: { w: BettingWeek }) {
       <table className="w-full text-[13px]">
         <thead>
           <tr>
-            <th className={th}>Card</th>
+            <th className={th}>Call</th>
             <th className={th}>Bets</th>
             <th className={th}>Won–lost</th>
             <th className={th}>Units</th>
@@ -21,8 +21,8 @@ export function PaperRecord({ w }: { w: BettingWeek }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.verdict}>
-              <td className={td}>{VERDICT_NAMES[r.verdict] ?? r.verdict}</td>
+            <tr key={r.view}>
+              <td className={td}>{VIEW_NAMES[r.view] ?? r.view}</td>
               <td className={`${td} tabular`}>{r.bets}</td>
               <td className={`${td} tabular`}>{r.wins}–{r.losses}</td>
               <td className={`${td} tabular`}>{signedUnits(r.units)}</td>

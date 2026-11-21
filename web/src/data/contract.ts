@@ -1386,12 +1386,41 @@ const TargetedRule = z.looseObject({
   passes: z.boolean(),
   by_five_years: z.array(z.looseObject({ from: num, n: num, roi: nnum })),
 })
-const GuideRuleRow = z.looseObject({ period: z.string(), n: num, roi: nnum, roi_lo: nnum, roi_hi: nnum, win_rate: nnum })
-export const GuideRule = z.looseObject({
-  worth_a_look: z.array(GuideRuleRow),
-  coin_flip: z.array(GuideRuleRow),
-  skip_mid_favorite: z.array(GuideRuleRow),
+// One bucket of the card's rules in history (`rules.<key>`); a bucket with no bets is just `{ n: 0 }`.
+const RuleStat = z.looseObject({
+  n: num,
+  roi: nnum.default(null),
+  roi_lo: nnum.default(null),
+  roi_hi: nnum.default(null),
+  roi_first: nnum.default(null),
+  roi_second: nnum.default(null),
+  roi_2021_2025: nnum.default(null),
+  n_2021_2025: nnum.default(null),
+  win_rate: nnum.default(null),
+  seasons_up: nnum.default(null),
+  seasons: nnum.default(null),
+  per_week: nnum.default(null),
 })
+export const GuideRules = z.looseObject({
+  target: RuleStat,
+  lean_dog: RuleStat,
+  lean: RuleStat,
+  avoid: RuleStat,
+  mid_fav: RuleStat,
+  long: RuleStat,
+  big_gap: RuleStat,
+  no_view: RuleStat,
+  model_pick: RuleStat,
+  lean_dog_bar: z.looseObject({
+    neighbour_roi: nnum,
+    neighbour_n: nnum,
+    checks: z.looseObject({ both_halves: z.boolean(), range_above_zero: z.boolean(), recent: z.boolean(), neighbour_agrees: z.boolean() }),
+    passes: z.boolean(),
+  }),
+  limits: z.looseObject({ lean_min: num, lean_max: num, max_targets: num }),
+})
+export type GuideRules = z.infer<typeof GuideRules>
+export type RuleStat = z.infer<typeof RuleStat>
 
 export const BettingMath = z.looseObject({
   schema_version: num,
@@ -1422,21 +1451,35 @@ export const BettingMath = z.looseObject({
     z.looseObject({ pool: z.string(), n: num, book: nnum, book_minus_10c: nnum, book_minus_20c: nnum, exchange: nnum, fee_2pct: nnum, fee_4pct: nnum }),
   ),
   exchange_fee: z.array(z.looseObject({ price_cents: num, fee_pct_of_stake: num, american_equiv: num })),
-  shopping: z.looseObject({ prices: num, ev_best: nnum, ev_median: nnum, ev_worst: nnum, best_beats_fair_share: nnum }),
-  guide_rule: GuideRule,
+  rules: GuideRules,
 })
-export type GuideRule = z.infer<typeof GuideRule>
 export type BettingMath = z.infer<typeof BettingMath>
 export type MathBand = z.infer<typeof MathBand>
 
-const WeekPick = z.looseObject({ side: z.enum(['home', 'away']), team: z.string(), p_model: num, p_market: num, p_blend: num, band: z.string() })
 const WeekMarket = z.looseObject({ as_of: z.string(), p_home: nnum, home_ml: nnum, away_ml: nnum, spread_home: nnum, total: nnum })
 const WeekTotal = z.looseObject({
   side: z.string(),
   wind_mph: num,
   line: nnum,
-  best: z.looseObject({ point: nnum, price: nnum, book: nstr }).nullable(),
   needed: z.looseObject({ american: num }),
+  reason: z.string(),
+})
+// One team's side of a game. `view` is the card's call: target (back it), avoid (stay away) or none.
+const WeekSide = z.looseObject({
+  side: z.enum(['home', 'away']),
+  team: z.string(),
+  price: nnum,
+  p_model: num,
+  p_market: num,
+  p_blend: num,
+  gap: num,
+  band: z.string(),
+  view: z.enum(['target', 'avoid', 'none']),
+  why: z.enum(['lean_dog', 'lean', 'mid_fav', 'long', 'big_gap', 'no_view', 'over_cap']),
+  agree: num,
+  model_pick: z.boolean(),
+  needed: z.looseObject({ american: num, cents: num }),
+  clears: z.boolean().nullable(),
   reason: z.string(),
 })
 export const CardGame = z.looseObject({
@@ -1446,14 +1489,8 @@ export const CardGame = z.looseObject({
   home: z.string(),
   started: z.boolean(),
   roof: nstr,
-  verdict: z.enum(['look', 'fun', 'skip', 'started']).nullable(),
-  reason: nstr,
-  pick: WeekPick.nullable(),
   market: WeekMarket.nullable(),
-  best: z.looseObject({ price: num, book: z.string() }).nullable(),
-  needed: z.looseObject({ american: num, cents: num }).nullable(),
-  clears: z.boolean().nullable(),
-  agree: nnum,
+  sides: z.array(WeekSide),
   total: WeekTotal.nullable(),
   model_status: nstr,
 })
@@ -1475,18 +1512,18 @@ export const BettingWeek = z.looseObject({
   model: z.string(),
   model_version: nstr,
   stake_pct: num,
-  max_looks: num,
+  max_targets: num,
   exchange_fee: num,
-  us_books: z.array(z.string()),
   card: z.looseObject({ week: num, games: z.array(CardGame), blend_w: num }),
   record: z.looseObject({
     rule_version: z.string(),
-    rows: z.array(z.looseObject({ game_id: z.string(), week: num, verdict: z.string(), side: z.string(), price: num, won: num, units: num })),
-    summary: z.array(z.looseObject({ verdict: z.string(), bets: num, wins: num, losses: num, units: num, roi: nnum })),
+    rows: z.array(z.looseObject({ game_id: z.string(), week: num, view: z.string(), why: z.string(), side: z.string(), price: num, won: num, units: num })),
+    summary: z.array(z.looseObject({ view: z.string(), bets: num, wins: num, losses: num, units: num, roi: nnum })),
   }),
-  history: GuideRule,
+  rules: GuideRules,
   closing: z.array(ClosingGame),
 })
 export type BettingWeek = z.infer<typeof BettingWeek>
 export type CardGame = z.infer<typeof CardGame>
+export type CardSide = z.infer<typeof WeekSide>
 export type ClosingGame = z.infer<typeof ClosingGame>

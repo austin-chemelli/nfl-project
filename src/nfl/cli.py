@@ -749,6 +749,15 @@ def betting_study(
         console.print(
             f"targeted {tb['key']}: {tb['n']} bets, {tb['roi']:+.1%}, passes={tb['passes']}"
         )
+    r = s["rules"]
+    for k in ("lean_dog", "lean", "no_view", "mid_fav", "long", "big_gap", "model_pick"):
+        v = r[k]
+        if v.get("n"):
+            console.print(
+                f"card rule {k}: {v['n']} bets, {v['roi']:+.1%} "
+                f"(halves {v['roi_first']:+.1%} / {v['roi_second']:+.1%}, 2021-25 {v['roi_2021_2025']:+.1%})"
+            )
+    console.print(f"underdog lean passes the targeted bar: {r['lean_dog_bar']['passes']}")
     console.print(f"wrote {study_path(paths)}")
 
 

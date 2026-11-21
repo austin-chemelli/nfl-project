@@ -1,97 +1,117 @@
-import type { ReactNode } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { FinePrint } from '../components/FinePrint'
-import { SummaryStrip, Tile } from '../components/SummaryStrip'
-import { Tabs } from '../components/Tabs'
+import { Tabs, useSetTab, type TabDef } from '../components/Tabs'
 import { Loaded, Page } from '../components/ui'
-import { Link } from 'react-router'
-import { useBettingMath } from '../data/api'
-import type { BettingMath } from '../data/contract'
-import { pct, signedPct } from '../lib/format'
-import { BETTING_VISIBILITY, listed, reachable } from '../lib/bettingVisibility'
+import { useBettingWeek } from '../data/api'
+import type { BettingWeek } from '../data/contract'
+import { setBankroll, stakeFor, useBankroll } from '../lib/bankroll'
+import { BETTING_VISIBILITY, reachable } from '../lib/bettingVisibility'
+import { kickoffEt } from '../lib/format'
 import { useNoindex } from '../lib/useNoindex'
+import { BetLog } from './betting/BetLog'
 import { HelpLine } from './betting/common'
-import { chance } from './betting/facts'
-import { Models } from './betting/Models'
-import { Parlays } from './betting/Parlays'
-import { Prices } from './betting/Prices'
-import { ShortAnswers } from './betting/ShortAnswers'
-import { Spreads } from './betting/Spreads'
-import { Stakes } from './betting/Stakes'
-import { Where } from './betting/Where'
+import { ThisWeek } from './betting/ThisWeek'
+import { WeekRecord } from './betting/WeekRecord'
+import type { Draft } from './betting/weekFacts'
 import NotFound from './NotFound'
 
-function TabBody({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-8">{children}</div>
-}
-
-function Tiles({ m }: { m: BettingMath }) {
-  const heavy = m.bands.find((b) => b.band === 'heavy_fav')
-  const coin = m.bands.find((b) => b.band === 'coin')
-  const single = m.parlays.find((p) => p.legs === 1)
-  const four = m.parlays.find((p) => p.legs === 4)
-  const at6 = (id: string) => m.staking.find((s) => s.strategy === id && s.bets_per_week === 6)
+function BankrollInput() {
+  const id = useId()
+  const bankroll = useBankroll()
+  const [text, setText] = useState(bankroll == null ? '' : String(bankroll))
   return (
-    <SummaryStrip label="Betting math summary">
-      <Tile label="Singles or parlays?" value={signedPct(single?.roi)} sub={`4 legs: ${signedPct(four?.roi)}`} tab="short" />
-      <Tile label="Heavy favorites" value={signedPct(heavy?.roi)} sub={`win ${pct(heavy?.win_rate)}, the least costly price`} tab="prices" />
-      <Tile label="Coin flips" value={signedPct(coin?.roi)} sub="you pay the cut, nothing else" tab="prices" />
-      <Tile label="Stake per bet" value="1%" sub={`lost half the bankroll in ${chance(at6('flat_1')?.p_lose_half)} of seasons; 5%: ${chance(at6('flat_5')?.p_lose_half)}`} tab="stakes" />
-    </SummaryStrip>
+    <div className="flex flex-wrap items-center gap-2">
+      <label htmlFor={id} className="text-[14px] text-ink-2">Your bankroll</label>
+      <span className="flex items-center gap-1 rounded border border-line bg-surface-1 px-2 py-1">
+        <span aria-hidden="true" className="text-ink-3">$</span>
+        <input
+          id={id}
+          type="number"
+          min="0"
+          step="any"
+          inputMode="decimal"
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value)
+            const n = Number(e.target.value)
+            setBankroll(e.target.value.trim() !== '' && Number.isFinite(n) && n > 0 ? n : null)
+          }}
+          className="w-28 bg-transparent text-[14px] outline-none"
+        />
+      </span>
+      <span className="text-[13px] text-ink-3">Kept in this browser only.</span>
+    </div>
   )
 }
 
-function Body({ m }: { m: BettingMath }) {
-  const years = m.seasons[1] - m.seasons[0] + 1
+function Body({ w }: { w: BettingWeek }) {
+  const bankroll = useBankroll()
+  const setTab = useSetTab()
+  const [draft, setDraft] = useState<Draft | null>(null)
+  const [draftKey, setDraftKey] = useState(0)
+  const stake = stakeFor(bankroll, w.stake_pct)
+  const logOk = reachable(BETTING_VISIBILITY.log)
+  const cardOk = reachable(BETTING_VISIBILITY.card)
+  const asOf = useMemo(() => w.card.games.reduce<string | null>((a, g) => (g.market && (a == null || g.market.as_of > a) ? g.market.as_of : a), null), [w])
+
+  const tabs: TabDef[] = []
+  if (cardOk) {
+    tabs.push({
+      id: 'week',
+      label: 'This week',
+      content: (
+        <ThisWeek
+          w={w}
+          bankroll={bankroll}
+          onLog={
+            logOk
+              ? (d) => {
+                  setDraft(d)
+                  setDraftKey((k) => k + 1)
+                  setTab('log')
+                }
+              : undefined
+          }
+        />
+      ),
+    })
+  }
+  if (logOk) {
+    tabs.push({
+      id: 'log',
+      label: 'Your bets',
+      content: <BetLog w={w} draft={draft} draftKey={draftKey} defaultStake={stake} onAdded={() => setDraft(null)} />,
+    })
+  }
+  if (cardOk) tabs.push({ id: 'record', label: 'Track record', content: <WeekRecord w={w} /> })
+
   return (
     <>
-      <Tiles m={m} />
-      <Tabs
-        label="Betting math sections"
-        default="short"
-        tabs={[
-          { id: 'short', label: 'Short answers', content: <TabBody><ShortAnswers m={m} /></TabBody> },
-          { id: 'prices', label: 'Prices', content: <TabBody><Prices m={m} /></TabBody> },
-          { id: 'parlays', label: 'Parlays', content: <TabBody><Parlays m={m} /></TabBody> },
-          { id: 'stakes', label: 'How much to stake', content: <TabBody><Stakes m={m} /></TabBody> },
-          { id: 'models', label: 'Our models', content: <TabBody><Models m={m} /></TabBody> },
-          { id: 'spreads', label: 'Spreads and totals', content: <TabBody><Spreads m={m} /></TabBody> },
-          { id: 'where', label: 'Where and how', content: <TabBody><Where m={m} /></TabBody> },
-        ]}
-      />
+      <BankrollInput />
+      <Tabs label="Betting sections" tabs={tabs} />
       <FinePrint>
         <p>
-          No edge shown in {years} seasons: every way of betting in this history loses money, and a few hundred bets can&apos;t prove otherwise. Treat betting here as a fun test, not income. Figures use the {m.model} line {m.model_version}, schedule lines that are roughly closing prices, and 90% ranges; the study is <code>nfl betting study</code>. Not betting advice.
+          The 2-to-6-point limits were chosen by looking at 2006-2025, so expect less in the future; the live record at our locks is the honest test. Small samples; a fun test, not income. Not betting advice.
         </p>
+        <p>Prices come from our latest odds snapshot{asOf ? ` (${kickoffEt(asOf)})` : ''}; they move, so check the price in the app before you buy.</p>
         <HelpLine />
       </FinePrint>
     </>
   )
 }
 
-function MathPage() {
-  const q = useBettingMath()
-  useNoindex(BETTING_VISIBILITY.math !== 'public')
+function WeekPage() {
+  const q = useBettingWeek()
+  useNoindex(BETTING_VISIBILITY.card !== 'public')
   return (
-    <Page
-      title="Betting math"
-      lede={
-        q.data
-          ? `What ${q.data.seasons[1] - q.data.seasons[0] + 1} seasons of our own lines say about betting NFL games: where the cost is lowest, and why there is no edge to find.`
-          : 'What our own lines say about betting NFL games: where the cost is lowest, and why there is no edge to find.'
-      }
-    >
-      {listed(BETTING_VISIBILITY.card) && (
-        <p className="-mt-3 text-[13px]">
-          <Link to="/betting/week">Your weekly card →</Link>
-        </p>
-      )}
-      <Loaded q={q} what="betting math" shape="tracker">
-        {(m) => <Body m={m} />}
+    <Page title="This week's bets" lede="A few games worth calling your shot on, and the ones to stay away from, from the Student, the market's prices and 20 seasons of history.">
+      <Loaded q={q} what="betting card" shape="tracker">
+        {(w) => <Body w={w} />}
       </Loaded>
     </Page>
   )
 }
 
 export default function BettingPage() {
-  return reachable(BETTING_VISIBILITY.math) ? <MathPage /> : <NotFound />
+  return reachable(BETTING_VISIBILITY.card) || reachable(BETTING_VISIBILITY.log) ? <WeekPage /> : <NotFound />
 }

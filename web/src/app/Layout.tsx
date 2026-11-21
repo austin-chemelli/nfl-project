@@ -2,7 +2,6 @@ import { NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router'
 import { useMeta } from '../data/api'
 import { ago, kickoffEt } from '../lib/format'
 import { useTheme, type Theme } from './theme'
-import { BETTING_VISIBILITY, listed } from '../lib/bettingVisibility'
 import { isHidden } from '../lib/hiddenPages'
 import { useScrollFade } from '../lib/useScrollFade'
 
@@ -12,7 +11,6 @@ const NAV: { to: string; label: string; end?: boolean; listed?: () => boolean }[
   { to: '/team', label: 'Teams' },
   { to: '/tracker', label: 'Tracker' },
   { to: '/hypotheses', label: 'History' },
-  { to: '/betting', label: 'Betting math', listed: () => listed(BETTING_VISIBILITY.math) },
   { to: '/coaches', label: 'Coaches' },
   { to: '/build', label: 'Build' },
   { to: '/method', label: 'How it works' },

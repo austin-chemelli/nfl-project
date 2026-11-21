@@ -1,25 +1,15 @@
 /** Plain helpers for the weekly card and the bet log. */
-import type { BettingWeek, CardGame, ClosingGame } from '../../data/contract'
+import type { BettingWeek, CardSide, ClosingGame } from '../../data/contract'
 import { dash } from '../../lib/format'
 import { decimalOdds, type BetEntry } from '../../lib/betLog'
 
-export const BOOKS: Record<string, string> = { draftkings: 'DraftKings', fanduel: 'FanDuel', betmgm: 'BetMGM', betrivers: 'BetRivers' }
-export const bookName = (b: string | null | undefined) => (b ? (BOOKS[b] ?? b) : '')
+export const VIEW_NAMES: Record<string, string> = { target: 'Targets', avoid: 'Avoids' }
 
-export const VERDICT_NAMES: Record<string, string> = { look: 'Worth a look', fun: 'For fun', skip: 'Skip', started: 'Started' }
+export type Draft = { game_id: string; side: 'home' | 'away'; price: number; stake: number | null }
 
-export type Groups = { look: CardGame[]; fun: CardGame[]; skip: CardGame[]; started: CardGame[]; none: CardGame[] }
-
-/** The card's games in the order the page shows them: worth a look, for fun, skip, started, then games with no price yet. */
-export function groupCard(games: CardGame[]): Groups {
-  const g: Groups = { look: [], fun: [], skip: [], started: [], none: [] }
-  for (const x of games) (x.verdict == null ? g.none : g[x.verdict]).push(x)
-  return g
-}
-
-/** The price a bet is staked at for the "to win" line: the best licensed book's price, else the price the card needs. */
-export function stakePrice(g: Pick<CardGame, 'best' | 'needed'>): number | null {
-  return g.best?.price ?? g.needed?.american ?? null
+/** The price a side's stake is worked out at: the price on offer now, else the price the card needs. */
+export function stakePrice(s: Pick<CardSide, 'price' | 'needed'>): number | null {
+  return s.price ?? s.needed.american
 }
 
 /** Dollars a winning bet pays, from stake and an American price. */

@@ -12,48 +12,41 @@ describe('betting guide visibility on the live site', () => {
     Object.assign(BETTING_VISIBILITY, original)
   })
 
-  it('puts the math in the nav and keeps the card out of it', async () => {
+  it('puts the math in the Method page and keeps both betting pages out of the nav', async () => {
     renderRoute('/method')
     const nav = within(await screen.findByRole('navigation', { name: 'Main' }))
-    expect(nav.getByRole('link', { name: 'Betting math' })).toHaveAttribute('href', '/betting')
-    expect(nav.queryByRole('link', { name: /your betting card/i })).toBeNull()
+    expect(await screen.findByRole('tab', { name: 'Betting math' }, { timeout: 12000 })).toBeInTheDocument()
+    expect(nav.queryByRole('link', { name: /betting/i })).toBeNull()
     for (const name of ['This week', 'League', 'Tracker', 'History', 'How it works']) expect(nav.getByRole('link', { name })).toBeInTheDocument()
   })
 
-  it('serves the math page, with no link to the card', async () => {
-    renderRoute('/betting')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Betting math' })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /weekly card/i })).toBeNull()
-    expect(document.querySelector('meta[name="robots"]')).toBeNull()
-  })
-
   it('routes the unlisted card by its URL and asks search engines to skip it', async () => {
-    renderRoute('/betting/week')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Your betting card' })).toBeInTheDocument()
+    renderRoute('/betting')
+    expect(await screen.findByRole('heading', { level: 1, name: "This week's bets" })).toBeInTheDocument()
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((t) => t.textContent)).toEqual(['This week', 'My bets', 'Record'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['This week', 'Your bets', 'Track record'])
     expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
   })
 
   it('drops the tabs of a section set to dev', async () => {
     BETTING_VISIBILITY.log = 'dev'
-    renderRoute('/betting/week')
+    renderRoute('/betting')
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((t) => t.textContent)).toEqual(['This week', 'Record'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['This week', 'Track record'])
   })
 
   it('answers like a page that does not exist when its sections are all dev', async () => {
     BETTING_VISIBILITY.card = 'dev'
     BETTING_VISIBILITY.log = 'dev'
-    renderRoute('/betting/week')
+    renderRoute('/betting')
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/not found/i)
   })
 
-  it('answers the math URL like a missing page when the math is dev, and leaves it out of the nav', async () => {
+  it('drops the Betting math tab of the Method page when the math is dev', async () => {
     BETTING_VISIBILITY.math = 'dev'
-    renderRoute('/betting')
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/not found/i)
-    expect(within(screen.getByRole('navigation', { name: 'Main' })).queryByRole('link', { name: 'Betting math' })).toBeNull()
+    renderRoute('/method')
+    await screen.findAllByRole('tab')
+    expect(screen.queryByRole('tab', { name: 'Betting math' })).toBeNull()
   })
 
   it('says what each visibility means', () => {
@@ -63,9 +56,9 @@ describe('betting guide visibility on the live site', () => {
 })
 
 describe('in development', () => {
-  it('shows every section, and the math page links to the card', async () => {
+  it('shows every section, and the math tab links to the weekly page', async () => {
     expect([reachable('dev'), listed('dev'), listed('unlisted')]).toEqual([true, true, true])
-    renderRoute('/betting')
-    expect(await screen.findByRole('link', { name: /weekly card/i })).toHaveAttribute('href', '/betting/week')
+    renderRoute('/method?tab=betting')
+    expect(await screen.findByRole('link', { name: /this week.s bets/i })).toHaveAttribute('href', '/betting')
   })
 })

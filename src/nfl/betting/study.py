@@ -18,22 +18,13 @@ from itertools import combinations
 import numpy as np
 import polars as pl
 
-from nfl.betting import history, prices
+from nfl.betting import history, prices, rules
+from nfl.betting.rules import BANDS
 
 TRAIN_END = 2015  # first half 2006-2015, second half 2016-2025: a pattern must hold in both
 Z90 = 1.645
 SEED = 20261120
 
-# price bands on the vig-free chance, with the American prices they correspond to
-BANDS = [
-    (0.80, 1.01, "heavy_fav", "Heavy favorite", "-400 or shorter"),
-    (0.65, 0.80, "big_fav", "Big favorite", "-185 to -400"),
-    (0.55, 0.65, "fav", "Favorite", "-120 to -185"),
-    (0.45, 0.55, "coin", "Coin flip", "-120 to +120"),
-    (0.35, 0.45, "dog", "Underdog", "+120 to +185"),
-    (0.20, 0.35, "big_dog", "Big underdog", "+185 to +400"),
-    (0.00, 0.20, "long", "Long shot", "+400 or longer"),
-]
 GAP_BUCKETS = [
     (0.0, 0.025, "0-2.5"),
     (0.025, 0.05, "2.5-5"),
@@ -659,26 +650,69 @@ def targeted_bar(games: pl.DataFrame, model: str) -> list[dict]:
     return out
 
 
-def guide_rule(s: pl.DataFrame, model: str) -> dict:
-    """The weekly card's moneyline rule (ADR 0033, guide v1) on history: the model's pick to win,
-    priced at about -185 or shorter (market chance 65%+), when the model rates it at least as
-    likely as the market does. Beside it: the picks the card says to skip (-120 to -185 favorites)
-    and coin flips. The bands were read off 2006-2025, so the out-of-sample check is 2026."""
+def _rule_stats(g: pl.DataFrame) -> dict:
+    n = g.height
+    if n == 0:
+        return {"n": 0}
+    p = g["profit"]
+    roi, se = float(p.mean()), float(p.std() or 0) / math.sqrt(n)
+    half = lambda lo, hi: g.filter(pl.col("season").is_between(lo, hi))["profit"]
+    h1, h2, rec = half(2006, TRAIN_END), half(TRAIN_END + 1, 2025), half(2021, 2025)
+    per_season = g.group_by("season").agg(pl.col("profit").sum())
+    return {
+        "n": n, "roi": round(roi, 4), "roi_lo": round(roi - Z90 * se, 4), "roi_hi": round(roi + Z90 * se, 4),
+        "roi_first": round(float(h1.mean()), 4) if len(h1) else None,
+        "roi_second": round(float(h2.mean()), 4) if len(h2) else None,
+        "roi_2021_2025": round(float(rec.mean()), 4) if len(rec) else None, "n_2021_2025": len(rec),
+        "win_rate": round(float(g["won"].mean()), 4),
+        "seasons_up": per_season.filter(pl.col("profit") > 0).height, "seasons": per_season.height,
+        "per_week": round(n / g.group_by("season", "week").len().height, 1),
+    }  # fmt: skip
+
+
+def side_rules(s: pl.DataFrame, model: str) -> dict:
+    """The card's rules (`rules.side_view`) on 2006-2025, every side of every game: what betting
+    each view returned at the closing-ish moneyline, per half and over 2021-2025. The gap limits
+    (LEAN_MIN, LEAN_MAX) were read off this same history, so `lean_dog` also gets the targeted bar
+    with a neighbouring condition (a lean of 0 to LEAN_MIN on the same underdogs)."""
     m = f"p_{model}"
-    d = _hist(s).filter(pl.col(m) > 0.5).with_columns(_period().alias("period"))
+    d = (
+        _hist(s).filter((pl.col("season") <= 2025) & pl.col(m).is_not_null())
+        .with_columns((pl.col(m) - pl.col("p_mkt")).alias("gap"), _band_expr().alias("band"))
+    )  # fmt: skip
+    views = [rules.side_view(a, b) for a, b in zip(d[m], d["p_mkt"], strict=True)]
+    d = d.with_columns(
+        pl.Series("view", [v[0] for v in views]), pl.Series("why", [v[1] for v in views])
+    )
     groups = {
-        "worth_a_look": d.filter((pl.col("p_mkt") >= 0.65) & (pl.col(m) >= pl.col("p_mkt"))),
-        "coin_flip": d.filter(pl.col("p_mkt").is_between(0.45, 0.55, closed="left")),
-        "skip_mid_favorite": d.filter(pl.col("p_mkt").is_between(0.55, 0.65, closed="left")),
+        "target": d.filter(pl.col("view") == "target"),
+        "lean_dog": d.filter(pl.col("why") == "lean_dog"),
+        "lean": d.filter(pl.col("why") == "lean"),
+        "avoid": d.filter(pl.col("view") == "avoid"),
+        "mid_fav": d.filter(pl.col("why") == "mid_fav"),
+        "long": d.filter(pl.col("why") == "long"),
+        "big_gap": d.filter(pl.col("why") == "big_gap"),
+        "no_view": d.filter(pl.col("why") == "no_view"),
     }
-    out = {}
-    for k, g in groups.items():
-        t = (
-            g.group_by("period")
-            .agg(*_roi_aggs(), pl.col("won").mean().alias("win_rate"))
-            .sort("period")
+    out = {k: _rule_stats(g) for k, g in groups.items()}
+    # the model's own pick to win, whatever the price: the naive way to use a model
+    out["model_pick"] = _rule_stats(d.filter(pl.col(m) > 0.5))
+    ld = out["lean_dog"]
+    nb = _rule_stats(
+        d.filter(
+            (pl.col("band") == "dog") & pl.col("gap").is_between(0, rules.LEAN_MIN, closed="left")
         )
-        out[k] = _rows(t)
+    )
+    checks = {
+        "both_halves": (ld.get("roi_first") or 0) > 0 and (ld.get("roi_second") or 0) > 0,
+        "range_above_zero": (ld.get("roi_lo") or 0) > 0,
+        "recent": (ld.get("roi_2021_2025") or 0) > 0,
+        "neighbour_agrees": (nb.get("roi") or 0) > 0,
+    }  # fmt: skip
+    out["lean_dog_bar"] = {"neighbour_roi": nb.get("roi"), "neighbour_n": nb.get("n"),
+                           "checks": checks, "passes": all(checks.values())}  # fmt: skip
+    out["limits"] = {"lean_min": rules.LEAN_MIN, "lean_max": rules.LEAN_MAX,
+                     "max_targets": rules.MAX_TARGETS}  # fmt: skip
     return out
 
 
@@ -859,7 +893,7 @@ def run(paths, model: str = "student", models: tuple[str, ...] = history.APPROAC
         "staking": staking(s, model, {r["season"]: r["w"] for r in path}),
         "spreads_totals": spreads_totals(games, model),
         "targeted": targeted_bar(games, model),
-        "guide_rule": guide_rule(s, model),
+        "rules": side_rules(s, model),
         "fees": fees(s, model),
         "kalshi_fee": kalshi_fee_table(),
         "live": live_lines(paths, model),

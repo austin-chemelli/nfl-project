@@ -82,8 +82,7 @@ def math_file(s: dict) -> dict:
         "lands_on_3": s["spreads_totals"]["lands_on_3_when_spread_near_3"],
         "fees": s["fees"],
         "exchange_fee": s["kalshi_fee"],
-        "shopping": (s.get("live") or {}).get("us") or None,
-        "guide_rule": s["guide_rule"],
+        "rules": s["rules"],
     }  # fmt: skip
 
 
@@ -109,11 +108,10 @@ def week_file(paths: Paths, games: pl.DataFrame, allrows: pl.DataFrame, lines: p
         "model": s["model"],
         "model_version": s["model_versions"].get(s["model"]),
         "stake_pct": guide.STAKE_PCT,
-        "max_looks": guide.MAX_LOOKS,
+        "max_targets": guide.MAX_TARGETS,
         "exchange_fee": guide.EXCHANGE_FEE,
-        "us_books": list(study.US_BOOKS),
         "card": c,
         "record": guide.live_record(paths, season, s),
-        "history": s["guide_rule"],
+        "rules": s["rules"],
         "closing": guide.closing_map(games, lines),
     }

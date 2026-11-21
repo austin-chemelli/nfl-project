@@ -2,7 +2,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ReferenceLine, Res
 import { Section } from '../../components/ui'
 import type { BettingMath } from '../../data/contract'
 import { pct, signedPct } from '../../lib/format'
-import { GuideRuleTable } from './GuideRuleTable'
+import { RulesTable } from './RulesTable'
 import { Lede } from './common'
 import { axis, tip } from './facts'
 
@@ -53,9 +53,11 @@ export function Models({ m }: { m: BettingMath }) {
         </div>
       </Section>
 
-      <Section title="The guide's own rule" help="The card sorts each game by price: worth a look, a coin flip, or skip. This is what each group returned in history.">
-        <Lede>What each group of the weekly card returned, by period.</Lede>
-        <GuideRuleTable rows={m.guide_rule} />
+      <Section title="Where the Student is worth following" help="The card's groups by how far the Student is from the market, and what each returned in history.">
+        <Lede>
+          The Student&apos;s whole gap to the market comes from games where it disagrees by {Math.round(m.rules.limits.lean_max * 100)} points or more; within that, it is as good as the market. That is why the card backs small leans and stays away from big ones.
+        </Lede>
+        <RulesTable rules={m.rules} />
       </Section>
     </>
   )

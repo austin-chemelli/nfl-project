@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { addBet, americanFromCents, newBetId, nowIso, validPrice, VENUES, type BetEntry, type Market, type Side } from '../../lib/betLog'
 import { american } from '../../lib/format'
-import type { Draft } from './WeekCard'
-import type { GameOption } from './weekFacts'
+import type { Draft, GameOption } from './weekFacts'
 
 const field = 'w-full rounded border border-line bg-surface-1 px-2 py-1 text-[14px]'
 const num = (s: string) => (s.trim() === '' ? NaN : Number(s.trim().replace('−', '-')))

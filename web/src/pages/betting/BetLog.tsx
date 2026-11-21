@@ -5,8 +5,7 @@ import { betClv, betProfit, deleteBet, downloadFile, exportName, gradeBet, impor
 import { american, dash, dollars, pts, signedPct } from '../../lib/format'
 import { BetForm } from './BetForm'
 import { PaperRecord } from './PaperRecord'
-import type { Draft } from './WeekCard'
-import { clvText, closingMap, describeBet, gameOptions } from './weekFacts'
+import { clvText, closingMap, describeBet, gameOptions, type Draft } from './weekFacts'
 
 const RESULT: Record<string, string> = { open: 'Open', win: 'Won', loss: 'Lost', push: 'Push' }
 const cls = (x: number | null) => (x == null || x === 0 ? '' : x > 0 ? 'text-[var(--good)]' : 'text-[var(--critical)]')

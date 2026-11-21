@@ -79,7 +79,6 @@ def betting_fixtures(src: Path) -> None:
 
 def main() -> None:
     src = get_paths().site
-    betting_fixtures(src)
     # Hand-built to match the slate fixture's game ids and to hold edge cases, so they survive a rerun.
     kept = {
         n: (OUT / n).read_bytes() for n in ("league.json", "similar.json") if (OUT / n).exists()
@@ -95,6 +94,7 @@ def main() -> None:
         (OUT / name).write_bytes(data)
 
     _dump(_load(src, "meta.json"), "meta.json")
+    betting_fixtures(src)  # after the folder is recreated, or the rmtree above removes them
 
     slate = _load(src, f"slate_2026_{WEEK:02d}.json")
     _dump(slate, f"slate_2026_{WEEK:02d}.json")
