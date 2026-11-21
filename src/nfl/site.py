@@ -646,8 +646,8 @@ def _swings_unsafe(paths, games, season, now, feats, injuries) -> dict[str, list
             qb1 = (chart.get(key) or [(None, None)])[0][0]
             mod = swings.apply(rows, side, {**v[q], "availability.qb1_out": 0.0 if q == qb1 else 1.0,
                                             "availability.qb_change": 0.0 if q == starts.get(key, {}).get("last") else 1.0})  # fmt: skip
-            base = swings.rescore(models, rows, gid, now)
-            what = swings.rescore(models, mod, gid, now)
+            base = swings.rescore(models, rows, gid, now, paths)
+            what = swings.rescore(models, mod, gid, now, paths)
             items.append({
                 "kind": "qb", "team": team, "why": why,
                 "assumed": {"qb": assumed, "name": c.get(assumed, assumed), "status": report.get(assumed),
@@ -1297,7 +1297,8 @@ def _contributions_pp(c: dict) -> dict:
     for f, v in c.items():
         if f in ("home_field", "news"):  # news has its own line (ADR 0032)
             continue
-        grp = FEATURE_GROUP.get(f, "other")
+        # Weeks 9-11 locks (registry v7) carry their narrative ratings as features: show them as News
+        grp = "news" if f.startswith("narrative.") else FEATURE_GROUP.get(f, "other")
         d = by_group.setdefault(grp, {"_logit": 0.0, "features": {}})
         d["_logit"] += v
         d["features"][f] = _pp(L, v)
@@ -1326,6 +1327,10 @@ def _news_block(
     r = rows.row(0, named=True)
     c = json.loads(r["contributions"]) if r["contributions"] else {}
     dl = float(c.get("news", 0.0))
+    if not dl and any(k.startswith("narrative.") for k in c):
+        return (
+            None  # a registry-v7 lock: the ratings were inside the Student's groups, no news term
+        )
     pts = news.points_from_logit(sum(c.values()), dl) if dl else 0.0
     reasons = []
     if dl:
@@ -1337,6 +1342,7 @@ def _news_block(
         "pts": _r(pts, 2),
         "football_only_spread": None if spread is None else _r(spread - pts, 1),
         "reasons": reasons,
+        "reasons_source": "recomputed",  # from the stored features and today's declared weights
         "cap_pts": news.CAP_PTS,
     }
 
@@ -2005,7 +2011,7 @@ def tracker(paths: Paths, season: int, reg: dict) -> dict:
             {"model_id": r["model_id"], "week": r["week"], "n": r["n"], "cum_log_loss": _r(r["cum"]), "live": r["live"], "n_live": r["n_live"]}
             for r in wk.iter_rows(named=True)
         ]  # fmt: skip
-        live = graded.filter(~pl.col("is_backfill"))
+        live = graded.filter(~pl.col("is_backfill") & pl.col("model_id").is_in(list(reg)))
         out["weeks_tracked"] = {
             r["model_id"]: r["weeks"]
             for r in live.group_by("model_id").agg(pl.concat_str(["season", "week"]).n_unique().alias("weeks")).iter_rows(named=True)

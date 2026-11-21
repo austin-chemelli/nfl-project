@@ -38,7 +38,6 @@ from nfl.approaches.engine import Model
 from nfl.approaches.schema import load_all
 from nfl.config import Paths, now_utc
 from nfl.features import store
-from nfl.features.groups import REGISTRY_VERSION
 from nfl.models import elo as elo_model
 from nfl.models import naive
 from nfl.predict import PRED_SCHEMA, append_rows
@@ -117,7 +116,7 @@ def load_models(paths: Paths, trained_through: int) -> tuple[list[tuple[str, Mod
         if a.id == "narrative":
             continue
         try:
-            m = fit.load(paths, a.id, trained_through)
+            m = fit.load_checked(paths, a.id, trained_through)
         except FileNotFoundError:
             missing.append(a.id)
             continue
@@ -125,12 +124,6 @@ def load_models(paths: Paths, trained_through: int) -> tuple[list[tuple[str, Mod
             raise RuntimeError(
                 f"{a.id}: the YAML changed since its fit (config hash mismatch); run `nfl fit` "
                 "before locking, or the lock would publish stale weights"
-            )
-        rv = m.meta.get("registry_version")
-        if rv is not None and rv != REGISTRY_VERSION:
-            raise RuntimeError(
-                f"{a.id}: fitted on feature registry v{rv}, the code is v{REGISTRY_VERSION} (ADR "
-                "0032 took the news ratings out of the groups); run `nfl fit` before locking"
             )
         out.append((a.id, m))
     try:

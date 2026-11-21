@@ -13,8 +13,12 @@ tracker judges the news against. Inputs are the features known before the lock: 
 and two countable facts (`news.*`, written by `features/narrative.py`; absent = 0). Two guards:
 
 - no double count: a team whose depth chart already flags the quarterback (`availability.qb1_out`,
-  `availability.qb_change`) gets no `qb_status`; a confirmed change counts only while
-  `availability.qb_change` is 0;
+  `availability.qb_change`) gets no `qb_status` and no `injury_impact`; a confirmed change counts
+  only while `availability.qb_change` is 0, and then it is the team's whole QB story (no
+  `qb_status`, `injury_impact` or `starters_ruled_out` on top); `injury_impact` counts only while
+  the official report lists no starter out (`availability.starters_out` is 0); ruled-out starters
+  count net of the official report: max(0, `news.starters_ruled_out` - `availability.starters_out`),
+  worked out here at the lock from the report rows the lock reads;
 - repeatability: a rating whose two research runs agree within one step on fewer than 70% of pairs,
   once at least 12 pairs exist, gets weight 0 (`nfl.llm.repeat.agreement`; unmeasured counts in full).
 
@@ -24,6 +28,7 @@ Pure: no model, no store writes. Historically every input is null, so the backfi
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -62,9 +67,10 @@ _W = [
         "the QB. Half of qb1_out (1.59 points) per step.",
     ),
     Weight(
-        "news.starters_ruled_out_new", -0.2, "starters ruled out",
-        "Starters reported out that the official report the lock read didn't list. The Student's "
-        "starters_out is worth 0.22 points each.",
+        "news.starters_ruled_out", -0.2, "starters ruled out",
+        "Starters the research reports out, minus those the official report the lock reads already "
+        "lists (availability.starters_out), so none counts twice. The Student's starters_out is "
+        "worth 0.22 points each.",
     ),
     Weight(
         "narrative.injury_impact", -0.2, "injuries",
@@ -84,7 +90,9 @@ LABELS: dict[str, str] = {w.feature: w.label for w in _W}
 
 QB_GATED = "narrative.qb_status"  # counts only while the chart doesn't flag the QB
 CHANGE_GATED = "news.qb_change_confirmed"  # counts only while availability.qb_change is 0
-GATES = ("availability.qb1_out", "availability.qb_change")
+RULED_OUT = "news.starters_ruled_out"  # net of the official report, at the lock
+INJURY = "narrative.injury_impact"  # counts only while the official report lists no starter out
+GATES = ("availability.qb1_out", "availability.qb_change", "availability.starters_out")
 INPUTS = [*WEIGHTS, *GATES]
 SIDES = ("home", "away")
 
@@ -96,7 +104,10 @@ def agreement_table(paths: Paths) -> dict[str, tuple[float, int]]:
         from nfl.llm import repeat  # lazy: written by the research side
 
         return dict(repeat.agreement(paths))
-    except ImportError, AttributeError, FileNotFoundError, OSError:
+    except ImportError, AttributeError:
+        return {}
+    except Exception as e:  # noqa: BLE001  (a corrupt or unreadable repeat file never blocks a lock)
+        warnings.warn(f"news: repeat agreement unreadable ({type(e).__name__}); declared weights", stacklevel=2)  # fmt: skip
         return {}
 
 
@@ -137,13 +148,21 @@ def reasons_for(
     for side, sign in (("home", 1.0), ("away", -1.0)):
         get = lambda f, s=side: vals.get((gid, s, f), 0.0)
         flagged = get("availability.qb1_out") != 0 or get("availability.qb_change") != 0
+        changed = get(CHANGE_GATED) != 0 and get("availability.qb_change") == 0  # the QB story
+        official = get("availability.starters_out")
         for feat, wt in w.items():
             v = get(feat)
+            if feat == RULED_OUT:
+                v = max(0.0, v - official)
             if not v or not wt:
                 continue
+            if feat == CHANGE_GATED and not changed:
+                continue
+            if changed and feat in (QB_GATED, INJURY, RULED_OUT):
+                continue  # one QB situation, one QB term
             if feat == QB_GATED and flagged:
                 continue
-            if feat == CHANGE_GATED and get("availability.qb_change") != 0:
+            if feat == INJURY and (flagged or official != 0):
                 continue
             out.append(
                 {"input": feat, "team": side, "value": round(v, 4), "pts": round(sign * wt * v, 4)}
@@ -214,7 +233,7 @@ def _label(feat: str, v: float) -> str:
         return "QB questionable" if v < 1.5 else "backup QB or unknown"
     if feat == "news.qb_change_confirmed":
         return "a new starting QB confirmed"
-    if feat == "news.starters_ruled_out_new":
+    if feat == RULED_OUT:
         return f"{n} starter{'s' if n != 1 else ''} ruled out"
     if feat == "narrative.injury_impact":
         return {1: "a role player or two hurt", 2: "a key starter hurt"}.get(

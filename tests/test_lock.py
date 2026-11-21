@@ -277,6 +277,48 @@ def test_stale_registry_fit_is_refused(tmp_path, monkeypatch):
         lock.load_models(None, 2025)
 
 
+def test_load_checked_refuses_stale_and_unstamped_grouped_fits(monkeypatch):
+    from nfl.approaches import fit
+
+    m = toy_model("student")
+    monkeypatch.setattr(fit, "load", lambda *a, **k: m)
+    for rv in ("7", None):  # unstamped = fitted before the stamp existed: grouped, so refused
+        m.meta.pop("registry_version", None)
+        if rv:
+            m.meta["registry_version"] = rv
+        with pytest.raises(RuntimeError, match="feature registry"):
+            fit.load_checked(None, "student", 2025)
+    m.meta["registry_version"] = fit.REGISTRY_VERSION
+    assert fit.load_checked(None, "student", 2025) is m
+    g = toy_model("global")  # not a grouped approach: nothing to check without a stamp
+    monkeypatch.setattr(fit, "load", lambda *a, **k: g)
+    assert fit.load_checked(None, "global", 2025) is g
+
+
+def test_run_score_and_league_inputs_refuse_a_v7_artifact(monkeypatch):
+    from datetime import datetime
+
+    from nfl.approaches import fit, run
+    from nfl.approaches.schema import load_all
+    from nfl.league import inputs
+
+    m = toy_model("student")
+    m.meta["registry_version"] = "7"
+    monkeypatch.setattr(fit, "load", lambda *a, **k: m)
+    games = pl.DataFrame({"game_id": ["G"], "season": [2026],
+                          "kickoff_utc": [datetime(2026, 11, 1, 18)]})  # fmt: skip
+    empty = pl.DataFrame(schema=store.FEATURE_SCHEMA)
+    monkeypatch.setattr(run, "scored_approaches", lambda paths, only=None: [load_all()["student"]])
+    monkeypatch.setattr(run.store, "read_features", lambda *a, **k: empty)
+    with pytest.raises(RuntimeError, match="registry v7"):
+        run._score(None, games)
+    monkeypatch.setattr(inputs.store, "games_frame", lambda paths: games)
+    monkeypatch.setattr(inputs.store, "read_features", lambda *a, **k: empty)
+    monkeypatch.setattr("nfl.predict.existing", lambda paths: pl.DataFrame())
+    with pytest.raises(RuntimeError, match="registry v7"):
+        inputs.load_inputs(None, 2026, datetime(2026, 11, 1))
+
+
 def test_the_twin_is_never_bet():
     from nfl import ledger
 

@@ -607,6 +607,7 @@ export const GameNews = z.looseObject({
   pts: nnum,
   football_only_spread: nnum, // the Student's spread before the news (home favored > 0)
   reasons: z.array(z.looseObject({ label: z.string(), team: z.string(), pts: num })),
+  reasons_source: z.string().optional(), // 'recomputed' = today's weights on the stored features
   cap_pts: num,
 })
 export type GameNews = z.infer<typeof GameNews>

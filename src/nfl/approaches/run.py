@@ -124,7 +124,7 @@ def _score(
         for a in approaches:
             # the one public line per approach (ADR 0004 amendment); global is a reference fit
             mid = a.id
-            model = fit.load(paths, mid, season - 1)
+            model = fit.load_checked(paths, mid, season - 1)
             # the artifact's own feature list: grouped approaches resolve against the store
             wide = g.select("game_id").join(
                 store.to_wide(vec, model.inputs), on="game_id", how="left"

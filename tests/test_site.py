@@ -657,6 +657,16 @@ def test_news_block_reads_points_from_the_stored_row_and_names_the_reasons():
     assert site._news_block(g, allrows, feats, {}, news.WEIGHTS) is None  # no research record
 
 
+def test_news_block_is_none_for_a_registry_v7_lock_and_legacy_narrative_files_under_news():
+    from nfl.approaches import news
+
+    g, allrows, feats, _ = _news_inputs()
+    legacy = allrows.with_columns(pl.lit(json.dumps({"home_field": 0.2, "narrative.qb_status": -0.3})).alias("contributions"))  # fmt: skip
+    assert site._news_block(g, legacy, feats, {"G": object()}, news.WEIGHTS) is None
+    out = site._contributions_pp({"home_field": 0.2, "narrative.qb_status": -0.3, "strength.elo_pre": 0.4})  # fmt: skip
+    assert "news" in out["groups"] and "other" not in out["groups"]
+
+
 def test_contributions_sum_to_the_logit_and_news_has_its_own_piece():
     _, allrows, _, _ = _news_inputs()
     out = site._contributions_pp(json.loads(allrows["contributions"][0]))

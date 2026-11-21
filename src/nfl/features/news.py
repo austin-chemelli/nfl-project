@@ -7,10 +7,13 @@ news adjustment (`nfl.approaches.news`) reads facts, not moods:
   neither the franchise's primary passer in its previous game nor the depth chart's QB1 as of the
   record's `known_as_of` (the depth-chart disagreement, idea A6); 0 otherwise (nothing named, or the
   same man; also 0 when no reference QB is known, as nothing can be said to differ).
-- `news.starters_ruled_out_new`: how many of the record's `starters_ruled_out` the injury report
-  rows known before the record do not list as Out or Doubtful for that game. Rows without a
-  timestamp count as known (the convention of `availability`'s value features); null when the
-  injury table is absent.
+- `news.starters_ruled_out`: how many names the record's `starters_ruled_out` holds (the record's own
+  frozen count). Whether the official report already lists them is decided at the lock
+  (`nfl.approaches.news.adjustment`, from the report rows the lock reads): recomputing it here would
+  move on every rebuild, as 2025-26 injury rows carry no `date_modified`.
+
+The QB check reads depth charts as of the record's `known_as_of` (timestamped charts from 2025, so a
+rebuild never rewrites it) and the franchise's previous game's passer (a fixed fact).
 
 Rows are stamped with the record's `known_as_of` (a lock only sees records before it), one set per
 record, never backfilled. Records older than schema v3 emit nothing: they didn't ask. This is its
@@ -23,7 +26,6 @@ from __future__ import annotations
 import warnings
 from datetime import datetime
 
-import duckdb
 import polars as pl
 
 from nfl.config import Paths
@@ -50,24 +52,40 @@ def player_names(paths: Paths) -> dict[str, set[str]]:
     return out
 
 
-def load_injuries(paths: Paths) -> pl.DataFrame | None:
-    """(season, week, franchise, name, status, date_modified), or None without the table."""
-    glob = f"{paths.curated_table('injuries').as_posix()}/*/*.parquet"
-    if not list(paths.curated_table("injuries").glob("*/*.parquet")):
-        return None
-    d = (
-        duckdb.connect()
-        .sql(
-            'select cast(season as bigint) as season, cast(week as bigint) as "week", team, '
-            "full_name as name, report_status as status, timezone('UTC', date_modified) as date_modified "
-            f"from read_parquet('{glob}', hive_partitioning=true, union_by_name=true)"
-        )
-        .pl()
-    )
-    d = d.with_columns(pl.col("date_modified").dt.replace_time_zone(None).cast(pl.Datetime("us")))
-    return d.with_columns(availability._franchise("team").alias("franchise")).select(
-        "season", "week", "franchise", "name", "status", "date_modified"
-    )
+def _qb_refs(
+    records: list[GameNarrative],
+    gt: pl.DataFrame,
+    prev: pl.DataFrame | None,
+    depth: pl.DataFrame | None,
+    names: dict[str, set[str]],
+) -> dict[tuple[int, str], set[str]]:
+    """(id(record), team) -> names of the charted QB1 as of the record's `known_as_of` and the
+    previous game's passer. One chart lookup per round of records (a game normally has one record,
+    so one call), never per record."""
+    out: dict[tuple[int, str], set[str]] = {}
+    if depth is None or prev is None or not records:
+        return out
+    passer = {(r[0], r[1]): r[2] for r in prev.drop_nulls("prev_passer").iter_rows()}
+    seen: dict[tuple[str, str], int] = {}
+    rounds: dict[int, list[tuple[GameNarrative, str]]] = {}
+    for rec in records:
+        for side in (rec.home, rec.away):
+            k = (rec.game_id, side.team)
+            rounds.setdefault(seen.get(k, 0), []).append((rec, side.team))
+            seen[k] = seen.get(k, 0) + 1
+    for batch in rounds.values():
+        cut = pl.DataFrame(
+            {"game_id": [r.game_id for r, _ in batch], "team": [t for _, t in batch],
+             "cutoff": [r.known_as_of for r, _ in batch]},
+            schema={"game_id": pl.Utf8, "team": pl.Utf8, "cutoff": pl.Datetime("us")},
+        )  # fmt: skip
+        one = gt.drop("cutoff").join(cut, on=["game_id", "team"], how="inner")
+        chart = availability._charts(one, depth).filter(pl.col("pos") == "QB").sort("ord")
+        qb1 = {(r[0], r[1]): r[2] for r in chart.group_by("game_id", "team", maintain_order=True).first().select("game_id", "team", "gsis_id").iter_rows()}  # fmt: skip
+        for rec, team in batch:
+            ids = [qb1.get((rec.game_id, team)), passer.get((rec.game_id, team))]
+            out[(id(rec), team)] = {n for i in ids if i for n in names.get(i, ())}
+    return out
 
 
 def _rows(
@@ -75,43 +93,30 @@ def _rows(
     games: pl.DataFrame,
     plays: pl.DataFrame | None,
     depth: pl.DataFrame | None,
-    inj: pl.DataFrame | None,
     names: dict[str, set[str]],
     build_ts: datetime,
 ) -> pl.DataFrame:
-    if inj is not None:  # naive UTC, null-safe (a table with no stamps at all is typed null)
-        inj = inj.with_columns(pl.col("date_modified").cast(pl.Datetime("us")))
     gt = availability._game_teams(games, build_ts)
     prev = availability._prev_passer(gt, plays) if plays is not None else None
     team_of = {(r["game_id"], r["team"]): r for r in gt.iter_rows(named=True)}
     rows = []
+    refs = _qb_refs(records, gt, prev, depth, names)
     for rec in records:
         for side in (rec.home, rec.away):
-            gtr = team_of.get((rec.game_id, side.team))
-            if gtr is None:
+            if (rec.game_id, side.team) not in team_of:
                 continue
-            # the QB check: references as of the record, never as of the lock or the build
-            refs: set[str] = set()
-            if depth is not None and prev is not None:
-                one = gt.filter((pl.col("game_id") == rec.game_id) & (pl.col("team") == side.team))
-                one = one.with_columns(pl.lit(rec.known_as_of).cast(pl.Datetime("us")).alias("cutoff"))  # fmt: skip
-                chart = availability._charts(one, depth).filter(pl.col("pos") == "QB").sort("ord")
-                ids = chart["gsis_id"].head(1).to_list()
-                ids += prev.filter((pl.col("game_id") == rec.game_id) & (pl.col("team") == side.team))["prev_passer"].drop_nulls().to_list()  # fmt: skip
-                refs = {n for i in ids for n in names.get(i, ())}
+            r = refs.get((id(rec), side.team), set())
             named = side.qb_named_starter
-            qb = 1.0 if named and refs and not any(same_person(named, n) for n in refs) else 0.0
+            qb = 1.0 if named and r and not any(same_person(named, n) for n in r) else 0.0
             rows.append((rec.game_id, side.team, "news.qb_change_confirmed", qb, rec.known_as_of))
-            new = None
-            if inj is not None:
-                listed = inj.filter(
-                    (pl.col("season") == rec.season) & (pl.col("week") == rec.week)
-                    & (pl.col("franchise") == gtr["franchise"]) & pl.col("status").is_in(availability.OUT_STATUSES)
-                    & (pl.col("date_modified").is_null() | (pl.col("date_modified") < rec.known_as_of))
-                )["name"].drop_nulls().to_list()  # fmt: skip
-                new = float(sum(not any(same_person(n, x) for x in listed) for n in side.starters_ruled_out))  # fmt: skip
             rows.append(
-                (rec.game_id, side.team, "news.starters_ruled_out_new", new, rec.known_as_of)
+                (
+                    rec.game_id,
+                    side.team,
+                    "news.starters_ruled_out",
+                    float(len(side.starters_ruled_out)),
+                    rec.known_as_of,
+                )
             )
     if not rows:
         return pl.DataFrame(schema=store.FEATURE_SCHEMA)
@@ -141,4 +146,4 @@ def build(paths: Paths, games: pl.DataFrame, build_ts: datetime) -> pl.DataFrame
         )
     except Exception as e:  # noqa: BLE001  (no charts or plays on this machine: only the injury half)
         print(f"(news: no depth charts or plays: {type(e).__name__})")
-    return _rows(records, games, plays, depth, load_injuries(paths), player_names(paths), build_ts)
+    return _rows(records, games, plays, depth, player_names(paths), build_ts)

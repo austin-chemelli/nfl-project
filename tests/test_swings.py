@@ -72,3 +72,17 @@ def test_weather_is_a_factor_only_past_the_thresholds():
         == "Kickoff forecast: wind 17 mph, 60% chance of rain or snow, 28°F"
     )
     assert swings.weather_text(40.0, 15.0, None) == "Kickoff forecast: wind 15 mph"
+
+
+def test_rescore_passes_paths_so_the_gated_weights_apply(monkeypatch):
+    from nfl import lock
+
+    seen = {}
+
+    def fake(models, rows, slate, cut, *, paths=None, with_core=False):
+        seen["paths"] = paths
+        return []
+
+    monkeypatch.setattr(lock, "score_approaches", fake)
+    swings.rescore([], pl.DataFrame(), "G", datetime(2026, 11, 1), "P")
+    assert seen["paths"] == "P"

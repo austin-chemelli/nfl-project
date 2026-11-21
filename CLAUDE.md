@@ -61,6 +61,8 @@ uv run nfl ledger            # open paper bets at last lock, settle, CLV -> mart
 uv run nfl narrative slate 2026 8   # games to research; `ingest <file>` validates+stores a record; `example`, `list`
 uv run nfl narrative claude 2026 8 [game_id...] [--no-store]   # research on headless Claude Code (Max login, ADR 0030) -> producer 'claude_max' (~3.5 min/game, 3 at once); without ids it skips games stored in this pass
 uv run nfl narrative run 2026 8 [game_id...]   # local research on the desktop model -> producer 'local' (~15 min/game; ADR 0014, being replaced)
+uv run nfl narrative claude 2026 8 --status-only   # late-status pass (ADR 0032): QB, designations, ruled out; merged onto the latest record, the lock never waits for it
+uv run nfl narrative repeat 2026 8 [--games 3] [--report]   # research games again, not stored; rating agreement -> marts/narrative_repeat.parquet (the news adjustment reads it)
 uv run nfl narrative week | check   # "<season> <week>" of the next games; check = exit 1 if a game lacks a record from the last desktop pass (cloud job before each lock)
 bash scripts/desktop-setup.sh [--test-game ID | --enable | --disable]   # on the desktop only: check and install the narrative timer (ADR 0030)
 uv run nfl narrative recompose <run.debug.json> --tag X [--model M] [--think job=low,...] [--job-models matchup=qwen3:14b|none] [--rebuild]  # rerun only the writing jobs (or only the checks) on a saved run's facts -> raw/narrative_local/experiments/X/

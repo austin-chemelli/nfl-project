@@ -707,7 +707,8 @@ def _attribution(r: dict, meta: dict, y: float, feature_group: dict, groups: dic
     for f, v in c.items():
         if f == "home_field":
             continue
-        grp = "news" if f == "news" else feature_group.get(f, "other")  # ADR 0032
+        # ADR 0032; Weeks 9-11 locks (registry v7) carry narrative.* features: they are the News too
+        grp = "news" if f == "news" or f.startswith("narrative.") else feature_group.get(f, "other")
         by_group[grp] = by_group.get(grp, 0.0) + v
     base = _ll(_expit(total), y)
     out = []

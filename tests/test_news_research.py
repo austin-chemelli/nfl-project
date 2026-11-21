@@ -125,8 +125,8 @@ CHART_LAMAR = ("BAL", "2026-10-27T12:00:00Z", "G_LAMAR")
 CHART_JB_LATE = ("BAL", "2026-10-29T12:00:00Z", "G_JB")  # after the record's stamp
 
 
-def _feat(records, depth, inj=None, plays=PLAYS):
-    rows = news._rows(records, GAMES, plays, depth, inj, NAMES, BUILD)
+def _feat(records, depth, plays=PLAYS):
+    rows = news._rows(records, GAMES, plays, depth, NAMES, BUILD)
     return {(r["side"], r["feature"]): r["value"] for r in rows.iter_rows(named=True)}, rows
 
 
@@ -153,22 +153,12 @@ def test_qb_change_uses_the_chart_as_of_the_record_not_a_later_one():
     assert f2[("away", "news.qb_change_confirmed")] == 0.0
 
 
-def _inj(name, status, modified):
-    return pl.DataFrame({"season": [2026], "week": [8], "franchise": ["BAL"], "name": [name],
-                         "status": [status], "date_modified": [modified]})  # fmt: skip
-
-
-def test_starters_ruled_out_new_counts_names_the_report_did_not_list_before_the_record():
+def test_starters_ruled_out_is_the_records_own_frozen_count():
     r = rec(away={"starters_ruled_out": ["Jacoby Brissett", "Lamar Jackson"]})
-    key = ("away", "news.starters_ruled_out_new")
-    d = _depth([CHART_LAMAR])
-    assert _feat([r], d, _inj("Jacoby Brissett", "Out", datetime(2026, 10, 27, 12)))[0][key] == 1.0
-    # the same row stamped after the record is invisible to it: both names are new
-    assert _feat([r], d, _inj("Jacoby Brissett", "Out", datetime(2026, 10, 29, 12)))[0][key] == 2.0
-    # Questionable is not Out; an unstamped row counts as known (availability's convention)
-    assert _feat([r], d, _inj("Jacoby Brissett", "Questionable", None))[0][key] == 2.0
-    assert _feat([r], d, _inj("J. Brissett", "Doubtful", None))[0][key] == 1.0
-    assert _feat([r], d, None)[0][key] is None
+    f, _ = _feat([r], _depth([CHART_LAMAR]))
+    assert f[("away", "news.starters_ruled_out")] == 2.0
+    assert f[("home", "news.starters_ruled_out")] == float(len(r.home.starters_ruled_out))
+    assert not hasattr(news, "load_injuries")  # nothing in a rebuild reads the report
 
 
 def test_a_record_stamped_after_a_lock_is_invisible_to_it():

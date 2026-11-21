@@ -25,16 +25,16 @@ cd "$(dirname "$0")/.."
 
 producer=${NARRATIVE_PRODUCER:-local}
 dry=0
-status=0
+status_mode=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --producer) producer=${2:?--producer needs claude or local}; shift 2 ;;
     --dry-run) dry=1; shift ;;
-    --status) status=1; shift ;;
+    --status) status_mode=1; shift ;;
     *) echo "usage: desktop-narrative.sh [--producer claude|local] [--status] [--dry-run]"; exit 2 ;;
   esac
 done
-if [ "$status" = 1 ]; then producer=claude; fi
+if [ "$status_mode" = 1 ]; then producer=claude; fi
 case "$producer" in claude|local) ;; *) echo "unknown producer '$producer'"; exit 2 ;; esac
 
 PROJECT="${GCP_PROJECT:-nfl-project-prod}"
@@ -120,11 +120,11 @@ if [ "$dry" = 1 ]; then
   echo "--dry-run: checks passed; would research $season week $week with producer $producer"
   exit 0
 fi
-kind="pass"; [ "$status" = 1 ] && kind="status pass"
+kind="pass"; [ "$status_mode" = 1 ] && kind="status pass"
 log INFO "desktop narrative $kind started: $season week $week ($producer)"
 
 result=$(mktemp)
-if [ "$status" = 1 ]; then
+if [ "$status_mode" = 1 ]; then
   uv run nfl narrative claude "$season" "$week" --status-only 2>&1 | tee "$result"
 elif [ "$producer" = claude ]; then
   uv run nfl narrative claude "$season" "$week" 2>&1 | tee "$result"

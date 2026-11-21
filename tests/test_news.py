@@ -34,7 +34,7 @@ def test_declared_weights_match_the_adr_and_each_has_a_why():
     assert news.WEIGHTS == {
         "news.qb_change_confirmed": -1.1,
         "narrative.qb_status": -0.5,
-        "news.starters_ruled_out_new": -0.2,
+        "news.starters_ruled_out": -0.2,
         "narrative.injury_impact": -0.2,
         "narrative.motivation": 0.3,
     }
@@ -59,7 +59,7 @@ def test_sign_is_home_minus_away_in_points():
 
 def test_cap_binds_at_one_and_a_half_points_both_ways():
     rows = [("home", "narrative.qb_status", 2.0), ("home", "narrative.injury_impact", 3.0),
-            ("home", "news.starters_ruled_out_new", 4.0)]  # fmt: skip
+            ("home", "news.starters_ruled_out", 4.0)]  # fmt: skip
     pts, rs = adj(rows)
     assert sum(r["pts"] for r in rs) == pytest.approx(
         -(1.0 + 0.6 + 0.8)
@@ -154,7 +154,7 @@ def test_apply_moves_spread_by_the_points_and_contributions_still_sum_to_the_log
 
 def test_describe_speaks_plain_words_on_each_teams_own_line():
     rs = [{"input": "narrative.qb_status", "team": "home", "value": 1.0, "pts": -0.5},
-          {"input": "news.starters_ruled_out_new", "team": "away", "value": 2.0, "pts": 0.4}]  # fmt: skip
+          {"input": "news.starters_ruled_out", "team": "away", "value": 2.0, "pts": 0.4}]  # fmt: skip
     d = news.describe(rs, "HOU", "IND")
     assert d == [{"label": "QB questionable", "team": "HOU", "pts": -0.5},
                  {"label": "2 starters ruled out", "team": "IND", "pts": -0.4}]  # fmt: skip
@@ -165,3 +165,40 @@ def test_points_from_logit_recovers_the_adjustment():
     logit = np.log(norm.cdf(spread / 13.5) / (1 - norm.cdf(spread / 13.5)))
     d = float(news.adj_logit(spread, logit, np.array([1.2]))[0])
     assert news.points_from_logit(float(logit[0]) + d, d) == pytest.approx(1.2)
+
+
+def test_ruled_out_counts_net_of_the_official_report():
+    assert adj([("home", "news.starters_ruled_out", 3.0)])[0] == pytest.approx(-0.6)
+    pts, rs = adj([("home", "news.starters_ruled_out", 3.0), ("home", "availability.starters_out", 2.0)])  # fmt: skip
+    assert pts == pytest.approx(-0.2) and rs[0]["value"] == 1.0
+    assert adj([("home", "news.starters_ruled_out", 2.0), ("home", "availability.starters_out", 2.0)]) == (0.0, [])  # fmt: skip
+
+
+def test_injury_impact_counts_only_when_the_report_and_chart_show_nothing():
+    base = ("home", "narrative.injury_impact", 2.0)
+    assert adj([base])[0] == pytest.approx(-0.4)
+    assert adj([base, ("home", "availability.starters_out", 1.0)]) == (0.0, [])
+    assert adj([base, ("home", "availability.qb1_out", 1.0)]) == (0.0, [])
+    assert adj([base, ("home", "availability.qb_change", 1.0)]) == (0.0, [])
+
+
+def test_one_qb_situation_yields_one_qb_term():
+    # a confirmed change: no qb_status, no injury_impact, no ruled-out starters on top (TB at DET)
+    rows = [("home", "news.qb_change_confirmed", 1.0), ("home", "narrative.qb_status", 2.0),
+            ("home", "narrative.injury_impact", 3.0), ("home", "news.starters_ruled_out", 2.0)]  # fmt: skip
+    pts, rs = adj(rows)
+    assert [r["input"] for r in rs] == ["news.qb_change_confirmed"] and pts == pytest.approx(-1.1)
+    # without the change the other terms are back
+    assert len(adj(rows[1:])[1]) == 3
+
+
+def test_agreement_table_survives_a_corrupt_file(tmp_path):
+    from nfl.config import Paths
+
+    paths = Paths(tmp_path)
+    f = paths.marts / "narrative_repeat.parquet"
+    f.parent.mkdir(parents=True)
+    f.write_bytes(b"not a parquet file")
+    with pytest.warns(UserWarning, match="repeat agreement unreadable"):
+        assert news.agreement_table(paths) == {}
+    assert news.weights(paths) == news.WEIGHTS
