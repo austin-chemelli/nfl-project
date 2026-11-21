@@ -42,7 +42,7 @@ import polars as pl
 from nfl import market_books
 from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
-from nfl.features.groups import FEATURE_GROUP, GROUPS, HEADINGS, REGISTRY_VERSION
+from nfl.features.groups import FEATURE_GROUP, GROUPS, HEADINGS, MARKET_GROUP_CAP, REGISTRY_VERSION
 from nfl.league.teams import team_latest, teams_file
 
 RETRO_PUBLISH_SEASONS = {2026}  # retros are published for these seasons only (ADR 0016)
@@ -826,6 +826,10 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
     reg = model_registry()
 
     allrows = display_rows(paths, games, now)
+    _safe(
+        _ensure_matrix, None, paths
+    )  # ADR 0034: Build's matrix follows the fits (group_edges reads it)
+    custom = _safe(custom_inputs, {}, paths, games, allrows, season)  # ADR 0034: You's inputs
     market = _market_by_game(paths, games, now)
     # the market pieces (ADR 0024) are additive page data: a failure costs that piece, never the build
     season_lines = _safe(_season_lines, pl.DataFrame(), paths, season, now)
@@ -875,6 +879,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             row |= _header_qbs(row)
             points = lines.get(g["game_id"], [])
             row["line_move"] = _safe(_line_move, None, points, locks.get(g["game_id"]))
+            row["composites"] = custom.get(g["game_id"])
             slate_games.append(row)
             detail = row | _game_detail(g, allrows, feats, tend, injuries, narr, now, edges)
             detail["market_history"] = _safe(lambda pts: [_line_point(p) for p in pts], [], points)
@@ -935,8 +940,12 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             "split_defs": split_defs(),
             "feature_bands": feature_bands(feats, games, now),
             "last_lock": _last_lock(paths),
+            "custom": _safe(custom_meta, None, paths),
         },
     )
+    doc = _safe(custom_season, None, paths, games, season)
+    if doc is not None:
+        _write(site / f"custom_{season}.json", doc, compact=True)
     _write(
         site / "tracker.json",
         tracker(paths, season, reg)
@@ -1022,6 +1031,116 @@ def group_edges(
                 "strength_pct": _r(pct, 0),
             }
     return out
+
+
+# ------------------------------------------------------------- your own approach (ADR 0034, M30)
+# A reader's custom line is scored in the browser, never here: these are only its inputs (the
+# engine's group composites) at the moment the headline line beside it was made. Nothing in this
+# section writes a prediction, a grade or a bet.
+
+CUSTOM_SCHEMA = "1"
+CUSTOM_ROUND = (
+    4  # decimals of a composite: |error| ≤ 12 · 0.00005 in Σ W c, far below a display digit
+)
+
+
+def _ensure_matrix(paths: Paths) -> None:
+    from nfl.approaches import diy
+
+    if diy.ensure_matrix(paths):
+        print(f"site: rebuilt diy_matrix.json for {diy.matrix_key(paths)}")
+
+
+def custom_meta(paths: Paths) -> dict | None:
+    """meta.custom: what a saved custom line is tied to (registry, matrix key) and which groups it
+    weighs. The browser compares `key` with its saved calibration and refits on a mismatch, from the
+    published matrix: so `key` is read back from that file, and None (no "You" anywhere) when it
+    doesn't name the current fits (a failed rebuild must not leave readers waiting on a refit)."""
+    from nfl.approaches import diy
+
+    try:
+        key = json.loads((paths.site / "diy_matrix.json").read_text()).get("key")
+    except OSError, ValueError:
+        return None
+    if key is None or key != diy.matrix_key(paths):
+        return None
+    return {
+        "registry_version": REGISTRY_VERSION,
+        "key": key,
+        "trained_through": diy.LAST_SEASON,
+        "groups": diy.GROUP_IDS,
+        "live_only": diy.LIVE_ONLY,
+        "market_cap": MARKET_GROUP_CAP,
+    }
+
+
+def _composite_doc(r: dict, groups: list[str], as_of) -> dict:
+    return {
+        "as_of": _ts(as_of),
+        "neutral": bool(r["neutral"]),
+        "c": {g: round(float(r[f"c_{g}"]), CUSTOM_ROUND) for g in groups},
+    }
+
+
+def custom_inputs(paths: Paths, games: pl.DataFrame, allrows: pl.DataFrame, season: int) -> dict:
+    """{game_id: {as_of, neutral, c}} for every game with a headline row on the pages (lock,
+    backfill, preview or pregame), as of that row's lock_ts: "You" reads what the Student read."""
+    from nfl.approaches import diy
+
+    if allrows.is_empty():
+        return {}
+    head = allrows.filter(pl.col("model_id") == HEADLINE_ID).select(
+        "game_id", pl.col("lock_ts").cast(pl.Datetime("us"))
+    )
+    head = head.filter(pl.col("game_id").is_in(games["game_id"].to_list())).unique("game_id")
+    comp = diy.composites_at(paths, head, season)
+    if comp.is_empty():
+        return {}
+    at = dict(head.iter_rows())
+    return {r["game_id"]: _composite_doc(r, diy.GROUP_IDS, at[r["game_id"]]) for r in comp.iter_rows(named=True)}  # fmt: skip
+
+
+def custom_season(paths: Paths, games: pl.DataFrame, season: int) -> dict | None:
+    """site/custom_<season>.json: every graded game of the season with the composites as of the
+    Student's graded row (the same lock the tracker scores), the Student's and the market's graded
+    p. The browser scores a saved line on exactly these games for its unofficial record."""
+    from nfl.approaches import diy
+
+    graded = _read(paths, "graded")
+    if graded.is_empty():
+        return None
+    cur = graded.filter(pl.col("season") == season)
+    stu = cur.filter(pl.col("model_id") == HEADLINE_ID).select(
+        "game_id", "week", pl.col("lock_ts").cast(pl.Datetime("us")), "is_backfill",
+        pl.col("p_home").alias("p_student"), "home_win",
+    )  # fmt: skip
+    if stu.is_empty():
+        return None
+    mkt = cur.filter(pl.col("model_id") == "market_baseline").select(
+        "game_id", pl.col("p_home").alias("p_market")
+    )
+    comp = diy.composites_at(paths, stu.select("game_id", "lock_ts"), season)
+    if comp.is_empty():
+        return None
+    teams = games.select("game_id", "home_team", "away_team", "kickoff_utc")
+    rows = (
+        stu.join(comp, on="game_id").join(mkt, on="game_id", how="left")
+        .join(teams, on="game_id", how="left").sort("week", "kickoff_utc", "game_id")
+    )  # fmt: skip
+    return {
+        "schema_version": CUSTOM_SCHEMA,
+        "season": season,
+        "key": diy.matrix_key(paths),
+        "groups": diy.GROUP_IDS,
+        "games": [
+            {"game_id": r["game_id"], "week": r["week"], "home": r["home_team"], "away": r["away_team"],
+             "kickoff_utc": _ts(r["kickoff_utc"]), "home_won": int(r["home_win"]),
+             "status": BACKFILL if r["is_backfill"] else LOCKED,
+             "p_student": _r(r["p_student"]), "p_market": _r(r["p_market"]),
+             **_composite_doc(r, diy.GROUP_IDS, r["lock_ts"])}
+            for r in rows.iter_rows(named=True)
+        ],
+    }  # fmt: skip
 
 
 def _last_lock(paths: Paths) -> dict | None:

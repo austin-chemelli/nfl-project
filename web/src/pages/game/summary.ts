@@ -12,6 +12,7 @@ import type { Efficiency, Game, Meta, RetroGame, TeamRetro } from '../../data/co
 import { pct, spreadLabel } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf } from '../../lib/meta'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
+import { theNameLower } from '../../lib/models'
 import { deservedView, homeFieldPp, injuryRank, neutralDiscount, sortInjuries } from './helpers'
 import { etStamp, fmtPts } from './line'
 
@@ -43,9 +44,9 @@ function winnerOf(g: Game): string | null {
   return m > 0 ? g.home : g.away
 }
 
-export function summaryTiles(g: Game, meta: Meta, retro: RetroGame | null): TileSpec[] {
-  if (g.result == null) return pregameTiles(g, meta)
-  return retro != null ? finishedTiles(g, retro) : finishedNoRetroTiles(g, meta)
+export function summaryTiles(g: Game, meta: Meta, retro: RetroGame | null, headline: string = HEADLINE): TileSpec[] {
+  if (g.result == null) return pregameTiles(g, meta, headline)
+  return retro != null ? finishedTiles(g, retro) : finishedNoRetroTiles(g, meta, headline)
 }
 
 // ------------------------------------------------------------------------------------- shared
@@ -67,18 +68,21 @@ function resultTile(g: Game, tab: TabId): TileSpec {
     : { id: 'result', label: 'Result', value: 'Favorite won', sub: `${w} was ${pct(pW)} in the market ${marketWhen(g)}`, tab, team: w }
 }
 
+/** "Analyst, Student and You". */
+const joinNames = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`)
+
 /** How many approaches picked the winner, from the game file's picks. */
 function approachesRight(g: Game): { right: string[]; n: number } {
   const w = winnerOf(g)
-  const ps = APPROACHES.filter((a) => g.models[a]?.p_home != null)
+  const ps = APPROACHES.filter((a) => a !== 'you' && g.models[a]?.p_home != null) // the published four; yours is in the retro's table
   const right = w == null ? [] : ps.filter((a) => fav(g.models[a].p_home, g.home, g.away) === w)
   return { right: right.map((a) => SHORT[a]), n: ps.length }
 }
 
 // ------------------------------------------------------------------------------------- pregame
 
-function pregameTiles(g: Game, meta: Meta): TileSpec[] {
-  const tiles: TileSpec[] = [pickTile(g), marketTile(g, meta.generated_at), factorTile(g, meta)]
+function pregameTiles(g: Game, meta: Meta, headline: string): TileSpec[] {
+  const tiles: TileSpec[] = [pickTile(g, headline), marketTile(g, meta.generated_at, headline), factorTile(g, meta, headline)]
   const absence = absenceTile(g)
   tiles.push(absence ?? edgeTile(g, meta) ?? { id: 'absence', label: 'Key absence', value: 'None listed', sub: g.injuries.length ? 'no one out or doubtful' : 'no official report yet', tab: 'health' })
   const score = scoreTile(g)
@@ -98,12 +102,12 @@ export function scoreTile(g: Game): TileSpec | null {
   return { id: 'score', label: 'Expected score', value: `${hi} ${a}–${b} ${lo}`, sub, tab: 'approaches', team: hi }
 }
 
-function pickTile(g: Game): TileSpec {
-  const p = g.models[HEADLINE]?.p_home
+export function pickTile(g: Game, headline: string = HEADLINE): TileSpec {
+  const p = g.models[headline]?.p_home
   if (p == null) return { id: 'pick', label: 'The pick', value: '–', sub: 'not scored yet', tab: 'approaches' }
-  const sp = g.models[HEADLINE]?.spread_home
+  const sp = g.models[headline]?.spread_home
   const spread = sp == null ? '' : `, ${spreadLabel(sp, g.home, g.away)}`
-  return { id: 'pick', label: 'The pick', value: `${fav(p, g.home, g.away)} ${favPct(p)}`, sub: `the ${SHORT[HEADLINE]}'s line${spread}`, tab: 'approaches', modelId: HEADLINE, team: fav(p, g.home, g.away) }
+  return { id: 'pick', label: 'The pick', value: `${fav(p, g.home, g.away)} ${favPct(p)}`, sub: `${headline === 'you' ? 'your line (unofficial)' : `${theNameLower(headline)}'s line`}${spread}`, tab: 'approaches', modelId: headline, team: fav(p, g.home, g.away) }
 }
 
 /** The line's date when it is more than 3 days older than the site data (lines for later weeks lag). */
@@ -114,9 +118,9 @@ function lineAge(asOf: string | null | undefined, now: string): string {
   return ` · line from ${new Date(asOf).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' })}`
 }
 
-function marketTile(g: Game, now: string): TileSpec {
+export function marketTile(g: Game, now: string, headline: string = HEADLINE): TileSpec {
   const mk = marketP(g)
-  const p = g.models[HEADLINE]?.p_home
+  const p = g.models[headline]?.p_home
   const line = g.market?.spread_home
   const mkText = mk == null
     ? 'no market line yet'
@@ -129,8 +133,8 @@ function marketTile(g: Game, now: string): TileSpec {
 }
 
 /** The group (or home field) that moves the headline line most. */
-function factorTile(g: Game, meta: Meta): TileSpec {
-  const c = g.contributions[HEADLINE]
+export function factorTile(g: Game, meta: Meta, headline: string = HEADLINE): TileSpec {
+  const c = g.contributions[headline]
   if (!c) return { id: 'factor', label: 'Biggest factor', value: '–', sub: 'no breakdown', tab: 'preview' }
   // the neutral-site discount sits on home field, as on the Preview chart
   const items = [
@@ -141,7 +145,7 @@ function factorTile(g: Game, meta: Meta): TileSpec {
   // at a neutral site, home field's parts: "(7.0, less 4.9 for a neutral site)"
   const off = neutralDiscount(g, c)
   const parts = top.name === 'Home field' && off !== 0 && c.home_field_pp != null ? ` (${c.home_field_pp.toFixed(1)}, less ${Math.abs(off).toFixed(1)} for a neutral site)` : ''
-  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${Math.abs(top.pp).toFixed(1)} win-chance pts toward ${top.pp >= 0 ? g.home : g.away}${parts}, ${SHORT[HEADLINE]}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
+  return { id: 'factor', label: 'Biggest factor', value: top.name, sub: `${Math.abs(top.pp).toFixed(1)} win-chance pts toward ${top.pp >= 0 ? g.home : g.away}${parts}, ${headline === 'you' ? 'your line' : SHORT[headline]}`, tab: 'preview', team: top.pp >= 0 ? g.home : g.away }
 }
 
 /** Position weight for "key": the injury file has no importance field, so the position stands in for it. */
@@ -275,16 +279,16 @@ function surpriseTile(r: RetroGame): TileSpec | null {
 }
 
 /** A final game whose retro isn't built yet: what can be said from the game file. */
-function finishedNoRetroTiles(g: Game, meta: Meta): TileSpec[] {
+function finishedNoRetroTiles(g: Game, meta: Meta, headline: string): TileSpec[] {
   const { right, n } = approachesRight(g)
   const tie = winnerOf(g) == null
   return [
     resultTile(g, 'approaches'),
     tie || n === 0
       ? { id: 'right', label: 'Approaches right', value: '–', sub: tie ? 'a tie' : 'no approach forecasts', tab: 'approaches' }
-      : { id: 'right', label: 'Approaches right', value: `${right.length} of ${n}`, sub: right.length ? right.join(', ') : 'none picked the winner', tab: 'approaches' },
-    pickTile(g),
-    factorTile(g, meta),
+      : { id: 'right', label: 'Approaches right', value: `${right.length} of ${n}`, sub: right.length ? joinNames(right) : 'none picked the winner', tab: 'approaches' },
+    pickTile(g, headline),
+    factorTile(g, meta, headline),
     { id: 'pending', label: 'Retrospective', value: 'Coming', sub: 'built the morning after a game', tab: 'approaches' },
   ]
 }

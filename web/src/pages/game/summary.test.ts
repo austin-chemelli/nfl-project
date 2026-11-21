@@ -117,3 +117,23 @@ describe('summaryTiles', () => {
     expect(t[1]).toMatchObject({ value: '0 of 4', sub: 'none picked the winner' })
   })
 })
+
+describe('summaryTiles with the reader\'s own line as the headline', () => {
+  const you = { ...game.models.student, p_home: 0.4, spread_home: 1.5, status: 'preview' as const }
+  const g = { ...game, models: { ...game.models, you }, contributions: { ...game.contributions, you: game.contributions.student } }
+  it('leads with your line, unofficial, and keeps its colour', () => {
+    const pick = summaryTiles(g, meta, null, 'you').find((x) => x.id === 'pick')
+    expect(pick).toMatchObject({ modelId: 'you', value: 'CAR 60%' })
+    expect(pick?.sub).toMatch(/^your line \(unofficial\), /)
+  })
+  it('names your line in the factor tile and leaves the default alone', () => {
+    expect(summaryTiles(g, meta, null, 'you').find((x) => x.id === 'factor')?.sub).toMatch(/, your line$/)
+    expect(summaryTiles(g, meta, null).find((x) => x.id === 'pick')).toMatchObject({ modelId: 'student' })
+    expect(summaryTiles(g, meta, null).find((x) => x.id === 'factor')?.sub).toMatch(/, Student$/)
+  })
+  it('counts only the published approaches as right, never the reader\'s own line', () => {
+    const f = { ...g, models: { ...g.models, analyst: { ...you } }, result: { home_score: 20, away_score: 23, margin: -3 } }
+    const sub = summaryTiles(f, meta, null).find((x) => x.id === 'right')?.sub ?? ''
+    expect(sub).not.toMatch(/You/)
+  })
+})

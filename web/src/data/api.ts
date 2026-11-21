@@ -4,7 +4,10 @@
  * through the Vite plugin at /data.
  */
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import type { z } from 'zod'
+import { slateWithYou, withYou } from '../you/augment'
+import { useLines } from '../you/current'
 import * as C from './contract'
 
 export const DATA_URL: string = (
@@ -44,32 +47,46 @@ export async function fetchJson<S extends z.ZodType>(path: string, schema: S): P
 const pad = (n: number) => String(n).padStart(2, '0')
 const FIVE_MIN = 5 * 60 * 1000
 
-function useJson<S extends z.ZodType>(key: string, path: string | null, schema: S): UseQueryResult<z.infer<S>> {
+function useJson<S extends z.ZodType>(key: string, path: string | null, schema: S, select?: (d: z.infer<S>) => z.infer<S>): UseQueryResult<z.infer<S>> {
   return useQuery({
     queryKey: [key, path],
     queryFn: () => fetchJson(path as string, schema),
     enabled: path !== null,
     staleTime: FIVE_MIN,
     retry: (n, e) => !isNotFound(e) && n < 1,
+    select,
   })
+}
+
+/** The reader's own line added to slates and game files (ADR 0034); the cache keeps the published file. */
+function useYouSelect() {
+  const { you } = useLines()
+  const slate = useCallback((d: C.Slate) => slateWithYou(d, you), [you])
+  const game = useCallback((d: C.Game) => withYou(d, you), [you])
+  return { slate: you ? slate : undefined, game: you ? game : undefined }
 }
 
 export const useMeta = () => useJson('meta', 'site/meta.json', C.Meta)
 export const useSlate = (season?: number, week?: number) =>
-  useJson('slate', season && week ? `site/slate_${season}_${pad(week)}.json` : null, C.Slate)
+  useJson('slate', season && week ? `site/slate_${season}_${pad(week)}.json` : null, C.Slate, useYouSelect().slate)
 /** Several weeks' slates at once (same cache as `useSlate`): the record of your picks reads every week you picked. */
-export const useSlates = (season: number, weeks: number[]) =>
-  useQueries({
+export const useSlates = (season: number, weeks: number[]) => {
+  const select = useYouSelect().slate
+  return useQueries({
     queries: weeks.map((w) => {
       const path = `site/slate_${season}_${pad(w)}.json`
-      return { queryKey: ['slate', path], queryFn: () => fetchJson(path, C.Slate), staleTime: FIVE_MIN, retry: (n: number, e: unknown) => !isNotFound(e) && n < 1 }
+      return { queryKey: ['slate', path], queryFn: () => fetchJson(path, C.Slate), staleTime: FIVE_MIN, retry: (n: number, e: unknown) => !isNotFound(e) && n < 1, select }
     }),
   })
-export const useGame = (id?: string) => useJson('game', id ? `site/game/${id}.json` : null, C.Game)
+}
+export const useGame = (id?: string) => useJson('game', id ? `site/game/${id}.json` : null, C.Game, useYouSelect().game)
+/** The season's graded games with the composites at each graded lock (ADR 0034): the unofficial record of the reader's line. */
+export const useCustomSeason = (season?: number, enabled = true) =>
+  useJson('custom', enabled && season ? `site/custom_${season}.json` : null, C.CustomSeason)
 export const useTracker = () => useJson('tracker', 'site/tracker.json', C.Tracker)
 export const useHypotheses = () => useJson('hypotheses', 'site/hypotheses.json', C.Hypotheses)
 export const useCoaches = () => useJson('coaches', 'site/coaches.json', C.Coaches)
-export const useDiyMatrix = () => useJson('diy', 'site/diy_matrix.json', C.DiyMatrix)
+export const useDiyMatrix = (enabled = true) => useJson('diy', enabled ? 'site/diy_matrix.json' : null, C.DiyMatrix)
 export const useSeasonFile = (season?: number) =>
   useJson('season', season ? `site/season_${season}.json` : null, C.SeasonFile)
 /** Every team's season-to-date feature values (ADR 0019): the League page's Teams tab; a 404 means not built yet. */

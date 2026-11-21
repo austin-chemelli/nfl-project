@@ -1,9 +1,9 @@
 /** Pure helpers for the Game page (port of nfl.ui.game_helpers). */
 import type { DriveTip } from '../../charts'
-import type { Contribution, DeservedFactor, Drive, Efficiency, Game, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
+import type { Contribution, DeservedFactor, Drive, Efficiency, Game, GradedPick, Meta, RetroGame, Tendency, WpPlay, WpSeries } from '../../data/contract'
 import { fmtEff, fmtUnit, kickoffEt, pct } from '../../lib/format'
 import { countsAsEdge, edgePct, groupOf, helpFor, isContextOnly, memberOf } from '../../lib/meta'
-import { APPROACHES } from '../../lib/models'
+import { APPROACHES, SHORT } from '../../lib/models'
 
 export const QB_STATUS: Record<number, string> = { 0: 'healthy starter', 1: 'questionable / limited / new', 2: 'backup or unknown' }
 
@@ -599,5 +599,23 @@ export function markText(p: WpPlay, home: string, away: string, factor?: string 
     swing: `+${Math.abs(Math.round(100 * view(p.p_after)) - Math.round(100 * view(p.p_before)))} pts`,
     text: p.text.replace(/^\(\d*:\d\d\)\s*/, ''), // the title already has the clock
     counted: factor ? `Counted in: ${factor}` : null,
+  }
+}
+
+/** The reader's own line on this game (ADR 0034), when they saved one: graded here in the browser, beside the record. */
+export type YouPick = { p_home: number; spread_home: number | null } | null | undefined
+
+/** A browser-graded row for the reader's line, in the retro's own terms (pick, right, log loss, spread error). */
+export function youRow(r: Pick<RetroGame, 'home' | 'away' | 'result'>, you: NonNullable<YouPick>): GradedPick {
+  const m = r.result.margin
+  const home = you.p_home >= 0.5
+  const y = m > 0 ? 1 : 0
+  const p = Math.min(Math.max(you.p_home, 1e-6), 1 - 1e-6)
+  return {
+    model_id: 'you', label: SHORT.you, kind: 'approach', status: 'unofficial', p_home: you.p_home,
+    pick: home ? r.home : r.away, p_pick: home ? you.p_home : 1 - you.p_home,
+    right: m === 0 || you.p_home === 0.5 ? null : home === m > 0,
+    log_loss: m === 0 ? NaN : -(y * Math.log(p) + (1 - y) * Math.log(1 - p)),
+    spread_home: you.spread_home, spread_error: you.spread_home == null ? null : Math.abs(you.spread_home - m), best: false,
   }
 }

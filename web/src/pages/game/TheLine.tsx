@@ -1,7 +1,8 @@
 import { LinePath, type PathPoint } from '../../charts'
 import { Section } from '../../components/ui'
 import type { Game } from '../../data/contract'
-import { HEADLINE, SHORT } from '../../lib/models'
+import { theName, theNameLower } from '../../lib/models'
+import { useHeadline } from '../../you/current'
 import { pick, spreadLabel } from '../../lib/format'
 import { etStamp, fmtPts, foldEvents, pathSentence, windowWords } from './line'
 
@@ -27,6 +28,7 @@ export function eventGroups(events: Ev[], nPoints: number): { between: Ev[]; bef
 
 /** How the market line moved before kickoff, and what changed in the same windows (ADR 0024). */
 export function TheLine({ g }: { g: Game }) {
+  const headline = useHeadline()
   const pts = g.market_history
   const m = g.line_move
   if (!hasLine(g) || !m) return null // nothing to show until the week's snapshots arrive (Austin, 2026-11-07)
@@ -43,12 +45,12 @@ export function TheLine({ g }: { g: Game }) {
   const path = pathSentence(pts, g.home, g.away)
   const sinceLock = windowWords(m.since_lock?.spread_home, g.home, g.away)
   const lastDay = windowWords(m.last_day?.spread_home, g.home, g.away)
-  const ours = g.models[HEADLINE]?.spread_home
+  const ours = g.models[headline]?.spread_home
   const ourTotal = g.expected_score?.total
-  const who = `The ${SHORT[HEADLINE]}`
+  const who = theName(headline)
   return (
     <Section title="How the line moved" help="The consensus across sportsbooks at each of our snapshots before kickoff: the median spread and total, needing at least three books. The dashed line is our own number.">
-      <TodayLine g={g} />
+      <TodayLine g={g} headline={headline} />
       <p className="m-0 text-ink">
         {path ?? 'No change'} · since {etStamp(m.first_seen)}
       </p>
@@ -113,18 +115,19 @@ function EventList({ title, events, num }: { title: string; events: Ev[]; num?: 
 }
 
 /** The headline line as locked beside today's preview score: whether we moved with the market. */
-function TodayLine({ g }: { g: Game }) {
-  const t = g.today?.models[HEADLINE]
+function TodayLine({ g, headline }: { g: Game; headline: string }) {
+  // today's reading has no "you" (the reader's line is scored in this browser, not in the daily job): nothing to say then
+  const t = g.today?.models[headline]
   if (!g.today || t?.p_home == null || g.result) return null
-  const locked = g.models[HEADLINE]
-  const name = `The ${SHORT[HEADLINE]}`
+  const locked = g.models[headline]
+  const name = theName(headline)
   const now = pick(t.p_home, g.home, g.away)
   return (
     <p className="m-0 mb-2 text-[14px] text-ink-2">
       {locked?.status === 'locked' && locked.p_home != null ? (
         <>{name} locked {pick(locked.p_home, g.home, g.away)}; on the data as of {etStamp(g.today.scored_at)} it reads {now}.</>
       ) : (
-        <>On the data as of {etStamp(g.today.scored_at)}, the {SHORT[HEADLINE]} reads {now}.</>
+        <>On the data as of {etStamp(g.today.scored_at)}, {theNameLower(headline)} reads {now}.</>
       )}{' '}
       <span className="text-ink-3">A preview, not locked, and never graded.</span>
     </p>

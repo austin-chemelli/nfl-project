@@ -6,13 +6,15 @@ import { Link } from 'react-router'
 import { Help } from '../../components/Help'
 import { useSlates } from '../../data/api'
 import type { GameRow } from '../../data/contract'
-import { HEADLINE, SHORT } from '../../lib/models'
+import { SHORT } from '../../lib/models'
+import { useHeadline } from '../../you/current'
 import { clearOpenPicks, pickOpen, pickedWeeks, scorePicks, usePicks, type Tally } from '../../lib/picks'
 
 const rec = (t: Tally) => `${t.w}–${t.l}`
 
 export function YourPicks({ season, games, now }: { season: number; games: GameRow[]; now?: number }) {
   const picks = usePicks()
+  const headline = useHeadline()
   const weeks = pickedWeeks(picks, season)
   const qs = useSlates(season, weeks)
   const open = games.filter((g) => pickOpen(g, now))
@@ -20,13 +22,14 @@ export function YourPicks({ season, games, now }: { season: number; games: GameR
   if (weeks.length === 0 && open.length === 0) return null
 
   const all = qs.flatMap((q) => q.data?.games ?? [])
-  const r = scorePicks(picks, all, HEADLINE)
-  const model = SHORT[HEADLINE] ?? HEADLINE
+  const r = scorePicks(picks, all, headline)
+  // the Student by name; the reader's own line as "your line" so it isn't confused with their picks
+  const model = headline === 'you' ? 'your line' : (SHORT[headline] ?? headline)
   return (
     <section aria-label="Your picks" className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-line bg-surface-1 px-3 py-2 text-[13px] text-ink-2">
       <span className="font-medium text-ink">
         Your picks{' '}
-        <Help text="Pick the winner of any game until kickoff with the buttons on each card. Picks stay in this browser only: nothing is sent anywhere, and another device or a cleared browser starts empty. Your record counts only finished games you picked, and puts the Student and the market's favorite on those same games." />
+        <Help text={`Pick the winner of any game until kickoff with the buttons on each card. Picks stay in this browser only: nothing is sent anywhere, and another device or a cleared browser starts empty. Your record counts only finished games you picked, and puts ${headline === 'you' ? 'the line you made' : 'the Student'} and the market's favorite on those same games.`} />
       </span>
       {open.length > 0 && (
         <span>

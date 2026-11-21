@@ -435,7 +435,7 @@ Backlog after M15: a sixth summary tile for comebacks (needs the five-tile cap r
 Both pages were taken off the live site on 2026-11-06 and nothing was removed: they stay in the repo and in `npm run dev`. Parked until Austin picks it up. Each returns on its own by coming off the list in `web/src/lib/hiddenPages.ts`, once he says it's good. Notes and measurements: `.notes/project-review-2026-11.md` §11.
 
 - **M16.1 Coaches: refinement.** Make sure the data is accurate, starting with play-callers, the weakest column (`.notes/coordinators-validation.md`), and maybe improve the visuals. Not a rebuild. *Planned 2026-11-06 on Fable as M17 (ADR 0021, proposed); M16.3 still brings the page back.*
-- **M16.2 Build: with the custom-approach work.** Revisit it when a user's own line starts showing up in other places (review §4.3), not on its own. Check it against wave 2 then, fix the 14 px phone overflow, and decide what happens to `/season/:year`, which is only linked from Build.
+- **M16.2 Build: with the custom-approach work.** Revisit it when a user's own line starts showing up in other places (review §4.3), not on its own. Check it against wave 2 then, fix the 14 px phone overflow, and decide what happens to `/season/:year`, which is only linked from Build. *Closed 2026-11-20 into M30 (ADR 0034): Build is back in the nav, on registry v7, and `/season/:year` stays linked from it.*
 - **M16.3 Bring a page back.** A `/site-walk` with a goal for that page (no walk has visited either), Austin's sign-off, then one line off the list restores the nav entry, the route and the League and Season links. Docs: `docs/site.md`, journal, hub.
 
 ## M17: Coaching staff ground truth, tendency context, team page (planned 2026-11-06 on Fable; ADR 0021 accepted)
@@ -639,4 +639,15 @@ Plan: `.notes/hub/plans/model-round-3.md` (master), audit `.notes/hub/plans/appr
 - M27.8 Repeatability: three games researched twice a week, rating agreement in the evals; a rating that doesn't repeat gets no weight.
 - M27.9 Countable facts from the research (starters ruled out since Wednesday, a confirmed QB change, a coach fired this week, a depth-chart disagreement), stored point-in-time.
 - M27.10 A late-status pass before each lock that the lock can run without.
+
+## M30: Your own approach (model round 3, track 3, 2026-11-20; ADR 0034)
+
+Plan: `.notes/hub/plans/model-round-3.md` §3. One PR, branch `your-approach`. Closes M16.2. Test builds on `~/dev/.scratch/your-approach-data`.
+
+- **M30.1 Composites the engine's way.** *Done 2026-11-20.* `approaches/diy.py`: `GROUP_IDS` = the weighted groups (12), Venue & weather from `traditionalist.persona`, venue members gated at neutral sites, a `neutral` column, Platt with the gate (`_platt(x, y, g)`, walk-forward, fit-toward), `matrix_key()`, `composites_at(paths, locks, season)`; matrix schema 2. Acceptance: the published Student, Analyst and Traditionalist lines rescored from the composites equal `p_home` (`test_composites_reproduce_the_published_lines`, max error 2e-16 on 151 games, 8 neutral).
+- **M30.2 Site data.** *Done 2026-11-20.* `site.py` section "your own approach": `composites` on every slate and game row (as of the headline row's lock_ts), `site/custom_<season>.json` (graded games, composites at the Student's graded lock, `p_student`, `p_market`), `meta.custom`. Contract in `contract.ts` (`Composites`, `CustomMeta`, `CustomSeason`).
+- **M30.3 The browser line.** *Done 2026-11-20.* `web/src/you/`: store `nfl-you-v1` (validated, cross-tab, registry migration), `line.ts` (`scoreLine`, `calibrate`, `probit`, `contributionOf`), `YouProvider` (resolves once, refits on a key change), `augment.ts` (`models.you`, `contributions.you` added in `data/api.ts`), `YouBar` (the default mark and the way back). TS evaluator gated like Python; parity fixtures `fixtures/diy/{parity,lines}.json`.
+- **M30.4 Build.** *Done 2026-11-20.* Back in the nav; weighted groups only, each with "What's in it" from `meta.groups`; Market behavior and Buzz as live-only sliders; save panel (name, update, default, share link, remove); starts from the saved approach; held-out check ("Reveal 2023–2025 for these weights") beside the hide toggle; fine print on how the line is scored.
+- **M30.5 "You" on the pages.** Slate (pick, strip, table, last week, recap, your picks), game (summary strip, The line, approaches table, Why, where they differ, who got it right), tracker ("Your line" tab and the first tile when it is the default), Season view default, League fine print (playoff odds stay the Student's), Method section.
+- **M30.6 After the merge.** `nfl diy-matrix` then `nfl site` on the bucket data (the matrix v2 and the new files), check one slate, one game and `custom_2026.json` on the live bucket.
 

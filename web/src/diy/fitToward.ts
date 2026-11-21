@@ -45,9 +45,10 @@ function solveSPD(A: Float64Array, b: Float64Array, k: number): Float64Array {
   return x
 }
 
-/** Logistic regression with penalty λ‖w − w0‖² and a free intercept. Returns [b, w]. */
-export function fitRidge(z: Float64Array, y: Float64Array, k: number, w0: Float64Array, lam: number, b0: number): [number, Float64Array] {
+/** Logistic regression with penalty λ‖w − w0‖² and a free intercept b·g (g: the neutral-site gate). Returns [b, w]. */
+export function fitRidge(z: Float64Array, y: Float64Array, k: number, w0: Float64Array, lam: number, b0: number, gate?: Float64Array): [number, Float64Array] {
   const n = y.length
+  const gg = gate ?? new Float64Array(n).fill(1)
   const d = k + 1
   const t = new Float64Array(d)
   t[0] = b0
@@ -55,7 +56,7 @@ export function fitRidge(z: Float64Array, y: Float64Array, k: number, w0: Float6
   const objective = (th: Float64Array) => {
     let s = 0
     for (let i = 0; i < n; i++) {
-      let eta = th[0]
+      let eta = th[0] * gg[i]
       for (let j = 0; j < k; j++) eta += z[i * k + j] * th[j + 1]
       s += logaddexp0(eta) - y[i] * eta
     }
@@ -67,17 +68,17 @@ export function fitRidge(z: Float64Array, y: Float64Array, k: number, w0: Float6
     const g = new Float64Array(d)
     const H = new Float64Array(d * d)
     for (let i = 0; i < n; i++) {
-      let eta = t[0]
+      let eta = t[0] * gg[i]
       for (let j = 0; j < k; j++) eta += z[i * k + j] * t[j + 1]
       const p = sigmoid(eta)
       const r = p - y[i]
       const w = p * (1 - p)
-      g[0] += r
-      H[0] += w
+      g[0] += r * gg[i]
+      H[0] += w * gg[i] * gg[i]
       for (let a = 0; a < k; a++) {
         const za = z[i * k + a]
         g[a + 1] += za * r
-        H[a + 1] += w * za
+        H[a + 1] += w * za * gg[i]
         for (let c = 0; c <= a; c++) H[(a + 1) * d + c + 1] += w * za * z[i * k + c]
       }
     }
@@ -116,8 +117,10 @@ export function fitToward(weights: GroupWeights, matrix: MatrixInput, opts: { la
   const k = groups.length
   const z = new Float64Array(rows.length * k)
   const y = new Float64Array(rows.length)
+  const gate = new Float64Array(rows.length)
   rows.forEach((i, r) => {
     y[r] = P.y[i]
+    gate[r] = P.g[i]
     cols.forEach((c, j) => { z[r * k + j] = P.C[i * G + c] })
   })
   const wUser = Float64Array.from(groups, (g) => weights[g] ?? 0)
@@ -127,9 +130,9 @@ export function fitToward(weights: GroupWeights, matrix: MatrixInput, opts: { la
     for (let j = 0; j < k; j++) s += z[r * k + j] * wUser[j]
     x[r] = s
   }
-  const [a, c] = platt(x, y)
+  const [a, c] = platt(x, y, gate)
   const w0 = wUser.map((v) => a * v)
-  const [b, w] = fitRidge(z, y, k, w0, lam, c)
+  const [b, w] = fitRidge(z, y, k, w0, lam, c, gate)
   const share = (v: Float64Array): GroupWeights => {
     let tot = 0
     for (const t of v) tot += Math.abs(t)

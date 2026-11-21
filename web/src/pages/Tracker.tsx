@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { FinePrint } from '../components/FinePrint'
 import { Help } from '../components/Help'
 import { SummaryStrip, Tile } from '../components/SummaryStrip'
 import { Tabs } from '../components/Tabs'
 import { Page, Loaded, Section } from '../components/ui'
-import { useMeta, useTracker } from '../data/api'
+import { useCustomSeason, useMeta, useTracker } from '../data/api'
+import type { Tracker } from '../data/contract'
+import { useHeadline, useLines, type YouLine } from '../you/current'
 import { CurrentSeason } from './tracker/CurrentSeason'
 import { Backtest } from './tracker/Backtest'
 import { Calibration } from './tracker/Calibration'
@@ -16,14 +18,31 @@ import { Ledger } from './tracker/Ledger'
 import { PersonaHistory } from './tracker/PersonaHistory'
 import { SeasonTable } from './tracker/SeasonTable'
 import { summaryTiles } from './tracker/summary'
+import { YourLine } from './tracker/YourLine'
+import { yourRecord } from './tracker/yourRecord'
 
 function TabBody({ children }: { children: ReactNode }) {
   return <div className="flex flex-col gap-8">{children}</div>
 }
 
+/** The summary strip; when the reader leads with their own line, its first tile is their unofficial record. */
+function Strip({ t, headline, you }: { t: Tracker; headline: string; you: YouLine | null }) {
+  const custom = useCustomSeason(t.season, headline === 'you' && you != null)
+  const rec = useMemo(() => (headline === 'you' && you && custom.data ? yourRecord(custom.data, you) : null), [headline, you, custom.data])
+  return (
+    <SummaryStrip label="Tracker summary">
+      {summaryTiles(t, headline, rec).map((x) => (
+        <Tile key={x.id} label={x.label} value={x.value} sub={x.sub} tab={x.tab} modelId={x.modelId} />
+      ))}
+    </SummaryStrip>
+  )
+}
+
 export default function TrackerPage() {
   const tracker = useTracker()
   const meta = useMeta()
+  const { you } = useLines()
+  const headline = useHeadline()
   return (
     <Page
       title="Season tracker"
@@ -39,11 +58,7 @@ export default function TrackerPage() {
           <Loaded q={meta} what="tracker" shape="tracker">
             {(m) => (
               <>
-                <SummaryStrip label="Tracker summary">
-                  {summaryTiles(t).map((x) => (
-                    <Tile key={x.id} label={x.label} value={x.value} sub={x.sub} tab={x.tab} modelId={x.modelId} />
-                  ))}
-                </SummaryStrip>
+                <Strip t={t} headline={headline} you={you} />
                 <Tabs
                   label="Tracker sections"
                   default="season"
@@ -128,6 +143,9 @@ export default function TrackerPage() {
                         </TabBody>
                       ),
                     },
+                    ...(you
+                      ? [{ id: 'you', label: 'Your line', content: <TabBody><YourLine season={t.season} you={you} /></TabBody> }]
+                      : []),
                   ]}
                 />
               </>

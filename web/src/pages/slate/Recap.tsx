@@ -3,16 +3,24 @@ import { Link } from 'react-router'
 import { Help } from '../../components/Help'
 import { SummaryStrip, Tile } from '../../components/SummaryStrip'
 import { Card, ErrorBox, ModelBadge, TableScroll, td, th } from '../../components/ui'
-import { isNotFound, useRecap } from '../../data/api'
+import { isNotFound, useCustomSeason, useRecap } from '../../data/api'
 import type { WeekRecap } from '../../data/contract'
 import { dash } from '../../lib/format'
+import { useHeadline, useLines } from '../../you/current'
+import { Unofficial } from '../../you/YouBar'
+import { youWeek, type YouWeek } from './helpers'
 import { recapTiles } from './recapTiles'
 
 export function Recap({ season, week, enabled = true, total }: { season: number; week: number; enabled?: boolean; total?: number }) {
   const q = useRecap(season, week, enabled)
+  const headline = useHeadline()
+  const { you } = useLines()
+  const custom = useCustomSeason(season, enabled && you != null)
   if (!enabled || q.isPending) return null
   if (q.isError) return isNotFound(q.error) ? null : <ErrorBox error={q.error} />
-  return <RecapBlock r={q.data} total={total} />
+  // the reader's own line on exactly the games this recap graded; computed here, never part of the server's rows
+  const mine = you && custom.data ? youWeek(you.line, custom.data.games, week, q.data.games) : null
+  return <RecapBlock r={q.data} total={total} mine={mine} headline={headline} />
 }
 
 /** Log loss against the market: negative is better. */
@@ -22,9 +30,9 @@ function vsMarket(v: number | null | undefined): string {
   return `${Math.abs(v).toFixed(3)} ${v < 0 ? 'better' : 'worse'}`
 }
 
-function RecapBlock({ r, total }: { r: WeekRecap; total?: number }) {
+function RecapBlock({ r, total, mine, headline }: { r: WeekRecap; total?: number; mine: YouWeek | null; headline: string }) {
   const models = r.models.filter((m) => m.kind !== 'global').sort((a, b) => (a.rank || 99) - (b.rank || 99))
-  const { tiles, caption } = recapTiles(r, total)
+  const { tiles, caption } = recapTiles(r, total, { headline, week: mine })
   return (
     <div role="region" aria-label={`Week ${r.week} recap`} className="flex flex-col gap-3">
       {caption && <p className="text-[13px] text-ink-3">{caption}</p>}
@@ -60,6 +68,15 @@ function RecapBlock({ r, total }: { r: WeekRecap; total?: number }) {
                     </tr>
                   )
                 })}
+                {mine && (
+                  <tr>
+                    <td className={`${td} tabular`}>{dash}</td>
+                    <td className={td}><ModelBadge modelId="you" /><Unofficial /></td>
+                    <td className={`${td} tabular whitespace-nowrap`}>{mine.right} of {mine.n}</td>
+                    <td className={`${td} tabular`}>{mine.logLoss.toFixed(3)}</td>
+                    <td className={`${td} tabular whitespace-nowrap`}>{mine.marketLogLoss == null ? dash : vsMarket(mine.logLoss - mine.marketLogLoss)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </TableScroll>

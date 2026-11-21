@@ -2,8 +2,9 @@
  * The build-your-own evaluator, ported from nfl.approaches.diy (pure functions, no React).
  *
  * Scoring group weights W over the matrix of group composites c_g is a matrix multiply plus a
- * walk-forward Platt calibration: p = σ(a_S · Σ_g W_g c_g + c_S) with (a_S, c_S) fitted on earlier
- * seasons only (slope constrained to a ≥ 0). Result objects keep Python's snake_case keys so the
+ * walk-forward Platt calibration: p = σ(a_S · Σ_g W_g c_g + c_S · g) with (a_S, c_S) fitted on earlier
+ * seasons only (slope constrained to a ≥ 0); g = 1 − neutral site, so home field is zero at a neutral
+ * site, as in the engine (ADR 0031). Result objects keep Python's snake_case keys so the
  * parity test can compare them one to one. Differences from Python: bootstrap intervals use a
  * different random stream (see rng.ts), and `accuracy`, `market_accuracy` and `reliability` are
  * extra fields the page shows.
@@ -46,6 +47,8 @@ export interface Prepared {
   C: Float64Array
   season: Int32Array
   warmup: Uint8Array
+  /** 1 − neutral site: the home-field offset counts only at a real home game */
+  g: Float64Array
   y: Float64Array
   mkt: Float64Array
   result: Float64Array
@@ -94,8 +97,11 @@ export function prepare(m: MatrixInput): Prepared {
     for (let i = 0; i < n; i++) if (!warmup[i] && season[i] < first) first = season[i]
   }
   const gid = cols.game_id as readonly string[] | undefined
+  const neutral = cols.neutral as readonly unknown[] | undefined
+  const g = new Float64Array(n)
+  for (let i = 0; i < n; i++) g[i] = neutral && Number(neutral[order[i]]) ? 0 : 1
   const out: Prepared = {
-    n, groups, inactive: [...(m.inactive ?? [])], C, season, warmup,
+    n, groups, inactive: [...(m.inactive ?? [])], C, season, warmup, g,
     y: f64('y'), mkt: f64('mkt_p'), result: f64('result'), home_ml: f64('home_ml'), away_ml: f64('away_ml'),
     week: f64('week'),
     game_id: Array.from({ length: n }, (_, i) => (gid ? gid[order[i]] : String(i))),
@@ -116,14 +122,32 @@ export function prepare(m: MatrixInput): Prepared {
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x))
 const logaddexp0 = (x: number) => Math.max(x, 0) + Math.log1p(Math.exp(-Math.abs(x)))
 
-/** p = σ(a·x + c) by maximum likelihood, damped Newton, slope constrained to a ≥ 0 (`_platt`). */
-export function platt(x: ArrayLike<number>, y: ArrayLike<number>): [number, number] {
+/** The c of p = σ(c·g) by maximum likelihood (Newton): home field alone, gated (`_offset_only`). */
+function offsetOnly(y: ArrayLike<number>, g: ArrayLike<number>): number {
+  let c = 0
+  for (let it = 0; it < 50; it++) {
+    let grad = 0, h = 0
+    for (let i = 0; i < y.length; i++) {
+      const p = sigmoid(c * g[i])
+      grad += (p - y[i]) * g[i]
+      h += p * (1 - p) * g[i] * g[i]
+    }
+    const step = grad / (h + 1e-12)
+    c -= step
+    if (Math.abs(step) < 1e-12) break
+  }
+  return c
+}
+
+/**
+ * p = σ(a·x + c·g) by maximum likelihood, damped Newton, slope constrained to a ≥ 0 (`_platt`).
+ * g is the neutral-site gate (1 = home field counts; every row when omitted).
+ */
+export function platt(x: ArrayLike<number>, y: ArrayLike<number>, gate?: ArrayLike<number>): [number, number] {
   const n = y.length
   if (n === 0) return [1, 0]
-  let ysum = 0
-  for (let i = 0; i < n; i++) ysum += y[i]
-  const ybar = Math.min(Math.max(ysum / n, 1e-6), 1 - 1e-6)
-  const c0 = Math.log(ybar / (1 - ybar))
+  const gg: ArrayLike<number> = gate ?? new Float64Array(n).fill(1)
+  const c0 = offsetOnly(y, gg)
   let xm = 0
   for (let i = 0; i < n; i++) xm += x[i]
   xm /= n
@@ -134,7 +158,7 @@ export function platt(x: ArrayLike<number>, y: ArrayLike<number>): [number, numb
   const nll = (a: number, c: number) => {
     let s = 0
     for (let i = 0; i < n; i++) {
-      const eta = a * x[i] + c
+      const eta = a * x[i] + c * gg[i]
       s += logaddexp0(eta) - y[i] * eta
     }
     return s
@@ -145,14 +169,14 @@ export function platt(x: ArrayLike<number>, y: ArrayLike<number>): [number, numb
   for (let it = 0; it < 30; it++) {
     let g0 = 0, g1 = 0, h00 = 0, h01 = 0, h11 = 0
     for (let i = 0; i < n; i++) {
-      const p = sigmoid(a * x[i] + c)
+      const p = sigmoid(a * x[i] + c * gg[i])
       const r = p - y[i]
       const w = p * (1 - p)
       g0 += r * x[i]
-      g1 += r
+      g1 += r * gg[i]
       h00 += w * x[i] * x[i]
-      h01 += w * x[i]
-      h11 += w
+      h01 += w * x[i] * gg[i]
+      h11 += w * gg[i] * gg[i]
     }
     h00 += 1e-8
     h11 += 1e-8
@@ -181,8 +205,9 @@ export type PlattParams = Record<number, [a: number, c: number, inSample: boolea
 
 /** Calibrated logit per row. Season S uses only rows of earlier seasons (itself if none: flagged). */
 export function walkForwardPlatt(
-  logit: Float64Array, y: Float64Array, season: Int32Array, scored: number[], rows?: Uint8Array,
+  logit: Float64Array, y: Float64Array, season: Int32Array, scored: number[], rows?: Uint8Array, gate?: Float64Array,
 ): { out: Float64Array; params: PlattParams } {
+  const g = gate ?? new Float64Array(logit.length).fill(1)
   const n = logit.length
   const out = logit.slice()
   const params: PlattParams = {}
@@ -196,8 +221,8 @@ export function walkForwardPlatt(
     }
     const inSample = prior.length === 0
     const win = inSample ? cur : prior
-    const [a, c] = platt(win.map((i) => logit[i]), win.map((i) => y[i]))
-    for (const i of cur) out[i] = a * logit[i] + c
+    const [a, c] = platt(win.map((i) => logit[i]), win.map((i) => y[i]), win.map((i) => g[i]))
+    for (const i of cur) out[i] = a * logit[i] + c * g[i]
     params[s] = [a, c, inSample]
   }
   return { out, params }
@@ -242,7 +267,7 @@ export function seasonPredictions(weights: Weights, matrix: MatrixInput, season:
   const raw = rawLogit(P, weights)
   const rows = new Uint8Array(P.n)
   for (let i = 0; i < P.n; i++) rows[i] = P.season[i] <= season ? 1 : 0
-  const { out, params } = walkForwardPlatt(raw, P.y, P.season, [season], rows)
+  const { out, params } = walkForwardPlatt(raw, P.y, P.season, [season], rows, P.g)
   const ids: string[] = []
   const p: number[] = []
   for (let i = 0; i < P.n; i++) if (P.season[i] === season) { ids.push(P.game_id[i]); p.push(sigmoid(out[i])) }
@@ -446,7 +471,7 @@ export function evaluate(weights: Weights, matrix: MatrixInput, opts: EvalOption
     keep[i] = scoredSet.has(season[i]) || (P.warmup[i] && season[i] < first) ? 1 : 0
   }
   const raw = rawLogit(P, weights)
-  const { out, params } = walkForwardPlatt(raw, y, season, scored, keep)
+  const { out, params } = walkForwardPlatt(raw, y, season, scored, keep, P.g)
   const p = new Float64Array(n)
   const ll = new Float64Array(n)
   const mll = new Float64Array(n)

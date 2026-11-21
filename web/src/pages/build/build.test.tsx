@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { renderRoute } from '../../test/render'
+import { resetSavedCache, YOU_KEY } from '../../you/store'
 import { gameLabel, headingShares } from './points'
 
 describe('Build page', () => {
@@ -12,8 +13,11 @@ describe('Build page', () => {
     }
     expect(screen.getAllByText("Who's better").length).toBeGreaterThan(0)
     expect(screen.getByRole('slider', { name: /Quality/ })).not.toBeDisabled()
-    // inactive groups are shown disabled with the reason
-    expect(screen.getByRole('slider', { name: /^Buzz/ })).toBeDisabled()
+    // live-only groups can be weighted (they count in the live line) and say why history can't test them
+    expect(screen.getByRole('slider', { name: /^Buzz/ })).not.toBeDisabled()
+    expect(screen.getAllByText(/Live only: no history/).length).toBeGreaterThan(0)
+    // context-only groups aren't sliders
+    expect(screen.queryByRole('slider', { name: /^Coaching/ })).toBeNull()
     // headline against the market (never a bare log loss)
     expect((await screen.findAllByText(/\d\.\d{3} \((\d\.\d{3} (better|worse) than|same as) the market\)/)).length).toBeGreaterThan(1)
     expect(screen.getByText('The market (vig removed)')).toBeInTheDocument()
@@ -54,6 +58,25 @@ describe('Build page', () => {
     renderRoute('/build?w=quality:50,offense:50')
     fireEvent.click(await screen.findByRole('button', { name: 'Fit toward you' }))
     expect(await screen.findByRole('button', { name: 'Use these weights' })).toBeInTheDocument()
+  })
+
+  it('saves the sliders as your approach, makes it the default, and starts from it next time', async () => {
+    localStorage.clear()
+    resetSavedCache()
+    const { unmount } = renderRoute('/build?w=quality:60,form:-40')
+    fireEvent.click(await screen.findByRole('button', { name: 'Save as my approach' }))
+    const saved = JSON.parse(localStorage.getItem(YOU_KEY) ?? 'null')
+    expect(saved).toMatchObject({ v: 1, name: 'You', points: { quality: 60, form: -40 }, registry: '7', is_default: false })
+    expect(saved.calib.key).toMatch(/^7-2025-[0-9a-f]{8}$/)
+    expect(Number.isFinite(saved.calib.a) && Number.isFinite(saved.calib.c)).toBe(true)
+    fireEvent.click(screen.getByRole('checkbox', { name: /Make it my default/ }))
+    expect(JSON.parse(localStorage.getItem(YOU_KEY) ?? 'null').is_default).toBe(true)
+    unmount()
+    renderRoute('/build')
+    await waitFor(() => expect(screen.getByRole('slider', { name: /Quality/ })).toHaveValue('60'))
+    expect(screen.getByRole('button', { name: /Your saved approach \(You\)/ })).toBeInTheDocument()
+    localStorage.clear()
+    resetSavedCache()
   })
 
   it('asks for points when the budget is empty', async () => {

@@ -18,6 +18,7 @@ import { disagrees, hasBooks } from './game/books'
 import { Retro } from './game/Retro'
 import { GameNav } from './game/GameNav'
 import { summaryTiles } from './game/summary'
+import { useHeadline } from '../you/current'
 import { gameStatus } from './slate/helpers'
 import { matchupVars } from '../lib/teamColors'
 
@@ -64,6 +65,7 @@ export default function GamePage() {
 }
 
 function GameBody({ g, meta }: { g: Game; meta: Meta }) {
+  const headline = useHeadline()
   const final = g.result != null
   const rq = useRetro(g.game_id, final)
   const [strip, setStrip] = useState<HTMLDivElement | null>(null)
@@ -75,7 +77,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
 
   const tabs: TabDef[] = []
   if (retro || retroError)
-    tabs.push({ id: 'retro', label: 'What happened', content: retro ? <TabBody><Retro r={retro} /><StrongCallsOutcome g={g} /></TabBody> : <ErrorBox error={retroError} /> })
+    tabs.push({ id: 'retro', label: 'What happened', content: retro ? <TabBody><Retro r={retro} you={g.models.you} /><StrongCallsOutcome g={g} /></TabBody> : <ErrorBox error={retroError} /> })
   tabs.push(
     {
       id: 'preview',
@@ -181,7 +183,7 @@ function GameBody({ g, meta }: { g: Game; meta: Meta }) {
     },
   )
 
-  const tiles = summaryTiles(g, meta, retro)
+  const tiles = summaryTiles(g, meta, retro, headline)
   return (
     <>
       {final && (
