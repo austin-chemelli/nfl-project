@@ -947,6 +947,19 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
         | {"leans": _safe(leans_record, None, lean_rows, current_week)},
     )
     _write(site / "audit.json", audit(paths))
+    try:  # the betting guide (ADR 0033): additive page data, a failure costs those pages only
+        from nfl.betting import site as betting_site
+
+        bstudy = betting_site.ensure_study(paths, HEADLINE_ID)
+        _write(site / "betting_math.json", betting_site.math_file(bstudy))
+        _write(
+            site / "betting_week.json",
+            betting_site.week_file(
+                paths, games, allrows, season_lines, feats, current_week, now, bstudy
+            ),
+        )
+    except (Exception, pl.exceptions.PanicException) as e:  # noqa: BLE001
+        print(f"site: betting files failed, continuing: {e!r}")
     try:  # additive page data (ADR 0019): a failure must never stop the site build
         teams = teams_file(feats, games, now, current_week)
         if teams is not None:

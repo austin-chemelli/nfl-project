@@ -1,6 +1,6 @@
 /* oxlint-disable react/only-export-components -- route table; HMR on this file is not needed */
 import { lazy, Suspense, type ComponentType } from 'react'
-import { Navigate, type RouteObject } from 'react-router'
+import { Navigate, useLocation, type RouteObject } from 'react-router'
 import { Loading } from '../components/ui'
 import { isHidden } from '../lib/hiddenPages'
 import { Layout } from './Layout'
@@ -20,6 +20,12 @@ const page = (load: () => Promise<{ default: ComponentType }>) => {
 const hidable = (path: string, load: () => Promise<{ default: ComponentType }>) =>
   page(() => (isHidden(path) ? import('../pages/NotFound') : load()))
 
+// the weekly page moved from /betting/week to /betting; keep ?tab= links working
+function WeekRedirect() {
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: '/betting', search }} replace />
+}
+
 export const routes: RouteObject[] = [
   {
     element: <Layout />,
@@ -35,6 +41,8 @@ export const routes: RouteObject[] = [
       { path: 'hypotheses', element: page(() => import('../pages/Hypotheses')) },
       { path: 'coaches', element: hidable('/coaches', () => import('../pages/Coaches')) },
       { path: 'build', element: hidable('/build', () => import('../pages/Build')) },
+      { path: 'betting', element: page(() => import('../pages/Betting')) },
+      { path: 'betting/week', element: <WeekRedirect /> },
       { path: 'season/:year', element: page(() => import('../pages/Season')) },
       { path: 'method', element: page(() => import('../pages/Method')) },
       // the nav's labels as URLs, which visitors type (both personas, 2026-11-15 walk)
