@@ -222,4 +222,5 @@ def test_composites_reproduce_the_published_lines():
         # the news adjustment (ADR 0032) is the row's own `news` piece, the same for every line
         dl = np.array([json.loads(c or "{}").get("news", 0.0) for c in df["contributions"]])
         p = 1 / (1 + np.exp(-(core + dl)))
-        assert np.abs(p - df["p_home"].to_numpy()).max() < 1e-9, mid
+        # 1e-6: the stored `news` piece is rounded to 6 decimals; without news the match is 1e-16
+        assert np.abs(p - df["p_home"].to_numpy()).max() < 1e-6, mid

@@ -225,7 +225,9 @@ def line_parity(paths, n_home: int = 6) -> dict:
     out = {"season": season, "lines": {}, "games": []}
     from nfl.site import _news_pts
 
-    stu = preds.filter(pl.col("model_id") == "student").select("game_id", "lock_ts", "contributions")
+    stu = preds.filter(pl.col("model_id") == "student").select(
+        "game_id", "lock_ts", "contributions"
+    )
     news_pts = {r["game_id"]: _news_pts(r["contributions"]) for r in stu.iter_rows(named=True)}
     comp = diy.composites_at(paths, stu.select("game_id", "lock_ts"), season)
     newsy = comp.filter(pl.col("game_id").is_in([g for g, v in news_pts.items() if v]))
