@@ -88,5 +88,34 @@ export function fmtEff(v: number | null | undefined, unit: string): string {
 /** A push toward a team, whichever side it's on: helping a team is never a negative number. */
 export const ptsFor = (v: number) => `+${Math.abs(v).toFixed(1)} pts`
 
+/** A return or rate change with a real minus: "−3.6%", "+3.1%". */
+export function signedPct(p: number | null | undefined, digits = 1): string {
+  if (p == null || Number.isNaN(p)) return dash
+  const v = 100 * p
+  const s = Math.abs(v).toFixed(digits)
+  return `${Number(s) === 0 ? '' : v > 0 ? '+' : '−'}${s}%`
+}
+
+/** An American price, rounded, with a real minus: "−245", "+130". */
+export function american(price: number | null | undefined): string {
+  if (price == null || Number.isNaN(price)) return dash
+  const r = Math.round(price)
+  return `${r > 0 ? '+' : r < 0 ? '−' : ''}${Math.abs(r)}`
+}
+
+/** Dollars: "$25", "$0.07", with a minus in front of a loss. */
+export function dollars(x: number | null | undefined, digits = 0): string {
+  if (x == null || Number.isNaN(x)) return dash
+  const a = Math.abs(x).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })
+  return `${x < 0 ? '−' : ''}$${a}`
+}
+
+/** Units of stake with a sign: "+1.95", "−0.12". */
+export function signedUnits(x: number | null | undefined, digits = 2): string {
+  if (x == null || Number.isNaN(x)) return dash
+  const s = Math.abs(x).toFixed(digits)
+  return `${Number(s) === 0 ? '' : x > 0 ? '+' : '−'}${s}`
+}
+
 /** The same in a table, where position can't say whose side it is: "JAX +7.6". */
 export const ptsSide = (v: number, home: string, away: string) => (Math.abs(v) < 0.05 ? 'even' : `${v > 0 ? home : away} +${Math.abs(v).toFixed(1)}`)

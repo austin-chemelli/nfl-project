@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-20 for §3.4 and §3.8 (model wave 3, ADR 0031), 2026-11-13 for the Players section as built (M24.7 team health, round 3 key players), the rest 2026-11-09 (§3.8 the candidates ledger live, ADR 0026; §3.9 matchups and paths to an upset, ADR 0028, planned); the live state is [state.md](state.md).
+Status: current, verified 2026-11-20 for §3.4 and §3.8 (model wave 3, ADR 0031) and the betting site files (ADR 0033), 2026-11-13 for the Players section as built (M24.7 team health, round 3 key players), the rest 2026-11-09 (§3.8 the candidates ledger live, ADR 0026; §3.9 matchups and paths to an upset, ADR 0028, planned); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
@@ -230,6 +230,7 @@ Game retro sections: `result`; `predictions[]` (per approach: status, pick, righ
 | `site/retro/<game_id>.json` | game retrospective (ADR 0016); only for finished 2026 games; 404 = not built yet; `wp_series` and `drives` from M15 (ADR 0020), nullable |
 | `site/teams.json`, `site/league.json`, `site/similar.json` | per-team feature table; standings, playoff odds, leverage; similar seasons and flag cards (ADR 0019, §3.6d) |
 | game and slate files, additive (ADR 0024) | `market_history[]` (pre-kickoff consensus path), `market_moves`, `events[]` (what changed in each window), `swings[]` (what could move the game, with what-ifs), `strong_calls[]`, `today` (the preview score), `expected_score`, `books` (each book at the latest pre-kickoff snapshot, with disagreement flags); `tracker.json.strong_calls`, `tracker.json.totals` |
+| `site/betting_math.json`, `site/betting_week.json` | the betting study's tables for the public Betting math page; the week's card (every game's two sides with a view from `betting/rules.py`, a reason, the price needed in American odds and cents; the windy under; no book names), the card's record at the locks, and the season's closing lines for the browser-only bet log (ADR 0033) |
 | `site/recap_<season>_<week>.json` | week recap: per-approach week record and log loss, best approach, best call and costliest miss, biggest upsets, luckiest/unluckiest teams, most misread games |
 
 Streamlit reads these in P1; React reads the same files in P2. The contract is versioned with `schema_version` in `meta.json`.
