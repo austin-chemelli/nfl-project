@@ -1,5 +1,6 @@
 """Build-your-own evaluator: synthetic-matrix properties and one real-data consistency check."""
 
+import json
 import time
 
 import numpy as np
@@ -206,12 +207,19 @@ def test_composites_reproduce_the_published_lines():
         (pl.col("season") == season) & pl.col("is_backfill")
     )
     for mid, art in arts.items():
-        rows = preds.filter(pl.col("model_id") == mid).select("game_id", "lock_ts", "p_home")
+        rows = preds.filter(pl.col("model_id") == mid).select(
+            "game_id", "lock_ts", "p_home", "contributions"
+        )
         if rows.is_empty():
             pytest.skip("no backfill rows this season")
-        df = rows.join(diy.composites_at(paths, rows, season), on="game_id")
+        df = rows.join(
+            diy.composites_at(paths, rows.select("game_id", "lock_ts"), season), on="game_id"
+        )
         W = art.meta["group_weights"]
         x = sum(W.get(g, 0.0) * df[f"c_{g}"].to_numpy() for g in diy.GROUP_IDS)
         g = 1.0 - df["neutral"].to_numpy()
-        p = 1 / (1 + np.exp(-(art.calib_a * (art.intercept * g + x) + art.calib_c * g)))
+        core = art.calib_a * (art.intercept * g + x) + art.calib_c * g
+        # the news adjustment (ADR 0032) is the row's own `news` piece, the same for every line
+        dl = np.array([json.loads(c or "{}").get("news", 0.0) for c in df["contributions"]])
+        p = 1 / (1 + np.exp(-(core + dl)))
         assert np.abs(p - df["p_home"].to_numpy()).max() < 1e-9, mid

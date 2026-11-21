@@ -72,6 +72,8 @@ export const Composites = z.looseObject({
   as_of: nstr,
   neutral: z.boolean(),
   c: z.record(z.string(), num),
+  // the news adjustment every line took at that lock, in points (ADR 0032); older files lack it
+  news_pts: num.default(0),
 })
 
 /** meta.custom: what a saved custom line is tied to; older meta files lack it (no "You" anywhere). */

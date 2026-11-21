@@ -223,15 +223,20 @@ def line_parity(paths, n_home: int = 6) -> dict:
         (pl.col("season") == season) & pl.col("is_backfill")
     )
     out = {"season": season, "lines": {}, "games": []}
-    stu = preds.filter(pl.col("model_id") == "student").select("game_id", "lock_ts")
-    comp = diy.composites_at(paths, stu, season)
-    pick = pl.concat(
-        [comp.filter(pl.col("neutral") == 1), comp.filter(pl.col("neutral") == 0).head(n_home)]
-    )
+    from nfl.site import _news_pts
+
+    stu = preds.filter(pl.col("model_id") == "student").select("game_id", "lock_ts", "contributions")
+    news_pts = {r["game_id"]: _news_pts(r["contributions"]) for r in stu.iter_rows(named=True)}
+    comp = diy.composites_at(paths, stu.select("game_id", "lock_ts"), season)
+    newsy = comp.filter(pl.col("game_id").is_in([g for g, v in news_pts.items() if v]))
+    pick = pl.concat([
+        comp.filter(pl.col("neutral") == 1), comp.filter(pl.col("neutral") == 0).head(n_home), newsy.head(4)
+    ]).unique("game_id", maintain_order=True)  # fmt: skip
     ids = pick["game_id"].to_list()
     for r in pick.iter_rows(named=True):
         out["games"].append({"game_id": r["game_id"], "neutral": bool(r["neutral"]),
-                             "c": {g: round(float(r[f"c_{g}"]), 4) for g in diy.GROUP_IDS}})  # fmt: skip
+                             "c": {g: round(float(r[f"c_{g}"]), 4) for g in diy.GROUP_IDS},
+                             "news_pts": round(news_pts.get(r["game_id"], 0.0), 3)})  # fmt: skip
     for mid in ("student", "analyst", "traditionalist"):
         art = fit.load(paths, mid, season - 1)
         rows = preds.filter((pl.col("model_id") == mid) & pl.col("game_id").is_in(ids))

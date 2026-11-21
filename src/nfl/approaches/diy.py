@@ -145,7 +145,7 @@ def _composites(paths: Paths, df: pl.DataFrame, season: int, model_season: int) 
     done: set[str] = set()
     g = gate(df)
     for mid in HOME_GROUP_SOURCES:
-        model = fit.load(paths, mid, model_season)
+        model = fit.load_checked(paths, mid, model_season)  # refuses a fit from another registry
         z = venue_gate(model.scaler.transform(df), model.features, g)
         inner = model.meta["inner"]
         for j, gid in enumerate(GROUP_IDS):

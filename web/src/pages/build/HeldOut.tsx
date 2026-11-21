@@ -9,7 +9,7 @@ import { evaluate, weightsFor, type Evaluation, type GroupWeights } from '../../
 import { llVsMarket } from '../../lib/format'
 
 /** n-weighted log loss and market log loss over the seasons from `from` on. */
-function window(ev: Evaluation, from: number) {
+function heldOut(ev: Evaluation, from: number) {
   let n = 0, ll = 0, nm = 0, mll = 0
   for (const s of ev.seasons) {
     if (s.season < from) continue
@@ -33,8 +33,8 @@ export function HeldOut({ hide, hiddenFrom, lastSeason, weights, matrix, active,
   const key = JSON.stringify(weights)
   const result = useMemo(() => {
     if (shown !== key || !active) return null
-    const mine = window(evaluate(weights, matrix), hiddenFrom)
-    const student = window(evaluate(weightsFor('student', matrix, {}), matrix), hiddenFrom)
+    const mine = heldOut(evaluate(weights, matrix), hiddenFrom)
+    const student = heldOut(evaluate(weightsFor('student', matrix, {}), matrix), hiddenFrom)
     return { mine, student }
   }, [shown, key, active, weights, matrix, hiddenFrom])
   const span = `${hiddenFrom}–${lastSeason}`

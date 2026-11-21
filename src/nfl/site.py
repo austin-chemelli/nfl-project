@@ -1077,11 +1077,22 @@ def custom_meta(paths: Paths) -> dict | None:
     }
 
 
-def _composite_doc(r: dict, groups: list[str], as_of) -> dict:
+def _news_pts(contributions: str | None) -> float:
+    """The news adjustment (ADR 0032) in points from a headline row's contributions: the same points
+    every line took at that lock, so a custom line takes them too. 0 without a `news` entry."""
+    from nfl.approaches import news
+
+    c = json.loads(contributions) if contributions else {}
+    dl = float(c.get("news", 0.0))
+    return news.points_from_logit(sum(c.values()), dl) if dl else 0.0
+
+
+def _composite_doc(r: dict, groups: list[str], as_of, news_pts: float = 0.0) -> dict:
     return {
         "as_of": _ts(as_of),
         "neutral": bool(r["neutral"]),
         "c": {g: round(float(r[f"c_{g}"]), CUSTOM_ROUND) for g in groups},
+        "news_pts": round(news_pts, 3),
     }
 
 
@@ -1093,14 +1104,22 @@ def custom_inputs(paths: Paths, games: pl.DataFrame, allrows: pl.DataFrame, seas
     if allrows.is_empty():
         return {}
     head = allrows.filter(pl.col("model_id") == HEADLINE_ID).select(
-        "game_id", pl.col("lock_ts").cast(pl.Datetime("us"))
+        "game_id", pl.col("lock_ts").cast(pl.Datetime("us")), "contributions"
     )
     head = head.filter(pl.col("game_id").is_in(games["game_id"].to_list())).unique("game_id")
-    comp = diy.composites_at(paths, head, season)
+    comp = diy.composites_at(paths, head.select("game_id", "lock_ts"), season)
     if comp.is_empty():
         return {}
-    at = dict(head.iter_rows())
-    return {r["game_id"]: _composite_doc(r, diy.GROUP_IDS, at[r["game_id"]]) for r in comp.iter_rows(named=True)}  # fmt: skip
+    at = {r["game_id"]: r for r in head.iter_rows(named=True)}
+    return {
+        r["game_id"]: _composite_doc(
+            r,
+            diy.GROUP_IDS,
+            at[r["game_id"]]["lock_ts"],
+            _news_pts(at[r["game_id"]]["contributions"]),
+        )
+        for r in comp.iter_rows(named=True)
+    }
 
 
 def custom_season(paths: Paths, games: pl.DataFrame, season: int) -> dict | None:
@@ -1115,7 +1134,7 @@ def custom_season(paths: Paths, games: pl.DataFrame, season: int) -> dict | None
     cur = graded.filter(pl.col("season") == season)
     stu = cur.filter(pl.col("model_id") == HEADLINE_ID).select(
         "game_id", "week", pl.col("lock_ts").cast(pl.Datetime("us")), "is_backfill",
-        pl.col("p_home").alias("p_student"), "home_win",
+        pl.col("p_home").alias("p_student"), "home_win", "contributions",
     )  # fmt: skip
     if stu.is_empty():
         return None
@@ -1140,7 +1159,7 @@ def custom_season(paths: Paths, games: pl.DataFrame, season: int) -> dict | None
              "kickoff_utc": _ts(r["kickoff_utc"]), "home_won": int(r["home_win"]),
              "status": BACKFILL if r["is_backfill"] else LOCKED,
              "p_student": _r(r["p_student"]), "p_market": _r(r["p_market"]),
-             **_composite_doc(r, diy.GROUP_IDS, r["lock_ts"])}
+             **_composite_doc(r, diy.GROUP_IDS, r["lock_ts"], _news_pts(r["contributions"]))}
             for r in rows.iter_rows(named=True)
         ],
     }  # fmt: skip

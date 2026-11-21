@@ -39,6 +39,14 @@ export function probit(p: number): number {
   return ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
 }
 
+/** Φ(x), the standard normal CDF (Numerical Recipes erfc, fractional error < 1.2e-7). */
+export function normCdf(x: number): number {
+  const z = Math.abs(x) / Math.SQRT2
+  const t = 1 / (1 + 0.5 * z)
+  const r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))))
+  return x >= 0 ? 1 - r / 2 : r / 2
+}
+
 /** A line in the engine's linear form: logit = a·(b·g + Σ W c) + c·g. A custom line has b = 0. */
 export interface LineParams {
   W: GroupWeights
@@ -51,13 +59,14 @@ export interface Scored {
   p_home: number
   spread_home: number
   logit: number
-  /** logit pieces: home field (a·b·g + c·g) and a·W_g·c_g per group; they sum to `logit` */
+  /** logit pieces: home field (a·b·g + c·g), a·W_g·c_g per group, and the news adjustment; they sum to `logit` */
   home_field: number
   groups: GroupWeights
+  news: number
 }
 
 /** Score one game's composites with a line (`engine.Model.score`, at the group level). */
-export function scoreLine(line: LineParams, comp: Pick<Composites, 'neutral' | 'c'>): Scored {
+export function scoreLine(line: LineParams, comp: Pick<Composites, 'neutral' | 'c'> & { news_pts?: number }): Scored {
   const g = comp.neutral ? 0 : 1
   const groups: GroupWeights = {}
   let x = 0
@@ -68,9 +77,15 @@ export function scoreLine(line: LineParams, comp: Pick<Composites, 'neutral' | '
     x += w * v
   }
   const home = line.a * line.intercept * g + line.c * g
-  const logit = line.a * x + home
-  const p = Math.min(Math.max(sigmoid(logit), P_CLIP), 1 - P_CLIP)
-  return { p_home: p, spread_home: probit(p) * SD_MARGIN, logit, home_field: home, groups }
+  const core = line.a * x + home
+  const pCore = Math.min(Math.max(sigmoid(core), P_CLIP), 1 - P_CLIP)
+  const pts = comp.news_pts ?? 0
+  if (!pts) return { p_home: pCore, spread_home: probit(pCore) * SD_MARGIN, logit: core, home_field: home, groups, news: 0 }
+  // the news adjustment (ADR 0032, nfl.approaches.news.apply): the spread moves by exactly its points
+  const spread = probit(pCore) * SD_MARGIN + pts
+  const p = Math.min(Math.max(normCdf(spread / SD_MARGIN), P_CLIP), 1 - P_CLIP)
+  const logit = Math.log(p / (1 - p))
+  return { p_home: p, spread_home: spread, logit, home_field: home, groups, news: logit - core }
 }
 
 /** Points of home win chance a piece is worth: p(with it) − p(without it), ×100 (site.py `_pp`). */
@@ -80,7 +95,9 @@ const pp = (total: number, piece: number) => Math.round(1000 * (sigmoid(total) -
 export function contributionOf(s: Scored): Contribution {
   const groups: Contribution['groups'] = {}
   for (const [id, v] of Object.entries(s.groups)) groups[id] = { pp: pp(s.logit, v), features: {} }
-  return { p_home: Math.round(1e4 * sigmoid(s.logit)) / 1e4, home_field_pp: pp(s.logit, s.home_field), groups }
+  const out: Contribution = { p_home: Math.round(1e4 * sigmoid(s.logit)) / 1e4, home_field_pp: pp(s.logit, s.home_field), groups }
+  if (s.news) out.news_pp = pp(s.logit, s.news)
+  return out
 }
 
 /**
