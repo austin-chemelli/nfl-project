@@ -310,7 +310,7 @@ def load_inputs(
     # Only the Student is needed, so load it alone (same config-hash guard as lock.load_models).
     cfg = load_all()[STUDENT_ID]
     try:
-        model = fit.load(paths, STUDENT_ID, season - 1)
+        model = fit.load_checked(paths, STUDENT_ID, season - 1)
     except FileNotFoundError as e:
         raise RuntimeError(f"no Student fit trained through {season - 1} (run nfl fit)") from e
     if check_hash and model.meta.get("config_hash") != fit.config_hash(cfg):
@@ -318,7 +318,7 @@ def load_inputs(
     student = [(STUDENT_ID, model)]
 
     def score(slate: pl.DataFrame) -> pl.DataFrame:
-        sc = lock.score_approaches(student, feats, slate, as_of)
+        sc = lock.score_approaches(student, feats, slate, as_of, paths=paths)
         return sc[0].frame.select("game_id", "p_home")
 
     out = build_inputs(games, preds, feats, score, season, as_of)

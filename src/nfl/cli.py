@@ -342,13 +342,19 @@ def narrative_claude(
     store: bool = typer.Option(
         True, help="Ingest the records (--no-store keeps them under raw/ only)."
     ),
+    status_only: bool = typer.Option(
+        False,
+        "--status-only",
+        help="The late-status pass (ADR 0032): re-check who plays for games that have a record.",
+    ),
 ) -> None:
     """Research games with headless Claude Code on the Max login (ADR 0030) and ingest them."""
     from nfl.llm import claude_research as cr
 
     try:
-        runs = cr.run_week(get_paths(), season, week, game_ids, model=model or cr.MODEL,
-                           parallel=parallel, store=store)  # fmt: skip
+        fn = cr.run_status if status_only else cr.run_week
+        runs = fn(get_paths(), season, week, game_ids, model=model or cr.MODEL,
+                  parallel=parallel, store=store)  # fmt: skip
     except cr.LoginError as e:
         print(f"FAILED login: {e}")
         raise typer.Exit(1) from e
@@ -368,6 +374,39 @@ def narrative_claude(
         if not r.ok:
             print(f"FAILED {r.game_id.split('_', 2)[2]}: {r.error}")
     if not all(r.ok for r in runs):
+        raise typer.Exit(1)
+
+
+@narrative_app.command("repeat")
+def narrative_repeat(
+    season: int = typer.Argument(None),
+    week: int = typer.Argument(None),
+    games: int = typer.Option(3, "--games", help="Games researched again."),
+    model: str = typer.Option(None, help="Claude model alias (default sonnet)."),
+    report: bool = typer.Option(
+        False, "--report", help="Print the agreement table; research nothing."
+    ),
+) -> None:
+    """Do the ratings repeat? Research games with a stored record again (not stored) and compare."""
+    from nfl.llm import claude_research as cr
+    from nfl.llm import repeat
+
+    paths = get_paths()
+    if report:
+        console.print(repeat.report(paths))
+        return
+    if season is None or week is None:
+        print("usage: nfl narrative repeat <season> <week> [--games N] | --report")
+        raise typer.Exit(2)
+    try:
+        res = repeat.run(paths, season, week, games, model=model or cr.MODEL)
+    except (cr.LoginError, ValueError) as e:
+        print(f"FAILED {e}")
+        raise typer.Exit(1) from e
+    for gid, err in res:
+        console.print(f"{gid}: {'compared' if err is None else f'[red]{err}[/red]'}")
+    console.print(repeat.report(paths))
+    if any(err for _, err in res):
         raise typer.Exit(1)
 
 

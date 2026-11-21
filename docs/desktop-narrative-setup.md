@@ -46,6 +46,21 @@ Status: current, written 2026-11-19 for the switch (ADR 0030, M6.8). Everything 
    ```
    It ends with `desktop narrative pass done: <season> week <week> (claude)` after about 15 minutes. The site shows the new records a few minutes later, once the `nfl-site` job it starts has published.
 
+## Optional: the late-status pass and the repeat check (ADR 0032)
+
+**Late-status pass.** A short second pass re-checks only who plays (starting quarterback, injury designations, inactives, starters ruled out) for games that already have a record, so the news adjustment sees Thursday and Saturday-morning news before each lock. About 5 minutes for a full slate; the records are new `claude_max` records with `pass_kind: status`. The units are installed **off** by `desktop-setup.sh`; switch the timer (Thursday 07:30 and Saturday 10:30 Eastern, `STATUS_PASSES`) on or off with:
+```
+bash scripts/desktop-setup.sh --enable-status
+bash scripts/desktop-setup.sh --disable-status
+```
+Run one by hand (any time, games already status-checked since the last slot are skipped): `systemctl --user start nfl-narrative-status.service`, or `uv run nfl narrative claude <season> <week> --status-only [game_id...]`. Nothing waits for it: the lock takes the latest record before it, and the cloud `narrative check` counts full passes only, so a status pass that doesn't run changes nothing.
+
+**Repeat check (by hand, about 7 minutes).** Researches three games that have a stored record from the latest full pass a second time, stores nothing, and appends the comparison to `marts/narrative_repeat.parquet`:
+```
+uv run nfl narrative repeat <season> <week> --games 3
+uv run nfl narrative repeat --report      # agreement per rating, no research
+```
+
 ## Checks afterwards
 
 - Next runs: `systemctl --user list-timers nfl-narrative.timer`

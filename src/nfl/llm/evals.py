@@ -73,3 +73,11 @@ def compare_records(paths: list[Path]) -> str:
     for p in paths:
         out += _texts(p)
     return "\n".join(out)
+
+
+def repeat_section(paths) -> str:
+    """The ratings' repeatability (ADR 0032, A1) as a markdown section for the evals report:
+    per rating the share of rerun pairs that agree within one step (`nfl narrative repeat`)."""
+    from nfl.llm import repeat
+
+    return "\n".join(["## Do the ratings repeat?", "", repeat.report(paths), ""])

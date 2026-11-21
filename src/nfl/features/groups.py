@@ -18,6 +18,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# v8 2026-11-20 (ADR 0032): the narrative ratings `qb_status`, `injury_impact`, `motivation`, `revenge`,
+# `lookahead` and `weather_concern` leave their groups: news reaches every line as one capped,
+# declared adjustment (nfl.approaches.news) instead of at a group's average fitted weight. Buzz and
+# the Sharp's public-betting read stay. Narrative is null historically, so no backfill number moves.
 # v7 2026-11-20 (model wave 3, ADR 0031): every member is now built or removed on purpose. The planned
 # `environment.temp_c` and `wind_kph` are removed: the store has kickoff weather (`weather.*`), but
 # observed for played games and forecast at a lock, so it stays out of every fit (context for the
@@ -30,7 +34,7 @@ from dataclasses import dataclass
 # neutral site by rule now (engine.NEUTRAL), and a member would count it twice. v6: wave 2 (ADR 0018). v5 2026-10-28: ml_spread_gap removed
 # from Market behavior (it carried the line's level); live-only scale priors. v4: scheme priors built.
 # v3: Market behavior, labels, units.
-REGISTRY_VERSION = "7"
+REGISTRY_VERSION = "8"
 
 # How the UI formats a value of each unit.
 UNITS = {
@@ -158,7 +162,6 @@ _GROUPS = [
               M("strength.qb_cpoe", 1, "QB completion % over expected", "pp", "How much more often the projected starter completes passes than the difficulty of his throws predicts.", short="QB accuracy"),
               M("availability.qb1_out", -1, "Starting QB out", "flag", "The depth-chart starter is listed Out or Doubtful."),
               M("availability.qb_change", -1, "New starter", "flag", "The projected starter is not the quarterback who started the team's last game."),
-              M("narrative.qb_status", -1, "QB status (news)", "index", "From the week's reporting: 0 healthy starter, 1 questionable or limited, 2 backup starting or unknown."),
           )),
     Group("health", "Health", "Who's playing", "Who is missing",
           "Who is missing from the lineup, weighted by how much the position matters.",
@@ -167,7 +170,6 @@ _GROUPS = [
               M("availability.starters_out", -1, "Starters out", "count", "Depth-chart starters listed Out or Doubtful."),
               M("availability.ol_starters_out", -1, "Offensive line starters out", "count", "Starting centers, guards and tackles listed Out or Doubtful."),
               M("availability.report_count", -1, "Players on the injury report", "count", "Players with an Out, Doubtful or Questionable game status."),
-              M("narrative.injury_impact", -1, "Injury impact (news)", "index", "From the week's reporting: 0 nothing notable, 1 a role player or two, 2 a key starter, 3 several key starters or the QB."),
           )),
     Group("form", "Form", "The moment", "Momentum",
           "Recent results and trajectory: is the team hot or cold?",
@@ -185,9 +187,6 @@ _GROUPS = [
               M("form.letdown", -1, "Coming off a big win", "flag", "Last game was a win over a top-8 team or a primetime division win."),
               M("form.eliminated", -1, "Out of contention", "flag", "Week 13 or later with a win rate under 35%."),
               M("form.clinched", -1, "Coasting", "flag", "Week 13 or later with a win rate over 80%."),
-              M("narrative.motivation", 1, "Motivation (news)", "index", "From the week's reporting: −1 nothing to play for, 0 ordinary, +1 must-win."),
-              M("narrative.revenge", 1, "Revenge game (news)", "flag", "The week's coverage frames it as a revenge game."),
-              M("narrative.lookahead", -1, "Looking ahead (news)", "flag", "The week's coverage frames it as a trap or look-ahead game."),
           )),
     Group("rest_travel", "Rest & travel", "The setup", "Fresh legs and body clocks",
           "Rest days, byes, short weeks, travel distance and time zones.",
@@ -206,7 +205,6 @@ _GROUPS = [
               M("environment.primetime", 1, "Primetime", "flag", "Kickoff at 7pm ET or later, or a Thursday or Monday game."),
               M("environment.is_dome", 1, "Dome", "flag", "Played under a closed roof."),
               M("environment.is_turf", 1, "Artificial turf", "flag", "Played on an artificial surface."),
-              M("narrative.weather_concern", -1, "Weather concern (news)", "index", "From the forecast: 0 dome or mild, 0.5 strong wind or rain, 1 severe."),
           ), game_level=True),
     Group("coaching", "Coaching", "The sidelines", "Decision quality and staff stability",
           "How the staff makes decisions, and how stable the staff is.",
@@ -287,15 +285,9 @@ MARKET_LEVEL = {
 LIVE_PRIORS: dict[str, tuple[float, float]] = {
     "market.line_move_pts": (0.0, 1.5),
     "narrative.public_bet_pct_home": (0.5, 0.15),
-    "narrative.qb_status": (0.3, 0.6),
-    "narrative.injury_impact": (1.0, 1.0),
     "narrative.sentiment": (0.0, 0.4),
     "narrative.hype": (0.4, 0.25),
     "narrative.coaching_turmoil": (0.1, 0.2),
-    "narrative.motivation": (0.0, 0.4),
-    "narrative.revenge": (0.05, 0.2),
-    "narrative.lookahead": (0.05, 0.2),
-    "narrative.weather_concern": (0.15, 0.25),
 }
 # Hard limits on a feature's raw value, applied before standardizing. Line moves run a median of
 # 0.5 points and 2.5 at the 95th percentile (44 games, 2026); a QB injury moved JAX @ BAL 12.5, which

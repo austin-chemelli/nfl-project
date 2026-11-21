@@ -13,11 +13,13 @@ import subprocess
 
 import polars as pl
 
-from nfl.approaches import ensemble, fit
+from nfl.approaches import ensemble, fit, news
 from nfl.approaches.schema import Approach, check_features, load_all
 from nfl.config import FIRST_SCORED_SEASON, Paths, current_season
 from nfl.features import store
 from nfl.predict import PRED_SCHEMA, append_rows, existing
+
+CORE_ID = "student.core"  # = nfl.lock.CORE_ID (lock imports this module lazily)
 
 
 def git_sha() -> str:
@@ -114,18 +116,25 @@ def _score(
         g = games.filter(pl.col("season") == season)
         # every completed game, ties included (grading drops ties); features as of the lock
         locks = g.select("game_id", (pl.col("kickoff_utc") - fit.SYNTHETIC_LOCK).alias("lock_ts"))
-        vec = store.game_vectors(store.as_of(store.read_features(paths, (season, season)), locks))
+        asof = store.as_of(store.read_features(paths, (season, season)), locks)
+        vec = store.game_vectors(asof)
+        # news at the synthetic lock: 0 for every past season (narrative is null), live seasons get
+        # the stored narrative as known then (ADR 0032)
+        adj = news.adjustment(asof, g["game_id"].to_list(), news.weights(paths))
         for a in approaches:
             # the one public line per approach (ADR 0004 amendment); global is a reference fit
             mid = a.id
-            model = fit.load(paths, mid, season - 1)
+            model = fit.load_checked(paths, mid, season - 1)
             # the artifact's own feature list: grouped approaches resolve against the store
             wide = g.select("game_id").join(
                 store.to_wide(vec, model.inputs), on="game_id", how="left"
             )
             scored_df = model.score(wide)
             version = f"{sha}+{model.meta.get('config_hash', '')}"
-            rows.append(_rows(g, scored_df, mid, version))
+            if mid == ensemble.HEADLINE_ID:  # the twin: the Student before the adjustment
+                rows.append(_rows(g, scored_df, CORE_ID, version))
+                model_ids.add(CORE_ID)
+            rows.append(_rows(g, news.apply(scored_df, adj), mid, version))
             model_ids.add(mid)
     new = pl.concat(rows) if rows else pl.DataFrame(schema=PRED_SCHEMA)
     return new, model_ids

@@ -200,3 +200,126 @@ def test_push_guard_allows_only_lock_commits(repo):
     git(repo, "add", "sneaky.py")
     git(repo, "commit", "-q", "-m", "lock: 2026 W09 sat")
     assert len(lock.unpushed_non_lock_commits(repo)) == 1
+
+
+def news_store(kao):
+    rows = toy_store(kao).rows()
+    rows += feat_rows(
+        "G_SUN", "narrative.qb_status", 0.0, 2.0, kao
+    )  # BAL's QB is in doubt: helps BUF
+    rows += feat_rows("G_SUN", "narrative.motivation", 1.0, 0.0, kao)
+    return pl.DataFrame(rows, schema=store.FEATURE_SCHEMA, orient="row")
+
+
+def test_the_student_gets_the_news_and_its_twin_does_not():
+    slate = GAMES.filter(pl.col("game_id") == "G_SUN")
+    feats = news_store(SAT_LOCK - timedelta(hours=1))
+    models = [("student", toy_model("student")), ("sharp", toy_model("sharp"))]
+    plain = {
+        s.model_id: s
+        for s in lock.score_approaches(
+            models, toy_store(SAT_LOCK - timedelta(hours=1)), slate, SAT_LOCK
+        )
+    }
+    scored = {
+        s.model_id: s for s in lock.score_approaches(models, feats, slate, SAT_LOCK, with_core=True)
+    }
+    assert set(scored) == {"student", "student.core", "sharp"}
+    core, stu, sharp = (
+        scored[k].frame.row(0, named=True) for k in ("student.core", "student", "sharp")
+    )
+    base = plain["student"].frame.row(0, named=True)
+    # the twin is the football only line; the Student is it plus 1.0 + 0.3 points, the same on every line
+    assert core["p_home"] == pytest.approx(base["p_home"]) and "news_pts" not in core
+    assert stu["spread_home"] == pytest.approx(core["spread_home"] + 1.3)
+    assert sharp["spread_home"] == pytest.approx(plain["sharp"].frame["spread_home"][0] + 1.3)
+    assert stu["p_home"] > core["p_home"]
+    assert scored["student"].version == scored["student.core"].version
+    # contributions still sum to the logit, with a `news` entry on the adjusted line only
+    c = json.loads(stu["contributions"])
+    assert "news" in c and sum(c.values()) == pytest.approx(stu["logit"])
+    assert "news" not in json.loads(core["contributions"])
+    # without with_core there is no twin (previews and what-ifs never carry it)
+    assert "student.core" not in {
+        s.model_id for s in lock.score_approaches(models, feats, slate, SAT_LOCK)
+    }
+
+
+def test_twin_row_and_artifact_news():
+    slate = GAMES.filter(pl.col("game_id") == "G_SUN")
+    feats = news_store(SAT_LOCK - timedelta(hours=1))
+    res = lock.LockResult(2026, 9, "sat", SAT_LOCK, slate)
+    res.market = lock.market_at(feats, slate, SAT_LOCK)
+    res.scored = lock.score_approaches(
+        [("student", toy_model("student"))], feats, slate, SAT_LOCK, with_core=True
+    )
+    rows = lock.prediction_rows(res, "snap", "deadbee")
+    assert sorted(rows["model_id"].to_list()) == ["student", "student.core"]
+    assert rows["model_version"].n_unique() == 1
+    art = lock.build_artifact(res, "deadbee", "snap", None)
+    g = art["games"][0]
+    assert g["news"]["pts"] == pytest.approx(1.3)
+    assert [r["input"] for r in g["news"]["reasons"]] == [
+        "narrative.qb_status",
+        "narrative.motivation",
+    ]
+    assert g["models"]["student.core"]["spread_home"] == pytest.approx(
+        g["models"]["student"]["spread_home"] - 1.3, abs=1e-3
+    )
+
+
+def test_stale_registry_fit_is_refused(tmp_path, monkeypatch):
+    m = toy_model("student")
+    m.meta["registry_version"] = "7"
+    monkeypatch.setattr(lock.fit, "load", lambda *a, **k: m)
+    monkeypatch.setattr(lock.fit, "config_hash", lambda a: "abc")
+    with pytest.raises(RuntimeError, match="registry v7"):
+        lock.load_models(None, 2025)
+
+
+def test_load_checked_refuses_stale_and_unstamped_grouped_fits(monkeypatch):
+    from nfl.approaches import fit
+
+    m = toy_model("student")
+    monkeypatch.setattr(fit, "load", lambda *a, **k: m)
+    for rv in ("7", None):  # unstamped = fitted before the stamp existed: grouped, so refused
+        m.meta.pop("registry_version", None)
+        if rv:
+            m.meta["registry_version"] = rv
+        with pytest.raises(RuntimeError, match="feature registry"):
+            fit.load_checked(None, "student", 2025)
+    m.meta["registry_version"] = fit.REGISTRY_VERSION
+    assert fit.load_checked(None, "student", 2025) is m
+    g = toy_model("global")  # not a grouped approach: nothing to check without a stamp
+    monkeypatch.setattr(fit, "load", lambda *a, **k: g)
+    assert fit.load_checked(None, "global", 2025) is g
+
+
+def test_run_score_and_league_inputs_refuse_a_v7_artifact(monkeypatch):
+    from datetime import datetime
+
+    from nfl.approaches import fit, run
+    from nfl.approaches.schema import load_all
+    from nfl.league import inputs
+
+    m = toy_model("student")
+    m.meta["registry_version"] = "7"
+    monkeypatch.setattr(fit, "load", lambda *a, **k: m)
+    games = pl.DataFrame({"game_id": ["G"], "season": [2026],
+                          "kickoff_utc": [datetime(2026, 11, 1, 18)]})  # fmt: skip
+    empty = pl.DataFrame(schema=store.FEATURE_SCHEMA)
+    monkeypatch.setattr(run, "scored_approaches", lambda paths, only=None: [load_all()["student"]])
+    monkeypatch.setattr(run.store, "read_features", lambda *a, **k: empty)
+    with pytest.raises(RuntimeError, match="registry v7"):
+        run._score(None, games)
+    monkeypatch.setattr(inputs.store, "games_frame", lambda paths: games)
+    monkeypatch.setattr(inputs.store, "read_features", lambda *a, **k: empty)
+    monkeypatch.setattr("nfl.predict.existing", lambda paths: pl.DataFrame())
+    with pytest.raises(RuntimeError, match="registry v7"):
+        inputs.load_inputs(None, 2026, datetime(2026, 11, 1))
+
+
+def test_the_twin_is_never_bet():
+    from nfl import ledger
+
+    assert "student.core" in ledger.NO_BET_MODELS

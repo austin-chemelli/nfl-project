@@ -78,6 +78,7 @@ TABLES: tuple[Table, ...] = (
     Table("scheme_qb_season", "mart", "scheme rates by quarterback-season"),
     Table("audit", "mart", "null rates per table and column"),
     Table("llm_calls", "mart", "one row per local-model request"),
+    Table("narrative_repeat", "mart", "research ratings, stored vs a rerun, per game and rating: do they repeat? (append-only, ADR 0032)"),
     Table("candidates", "mart", "the candidates ledger: every second-level candidate's gates and verdict (append-only)"),
     Table("team_week", "derived", "SQL model: plays aggregated per season, week, game, team and side (off/def)"),
     Table("team_split_week", "derived", "SQL model: team_week split by situation (blitz, box, play action, down, field zone, opponent tier ...), with and without, per unit"),

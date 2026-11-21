@@ -1039,6 +1039,28 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 
 Not fixed: the status-to-play rates behind `value_lost` are fitted on every season (a mild optimism in a candidate that failed anyway).
 
+## 2026-11-20: Model wave 3 live; PR 2: the news adjustment (approaches-3, M27, ADR 0032)
+
+**Why.** Austin wants late news and "bad vibes" to count a little. The narrative ratings sat inside the groups, uncapped and unmeasured. In the 2026 live rows they moved the Student 0.7 points on average (up to 2.1) and the Sharp up to 4.4, and a revenge or look-ahead flag alone was worth 1.2 points.
+
+**What changed.**
+- PR 1 (#69) was merged and cut over the same evening: refit on a fresh bucket copy, upload, `nfl-site` and a dry-run lock. CI's site-data step failed at first, because the new image ran before the upload and I still held the job lock; it passed on rerun.
+- PR 2, built by two `implementer` agents in parallel:
+  - registry v8, with six narrative members out of the groups;
+  - `nfl.approaches.news`: declared weights in points, a 1.5-point cap, no double count with the depth chart;
+  - the same adjustment on every line, plus a `student.core` twin;
+  - schema v3 countable facts and the `news` feature family;
+  - `nfl narrative repeat` and its agreement gate;
+  - a status-only pass and its timer, installed off;
+  - game `news` and tracker `news_effect` on the site.
+
+**Findings.**
+- Weights come from the Student's own fitted effects: QB out 1.59 points, QB change 1.07, starter out 0.22.
+- A v8 refit's football weights equal v7's to 4e-14, so no historical number moves.
+- On the Week 11 Saturday slate the adjustment ran from −0.3 to +1.0 points (TB @ DET: Tampa's QB status 2). The cap bound nowhere. No countable-fact rows exist yet.
+
+**Lesson.** Release the job lock before starting a cloud job that takes it. Two agents writing `tests/test_news.py` at once clobbered one file: give parallel agents distinct test file names in the brief.
+
 ## 2026-11-20: A betting guide from our own history (M29, betting-guide track)
 
 **Why.** Austin wants to place small, manual bets for fun (Underdog, from Texas) and asked which bets make sense: singles or parlays, heavy favorites, coin flips, how much to stake, and spreads or totals only on strong evidence.

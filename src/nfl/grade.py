@@ -295,7 +295,10 @@ def grade(paths: Paths, console: Console) -> None:
     console.print(t)
 
     paths.site.mkdir(parents=True, exist_ok=True)
-    (paths.site / "scorecard.json").write_text(sc.write_json())
+    from nfl.site import model_registry  # lazy: site imports this module's neighbours
+
+    public = set(model_registry())  # not the diagnostics (student.core, retired student_v2)
+    (paths.site / "scorecard.json").write_text(sc.filter(pl.col("model_id").is_in(public)).write_json())  # fmt: skip
     slate = upcoming_slate(paths)
     if not slate.is_empty():
         season, week = slate["season"][0], slate["week"][0]

@@ -33,7 +33,7 @@ from zoneinfo import ZoneInfo
 
 import polars as pl
 
-from nfl.approaches import ensemble, fit
+from nfl.approaches import ensemble, fit, news
 from nfl.approaches.engine import Model
 from nfl.approaches.schema import load_all
 from nfl.config import Paths, now_utc
@@ -47,6 +47,7 @@ SLOTS = {"thu": {2, 3, 4}, "sat": {5, 6, 0, 1}}  # Python weekday(): Mon=0 ... S
 ARTIFACT_SCHEMA = "1"
 PUBLIC_DIR = Path("public") / "predictions"
 LOCK_PREFIX = "lock: "
+CORE_ID = "student.core"  # the Student without the news adjustment (ADR 0032): a diagnostic twin
 
 
 # ---------------------------------------------------------------------------------------- slate
@@ -115,7 +116,7 @@ def load_models(paths: Paths, trained_through: int) -> tuple[list[tuple[str, Mod
         if a.id == "narrative":
             continue
         try:
-            m = fit.load(paths, a.id, trained_through)
+            m = fit.load_checked(paths, a.id, trained_through)
         except FileNotFoundError:
             missing.append(a.id)
             continue
@@ -137,18 +138,38 @@ def score_approaches(
     feats_long: pl.DataFrame,
     slate: pl.DataFrame,
     lock_ts: datetime,
+    *,
+    paths: Paths | None = None,
+    with_core: bool = False,
 ) -> list[Scored]:
-    """Pure: score the slate with each model using feature rows known strictly before lock_ts."""
+    """Pure: score the slate with each model using feature rows known strictly before lock_ts, then
+    add the news adjustment (ADR 0032; the same points on every line). `paths` reads the repeat
+    table that zeroes unrepeatable ratings (without it, the declared weights count in full).
+    `with_core` also returns `student.core`: the Student before the adjustment, for the lock only."""
     asof = store.as_of(
         feats_long.filter(pl.col("game_id").is_in(slate["game_id"].to_list())), lock_ts
     )
+    return _score_asof(models, asof, slate, paths, with_core)
+
+
+def _score_asof(
+    models: list[tuple[str, Model]],
+    asof: pl.DataFrame,
+    slate: pl.DataFrame,
+    paths: Paths | None,
+    with_core: bool,
+) -> list[Scored]:
     vec = store.game_vectors(asof)
     ids = slate.select("game_id")
+    adj = news.adjustment(asof, ids["game_id"].to_list(), news.weights(paths))
     out = []
     for mid, m in models:
         wide = ids.join(store.to_wide(vec, m.inputs), on="game_id", how="left")
         sc = m.score(wide)
-        out.append(Scored(mid, f"{m.meta.get('config_hash', '')}", sc))
+        version = f"{m.meta.get('config_hash', '')}"
+        if with_core and mid == ensemble.HEADLINE_ID:
+            out.append(Scored(CORE_ID, version, sc))
+        out.append(Scored(mid, version, news.apply(sc, adj)))
     return out
 
 
@@ -307,6 +328,11 @@ def build_artifact(
                     "p_home": _r(r["p_home"]),
                     "spread_home": _r(r["spread_home"]),
                 }
+                if "news_pts" in r and "news" not in by_game[r["game_id"]]:  # additive (ADR 0032)
+                    by_game[r["game_id"]]["news"] = {
+                        "pts": _r(r["news_pts"]),
+                        "reasons": json.loads(r["news_reasons"] or "[]"),
+                    }
     return {
         "schema_version": ARTIFACT_SCHEMA,
         "season": res.season,
@@ -467,9 +493,9 @@ def run(
             f"missing fit artifacts trained through {season - 1}: {missing} (run nfl fit)"
         )
     res.market = market_at(feats, slate, lock_ts)
-    res.scored = score_approaches(models, feats, slate, lock_ts) + score_reference(
-        games, slate, res.market
-    )
+    res.scored = score_approaches(
+        models, feats, slate, lock_ts, paths=paths, with_core=True
+    ) + score_reference(games, slate, res.market)
 
     res.totals = _totals(paths, feats, slate, res.market, lock_ts, season, slot, dry_run)
 

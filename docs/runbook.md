@@ -106,6 +106,12 @@ It checks: systemd and lingering in WSL (job-search's host setup already did bot
 | Claude is signed in with '...', not the claude.ai Max login | An API key or token is set: remove it from the environment and `~/.claude/settings.json`, then `claude /login` |
 | some games failed (usage limit, a page loop, a timeout) | `systemctl --user start nfl-narrative.service` resumes (stored games are skipped); the game's folder under `raw/narrative_claude/` says why |
 
+### Late-status pass and repeat check (ADR 0032, optional)
+
+`nfl-narrative-status.timer` (Thu 07:30 and Sat 10:30 ET, `STATUS_PASSES`; installed off, `bash scripts/desktop-setup.sh --enable-status` / `--disable-status`) runs `scripts/desktop-narrative.sh --status` = `nfl narrative claude <season> <week> --status-only`: a short session per game that already has a record, re-checking the starting QB, injury designations, inactives and starters ruled out (prompt `claude_status_v1`, checked like a full record), merged onto a copy of the latest record as a new one (`pass_kind: status`, new `known_as_of`), then the usual upload and `nfl-site`. It is not in `PASSES`: the cloud `nfl-narrative-check` counts full passes only (`stored_since` ignores status records) and the lock reads no desktop state, only the latest record stamped before it, so a missed status pass changes nothing. Run one now: `systemctl --user start nfl-narrative-status.service`; logs `journalctl --user -u nfl-narrative-status`.
+
+`uv run nfl narrative repeat <season> <week> [--games 3]` researches games with a stored full record again (nothing stored) and appends rating-by-rating comparisons to `marts/narrative_repeat.parquet`; `--report` prints the agreement per rating. A rating that agrees within one step on under 70% of at least 12 pairs gets weight 0 in the news adjustment. By hand, once a week, after the Wednesday pass.
+
 ### On the local model (Windows task `nfl-narrative`, until the switch-over)
 
 Two passes a week on the desktop, which has the models (docs/desktop-llm-setup.md): Wednesday 18:00 ET for every game (the Thursday game's final reports are out by then; the rest get an early preview) and Saturday 07:00 ET for the Sunday and Monday games (after Friday's injury designations, done before the 12:00 lock). Each pass stores new records; nothing is overwritten. The site shows a game's newest record, and features and locks use the newest one from before their own time (`known_as_of`). The pass times are `PASSES` in `src/nfl/llm/narrative.py`; the cloud check uses them, so change both together.

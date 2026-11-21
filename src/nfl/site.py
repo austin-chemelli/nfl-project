@@ -40,6 +40,7 @@ from pathlib import Path
 import polars as pl
 
 from nfl import market_books
+from nfl.approaches import news
 from nfl.config import Paths, current_season, now_utc
 from nfl.features import store
 from nfl.features.groups import FEATURE_GROUP, GROUPS, HEADINGS, REGISTRY_VERSION
@@ -288,7 +289,7 @@ def preview_rows(
     feats = store.read_features(paths, seasons=(season, season))
     models, _missing = lock.load_models(paths, season - 1)
     market = lock.market_at(feats, slate, now)
-    scored = lock.score_approaches(models, feats, slate, now) + lock.score_reference(
+    scored = lock.score_approaches(models, feats, slate, now, paths=paths) + lock.score_reference(
         history, slate, market
     )
     rows = []
@@ -645,8 +646,8 @@ def _swings_unsafe(paths, games, season, now, feats, injuries) -> dict[str, list
             qb1 = (chart.get(key) or [(None, None)])[0][0]
             mod = swings.apply(rows, side, {**v[q], "availability.qb1_out": 0.0 if q == qb1 else 1.0,
                                             "availability.qb_change": 0.0 if q == starts.get(key, {}).get("last") else 1.0})  # fmt: skip
-            base = swings.rescore(models, rows, gid, now)
-            what = swings.rescore(models, mod, gid, now)
+            base = swings.rescore(models, rows, gid, now, paths)
+            what = swings.rescore(models, mod, gid, now, paths)
             items.append({
                 "kind": "qb", "team": team, "why": why,
                 "assumed": {"qb": assumed, "name": c.get(assumed, assumed), "status": report.get(assumed),
@@ -854,6 +855,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
 
     narr = {r.game_id: r for r in load_records(paths, (season, season))}
     edges = group_edges(paths, games, feats, season, now)
+    news_w = news.weights(paths)
     charted, starters = _depth_context(paths, games, season, now)
     card_ctx = {
         "starts": _qb_starts(games),
@@ -880,6 +882,7 @@ def build(paths: Paths, season: int | None = None, league_snapshot: str | None =
             detail["market_history"] = _safe(lambda pts: [_line_point(p) for p in pts], [], points)
             detail["books"] = _safe(_books_out, None, books.get(g["game_id"]))
             detail["swings"] = swing.get(g["game_id"], [])
+            detail["news"] = _safe(_news_block, None, g, allrows, feats, narr, news_w)
             detail["strong_calls"] = calls_by_game.get(g["game_id"], [])
             detail["key_players"] = claims_by_game.get(g["game_id"])  # ADR 0027: context, M24.4
             detail["lineups"] = lineups.get(g["game_id"])  # ADR 0027: the formation map, M24.5
@@ -1305,9 +1308,10 @@ def _contributions_pp(c: dict) -> dict:
     L = sum(c.values())
     by_group: dict[str, dict] = {}
     for f, v in c.items():
-        if f == "home_field":
+        if f in ("home_field", "news"):  # news has its own line (ADR 0032)
             continue
-        grp = FEATURE_GROUP.get(f, "other")
+        # Weeks 9-11 locks (registry v7) carry their narrative ratings as features: show them as News
+        grp = "news" if f.startswith("narrative.") else FEATURE_GROUP.get(f, "other")
         d = by_group.setdefault(grp, {"_logit": 0.0, "features": {}})
         d["_logit"] += v
         d["features"][f] = _pp(L, v)
@@ -1317,7 +1321,42 @@ def _contributions_pp(c: dict) -> dict:
     return {
         "p_home": _r(expit(L)),
         "home_field_pp": _pp(L, c.get("home_field", 0.0)),
+        "news_pp": _pp(L, c.get("news", 0.0)),
         "groups": by_group,
+    }
+
+
+def _news_block(
+    g: dict, allrows: pl.DataFrame, feats: pl.DataFrame, narr: dict, w: dict
+) -> dict | None:
+    """What the news added to the Student's line for this game (ADR 0032), or None without a research
+    record. Points come from the stored row (exact); the reasons from the features at that lock."""
+    gid = g["game_id"]
+    if gid not in narr or allrows.is_empty():
+        return None
+    rows = allrows.filter((pl.col("game_id") == gid) & (pl.col("model_id") == HEADLINE_ID))
+    if rows.is_empty():
+        return None
+    r = rows.row(0, named=True)
+    c = json.loads(r["contributions"]) if r["contributions"] else {}
+    dl = float(c.get("news", 0.0))
+    if not dl and any(k.startswith("narrative.") for k in c):
+        return (
+            None  # a registry-v7 lock: the ratings were inside the Student's groups, no news term
+        )
+    pts = news.points_from_logit(sum(c.values()), dl) if dl else 0.0
+    reasons = []
+    if dl:
+        asof = store.as_of(feats.filter(pl.col("game_id") == gid), r["lock_ts"])
+        vals = news._team_values(asof, [gid])
+        reasons = news.describe(news.reasons_for(vals, gid, w), g["home_team"], g["away_team"])
+    spread = r["spread_home"]
+    return {
+        "pts": _r(pts, 2),
+        "football_only_spread": None if spread is None else _r(spread - pts, 1),
+        "reasons": reasons,
+        "reasons_source": "recomputed",  # from the stored features and today's declared weights
+        "cap_pts": news.CAP_PTS,
     }
 
 
@@ -1326,7 +1365,9 @@ def _game_detail(g, allrows, feats, tend, injuries, narr, now, edges=None) -> di
     contrib = {}
     if not allrows.is_empty():
         for r in allrows.filter(
-            (pl.col("game_id") == gid) & pl.col("contributions").is_not_null()
+            (pl.col("game_id") == gid)
+            & pl.col("contributions").is_not_null()
+            & (pl.col("model_id") != "student.core")  # the twin is a diagnostic (ADR 0032)
         ).iter_rows(named=True):
             contrib[r["model_id"]] = _contributions_pp(json.loads(r["contributions"]))
     # feature values as known at the game's lock (kickoff for completed, now for upcoming)
@@ -1922,6 +1963,39 @@ def model_changes(preds: pl.DataFrame, models: list[str]) -> list[dict]:
     return out
 
 
+def news_effect(graded: pl.DataFrame, seed: int = 0) -> dict | None:
+    """What the news added (ADR 0032): live graded games of the Student against its football-only twin
+    (`student.core`). `delta_log_loss` is the mean paired difference, negative = the news helped, with a
+    90% bootstrap over games. None before the first live game with a twin."""
+    import numpy as np
+
+    if graded.is_empty() or "student.core" not in graded["model_id"].unique().to_list():
+        return None
+    live = graded.filter(~pl.col("is_backfill"))
+    a = live.filter(pl.col("model_id") == HEADLINE_ID).select(
+        "game_id", pl.col("log_loss").alias("ll"), pl.col("spread_home").alias("sp")
+    )
+    b = live.filter(pl.col("model_id") == "student.core").select(
+        "game_id", pl.col("log_loss").alias("ll0"), pl.col("spread_home").alias("sp0")
+    )
+    j = a.join(b, on="game_id", how="inner")
+    if j.is_empty():
+        return None
+    d = (j["ll"] - j["ll0"]).to_numpy()
+    pts = (j["sp"] - j["sp0"]).abs().to_numpy()
+    moved = pts > 0.05
+    rng = np.random.default_rng(seed)
+    boot = d[rng.integers(0, len(d), size=(500, len(d)))].mean(1)
+    return {
+        "games": len(d),
+        "moved": int(moved.sum()),
+        "mean_abs_pts": _r(float(pts[moved].mean()), 2) if moved.any() else None,
+        "delta_log_loss": _r(float(d.mean()), 4),
+        "lo": _r(float(np.quantile(boot, 0.05)), 4) if moved.any() else None,
+        "hi": _r(float(np.quantile(boot, 0.95)), 4) if moved.any() else None,
+    }
+
+
 def tracker(paths: Paths, season: int, reg: dict) -> dict:
     sc = _read(paths, "scorecard")
     graded = _read(paths, "graded")
@@ -1950,11 +2024,12 @@ def tracker(paths: Paths, season: int, reg: dict) -> dict:
             {"model_id": r["model_id"], "week": r["week"], "n": r["n"], "cum_log_loss": _r(r["cum"]), "live": r["live"], "n_live": r["n_live"]}
             for r in wk.iter_rows(named=True)
         ]  # fmt: skip
-        live = graded.filter(~pl.col("is_backfill"))
+        live = graded.filter(~pl.col("is_backfill") & pl.col("model_id").is_in(list(reg)))
         out["weeks_tracked"] = {
             r["model_id"]: r["weeks"]
             for r in live.group_by("model_id").agg(pl.concat_str(["season", "week"]).n_unique().alias("weeks")).iter_rows(named=True)
         }  # fmt: skip
+    out["news_effect"] = news_effect(graded)
     if not summ.is_empty():
         out["backtest"] = [
             {k: (_r(v) if isinstance(v, float) else v) for k, v in r.items()}

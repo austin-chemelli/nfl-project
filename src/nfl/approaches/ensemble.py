@@ -17,7 +17,7 @@ ENSEMBLE_ID = "ensemble"
 HEADLINE_ID = "student"
 # weather (ADR 0024) is context: training would see observed kickoff weather and a lock only a
 # forecast, so it stays out of every fit (ADR 0031, review finding)
-EXCLUDED_FAMILIES = {"market", "narrative", "weather"}
+EXCLUDED_FAMILIES = {"market", "narrative", "weather", "news"}  # news: live-only facts (ADR 0032)
 # the neutral-site flag is a rule (engine.NEUTRAL), never a fitted member: it would count twice
 EXCLUDED_FEATURES = {"environment.neutral_site"}
 

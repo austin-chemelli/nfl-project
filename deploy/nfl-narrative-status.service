@@ -1,0 +1,15 @@
+[Unit]
+Description=NFL late-status pass: who plays, on headless Claude Code on the Max login (ADR 0032)
+# Started by nfl-narrative-status.timer on the desktop (WSL, systemd user unit). Same script as the
+# full pass, with --status: `nfl narrative claude --status-only` for games that already have a
+# record, then the upload and the site rebuild. Optional: nothing waits for it (the lock reads the
+# latest record before it; the cloud `narrative check` counts full passes only). docs/runbook.md.
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/dev/nfl-project
+Environment=NARRATIVE_PRODUCER=claude
+ExecStart=/usr/bin/env bash -lc 'exec scripts/desktop-narrative.sh --status'
+Nice=5
+# a status pass is about 5 minutes; each game's session stops itself after 30
+TimeoutStartSec=2h

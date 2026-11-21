@@ -244,7 +244,7 @@ def test_one_game_end_to_end_with_a_repair_turn(tmp_path, monkeypatch):
     stored = load_records(paths)
     assert [r.producer for r in stored] == ["claude_max"] and stored[
         0
-    ].prompt_version == "claude_v1"
+    ].prompt_version == "claude_v2"
     assert stored[0].searches == ["Ravens QB week 8"]
     kept = list(cr.runs_dir(paths, 2026, 8).glob("2026_08_BAL_BUF_*"))
     assert kept and (kept[0] / "record.checked.json").exists() and not (kept[0] / "settings.json").exists()  # fmt: skip
