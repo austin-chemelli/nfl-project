@@ -17,6 +17,22 @@ shrunk mean = (sum_x + n0 * prior) / (n + n0).
   decisions.turnover_margin_pg (takeaways - giveaways) per game on pass/run plays, shrunk toward 0
                                with n0 = 4 games. Giveaway = interception thrown + fumble lost by
                                the offense.
+  decisions.one_score_luck     (wins in one-score games (|margin| <= 8) - 0.5 * one-score games) /
+                               games played, season to date; ties count half a win. Unshrunk;
+                               null before the team's first game of the season.
+  decisions.penalty_yds_pg     penalty yards against (accepted, `penalty_team` = the team) per game,
+                               shrunk with n0 = 4 games, same prior blend (default 55).
+  decisions.pace               seconds of game clock between consecutive snaps of one drive (same
+                               quarter, 0 < gap <= 60) when the snap is a pass/run in neutral
+                               situations (wp 0.2-0.8, quarters 1-3), n0 = 150, same prior blend
+                               (default 28).
+  decisions.proe_leading       like pass_rate_oe but only plays with score_differential >= 7;
+  decisions.proe_trailing      ... and <= -7. n0 = 100, same prior blend.
+  decisions.hc_tenure          seasons the game's head coach (schedule `home_coach`/`away_coach`,
+                               an empty name takes the team's previous game's coach) has led the
+                               team without a break, including this season. Null for a coach whose
+                               run starts in the first season of the games table (tenure unknown).
+  decisions.hc_new             1 when hc_tenure is 1, else 0 (null when tenure is null).
 """
 
 from __future__ import annotations
@@ -32,12 +48,19 @@ from nfl.features.strength import TEAM_W, _canon, _prev_tables, team_games
 from nfl.tendencies import rates_asof, weekly_aggregates
 
 SOURCE = "pbp"
-VERSION = "1"
+VERSION = "3"
 
 N0_GO = 10.0
 N0_OE = 150.0
 N0_EXPLOSIVE = 200.0
 N0_TURNOVER = 4.0
+N0_PROE_SPLIT = 100.0
+N0_PACE = 150.0
+N0_PENALTY = 4.0
+PACE_DEFAULT = 28.0
+PENALTY_DEFAULT = 55.0
+LEAD_MARGIN = 7
+ONE_SCORE = 8.0
 EXPLOSIVE_DEFAULT = 0.09
 PASS_OE_DEFAULT = 0.0
 
@@ -53,6 +76,16 @@ select game_id, posteam as team,
                    and pass_oe is not null) as oe_n,
   coalesce(sum(cast(pass_oe as double)) filter (where down in (1, 2)
                    and play_type in ('pass','run') and pass_oe is not null), 0) as oe_s,
+  count(*) filter (where down in (1, 2) and play_type in ('pass','run') and pass_oe is not null
+                   and score_differential >= {lead}) as lead_n,
+  coalesce(sum(cast(pass_oe as double)) filter (where down in (1, 2)
+                   and play_type in ('pass','run') and pass_oe is not null
+                   and score_differential >= {lead}), 0) as lead_s,
+  count(*) filter (where down in (1, 2) and play_type in ('pass','run') and pass_oe is not null
+                   and score_differential <= -{lead}) as trail_n,
+  coalesce(sum(cast(pass_oe as double)) filter (where down in (1, 2)
+                   and play_type in ('pass','run') and pass_oe is not null
+                   and score_differential <= -{lead}), 0) as trail_s,
   count(*) filter (where play_type in ('pass','run')) as ex_n,
   count(*) filter (where (play_type = 'pass' and yards_gained >= 20)
                    or (play_type = 'run' and yards_gained >= 12)) as ex_s,
@@ -70,9 +103,32 @@ from read_parquet('{glob}', hive_partitioning=true)
 where season >= {min_season} and posteam is not null and defteam is not null
 group by 1, 2
 """
+_PENALTIES = """
+select game_id, penalty_team as team,
+  coalesce(sum(cast(penalty_yards as double)), 0) as pen_yds
+from read_parquet('{glob}', hive_partitioning=true)
+where season >= {min_season} and penalty = 1 and penalty_team is not null
+group by 1, 2
+"""
+_PACE = """
+with p as (
+  select game_id, posteam as team, play_type, wp, qtr, game_seconds_remaining,
+    lag(game_seconds_remaining) over (
+      partition by game_id, posteam, drive, qtr order by play_id) as prev_secs
+  from read_parquet('{glob}', hive_partitioning=true)
+  where season >= {min_season} and posteam is not null and play_type is not null
+)
+select game_id, team, count(*) as pace_n, sum(prev_secs - game_seconds_remaining) as pace_s
+from p
+where play_type in ('pass','run') and wp between 0.2 and 0.8 and qtr <= 3
+  and prev_secs - game_seconds_remaining > 0 and prev_secs - game_seconds_remaining <= 60
+group by 1, 2
+"""
 
-
-STAT_COLS = ["go_n", "go_s", "oe_n", "oe_s", "ex_n", "ex_s", "giveaways", "takeaways"]
+STAT_COLS = [
+    "go_n", "go_s", "oe_n", "oe_s", "lead_n", "lead_s", "trail_n", "trail_s", "ex_n", "ex_s",
+    "giveaways", "takeaways", "pen_yds", "pace_n", "pace_s",
+]  # fmt: skip
 
 
 def load_game_stats(paths: Paths, min_season: int) -> pl.DataFrame:
@@ -80,13 +136,14 @@ def load_game_stats(paths: Paths, min_season: int) -> pl.DataFrame:
     con = duckdb.connect()
     glob = f"{paths.curated_table('plays').as_posix()}/*/*.parquet"
     kw = {"glob": glob, "min_season": min_season}
-    off = con.sql(_STATS.format(**kw)).pl()
-    tk = con.sql(_TAKEAWAYS.format(**kw)).pl()
-    return (
-        off.join(tk, on=["game_id", "team"], how="full", coalesce=True)
-        .with_columns(pl.col(c).fill_null(0).cast(pl.Float64) for c in STAT_COLS)
-        .with_columns(pl.lit(1.0).alias("played"))
-    )
+    out = con.sql(_STATS.format(**kw, lead=LEAD_MARGIN)).pl()
+    for q in (_TAKEAWAYS, _PENALTIES, _PACE):
+        out = out.join(
+            con.sql(q.format(**kw)).pl(), on=["game_id", "team"], how="full", coalesce=True
+        )
+    return out.with_columns(
+        pl.col(c).fill_null(0).cast(pl.Float64) for c in STAT_COLS
+    ).with_columns(pl.lit(1.0).alias("played"))
 
 
 def _cum_before(tg: pl.DataFrame, cols: list[str]) -> pl.DataFrame:
@@ -150,6 +207,48 @@ def _go_rate_oe(tg: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def _coach_tenure(games: pl.DataFrame) -> pl.DataFrame:
+    """(game_id, team, hc_tenure, hc_new): from the schedule's coach names, point in time because
+    a game's coach is known before kickoff (a missing name takes the team's previous game's)."""
+    rows = pl.concat(
+        [
+            games.select("game_id", "kickoff_utc", pl.col("season").cast(pl.Int64),
+                         pl.col(f"{side}_team").alias("team"),
+                         pl.col(f"{side}_coach").alias("coach"))
+            for side in ("home", "away")
+        ]
+    )  # fmt: skip
+    first = rows["season"].min()
+    rows = (
+        rows.with_columns(pl.col("coach").replace("", None))
+        .with_columns(_canon().alias("ckey"))
+        .sort("ckey", "kickoff_utc", "game_id", nulls_last=True)
+        .with_columns(pl.col("coach").forward_fill().over("ckey"))
+        .with_columns(
+            (pl.col("coach") != pl.col("coach").shift(1).over("ckey"))
+            .fill_null(True)
+            .cum_sum()
+            .over("ckey")
+            .alias("_run")
+        )
+        .with_columns(pl.col("season").min().over("ckey", "_run").alias("_start"))
+        .with_columns(
+            pl.when(pl.col("coach").is_null() | (pl.col("_start") == first))
+            .then(None)
+            .otherwise(pl.col("season") - pl.col("_start") + 1)
+            .cast(pl.Float64)
+            .alias("decisions.hc_tenure")
+        )
+        .with_columns(
+            pl.when(pl.col("decisions.hc_tenure").is_null())
+            .then(None)
+            .otherwise((pl.col("decisions.hc_tenure") == 1).cast(pl.Float64))
+            .alias("decisions.hc_new")
+        )
+    )
+    return rows.select("game_id", "team", "decisions.hc_tenure", "decisions.hc_new")
+
+
 def compute(games: pl.DataFrame, stats: pl.DataFrame, weekly: pl.DataFrame) -> pl.DataFrame:
     """Long (game_id, team, feature, value) for every team-game in `games`."""
     cols = [*STAT_COLS, "played"]
@@ -174,12 +273,42 @@ def compute(games: pl.DataFrame, stats: pl.DataFrame, weekly: pl.DataFrame) -> p
             "decisions.turnover_margin_pg"
         )
     )
+    played = pl.col("margin").is_not_null()
+    one = played & (pl.col("margin").abs() <= ONE_SCORE)
+    win = (
+        pl.when(pl.col("margin") > 0).then(1.0).when(pl.col("margin") == 0).then(0.5).otherwise(0.0)
+    )
+    tg = tg.with_columns(
+        played.cast(pl.Float64).alias("_gp"),
+        pl.when(one).then(win - 0.5).otherwise(0.0).alias("_os"),
+    )
+    tg = _cum_before(tg, ["_gp", "_os"])
+    tg = tg.with_columns(
+        pl.when(pl.col("_c_gp") > 0)
+        .then(pl.col("_c_os") / pl.col("_c_gp"))
+        .otherwise(None)
+        .alias("decisions.one_score_luck")
+    )
+    tg = _shrunk_rate(tg, "decisions.proe_leading", "lead_s", "lead_n", N0_PROE_SPLIT, 0.0)
+    tg = _shrunk_rate(tg, "decisions.proe_trailing", "trail_s", "trail_n", N0_PROE_SPLIT, 0.0)
+    tg = _shrunk_rate(tg, "decisions.pace", "pace_s", "pace_n", N0_PACE, PACE_DEFAULT)
+    tg = _shrunk_rate(
+        tg, "decisions.penalty_yds_pg", "pen_yds", "played", N0_PENALTY, PENALTY_DEFAULT
+    )
     feats = [
+        "decisions.proe_leading",
+        "decisions.proe_trailing",
+        "decisions.pace",
+        "decisions.penalty_yds_pg",
+        "decisions.one_score_luck",
         "decisions.fourth_go_rate_oe",
         "decisions.pass_rate_oe",
         "decisions.explosive_rate",
         "decisions.turnover_margin_pg",
     ]
+    if {"home_coach", "away_coach"} <= set(games.columns):
+        tg = tg.join(_coach_tenure(games), on=["game_id", "team"], how="left")
+        feats += ["decisions.hc_tenure", "decisions.hc_new"]
     long = tg.select("game_id", "team", *feats).unpivot(
         feats, index=["game_id", "team"], variable_name="feature", value_name="value"
     )

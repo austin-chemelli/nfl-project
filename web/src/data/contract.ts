@@ -830,6 +830,8 @@ export const Tracker = z.looseObject({
   seasons: z.array(z.looseObject({ season: num, model_id: z.string(), n: num, log_loss: num, brier: num, ece: nnum, spread_mae: nnum })),
   current_season: z.array(z.looseObject({ model_id: z.string(), week: num, n: num, n_live: num.optional(), cum_log_loss: num, live: z.boolean() })),
   weeks_tracked: z.record(z.string(), num),
+  // where a line's model version changed (first live row with a new config hash); rows before it were scored by the old version
+  model_changes: z.array(z.looseObject({ model_id: z.string(), season: num, week: num, lock_ts: z.string(), label: z.string() })).default([]),
   backtest: z.array(
     z.looseObject({
       model_id: z.string(), seasons: num, first_season: num, last_season: num, n_games: num,

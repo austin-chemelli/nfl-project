@@ -37,12 +37,19 @@ def games_frame():
     )
 
 
-def ftn(gid, season, week, off, deff, play_type, *, motion=False, pa=False, blitz=0, box=7):
+def ftn(
+    gid, season, week, off, deff, play_type, *, motion=False, pa=False, blitz=0, box=7, **flags
+):
     d = play_type == "pass"
+    base = {
+        "is_rpo": False, "is_screen_pass": False, "is_no_huddle": False, "qb_location": "S",
+        "is_drop": False, "is_catchable_ball": False, "is_contested_ball": False,
+        "is_interception_worthy": False,
+    }  # fmt: skip
     return P(
         gid, season, week, off, deff, play_type=play_type, has_ftn=True, is_motion=motion,
         is_play_action=pa, n_blitzers=blitz, n_defense_box=box, qb_dropback=int(d),
-        **{"pass": int(d)},
+        **{"pass": int(d)}, **{**base, **flags},
     )  # fmt: skip
 
 
@@ -54,9 +61,46 @@ def plays(g3_extra=()):
     # g2 (2022 wk1): A offense: 4 pass/run plays, 3 motion; 2 passes, 1 play action;
     # B defense faces 2 dropbacks, 1 blitzed; box >= 8 on 1 of 2 runs
     r += [
-        ftn("g2", 2022, 1, "A", "B", "pass", motion=True, pa=True, blitz=1),
-        ftn("g2", 2022, 1, "A", "B", "pass", motion=True, blitz=0),
-        ftn("g2", 2022, 1, "A", "B", "run", motion=True, box=8),
+        ftn(
+            "g2",
+            2022,
+            1,
+            "A",
+            "B",
+            "pass",
+            motion=True,
+            pa=True,
+            blitz=1,
+            is_screen_pass=True,
+            is_catchable_ball=True,
+            is_drop=True,
+            is_contested_ball=True,
+        ),
+        ftn(
+            "g2",
+            2022,
+            1,
+            "A",
+            "B",
+            "pass",
+            motion=True,
+            blitz=0,
+            is_catchable_ball=True,
+            is_interception_worthy=True,
+        ),
+        ftn(
+            "g2",
+            2022,
+            1,
+            "A",
+            "B",
+            "run",
+            motion=True,
+            box=8,
+            is_rpo=True,
+            is_no_huddle=True,
+            qb_location="U",
+        ),
         ftn("g2", 2022, 1, "A", "B", "run", box=6),
         # B offense: 4 plays, 1 motion; 1 pass without play action; A defense blitzes it
         ftn("g2", 2022, 1, "B", "A", "pass", motion=True, blitz=2),
@@ -90,7 +134,7 @@ def shrunk(sx, n, league):
 
 def test_null_before_2022_and_week1(tmp_path):
     vals, _ = run(tmp_path, plays())
-    assert vals.height == 4 * 2 * 4  # a row per team-game-feature, nulls included
+    assert vals.height == 4 * 2 * 11  # a row per team-game-feature, nulls included
     for gid in ("g1", "g2"):  # 2021 has no FTN data; 2022 week 1 has no prior
         sub = vals.filter(pl.col("game_id") == gid)
         assert sub["value"].null_count() == sub.height
@@ -121,9 +165,45 @@ def test_rates_as_of_week(tmp_path):
     assert got == pytest.approx(((w1 * 1 + 1) + N0 * league) / (w1 * 4 + 1 + N0))
 
 
+def test_new_scheme_rates(tmp_path):
+    vals, _ = run(tmp_path, plays())
+    # A's week 1: 4 pass/run plays (1 RPO, 1 no-huddle, 1 under center), 2 passes (1 screen,
+    # 1 interception-worthy), 2 catchable balls (1 dropped, 1 contested); B's plays all False
+    for name, x, n, lg in (
+        ("rpo_rate", 1, 4, 1 / 8), ("no_huddle_rate", 1, 4, 1 / 8),
+        ("under_center_rate", 1, 4, 1 / 8), ("screen_rate", 1, 2, 1 / 3),
+        ("int_worthy_rate", 1, 2, 1 / 3), ("drop_rate", 1, 2, 1 / 2),
+        ("contested_rate", 1, 2, 1 / 2),
+    ):  # fmt: skip
+        got = feat(vals, "g3", "A", f"front.{name}")
+        assert got == pytest.approx(shrunk(x, n, lg)), name
+    # no FTN charting in 2021
+    assert feat(vals, "g1", "A", "front.drop_rate") is None
+
+
 def test_no_leakage(tmp_path):
     base, _ = run(tmp_path / "a", plays())
-    extra = [ftn("g3", 2022, 2, "A", "B", "pass", motion=True, pa=True, blitz=5)] * 5
+    extra = [
+        ftn(
+            "g3",
+            2022,
+            2,
+            "A",
+            "B",
+            "pass",
+            motion=True,
+            pa=True,
+            blitz=5,
+            is_drop=True,
+            is_catchable_ball=True,
+            is_contested_ball=True,
+            is_interception_worthy=True,
+            is_screen_pass=True,
+            is_rpo=True,
+            is_no_huddle=True,
+            qb_location="U",
+        )
+    ] * 5
     mut, _ = run(tmp_path / "b", plays(extra))
     for gid in ("g1", "g2", "g3"):
         for t in "AB":
@@ -137,8 +217,8 @@ def test_build_rows_through_store(tmp_path):
     paths = write_plays(tmp_path, make_plays(plays()))
     rows = front.build(paths, games_frame(), BUILD)
     store.validate(rows)
-    assert rows.height == 4 * 2 * 4
-    assert set(rows["source"]) == {"ftn"} and set(rows["version"]) == {"1"}
+    assert rows.height == 4 * 2 * 11
+    assert set(rows["source"]) == {"ftn"} and set(rows["version"]) == {"2"}
 
 
 @requires_data

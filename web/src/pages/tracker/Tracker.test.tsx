@@ -74,6 +74,28 @@ describe('Tracker page', () => {
     }
   })
 
+  it('season tab: a marker and a note where a line changed model, none for an old file', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tracker-change-'))
+    fs.cpSync(path.resolve(import.meta.dirname, '../../test/fixtures'), root, { recursive: true })
+    const file = path.join(root, 'site/tracker.json')
+    const t = JSON.parse(fs.readFileSync(file, 'utf8'))
+    const row = t.current_season.find((r: { model_id: string }) => r.model_id === 'student')
+    t.model_changes = [{ model_id: 'student', season: t.season, week: row.week, lock_ts: '2026-11-12T14:00:00Z', label: 'New model version' }]
+    fs.writeFileSync(file, JSON.stringify(t))
+    try {
+      const { container, unmount } = renderRoute('/tracker', root)
+      expect(await screen.findByTestId('model-change-note')).toHaveTextContent(`New model version, week ${row.week}`)
+      expect(container.querySelectorAll('.recharts-reference-line').length).toBe(2) // the zero line and the marker
+      expect(container.querySelector('.recharts-reference-line title')?.textContent).toContain('New model version')
+      unmount()
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+    renderRoute('/tracker')
+    await screen.findByText('Gap to the market, by week')
+    expect(screen.queryByTestId('model-change-note')).toBeNull()
+  })
+
   it('a strip tile opens the tab that explains it', async () => {
     renderRoute('/tracker')
     const strip = await screen.findByRole('group', { name: 'Tracker summary' })

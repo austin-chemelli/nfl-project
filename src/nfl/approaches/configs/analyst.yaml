@@ -1,4 +1,7 @@
-# See traditionalist.yaml for units. Proposed by Claude 2026-10-27 at group level, for Austin's review.
+# See traditionalist.yaml for units. Proposed by Claude 2026-10-27 at group level; re-argued for model
+# wave 3 (ADR 0031, 2026-11-20): the Analyst follows the evidence, so it drops the venue modifiers that
+# cost accuracy since 2016 (neutral sites are now a rule for everyone) and its "fitted" diagnostic is
+# ridge toward zero, i.e. what history alone supports for its groups.
 id: analyst
 name: The Analyst
 blurb: >-
@@ -10,13 +13,13 @@ intercept: {w: 0.15, why: "Home field has shrunk to about 1.5 points"}
 groups:
   offense:       {w: 0.40, why: "Offensive efficiency is the most stable signal in football"}
   quarterback:   {w: 0.30, why: "The quarterback is most of the offense"}
-  defense:       {w: 0.25, why: "Defense matters, but it's less stable than offense"}
+  defense:       {w: 0.25, why: "Defense matters, but it repeats about half as much as offense"}
   quality:       {w: 0.15, why: "Results carry some signal; point differential beats record"}
   health:        {w: 0.10, why: "Missing starters change the efficiency picture"}
-  venue_weather: {w: 0.10, why: "Neutral sites and divisions shift home field a little"}
   rest_travel:   {w: 0.05, why: "Rest is a small but real edge"}
-  form:          {w: 0.02, why: "Momentum is mostly noise"}
   special_teams: {w: 0.05, why: "Kicking and field position are worth points, if not many"}
+  form:          {w: 0.02, why: "Momentum is mostly noise"}
   market:        {w: 0.065, why: "A big move is news the efficiency numbers haven't caught"}
 overrides:
   market: {market.line_move_pts: 1.0}
+fit: {shrink_to_persona: false}

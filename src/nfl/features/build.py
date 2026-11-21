@@ -26,6 +26,7 @@ FAMILIES = [
     "market",
     "availability",
     "scheme",
+    "matchup",
     "narrative",
     "weather",
 ]

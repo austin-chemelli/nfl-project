@@ -140,7 +140,7 @@ Register-ScheduledTask -TaskName "nfl-narrative" -Action $a -Trigger $t -Setting
 ```
 The task runs when Austin is signed in, which Ollama needs anyway (docs/desktop-llm-setup.md §6). Check the task's environment without a full pass (uv and gcloud on the login shell's PATH): `wsl -d <distro> -- bash -lc "cd ~/dev/nfl-project && uv run nfl narrative week && echo OK"`. Run a pass by hand: `Start-ScheduledTask nfl-narrative`, or `bash scripts/desktop-narrative.sh` in WSL. Logs: `data/raw/narrative_local/passes/` on the desktop, and `gcloud logging read 'logName="projects/nfl-project-prod/logs/nfl-desktop-narrative"' --limit 20`.
 
-## Adding an approach mid-season (ADR 0026; e.g. `student_v2`)
+## Adding an approach mid-season (ADR 0026; first used for `student_v2`, folded into the Student in wave 3)
 
 A new YAML changes no existing config hash (a test pins the live four), so the other fits stay frozen. The site job needs the new approach's fit files the moment the new image runs, and the backfill rows go in a quiet window right after:
 

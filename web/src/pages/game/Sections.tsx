@@ -11,6 +11,8 @@ import { Card, DataTable, ModelBadge, Section, Segmented, TableScroll, td, th } 
 import type { Game, KeyPlayer, Meta } from '../../data/contract'
 import { fmtUnit, pct, pts, ptsFor, ptsSide, ptsToward, spreadLabel } from '../../lib/format'
 import { approachOf, groupOf } from '../../lib/meta'
+import { isScored, splitFeature } from '../../lib/scored'
+import { ScoredTag } from '../../components/ScoredTag'
 import { isReference, SHORT } from '../../lib/models'
 import {
   byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, lineMoveChip, marketSource, previewRows, tape, tendencyBlocks,
@@ -359,7 +361,7 @@ export function Tendencies({ g, meta }: { g: Game; meta: Meta }) {
 }
 
 /** What each side's habits imply (ADR 0028): a grid per side, under the file's own one-sentence lede. Null when the file has none. */
-export function MatchupsSection({ g }: { g: Game; meta: Meta }) {
+export function MatchupsSection({ g, meta }: { g: Game; meta: Meta }) {
   const m = g.matchups
   if (!m || m.sides.length === 0) return null
   const colorOf = (team: string) => (team === g.home ? 'var(--team-home)' : team === g.away ? 'var(--team-away)' : 'var(--text-secondary)')
@@ -390,7 +392,10 @@ export function MatchupsSection({ g }: { g: Game; meta: Meta }) {
                 <FaceOff rows={side.face_off} offense={side.offense} defense={side.defense} colorOf={colorOf} />
               </>
             )}
-            <h4 className="mb-1 mt-4 text-[12px] font-semibold text-ink-2">What you'll see, and how it has gone</h4>
+            <h4 className="mb-1 mt-4 text-[12px] font-semibold text-ink-2">
+              What you'll see, and how it has gone
+              <ScoredTag scored={side.rows.length > 0 && side.rows.every((r) => isScored(splitFeature(r.split), meta))} />
+            </h4>
             <HabitList rows={side.rows} offense={side.offense} defense={side.defense} colorOf={colorOf} pass={passOf(side.offense)} />
           </Card>
         ))}

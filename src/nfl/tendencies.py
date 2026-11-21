@@ -39,6 +39,13 @@ OFFENSE: dict[str, tuple[str, str]] = {
     "rpo_rate": ("is_rpo::int", "has_ftn and play_type in ('pass','run')"),
     "screen_rate": ("is_screen_pass::int", "has_ftn and play_type = 'pass'"),
     "under_center_rate": ("(qb_location = 'U')::int", "has_ftn and play_type in ('pass','run')"),
+    "ftn_no_huddle_rate": ("is_no_huddle::int", "has_ftn and play_type in ('pass','run')"),
+    "drop_rate": ("is_drop::int", "has_ftn and play_type = 'pass' and is_catchable_ball"),
+    "contested_rate": (
+        "is_contested_ball::int",
+        "has_ftn and play_type = 'pass' and is_catchable_ball",
+    ),
+    "int_worthy_rate": ("is_interception_worthy::int", "has_ftn and play_type = 'pass'"),
     "epa_per_play": ("epa", "play_type in ('pass','run')"),
     "success_rate": ("success", "play_type in ('pass','run')"),
     "fourth_down_go_rate": (

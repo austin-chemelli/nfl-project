@@ -1,6 +1,9 @@
 # Group weights (ADR 0012): logit units per 1 SD of each group's unit-variance composite; positive
 # favors the home team's edge in that group. Inner weights come from history unless overridden.
 # Proposed by Claude 2026-10-27 at group level, for Austin's review. Flat v1: .notes/persona-flat-v1/
+# Model wave 3 (ADR 0031): home field and the venue modifiers are zero at neutral sites by rule; his
+# weights are unchanged (the biases are the point). Kickoff weather stays out of every fit until
+# archived forecasts exist (a lock only has a forecast).
 id: traditionalist
 name: The Traditionalist
 blurb: >-
@@ -21,3 +24,4 @@ groups:
   offense:       {w: 0.05, why: "Has heard of EPA, doesn't really trust it"}
   buzz:          {w: 0.05, why: "Listens to the talk shows"}
   special_teams: {w: 0.10, why: "Field position and a kicker you can trust win close games"}
+fit: {shrink_to_persona: false}

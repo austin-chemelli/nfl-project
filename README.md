@@ -14,13 +14,13 @@ Every week, predictions for every game are locked before kickoff and committed t
 
 | Model | Games | Log loss | Brier |
 |---|---|---|---|
-| Market (vig-free moneyline) | 14 | 0.4132 | 0.1196 |
-| The Traditionalist | 14 | 0.4302 | 0.1272 |
-| The Analyst | 14 | 0.4591 | 0.1400 |
-| The Sharp | 14 | 0.5453 | 0.1797 |
-| The Student | 14 | 0.4515 | 0.1366 |
-| Elo | 14 | 0.4755 | 0.1497 |
-| Home team 57% | 14 | 0.7433 | 0.2749 |
+| Market (vig-free moneyline) | 30 | 0.4828 | 0.1532 |
+| The Traditionalist | 30 | 0.5383 | 0.1785 |
+| The Analyst | 30 | 0.5322 | 0.1754 |
+| The Sharp | 30 | 0.5692 | 0.1923 |
+| The Student | 30 | 0.5293 | 0.1740 |
+| Elo | 30 | 0.5309 | 0.1761 |
+| Home team 57% | 30 | 0.7500 | 0.2782 |
 
 Lower is better. A season of live games cannot rank models; see the backtest for intervals.
 
@@ -28,14 +28,13 @@ Lower is better. A season of live games cannot rank models; see the backtest for
 
 | Model | Games | Log loss | Δ vs market (90% CI) |
 |---|---|---|---|
-| Market (vig-free moneyline) | 5,818 | 0.6090 |  |
-| The Traditionalist | 5,818 | 0.6289 | +0.0199 (+0.0146 to +0.0249) |
-| The Analyst | 5,818 | 0.6246 | +0.0156 (+0.0119 to +0.0196) |
-| The Sharp | 5,818 | 0.6286 | +0.0196 (+0.0147 to +0.0244) |
-| The Student | 5,818 | 0.6243 | +0.0153 (+0.0113 to +0.0191) |
-| The Student v2 | 5,818 | 0.6240 | +0.0150 (+0.0112 to +0.0187) |
-| Elo | 5,818 | 0.6291 | +0.0201 (+0.0153 to +0.0240) |
-| Home team 57% | 5,818 | 0.6867 | +0.0777 (+0.0712 to +0.0840) |
+| Market (vig-free moneyline) | 5,834 | 0.6088 |  |
+| The Traditionalist | 5,834 | 0.6290 | +0.0201 (+0.0155 to +0.0255) |
+| The Analyst | 5,834 | 0.6243 | +0.0155 (+0.0118 to +0.0195) |
+| The Sharp | 5,834 | 0.6281 | +0.0193 (+0.0149 to +0.0246) |
+| The Student | 5,834 | 0.6236 | +0.0148 (+0.0112 to +0.0187) |
+| Elo | 5,834 | 0.6290 | +0.0201 (+0.0154 to +0.0239) |
+| Home team 57% | 5,834 | 0.6869 | +0.0780 (+0.0705 to +0.0851) |
 
 <!-- scorecard:end -->
 

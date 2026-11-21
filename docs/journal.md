@@ -1011,3 +1011,30 @@ The table's head coaches now match the nflverse schedule on all 256 team-seasons
 **Findings.** The hub reads a state.md row as closed only from a bold `**decided|dropped|closed …**`; D3 said "superseded" and so still counted as open. Board count 9 before; 4 after the merge (D1, D14, player value screening, the scheduled Claude jobs plan).
 
 **Lesson.** A track that closes should mark its plan's items itself; the retro track merged with two items still `open`.
+
+## 2026-11-20: Model wave 3, PR 1: the approaches audit, one Student, registry v7 (approaches-3, M27, ADR 0031)
+
+**Why.** Austin asked to re-evaluate the approaches (built first, before most of today's data existed), to end the two-Student split, to use new data where it helps, and to have the scoring reflect the matchup numbers the Preview shows. He lifted the offseason-refit rule: a better Student goes public mid-season.
+
+**What changed.** `nfl.approaches.shadow` walks any variant forward in memory (the same `fit_flavors` path) and pairs it with a baseline. The audit (`scripts/approaches_audit.py`, `scripts/approaches_gap.py`, `.notes/hub/plans/approaches-audit.md`) measured every fitting choice and candidate. One Student: `shift_10`, no Venue & weather, the net matchup edge in Offense; `student_v2` deleted (its rows stay). Home field is zero at neutral sites by rule for every model (`engine.NEUTRAL`). Registry v7: every member built or removed (four implementer agents built `front.py`, `decisions.py`, `strength.py`, `availability.py` v2 and the new `features/matchup.py`, each with mutation leakage tests). The ledger runs the fourth gate (`shadow_*` columns, verdict `model`). The Preview marks numbers "in the line / shown, not scored"; the tracker marks version changes.
+
+**Findings.**
+- Where the gap to the market lives, 2016-2025 (2,751 games): when the Student and the market are within 6 points of win chance (58% of games) the Student is as good as the market or better. The whole gap is in the bigger disagreements. Weeks 1-4 and 15+ carry 75% of it, road favorites 67% (38% of games), heavy-injury games 21% (10% of games).
+- The Friday injury report (one stamped row per player-week, about 50 hours before kickoff, 2010-2024) closes 7-10% of the gap a lock without it would have. Quarterback and injury features explain 5% of the market-minus-Student logit; the market weighs a new starter about 1.3 points more.
+- Houston vs Indianapolis (2026 Week 11): the line went −10 → −12.5 by Tuesday; the Student's previews stayed at −9.4 (−8.6 after Wednesday's narrative records rated Houston's injuries worse) until the lock's injury report and line move took it to −11.3. HOU won by 23.
+- Design choices (paired Δ vs today's Student, 2016+): `shift_10` −0.0005 [−0.0008, −0.0001]; no Venue & weather with the shift −0.0016 [−0.0031, −0.0002] (but +0.0010 ns on 2005-2015: the modifiers' old home-field effects faded); training from 2006/2010 +0.0001/+0.0018; season decay −0.0002 ns; λ fixed at 1000 +0.0039; inner λ 10000 +0.0008; no groups (flat ridge) −0.0014 ns; phase-specific fits +0.0029 (worse). The Student's group λ is 10, so the "equal 0.1 start" barely matters.
+- Candidates in shadow: only the net matchup edge passes (−0.0003 [−0.0006, −0.0001], 2022+, 4/4 seasons; market residual +0.63 [+0.27, +0.92]). EPA without turnovers, takeaway rate, fumble and one-score luck, `value_lost`, `ol_weakest` and weather: all within ±0.0004, CIs across 0. The FTN drop, contested-catch and risky-throw rates, switched on by being built, cost +0.0013 [+0.0002, +0.0023] together and leave the groups.
+- Result, backfill 2016 to 2026 Week 10: Student 0.6286 → 0.6270 (−0.0016 [−0.0028, −0.0005], 8/11 seasons; −0.0011 against Student v2), Analyst −0.0013, Sharp −0.0003, Traditionalist +0.0001 (ns). Neutral games (94): Sharp 0.664 → 0.634, Traditionalist 0.637 → 0.623, Student 0.643 → 0.626.
+- The first neutral-rule fit double-counted for the Traditionalist (its Venue group still held `environment.neutral_site`): −17.5 points of win chance against the designated home team at neutral sites, caught by the per-approach neutral-game check; the member left the registry.
+
+**Lesson.** The model was saturated on football stats: every new stat was noise against it, and the gains came from structure (home field, neutral sites) and from removing things that had been switched on by default. Building a registered member is itself a model change; registry members must be decided, not "planned". Another lesson: the shadow gate's first version treated context-only members as "in the model" and returned exactly zero, caught in the ledger output.
+
+**Review (a `reviewer` agent, before the PR).** It found six real problems, all fixed in the PR:
+- Weather in Venue & weather leaked: training sees observed kickoff weather and a lock only a forecast. Weather is out of every fit again.
+- The net matchup edge could be stale at a lock: `team_split_week` wasn't rebuilt in `lock.refresh`, and `nfl daily` / `weekly refresh` built features before the models. Now the models come first.
+- `model` could skip the first three gates: a lucky shadow pass on a luck measure would have counted. Now only a `use` candidate can become `model`, and `SCREEN_VERSION` is 2.
+- The Traditionalist's venue modifiers still applied at neutral sites, and the global fit kept the neutral flag as a member. Both are gated or excluded now.
+- `value_lost` ignored injury-report timestamps in production. The loader didn't select `date_modified`, though the tests passed it in.
+- Two copy fixes on the tracker and the Tendencies tag.
+
+Not fixed: the status-to-play rates behind `value_lost` are fitted on every season (a mild optimism in a candidate that failed anyway).

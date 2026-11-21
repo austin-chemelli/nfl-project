@@ -10,7 +10,8 @@ null. Training uses observed kickoff weather and live locks use forecasts: a mil
 
 No approach reads this family: `environment.temp_c` and `wind_kph` are registered (planned) in the
 Venue & weather group, and filling those would move every public line mid-season. These feed the
-totals model and the swing list; the group gains weather in model wave 3.
+totals model and the swing list. Model wave 3 (ADR 0031) kept it out of every fit: training
+would see observed weather and a lock only a forecast, until archived forecasts exist (M23.14).
 """
 
 from __future__ import annotations

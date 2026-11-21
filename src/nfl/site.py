@@ -1860,6 +1860,55 @@ def lineup_conflicts(detail: dict) -> list[str]:
 # ---------------------------------------------------------------------------------------- tracker
 
 
+# Config-hash prefix (the part of `model_version` after '+') -> label for a known model change.
+# config-hash prefix -> what changed (the tracker's marker label); unknown hashes get the default
+MODEL_CHANGE_LABELS: dict[str, str] = {
+    "cf0e91518f1c": "Model wave 3: one Student, home field from the last ten seasons",  # student
+    "16608e26c57c": "Model wave 3: no venue modifiers, neutral sites level",  # analyst
+    "bbc096a2fd16": "Model wave 3: neutral sites level",  # sharp
+    "905cad48df9e": "Model wave 3: neutral sites level",  # traditionalist
+}
+MODEL_CHANGE_DEFAULT = "New model version"
+
+
+def model_changes(preds: pl.DataFrame, models: list[str]) -> list[dict]:
+    """Per model, the first LIVE row whose config hash differs from the previous live row's, by lock_ts.
+
+    The hash is the part of `model_version` after '+'; rows without one are skipped. Rows stay in
+    predictions.parquet (append-only), so the tracker marks where a line changed instead of hiding the old rows."""
+    need = {"model_id", "model_version", "is_backfill", "lock_ts", "season", "week"}
+    if preds.is_empty() or not need <= set(preds.columns):
+        return []
+    live = (
+        preds.filter(~pl.col("is_backfill") & pl.col("model_id").is_in(models) & pl.col("model_version").str.contains("+", literal=True))
+        .with_columns(pl.col("model_version").str.split("+").list.last().alias("_cfg"))
+        .sort("lock_ts")
+        .group_by("model_id", "lock_ts", maintain_order=True)
+        .first()
+        .sort("lock_ts")
+    )  # fmt: skip
+    out: list[dict] = []
+    last: dict[str, str] = {}
+    for r in live.iter_rows(named=True):
+        mid, cfg = r["model_id"], r["_cfg"]
+        if mid in last and last[mid] != cfg:
+            label = next(
+                (v for k, v in MODEL_CHANGE_LABELS.items() if cfg.startswith(k)),
+                MODEL_CHANGE_DEFAULT,
+            )
+            out.append(
+                {
+                    "model_id": mid,
+                    "season": r["season"],
+                    "week": r["week"],
+                    "lock_ts": _ts(r["lock_ts"]),
+                    "label": label,
+                }
+            )
+        last[mid] = cfg
+    return out
+
+
 def tracker(paths: Paths, season: int, reg: dict) -> dict:
     sc = _read(paths, "scorecard")
     graded = _read(paths, "graded")
@@ -1915,6 +1964,9 @@ def tracker(paths: Paths, season: int, reg: dict) -> dict:
             {k: (_r(v) if isinstance(v, float) else v) for k, v in r.items()}
             for r in div.filter(pl.col("model_id").is_in(list(reg))).iter_rows(named=True)
         ]
+    out["model_changes"] = model_changes(
+        _read(paths, "predictions"), [m for m in reg if m != "student_v2"]
+    )
     out["ledger"] = []  # the contract requires the key, so an empty ledger can't error the page
     if not settled.is_empty():
         from nfl import ledger

@@ -18,9 +18,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# v5 2026-10-28: ml_spread_gap removed from Market behavior (it carried the line's level, review
-# finding); live-only scale priors. v4: scheme priors built. v3: Market behavior, labels, units.
-REGISTRY_VERSION = "6"
+# v7 2026-11-20 (model wave 3, ADR 0031): every member is now built or removed on purpose. The planned
+# `environment.temp_c` and `wind_kph` are removed: the store has kickoff weather (`weather.*`), but
+# observed for played games and forecast at a lock, so it stays out of every fit (context for the
+# total and the swing list) until archived forecasts exist (M23.14); the FTN receiver and QB charting rates (drops, contested catches, risky throws) are built
+# but out of the weighted groups (together they cost 0.0013 log loss since 2022, ledger rows); the
+# seven planned matchup interactions are replaced by the engine's edges (ADR 0028): the net edge
+# passed every ledger gate and joined Offense, the per-situation edges stay context; `decisions.hc_ats_career` (an against-the-spread record, which doesn't
+# repeat and is the market's number) and `front.pass_rushers_5plus_rate` (identical to the blitz rate
+# in FTN's charting, M25.0) are removed, and so is `environment.neutral_site`: home field is zero at a
+# neutral site by rule now (engine.NEUTRAL), and a member would count it twice. v6: wave 2 (ADR 0018). v5 2026-10-28: ml_spread_gap removed
+# from Market behavior (it carried the line's level); live-only scale priors. v4: scheme priors built.
+# v3: Market behavior, labels, units.
+REGISTRY_VERSION = "7"
 
 # How the UI formats a value of each unit.
 UNITS = {
@@ -38,6 +48,8 @@ UNITS = {
     "count": "a count",
     "seasons": "seasons",
     "flag": "yes/no (1/0)",
+    "degf": "degrees Fahrenheit",
+    "mph": "miles per hour",
     "index": "a 0-to-N rating scale described in the feature",
 }
 
@@ -112,14 +124,13 @@ _GROUPS = [
               M("strength.epa_off", 1, "Offensive EPA per play", "epa", "Expected points added per offensive play: how much each snap improves the scoring outlook. Around 0 is average, +0.1 is very good.", short="Offense EPA"),
               M("strength.success_off", 1, "Offensive success rate", "pct", "Share of offensive plays that improve the scoring outlook (EPA above zero).", short="Offense success"),
               M("decisions.explosive_rate", 1, "Explosive play rate", "pct", "Share of plays that are passes of 20+ yards or runs of 12+ yards.", short="Explosive plays"),
+              M("matchup.net_edge_pg", 1, "Net matchup edge", "points", "How each offense's habits meet the other defense's results in the same charted situations (blitz, boxes, play action, motion, screens, RPOs), home minus away, in points per game (the matchup engine, ADR 0028; FTN, 2022 on). Joined Offense in model wave 3 after passing every ledger gate.", short="Matchup edge"),
               M("strength.epa_pass_off", 1, "Passing EPA per play", "epa", "Expected points added per pass play, including sacks and scrambles.", short="Passing offense"),
               M("strength.epa_rush_off", 1, "Rushing EPA per play", "epa", "Expected points added per designed run.", short="Rushing offense"),
               M("strength.epa_early_off", 1, "Early-down EPA per play", "epa", "EPA per play on first and second down, a steadier signal than third downs.", adv=True, short="Early-down EPA"),
               M("strength.epa_nongarbage_off", 1, "EPA when the game is in doubt", "epa", "EPA per play excluding garbage time (win probability under 10% or over 90%).", adv=True, short="Non-garbage EPA"),
               M("strength.epa_off_adj", 1, "Opponent-adjusted offensive EPA", "epa", "Offensive EPA per play after accounting for the defenses faced.", adv=True, short="Adjusted offense EPA"),
               M("strength.sack_rate_off", -1, "Sacks allowed rate", "pct", "Share of dropbacks that end in a sack.", adv=True, short="Sacks allowed"),
-              M("front.drop_rate", -1, "Drop rate", "pct", "Share of catchable targets dropped (FTN charting, 2022+).", adv=True, short="Drop rate"),
-              M("front.contested_rate", 1, "Contested catch rate", "pct", "Share of targets that are contested catches (FTN charting, 2022+).", adv=True, short="Contested catches"),
           )),
     Group("defense", "Defense", "Who's better", "Efficiency stopping the ball",
           "How efficiently each defense stops the ball, per play (lower allowed is better).",
@@ -148,7 +159,6 @@ _GROUPS = [
               M("availability.qb1_out", -1, "Starting QB out", "flag", "The depth-chart starter is listed Out or Doubtful."),
               M("availability.qb_change", -1, "New starter", "flag", "The projected starter is not the quarterback who started the team's last game."),
               M("narrative.qb_status", -1, "QB status (news)", "index", "From the week's reporting: 0 healthy starter, 1 questionable or limited, 2 backup starting or unknown."),
-              M("front.int_worthy_rate", -1, "Risky throw rate", "pct", "Share of passes charted as interception-worthy (FTN, 2022+).", adv=True, short="Risky throws"),
           )),
     Group("health", "Health", "Who's playing", "Who is missing",
           "Who is missing from the lineup, weighted by how much the position matters.",
@@ -192,13 +202,10 @@ _GROUPS = [
     Group("venue_weather", "Venue & weather", "The setup", "Where and in what; shifts home advantage only",
           "Where the game is played and in what conditions; these change how much home field is worth.",
           (
-              M("environment.neutral_site", -1, "Neutral site", "flag", "Played at a neutral site (international games, Super Bowl)."),
               M("environment.div_game", -1, "Division game", "flag", "Division rivals, who know each other well."),
               M("environment.primetime", 1, "Primetime", "flag", "Kickoff at 7pm ET or later, or a Thursday or Monday game."),
               M("environment.is_dome", 1, "Dome", "flag", "Played under a closed roof."),
               M("environment.is_turf", 1, "Artificial turf", "flag", "Played on an artificial surface."),
-              M("environment.temp_c", -1, "Temperature", "count", "Kickoff temperature in °C (planned)."),
-              M("environment.wind_kph", -1, "Wind", "count", "Kickoff wind speed in km/h (planned)."),
               M("narrative.weather_concern", -1, "Weather concern (news)", "index", "From the forecast: 0 dome or mild, 0.5 strong wind or rain, 1 severe."),
           ), game_level=True),
     Group("coaching", "Coaching", "The sidelines", "Decision quality and staff stability",
@@ -207,24 +214,23 @@ _GROUPS = [
               M("decisions.fourth_go_rate_oe", 1, "4th-down aggressiveness", "prob_diff", "How often the team goes for it on 4th-and-short between the 35s, compared with the league.", short="4th-down aggression"),
               M("decisions.pass_rate_oe", 1, "Pass rate over expected", "pp", "How much more often the team passes on early downs than the situation predicts.", short="Pass rate vs expected"),
               M("decisions.early_down_pass_rate", 1, "Early-down pass rate", "pct", "Share of first- and second-down plays that are passes.", short="Early-down pass rate"),
-              M("decisions.hc_tenure", 1, "Head coach tenure", "seasons", "Seasons the current head coach has led the team (planned).", short="Coach tenure"),
-              M("decisions.hc_new", -1, "First-year head coach", "flag", "The head coach is in his first season with the team (planned)."),
+              M("decisions.hc_tenure", 1, "Head coach tenure", "seasons", "Seasons the current head coach has led the team.", short="Coach tenure"),
+              M("decisions.hc_new", -1, "First-year head coach", "flag", "The head coach is in his first season with the team."),
               M("narrative.coaching_turmoil", -1, "Coaching turmoil (news)", "index", "From the week's reporting: 0 stable, 1 hot seat, firing or public criticism of play-calling."),
-              M("decisions.proe_leading", 1, "Pass rate over expected when ahead", "pp", "Pass rate over expected when leading by 7 or more (planned).", adv=True),
-              M("decisions.proe_trailing", 1, "Pass rate over expected when behind", "pp", "Pass rate over expected when trailing by 7 or more (planned).", adv=True),
-              M("decisions.pace", 1, "Pace", "seconds", "Seconds per offensive play in neutral situations (planned).", adv=True),
-              M("decisions.penalty_yds_pg", -1, "Penalty yards per game", "yards", "Penalty yards against per game (planned).", adv=True),
-              M("decisions.hc_ats_career", 1, "Head coach vs the spread", "pct", "The head coach's career rate of covering the betting spread (planned).", adv=True),
+              M("decisions.proe_leading", 1, "Pass rate over expected when ahead", "pp", "Pass rate over expected when leading by 7 or more.", adv=True),
+              M("decisions.proe_trailing", 1, "Pass rate over expected when behind", "pp", "Pass rate over expected when trailing by 7 or more.", adv=True),
+              M("decisions.pace", 1, "Pace", "seconds", "Seconds per offensive play in neutral situations.", adv=True),
+              M("decisions.penalty_yds_pg", -1, "Penalty yards per game", "yards", "Penalty yards against per game.", adv=True),
           ), context_only=True),
     Group("off_scheme", "Offensive scheme", "The sidelines", "How the offense is built (style; history decides what helps)",
           "How the offense is built: motion, play-action, formations, personnel. Style, not quality; history decides what helps.",
           (
               M("front.motion_rate", 1, "Pre-snap motion", "pct", "Share of plays with a player in motion before the snap (FTN, 2022+).", short="Pre-snap motion"),
               M("front.play_action_rate", 1, "Play-action", "pct", "Share of passes with a play-action fake (FTN, 2022+).", short="Play-action"),
-              M("front.rpo_rate", 1, "Run-pass options", "pct", "Share of plays that are RPOs (FTN, 2022+; planned).", short="RPO rate"),
-              M("front.screen_rate", -1, "Screens", "pct", "Share of passes that are screens (FTN, 2022+; planned).", short="Screens"),
-              M("front.under_center_rate", -1, "Under center", "pct", "Share of plays with the QB under center (FTN, 2022+; planned).", short="Under center"),
-              M("front.no_huddle_rate", 1, "No-huddle", "pct", "Share of plays run without a huddle (FTN, 2022+; planned).", short="No-huddle"),
+              M("front.rpo_rate", 1, "Run-pass options", "pct", "Share of plays that are RPOs (FTN, 2022+).", short="RPO rate"),
+              M("front.screen_rate", -1, "Screens", "pct", "Share of passes that are screens (FTN, 2022+).", short="Screens"),
+              M("front.under_center_rate", -1, "Under center", "pct", "Share of plays with the QB under center (FTN, 2022+).", short="Under center"),
+              M("front.no_huddle_rate", 1, "No-huddle", "pct", "Share of plays run without a huddle (FTN, 2022+).", short="No-huddle"),
               M("scheme.off_11_rate_prior", 1, "Three-receiver sets (coordinator history)", "pct", "How often the offensive play-caller has used 11 personnel in past seasons, relative to each season's league average (participation 2016+; coverage 2018+).", short="11-personnel vs avg"),
               M("scheme.off_heavy_rate_prior", -1, "Heavy sets (coordinator history)", "pct", "How often the play-caller has used two-plus tight ends or backs in past seasons, relative to each season's league average (participation 2016+; coverage 2018+).", short="Heavy sets vs avg"),
               M("scheme.off_time_to_throw_prior", -1, "Time to throw (coordinator history)", "seconds", "Average time to throw in the play-caller's past offenses, relative to each season's league average (participation 2016+).", short="Time to throw vs avg"),
@@ -234,20 +240,19 @@ _GROUPS = [
           (
               M("front.blitz_rate", 1, "Blitz rate", "pct", "Share of opponent dropbacks with at least one blitzer (FTN, 2022+).", short="Blitz rate"),
               M("front.box_8plus_rate", 1, "Stacked boxes vs the run", "pct", "Share of opponent runs faced with 8+ defenders in the box (FTN, 2022+).", short="Stacked boxes"),
-              M("front.pass_rushers_5plus_rate", 1, "Five-plus rushers", "pct", "Share of dropbacks with five or more pass rushers (FTN, 2022+; planned).", short="Five-plus rushers"),
               M("scheme.def_man_rate_prior", 1, "Man coverage (coordinator history)", "pct", "How often the defensive play-caller has played man coverage in past seasons, relative to each season's league average (participation 2016+; coverage 2018+).", short="Man coverage vs avg"),
               M("scheme.def_two_high_rate_prior", -1, "Two-high shells (coordinator history)", "pct", "How often the play-caller has played two-deep safety shells in past seasons, relative to each season's league average (participation 2016+; coverage 2018+).", short="Two-high vs avg"),
           ), context_only=True),
     Group("matchups", "Matchups", "The sidelines", "This offense against this defense",
-          "This offense's habits against this defense's habits (planned).",
+          "Each situation's edge on its own: this offense's habits against this defense's results, in points per game (the matchup engine, ADR 0028; FTN charting, 2022 on). Shown, not scored: only their sum, the net edge in Offense, passed the gates.",
           (
-              M("matchup.pa_vs_pa_defense", 1, "Play-action vs a defense that struggles with it", "index", "Offense's play-action habit times the defense's results against play-action (planned)."),
-              M("matchup.blitz_vs_blitz_offense", 1, "Blitz vs an offense that struggles with it", "index", "Defense's blitz habit times the offense's results against the blitz (planned)."),
-              M("matchup.motion_vs_motion_defense", 1, "Motion vs a defense that struggles with it", "index", "Offense's motion habit times the defense's results against motion (planned)."),
-              M("matchup.under_center_vs_light_box", 1, "Power runs vs light boxes", "index", "Under-center run game against a defense that plays light boxes (planned)."),
-              M("matchup.off_vs_man", 1, "Offense vs man coverage", "index", "Offense's results against man coverage times the defense's man rate (planned)."),
-              M("matchup.off_vs_pressure", 1, "Offense vs pressure", "index", "Offense's results under pressure times the defense's pressure rate (planned)."),
-              M("matchup.off_11_vs_def_11", 1, "Three-receiver sets vs the defense", "index", "Offense's 11-personnel results against the defense's results versus 11 personnel (planned)."),
+              M("matchup.edge_blitz", 1, "Edge: blitz", "points", "Net edge when the defense blitzes.", adv=True),
+              M("matchup.edge_box_light", 1, "Edge: light box", "points", "Net edge on runs against a light box.", adv=True),
+              M("matchup.edge_box_heavy", 1, "Edge: heavy box", "points", "Net edge on runs against a heavy box.", adv=True),
+              M("matchup.edge_play_action", 1, "Edge: play action", "points", "Net edge on play-action passes.", adv=True),
+              M("matchup.edge_motion", 1, "Edge: motion", "points", "Net edge on plays with pre-snap motion.", adv=True),
+              M("matchup.edge_screen", 1, "Edge: screens", "points", "Net edge on screen passes.", adv=True),
+              M("matchup.edge_rpo", 1, "Edge: run-pass options", "points", "Net edge on run-pass options.", adv=True),
           ), context_only=True),
     Group("market", "Market behavior", "The outside world", "How the betting market is behaving (not what it predicts)",
           "How the betting market is behaving: line movement and where the public is. Never the line itself (ADR 0013); live only, so it contributes nothing to backtests.",
