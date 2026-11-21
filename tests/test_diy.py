@@ -1,5 +1,6 @@
 """Build-your-own evaluator: synthetic-matrix properties and one real-data consistency check."""
 
+import json
 import time
 
 import numpy as np
@@ -153,3 +154,73 @@ def test_real_matrix_consistency_with_backfill():
     for pid in ("traditionalist", "analyst", "sharp"):
         raw = diy.evaluate(m["personas"][pid]["W"], m)["overall"]["log_loss"]
         assert abs(raw - backfill(pid)) < 0.012, pid
+
+
+# --------------------------------------------- neutral sites and the custom line (ADR 0031, 0034)
+
+
+def test_neutral_site_has_no_home_field_in_the_calibration():
+    """A pure home-field data set: every home team wins at a real home game, coin flips at neutral
+    sites. The gated Platt puts all home field on g (c > 0) and scores a neutral game at 50%."""
+    rng = np.random.default_rng(5)
+    n = 4000
+    neutral = (rng.random(n) < 0.2).astype(float)
+    y = np.where(neutral == 1, rng.random(n) < 0.5, rng.random(n) < 0.6).astype(float)
+    x = rng.normal(size=n) * 1e-3  # no signal
+    _a, c = diy._platt(x, y, 1.0 - neutral)
+    assert c == pytest.approx(np.log(0.6 / 0.4), abs=0.08)
+    m = synthetic()
+    m["columns"]["neutral"] = [1] * m["n"]
+    sp = diy.season_predictions({g: 0.0 for g in G}, m, 2010)
+    assert np.allclose(sp["p"], 0.5)  # no weights, every game neutral: no home field anywhere
+
+
+def test_group_ids_are_the_weighted_groups():
+    from nfl.features.groups import GROUPS
+
+    assert diy.GROUP_IDS == [g for g, grp in GROUPS.items() if not grp.context_only]
+    assert "venue_weather" in diy.GROUP_IDS and "coaching" not in diy.GROUP_IDS
+    assert set(diy.LIVE_ONLY) <= set(diy.GROUP_IDS)
+
+
+@requires_data
+def test_composites_reproduce_the_published_lines():
+    """A line scored from the published composites (the browser's path: σ(a·(b·g + Σ W c) + c·g))
+    equals the engine's p_home on the same games, neutral sites included. The Sharp is left out on
+    purpose: its own Market behavior also fades the public, and the composites carry the Student's
+    (line movement only)."""
+    from nfl.approaches import fit
+    from nfl.config import current_season
+
+    paths = get_paths()
+    season = current_season()
+    try:
+        arts = {
+            mid: fit.load(paths, mid, season - 1)
+            for mid in ("student", "analyst", "traditionalist")
+        }
+    except FileNotFoundError:
+        pytest.skip("no fits for this season")
+    if any(a.meta.get("registry_version") != diy.REGISTRY_VERSION for a in arts.values()):
+        pytest.skip("local fits are from an older registry")
+    preds = pl.read_parquet(paths.marts / "predictions.parquet").filter(
+        (pl.col("season") == season) & pl.col("is_backfill")
+    )
+    for mid, art in arts.items():
+        rows = preds.filter(pl.col("model_id") == mid).select(
+            "game_id", "lock_ts", "p_home", "contributions"
+        )
+        if rows.is_empty():
+            pytest.skip("no backfill rows this season")
+        df = rows.join(
+            diy.composites_at(paths, rows.select("game_id", "lock_ts"), season), on="game_id"
+        )
+        W = art.meta["group_weights"]
+        x = sum(W.get(g, 0.0) * df[f"c_{g}"].to_numpy() for g in diy.GROUP_IDS)
+        g = 1.0 - df["neutral"].to_numpy()
+        core = art.calib_a * (art.intercept * g + x) + art.calib_c * g
+        # the news adjustment (ADR 0032) is the row's own `news` piece, the same for every line
+        dl = np.array([json.loads(c or "{}").get("news", 0.0) for c in df["contributions"]])
+        p = 1 / (1 + np.exp(-(core + dl)))
+        # 1e-6: the stored `news` piece is rounded to 6 decimals; without news the match is 1e-16
+        assert np.abs(p - df["p_home"].to_numpy()).max() < 1e-6, mid

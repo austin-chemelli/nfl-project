@@ -4023,5 +4023,23 @@
   ],
   "tracked": false,
   "grade": null
+ },
+ "composites": {
+  "as_of": "2026-10-29T23:15:00Z",
+  "neutral": false,
+  "c": {
+   "quality": 0.3809,
+   "offense": 0.0972,
+   "defense": 0.6472,
+   "special_teams": -0.3016,
+   "quarterback": 0.9381,
+   "health": -0.2093,
+   "form": 0.724,
+   "stakes": -0.0178,
+   "rest_travel": -0.5064,
+   "venue_weather": 0.7826,
+   "market": 0.0,
+   "buzz": -0.3182
+  }
  }
 }

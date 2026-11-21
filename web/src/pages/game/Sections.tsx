@@ -14,6 +14,8 @@ import { approachOf, groupOf } from '../../lib/meta'
 import { isScored, splitFeature } from '../../lib/scored'
 import { ScoredTag } from '../../components/ScoredTag'
 import { isReference, SHORT } from '../../lib/models'
+import { Unofficial } from '../../you/YouBar'
+import { useHeadline } from '../../you/current'
 import {
   byUnit, contribOrder, contributionItems, dotModels, edgeRows, featureContribRows, lineMoveChip, marketSource, previewRows, tape, tendencyBlocks,
 } from './helpers'
@@ -62,6 +64,7 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
                     <Help text={approachOf(meta, m)?.blurb}>
                       <ModelBadge modelId={m} label={label(m)} reference={isReference(m)} />
                     </Help>
+                    {m === 'you' && <Unofficial />}
                   </td>
                   <td className={`${td} tabular`}>{pct(mp.p_home, 1)}</td>
                   <td className={`${td} tabular`}>{spreadLabel(mp.spread_home, g.home, g.away)}</td>
@@ -86,7 +89,10 @@ export function ApproachesVsMarket({ g, meta }: { g: Game; meta: Meta }) {
 export function Why({ g, meta }: { g: Game; meta: Meta }) {
   const contrib = g.contributions
   const opts = contribOrder(contrib)
-  const [sel, setSel] = useState(opts[0] ?? '')
+  const headline = useHeadline()
+  // null until the reader picks one: follow the headline, which may become theirs after a refit
+  const [picked, setSel] = useState<string | null>(null)
+  const sel = picked ?? ((opts as readonly string[]).includes(headline) ? headline : opts[0] ?? '')
   if (opts.length === 0) {
     return <Section title="Why they lean the way they do"><p className="text-ink-2">No contribution breakdown for this game.</p></Section>
   }
@@ -114,6 +120,7 @@ export function Why({ g, meta }: { g: Game; meta: Meta }) {
         </span>
         <Help text={approachOf(meta, cur)?.blurb} />
       </div>
+      {cur === 'you' && <p className="mb-2 text-[13px] text-ink-3">Your line&apos;s breakdown is by group; it has no per-feature detail.</p>}
       {chip && <p className="mb-2 inline-block rounded border border-line bg-surface-2 px-2 py-0.5 text-[13px]">{chip}</p>}
       {history.size > 0 && (
         <p className="mb-1 flex items-center gap-1.5 text-[12px] text-ink-3">

@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import * as C from './contract'
 
-const REAL = path.resolve(import.meta.dirname, '../../../data/marts/site')
+// the local data (NFL_DATA_ROOT, as in vite.config.ts, so a scratch build can be checked too)
+const REAL = path.resolve(process.env.NFL_DATA_ROOT ?? path.resolve(import.meta.dirname, '../../../data'), 'marts/site')
 const FIX = path.resolve(import.meta.dirname, '../test/fixtures/site')
 
 function schemaFor(rel: string) {
@@ -17,6 +18,7 @@ function schemaFor(rel: string) {
   if (base === 'hypotheses.json') return C.Hypotheses
   if (base === 'coaches.json') return C.Coaches
   if (base === 'diy_matrix.json') return C.DiyMatrix
+  if (base.startsWith('custom_')) return C.CustomSeason
   if (base.startsWith('season_')) return C.SeasonFile
   if (base === 'audit.json') return C.Audit
   if (base === 'teams.json') return C.TeamsFile

@@ -7,6 +7,7 @@ import type { LeagueFile } from '../../data/contract'
 import { dash, kickoffEt } from '../../lib/format'
 import { teamDotVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
+import { useLines } from '../../you/current'
 import { hasSpark, sparkSeries } from './context'
 import { Spark } from './Spark'
 import { barWidth, fmtProb, oddsRows, parseView, recordOf, marketNote, sourcesText, winsRange, type Conf, type View } from './playoffs'
@@ -33,6 +34,7 @@ const ROUNDS = [
 
 /** The fine print for the playoff tabs: what each variant used and what the simulation leaves out. */
 export function SimFinePrint({ file, whatIf = false }: { file: LeagueFile; whatIf?: boolean }) {
+  const { you } = useLines()
   return (
     <FinePrint label="How these odds are made">
       {whatIf && (
@@ -57,6 +59,7 @@ export function SimFinePrint({ file, whatIf = false }: { file: LeagueFile; whatI
       </p>
       <p>A swing compares the runs where a team won with the runs where it lost, so it includes what a win says about how good that team is in that run, not only the win itself.</p>
       <p>These are simulations, not a count of exact playoff scenarios, so no team is ever shown as certain or out.</p>
+      {you?.isDefault && <p>Playoff odds are simulated from the Student&apos;s line and the market&apos;s, not from yours: rerunning ten thousand seasons in your browser is out of scope.</p>}
     </FinePrint>
   )
 }

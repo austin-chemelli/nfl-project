@@ -1060,3 +1060,22 @@ Not fixed: the status-to-play rates behind `value_lost` are fitted on every seas
 - On the Week 11 Saturday slate the adjustment ran from −0.3 to +1.0 points (TB @ DET: Tampa's QB status 2). The cap bound nowhere. No countable-fact rows exist yet.
 
 **Lesson.** Release the job lock before starting a cloud job that takes it. Two agents writing `tests/test_news.py` at once clobbered one file: give parallel agents distinct test file names in the brief.
+
+## 2026-11-20: Your own approach: Build is back and "You" is a line on every page (M30, ADR 0034)
+
+**Why.** Austin (model round 3): a reader builds their own approach by weighing the groups, sees how it would have done, saves it, and then sees it wherever the approaches are compared, as the default line if they choose. Build had been hidden since M16 and scored history from composites that ignored wave 3's neutral-site rule.
+
+**What changed.**
+- `approaches/diy.py` now builds the engine's composites: the 12 weighted groups only, Venue & weather from the Traditionalist's artifact (it was all zero: no source had it after the Student dropped the group), venue members gated at neutral sites, a `neutral` column and a gated Platt everywhere (`_platt(x, y, g)`), `matrix_key()` and `composites_at()`. `nfl site` rebuilds the matrix itself when its key is stale (`ensure_matrix`), writes `composites` on every slate and game row (as of the headline row's lock), `site/custom_<season>.json` (graded games at the Student's graded lock) and `meta.custom`.
+- `web/src/you/`: one saved approach per browser (`nfl-you-v1`), its maths (`scoreLine`, `calibrate`), a provider that resolves it once and adds `models.you` to the data as it loads, and the bar that says pages lead with your line. Build: save, rename, default, share, remove; what each group holds; live-only sliders; a held-out check. The slate, game, tracker ("Your line" tab), recap, Season view, League and Method pages show it, always marked unofficial.
+
+**Findings.**
+- Engine parity is exact: the published Student, Analyst and Traditionalist lines rescored from the composites match `p_home` to 2e-16 on all 151 graded 2026 games, the 8 neutral-site games included. The Sharp differs by up to 0.058 only because its Market behavior also fades the public (the composites carry line movement only); a "You" started from the Sharp reads the line move alone.
+- The custom file is 66 KB for 150 graded games; composites add about 200 bytes to a slate or game row.
+- The first test fixture refresh from the scratch build broke 40 unrelated tests (a different data snapshot). Patching only the new fields into the existing fixtures kept them green.
+
+**Review (a `reviewer` agent, before the PR).** Fixed: live-only groups (Market behavior, Buzz) blew up the calibration's slope when they held most of a budget (a 95% Buzz line picked at 100%), so together they are capped at 30%; the "where they differ" list said "At the lock" for the reader's line; a failed matrix rebuild could leave saved lines "updating" forever (meta's key is now read back from the published matrix, and a failed refit shows a note); the key now includes a hash of the source artifacts, so a refit under the same registry refits saved lines; the reader's line no longer counts among "the approaches" in card sentences and the right-or-wrong tile; the saved name no longer goes stale.
+
+**After the news adjustment merged first (#71, registry v8).** Rebased onto it. "You" takes the same news points as every line (`composites.news_pts`, from the headline row's `news` piece; the spread moves by exactly those points, as `news.apply` does); parity holds with news on. `nfl site` on the v8 data rebuilt the Build matrix by itself (key `8-2025-fc0043e0`). Weeks 9–11 were graded on live locks made before the adjustment, so the season record has no news yet; Week 11's slate does (TB @ DET +1.0). A helper named `window` in the held-out check shadowed the browser's `window` and crashed Build in the dev server only; renamed.
+
+**Lesson.** One data path for everything that lists approaches (`models.you` added where the data loads) meant most pages needed no change: the loops that keep the approaches a game has picked it up. The pages that needed work were the ones that hard-code the headline.

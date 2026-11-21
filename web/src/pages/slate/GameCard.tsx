@@ -7,9 +7,11 @@ import { StatusBadge } from '../../components/ui'
 import { TeamAccent } from '../../components/TeamAccent'
 import type { GameRow, LeagueFile, Meta } from '../../data/contract'
 import { kickoffEt, pct, spreadLabel } from '../../lib/format'
-import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
+import { APPROACHES, SHORT } from '../../lib/models'
 import { matchupVars } from '../../lib/teamColors'
 import { teamInfo } from '../../lib/teams'
+import { useHeadline } from '../../you/current'
+import { Unofficial } from '../../you/YouBar'
 import { YourPick } from '../../components/YourPick'
 import { cardSentence, contrastLine, gameStatus, pickOf, stakesLine, whyLine } from './helpers'
 
@@ -39,7 +41,8 @@ function FinalScore({ g }: { g: GameRow }) {
 
 /** `showStatus` is false when this card's status is the usual one for the week (said once above the grid). */
 export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Meta; showStatus: boolean; league?: LeagueFile }) {
-  const { status } = gameStatus(g)
+  const headline = useHeadline()
+  const { status } = gameStatus(g, headline)
   const mk = g.market?.p_home ?? null
   const models = APPROACHES.flatMap((id) => {
     const p = g.models[id]?.p_home
@@ -48,7 +51,7 @@ export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Me
   const fav = mk == null ? null : `${mk >= 0.5 ? g.home : g.away} ${pct(mk >= 0.5 ? mk : 1 - mk)}`
   const pregame = g.result == null
   const id = useId()
-  const pk = pickOf(g, HEADLINE)
+  const pk = pickOf(g, headline)
   const why = whyLine(g, meta)
   const contrast = contrastLine(g)
   const stakes = g.result == null ? stakesLine(g, league) : null
@@ -81,8 +84,9 @@ export function GameCard({ g, meta, showStatus, league }: { g: GameRow; meta: Me
         {move && <div className="text-[13px] text-ink-2">{move}</div>}
         {pk && (
           <div className="text-[14px] font-medium text-ink">
-            {SHORT[HEADLINE]}'s pick: {pk.team} {pct(pk.p)}
-            {g.models[HEADLINE]?.spread_home != null && <span className="font-normal text-ink-2"> ({spreadLabel(g.models[HEADLINE].spread_home, g.home, g.away)})</span>}
+            {headline === 'you' ? "Your line's pick" : `${SHORT[headline]}'s pick`}: {pk.team} {pct(pk.p)}
+            {g.models[headline]?.spread_home != null && <span className="font-normal text-ink-2"> ({spreadLabel(g.models[headline].spread_home, g.home, g.away)})</span>}
+            {headline === 'you' && <Unofficial />}
           </div>
         )}
         {why && <div id={`${id}-why`} className="text-[14px] text-ink">{why}</div>}
