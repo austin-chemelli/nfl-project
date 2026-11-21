@@ -231,7 +231,7 @@ Current docs, what each is for, and when it was last verified against the code o
 | [journal.md](journal.md) | understanding why something is the way it is | 2026-11-20 |
 | [hosting.md](hosting.md) | touching `infra/`, the buckets, deploys or the desktop upload path | 2026-11-08 |
 | [runbook.md](runbook.md) | operating the week by hand, rerunning a job, the desktop setup | 2026-11-08 |
-| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-17 |
+| [site.md](site.md) | working in `web/`: pages, the design language, the kit, deploy | 2026-11-20 |
 | [state-maintenance.md](state-maintenance.md) | updating this file, the journal or your hub track file (every chat, at track boundaries) | 2026-11-10 |
 | [desktop-narrative-setup.md](desktop-narrative-setup.md) | setting up or fixing the desktop's narrative timer on Claude Code (ADR 0030): steps, NEED fixes, emails | 2026-11-19 |
 | [desktop-llm-setup.md](desktop-llm-setup.md) | the desktop's models, Ollama, SearXNG, Tailscale | 2026-11-05 |
