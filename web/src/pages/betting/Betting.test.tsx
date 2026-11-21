@@ -145,6 +145,9 @@ describe("This week's bets page", () => {
     expect(within(slate).getAllByText('skip').length).toBeGreaterThan(3)
     const dal = within(slate).getByRole('listitem', { name: 'TEN at DAL' })
     expect(within(dal).getByRole('img')).toHaveAccessibleName('Home win chance: market 77%, Student 80%')
+    expect(within(slate).getByText(/Each team's win chance by the betting market/)).toBeInTheDocument()
+    expect(within(slate).getByText(/Where the Student would split it/)).toBeInTheDocument()
+    expect(within(dal).getByText('77%')).toBeInTheDocument()
   })
 
   it.each([0, 2])('shows %i targets gracefully', async (keep) => {
