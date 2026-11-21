@@ -37,7 +37,7 @@ def score(paths: Paths, now: datetime | None = None, season: int | None = None) 
     models, _missing = lock.load_models(paths, season - 1)
     feats = store.read_features(paths, seasons=(season, season))
     rows = []
-    for s in lock.score_approaches(models, feats, slate, now):
+    for s in lock.score_approaches(models, feats, slate, now, paths=paths):
         rows.append(s.frame.select("game_id", "p_home", "spread_home").with_columns(
             pl.lit(s.model_id).alias("model_id"), pl.lit(now, dtype=pl.Datetime("us")).alias("scored_at")))  # fmt: skip
     return pl.concat(rows).select(list(SCHEMA)).cast(SCHEMA)

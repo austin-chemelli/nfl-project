@@ -615,3 +615,76 @@ def test_model_changes_marks_the_first_live_row_with_a_new_config_hash():
         }
     ]
     assert site.model_changes(pl.DataFrame(), ["student"]) == []
+
+
+def _news_inputs():
+    """One game whose Student row carries a 1.0 point news adjustment (BAL's QB questionable)."""
+    import numpy as np
+    from scipy.special import expit
+    from scipy.stats import norm
+
+    from nfl.approaches import news
+    from nfl.features import store
+
+    lock_ts = datetime(2026, 11, 7, 17)
+    core_logit = 0.6
+    spread_core = float(norm.ppf(expit(core_logit)) * 13.5)
+    dl = float(news.adj_logit(np.array([spread_core]), np.array([core_logit]), np.array([1.0]))[0])
+    contrib = json.dumps({"home_field": 0.2, "strength.elo_pre": 0.4, "news": dl})
+    allrows = pl.DataFrame(
+        {"game_id": ["G"], "model_id": ["student"], "p_home": [float(expit(core_logit + dl))],
+         "spread_home": [spread_core + 1.0], "contributions": [contrib], "lock_ts": [lock_ts],
+         "status": ["locked"]}
+    )  # fmt: skip
+    feats = pl.DataFrame(
+        [(2026, 9, "G", "away", "narrative.qb_status", 2.0, datetime(2026, 11, 7, 12), "t", "1")],
+        schema=store.FEATURE_SCHEMA, orient="row",
+    )  # fmt: skip
+    g = {"game_id": "G", "home_team": "BUF", "away_team": "BAL"}
+    return g, allrows, feats, spread_core
+
+
+def test_news_block_reads_points_from_the_stored_row_and_names_the_reasons():
+    from nfl.approaches import news
+
+    g, allrows, feats, spread_core = _news_inputs()
+    b = site._news_block(g, allrows, feats, {"G": object()}, news.WEIGHTS)
+    assert b["pts"] == 1.0 and b["cap_pts"] == 1.5
+    assert b["football_only_spread"] == round(spread_core, 1)
+    assert b["reasons"] == [
+        {"label": "backup QB or unknown", "team": "BAL", "pts": -1.0}
+    ]  # hurts BAL itself
+    assert site._news_block(g, allrows, feats, {}, news.WEIGHTS) is None  # no research record
+
+
+def test_contributions_sum_to_the_logit_and_news_has_its_own_piece():
+    _, allrows, _, _ = _news_inputs()
+    out = site._contributions_pp(json.loads(allrows["contributions"][0]))
+    assert out["news_pp"] > 0 and "other" not in out["groups"]  # not filed under a feature group
+
+
+def test_news_effect_compares_live_student_rows_with_the_twin():
+    def row(gid, mid, sp, ll, live=True):
+        return {
+            "game_id": gid,
+            "model_id": mid,
+            "spread_home": sp,
+            "log_loss": ll,
+            "is_backfill": not live,
+        }
+
+    rows = []
+    for i in range(10):
+        moved = i < 4
+        rows += [row(f"g{i}", "student", 3.0 + (1.0 if moved else 0.0), 0.60 if moved else 0.70),
+                 row(f"g{i}", "student.core", 3.0, 0.65 if moved else 0.70)]  # fmt: skip
+    rows += [
+        row("old", "student", 1.0, 0.9, live=False),
+        row("old", "student.core", 0.0, 0.1, live=False),
+    ]
+    e = site.news_effect(pl.DataFrame(rows))
+    assert (e["games"], e["moved"], e["mean_abs_pts"]) == (10, 4, 1.0)
+    assert e["delta_log_loss"] == pytest.approx(-0.02)  # 4 games better by 0.05 over 10
+    assert e["lo"] <= e["delta_log_loss"] <= e["hi"]
+    assert site.news_effect(pl.DataFrame()) is None
+    assert site.news_effect(pl.DataFrame([r for r in rows if r["model_id"] == "student"])) is None

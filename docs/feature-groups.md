@@ -12,12 +12,12 @@ Sixteen groups, 94 members, every one built (registry v7, ADR 0031: nothing is "
 | **Offense** | `strength.epa_off` (+), `strength.success_off` (+), `decisions.explosive_rate` (+), **`matchup.net_edge_pg` (+, wave 3)**, `strength.epa_pass_off` (+), `strength.epa_rush_off` (+), *adv* `strength.epa_early_off` (+), `strength.epa_nongarbage_off` (+), `strength.epa_off_adj` (+), `strength.sack_rate_off` (−) | Efficiency moving the ball, and how this offense's habits meet this defense |
 | **Defense** | `strength.epa_def` (−), `strength.success_def` (−), `strength.epa_pass_def` (−), `strength.epa_rush_def` (−), `strength.sack_rate_def` (+), *adv* `strength.epa_def_adj` (−), `scheme.def_pressure_rate_prior` (+) | Efficiency stopping the ball |
 | **Special teams** | `strength.st_epa_pg` (+), `strength.st_kicking_epa_pg` (+), `strength.st_punt_epa_pg` (+), `strength.st_kickoff_epa_pg` (+) | Kicking and field position |
-| **Quarterback** | `strength.qb_epa` (+), `strength.qb_cpoe` (+), `availability.qb1_out` (−), `availability.qb_change` (−), `narrative.qb_status` (−) | Who is throwing, and is it the real guy |
-| **Health** | `availability.injury_impact` (−), `availability.starters_out` (−), `availability.ol_starters_out` (−), `availability.report_count` (−), `narrative.injury_impact` (−) | Who is missing |
+| **Quarterback** | `strength.qb_epa` (+), `strength.qb_cpoe` (+), `availability.qb1_out` (−), `availability.qb_change` (−) | Who is throwing, and is it the real guy |
+| **Health** | `availability.injury_impact` (−), `availability.starters_out` (−), `availability.ol_starters_out` (−), `availability.report_count` (−) | Who is missing |
 | **Form** | `form.last3_win_pct` (+), `form.last3_margin` (+), `form.streak` (+), `form.epa_trend` (+), `form.ats_l3` (+) | Momentum |
-| **Stakes** | `form.lookahead` (−), `form.letdown` (−), `form.eliminated` (−), `form.clinched` (−), `narrative.motivation` (+), `narrative.revenge` (+), `narrative.lookahead` (−) | What the game means to them |
+| **Stakes** | `form.lookahead` (−), `form.letdown` (−), `form.eliminated` (−), `form.clinched` (−) | What the game means to them |
 | **Rest & travel** | `environment.rest_days` (+), `form.off_bye` (+), `form.short_week` (−), `environment.travel_km` (−), `environment.tz_shift` (−), `form.road_streak` (−) | Fresh legs and body clocks |
-| **Venue & weather** (game-level) | `environment.div_game` (−), `environment.primetime` (+), `environment.is_dome` (+), `environment.is_turf` (+), `narrative.weather_concern` (−) | Where and in what; shifts home advantage only, and is zero at a neutral site. The Traditionalist's group, not the Student's |
+| **Venue & weather** (game-level) | `environment.div_game` (−), `environment.primetime` (+), `environment.is_dome` (+), `environment.is_turf` (+) | Where and in what; shifts home advantage only, and is zero at a neutral site. The Traditionalist's group, not the Student's |
 | **Coaching** (context) | `decisions.fourth_go_rate_oe`, `pass_rate_oe`, `early_down_pass_rate`, `hc_tenure`, `hc_new`, `narrative.coaching_turmoil`, *adv* `proe_leading`, `proe_trailing`, `pace`, `penalty_yds_pg` | Decision quality and staff stability |
 | **Offensive scheme** (context) | `front.motion_rate`, `play_action_rate`, `rpo_rate`, `screen_rate`, `under_center_rate`, `no_huddle_rate`, `scheme.off_11_rate_prior`, `off_heavy_rate_prior`, `off_time_to_throw_prior` | How the offense is built |
 | **Defensive scheme** (context) | `front.blitz_rate`, `box_8plus_rate`, `scheme.def_man_rate_prior`, `def_two_high_rate_prior` | How the defense is built |
@@ -39,3 +39,5 @@ Rules:
 - A member joins a weighted group only with a ledger row whose shadow gate passed (verdict `model`, ADR 0031); a member whose group is context-only is shown, not scored.
 
 Persona group weights live in `src/nfl/approaches/configs/*.yaml`, each with its `why`; wave 3's changes are in ADR 0031.
+
+Registry v8 (ADR 0032): the narrative ratings `qb_status`, `injury_impact`, `motivation`, `revenge`, `lookahead` and `weather_concern` are no longer group members. News reaches every line as one capped adjustment (`src/nfl/approaches/news.py`, at most 1.5 points).

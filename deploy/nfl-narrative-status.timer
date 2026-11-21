@@ -1,0 +1,12 @@
+[Unit]
+Description=NFL late-status passes: Thursday 07:30 and Saturday 10:30 Eastern (STATUS_PASSES in src/nfl/llm/narrative.py)
+
+[Timer]
+OnCalendar=Thu *-*-* 07:30:00 America/New_York
+OnCalendar=Sat *-*-* 10:30:00 America/New_York
+# Not Persistent: a status pass run after the lock it was meant for is worth nothing.
+Persistent=false
+RandomizedDelaySec=1min
+
+[Install]
+WantedBy=timers.target

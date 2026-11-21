@@ -57,11 +57,13 @@ The cloud rows are checked against `infra/jobs.tf` by `scripts/state_check.py`; 
 |---|---|---|---|---|---|
 | Tue 10:00 | `nfl-weekly-refresh`: ingest, odds, curate, features, score unscored finished games, grade, ledger, site, publish | cloud | `0 10 * * 2` | marts, site JSON | `gcloud run jobs executions list --job nfl-weekly-refresh --region us-central1` |
 | Wed 18:00 | `desktop-narrative-wed`: desktop narrative pass, every game of the week; uploads records, starts `nfl-site` | desktop | `wed 18:00` | `marts/narrative/` | `gcloud logging read 'logName="projects/nfl-project-prod/logs/nfl-desktop-narrative"' --limit 5` |
+| Thu 07:30 | `desktop-narrative-status-thu`: late-status pass (who plays; games with a record; ADR 0032). Optional: timer installed off, `desktop-setup.sh --enable-status`; nothing waits for it | desktop | `thu 07:30` | `marts/narrative/` | desktop log |
 | Thu 08:30 | `nfl-narrative-check`: fails (emails) if an upcoming game has no pass record (`claude_max` or `local`) since the last pass | cloud | `30 8 * * 4` | nothing | executions list |
 | Thu 09:00 | `nfl-lock-thu`: lock the Thursday games, commit + push the artifact | cloud | `0 9 * * 4` | predictions, bets, `public/predictions/` on `main`, site | `git log origin/main -1`; executions list |
 | Thu 20:05 | `nfl-odds-snapshot`: closing lines for CLV, publish | cloud | `5 20 * * 4` | `curated/lines`, site | executions list |
 | Wed, Fri, Sat 20:05 | `nfl-daily`: this season's ingest, an odds snapshot, curate, tendencies, features, site, publish (ADR 0024) | cloud | `5 20 * * 3`, `5 20 * * 5`, `5 20 * * 6` | lines, features, site | executions list |
 | Sat 07:00 | `desktop-narrative-sat`: desktop narrative pass, Sunday and Monday games (after Friday's designations) | desktop | `sat 07:00` | `marts/narrative/` | desktop log |
+| Sat 10:30 | `desktop-narrative-status-sat`: late-status pass again, after Friday's designations and the 07:00 pass (optional, as Thursday's) | desktop | `sat 10:30` | `marts/narrative/` | desktop log |
 | Sat 11:30 | `nfl-narrative-check` | cloud | `30 11 * * 6` | nothing | executions list |
 | Sat 12:00 | `nfl-lock-sat`: lock every Saturday to Monday game | cloud | `0 12 * * 6` | as Thursday | as Thursday |
 | Sun 09:20, 12:50, 16:00, 20:10 | `nfl-odds-snapshot` | cloud | `20 9 * * 0`, `50 12 * * 0`, `0 16 * * 0`, `10 20 * * 0` | lines, site | executions list |

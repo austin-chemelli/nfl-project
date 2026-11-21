@@ -14,7 +14,8 @@ The model searches, follows leads and writes `record.json`; then code decides wh
 The app never touches a credential: `claude` is an external program on its own login, every
 API-key variable is removed from its environment, and `require_subscription_login` refuses to run
 unless `claude auth status` reports a claude.ai login (no API key, no paid API, ADR 0030).
-Records are `producer: claude_max`, `prompt_version: claude_v1`. One row per game session goes to
+Records are `producer: claude_max`, `prompt_version: claude_v2` (schema v3, ADR 0032: the starting
+QB reporting names, starters ruled out and a fired coach, each cited and roster-checked). One row per game session goes to
 `marts/llm_calls.parquet` (job `research_claude`); the folder (prompt, transcript, raw and checked
 record, drops) is kept under raw/narrative_claude/.
 """
@@ -30,7 +31,7 @@ import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from string import Template
 from typing import Any
@@ -42,11 +43,21 @@ from nfl.config import Paths, now_utc, snapshot_ts
 from nfl.llm import checks
 from nfl.llm.client import append_call
 from nfl.llm.fetch import Fetcher
-from nfl.llm.narrative import GameNarrative, _check_against_schedule, example, ingest
+from nfl.llm.narrative import (
+    MAX_SOURCE_AGE_DAYS,
+    STATUS_PASSES,
+    GameNarrative,
+    _check_against_schedule,
+    example,
+    ingest,
+)
 from nfl.llm.research import Game, full_names
 
-PROMPT = Path(__file__).parent / "prompts" / "claude_research_v1.md"
-PROMPT_VERSION = "claude_v1"
+PROMPT = Path(__file__).parent / "prompts" / "claude_research_v2.md"
+PROMPT_VERSION = "claude_v2"
+STATUS_PROMPT = Path(__file__).parent / "prompts" / "claude_status_v1.md"
+STATUS_VERSION = "claude_status_v1"
+STATUS_FIELDS = ("qb_status", "qb_named_starter", "injury_impact", "starters_ruled_out", "key_absences")  # fmt: skip
 PRODUCER = "claude_max"
 JOB = "research_claude"
 MODEL = os.environ.get("NARRATIVE_CLAUDE_MODEL", "sonnet")
@@ -107,8 +118,9 @@ def _roster_lines(paths: Paths, season: int, week: int, team: str) -> tuple[int 
     return wk, [f"{n} ({p}, {s})" for n, p, s in rows]
 
 
-def prepare(paths: Paths, row: dict, folder: Path, model: str, now: datetime) -> str:
-    """Write the folder's inputs and return the prompt."""
+def prepare(paths: Paths, row: dict, folder: Path, model: str, now: datetime, *, base: GameNarrative | None = None) -> str:  # fmt: skip
+    """Write the folder's inputs and return the prompt (the status prompt when `base`, the game's
+    earlier record, is given: its status fields go to `previous.json`)."""
     g = Game.from_slate(row)
     names = full_names()
     folder.mkdir(parents=True, exist_ok=True)
@@ -126,7 +138,11 @@ def prepare(paths: Paths, row: dict, folder: Path, model: str, now: datetime) ->
     ctx = {"game_id": g.game_id, "season": g.season, "week": g.week, "kickoff_utc": kick.isoformat(),
            "stadium": g.stadium, "roof": g.roof, "home": home, "away": away}  # fmt: skip
     (folder / "context.json").write_text(json.dumps(ctx, indent=1))
-    (folder / "example.json").write_text(json.dumps(example(), indent=1))
+    if base is None:
+        (folder / "example.json").write_text(json.dumps(example(), indent=1))
+    else:
+        prev = {side: {"team": getattr(base, side).team, **{f: getattr(getattr(base, side), f) for f in STATUS_FIELDS}} for side in ("home", "away")}  # fmt: skip
+        (folder / "previous.json").write_text(json.dumps(prev, indent=1))
     p = str(folder.resolve())
     settings = {"permissions": {
         "allow": ["WebSearch", "WebFetch", f"Read(/{p}/**)", f"Write(/{p}/**)", f"Edit(/{p}/**)"],
@@ -135,14 +151,14 @@ def prepare(paths: Paths, row: dict, folder: Path, model: str, now: datetime) ->
     }}  # fmt: skip
     (folder / "settings.json").write_text(json.dumps(settings, indent=1))
     n = now.replace(tzinfo=UTC, microsecond=0)
-    return Template(PROMPT.read_text()).substitute(
+    return Template((STATUS_PROMPT if base else PROMPT).read_text()).substitute(
         away_name=names.get(g.away, g.away), away=g.away, home_name=names.get(g.home, g.home),
         home=g.home, season=g.season, week=g.week, kickoff_utc=kick.strftime("%Y-%m-%d %H:%M"),
         kickoff_et=kick.astimezone(ET).strftime("%a %b %-d %-I:%M %p"),
         venue=f"{g.stadium} ({g.roof or 'roof unknown'})", today=n.date().isoformat(),
         now=n.isoformat(), roster_week=home["roster_week"] or "unknown",
         window_start=(n.date() - timedelta(days=WINDOW_DAYS)).isoformat(),
-        model_label=f"claude-code/{model}", prompt_version=PROMPT_VERSION,
+        model_label=f"claude-code/{model}", prompt_version=STATUS_VERSION if base else PROMPT_VERSION,
     )  # fmt: skip
 
 
@@ -220,13 +236,13 @@ def runs_dir(paths: Paths, season: int, week: int) -> Path:
     return paths.root / "raw" / "narrative_claude" / f"season={season}" / f"week={week:02d}"
 
 
-def check_record(paths: Paths, raw: dict, folder: Path, fetcher: Fetcher, now: datetime) -> tuple[dict, Counter, list]:  # fmt: skip
+def check_record(paths: Paths, raw: dict, folder: Path, fetcher: Fetcher, now: datetime, *, version: str = PROMPT_VERSION) -> tuple[dict, Counter, list]:  # fmt: skip
     """Run the checks on the model's record (a dict); returns (record, drops, log). Raises when
     what is left doesn't validate."""
     from nfl.features.store import games_frame
 
     raw = json.loads(json.dumps(raw))
-    raw["producer"], raw["prompt_version"] = PRODUCER, PROMPT_VERSION
+    raw["producer"], raw["prompt_version"] = PRODUCER, version
     raw["reported_finished_at"] = raw.get("known_as_of")
     raw["known_as_of"] = now.replace(tzinfo=None, microsecond=0).isoformat()
     _check_against_schedule(paths, raw)
@@ -260,32 +276,70 @@ def check_record(paths: Paths, raw: dict, folder: Path, fetcher: Fetcher, now: d
     return rec, drops, log
 
 
-def research_game(paths: Paths, row: dict, *, model: str = MODEL, store: bool = True, now: datetime | None = None, run=subprocess.run, fetcher: Fetcher | None = None) -> ClaudeRun:  # fmt: skip
+def check_status(paths: Paths, status: dict, base: GameNarrative, folder: Path, fetcher: Fetcher, now: datetime) -> tuple[dict, Counter, list]:  # fmt: skip
+    """The late-status record: `status` (the model's status.json) checked like a full record's
+    status fields and claims, merged onto a copy of `base` (the game's latest record). The checks
+    run on a shaped record that holds only the status fields and their claims, so nothing of the
+    base is re-judged against pages this run never opened. Kept from the base: everything but its
+    injury and qb claims (the status supersedes them) and claims too old for the window. New:
+    `known_as_of`, `producer`, `prompt_version` claude_status_v1, `pass_kind: status`, `qb_name`
+    (the named starter, when there is one). Raises when the result doesn't validate."""
+    keep = base.model_dump(mode="json")
+    shaped = json.loads(json.dumps(keep))
+    for side in ("home", "away"):
+        t = shaped[side]
+        t.update({"notes": [], "scheme_trends": [], "summary": "Status-only update of the earlier record."})  # fmt: skip
+        t.update({f: v for f, v in (status.get(side) or {}).items() if f in STATUS_FIELDS})
+    shaped["matchup_notes"], shaped["consensus_narrative"] = [], "Status-only update of the earlier record."  # fmt: skip
+    shaped["claims"], shaped["searches"] = status.get("claims", []), status.get("searches") or ["status"]  # fmt: skip
+    checked, drops, log = check_record(paths, shaped, folder, fetcher, now, version=STATUS_VERSION)
+    cutoff = datetime.fromisoformat(checked["known_as_of"]).date()
+    kept = [c for c in keep["claims"] if c["category"] not in ("injury", "qb")
+            and (not c.get("published_at") or (cutoff - date.fromisoformat(c["published_at"][:10])).days <= MAX_SOURCE_AGE_DAYS)]  # fmt: skip
+    out = {**keep, "schema_version": "3", "producer": PRODUCER, "prompt_version": STATUS_VERSION,
+           "pass_kind": "status", "model": checked["model"], "known_as_of": checked["known_as_of"],
+           "reported_finished_at": checked.get("reported_finished_at"),
+           "claims": [*kept, *checked["claims"]], "searches": [*keep["searches"], *checked["searches"]]}  # fmt: skip
+    for side in ("home", "away"):
+        for f in STATUS_FIELDS:
+            out[side][f] = checked[side][f]
+        if out[side]["qb_named_starter"]:
+            out[side]["qb_name"] = out[side]["qb_named_starter"]
+    GameNarrative.model_validate(out)
+    return out, drops, log
+
+
+def research_game(paths: Paths, row: dict, *, model: str = MODEL, store: bool = True, now: datetime | None = None, run=subprocess.run, fetcher: Fetcher | None = None, base: GameNarrative | None = None) -> ClaudeRun:  # fmt: skip
+    """One game's session and what code stores of it. With `base` (the game's latest record) it is
+    the late-status pass: a short status-only session merged onto a copy of `base`."""
     g = Game.from_slate(row)
     now = now or now_utc()
     out = ClaudeRun(g.game_id)
-    keep = runs_dir(paths, g.season, g.week) / f"{g.game_id}_{snapshot_ts(now)}"
+    keep = runs_dir(paths, g.season, g.week) / f"{g.game_id}_{'status_' if base else ''}{snapshot_ts(now)}"  # fmt: skip
+    fname = "status.json" if base else "record.json"
     work = Path(tempfile.mkdtemp(prefix=f"nfl-narrative-{g.game_id}-"))
     out.folder = keep
     t0 = time.monotonic()
     try:
-        prompt = prepare(paths, row, work, model, now)
+        prompt = prepare(paths, row, work, model, now, base=base)
         (work / "prompt.txt").write_text(prompt)
         res = call(work, prompt, model, run=run)
-        rec_path = work / "record.json"
+        rec_path = work / fname
         record, err = None, None
         for attempt in range(2):
             try:
                 if not rec_path.exists():
-                    raise ValueError("no record.json was written")
-                record, drops, log = check_record(paths, json.loads(rec_path.read_text()), work, fetcher or Fetcher(paths, use_cache=False, max_chars=200_000), now_utc())  # fmt: skip
+                    raise ValueError(f"no {fname} was written")
+                fetch = fetcher or Fetcher(paths, use_cache=False, max_chars=200_000)
+                raw = json.loads(rec_path.read_text())
+                record, drops, log = (check_status(paths, raw, base, work, fetch, now_utc()) if base else check_record(paths, raw, work, fetch, now_utc()))  # fmt: skip
                 err = None
                 break
             except Exception as e:  # noqa: BLE001  (schema or JSON errors: one repair turn)
                 err = f"{type(e).__name__}: {str(e)[:500]}"
                 if attempt or not res.get("session_id"):
                     break
-                res2 = call(work, f"Code could not use record.json: {err}\nFix record.json (only what the error names), then reply with one line.", model, resume=res["session_id"], run=run)  # fmt: skip
+                res2 = call(work, f"Code could not use {fname}: {err}\nFix {fname} (only what the error names), then reply with one line.", model, resume=res["session_id"], run=run)  # fmt: skip
                 res = {**res2, "_seconds": res.get("_seconds", 0) + res2.get("_seconds", 0),
                        "num_turns": (res.get("num_turns") or 0) + (res2.get("num_turns") or 0)}  # fmt: skip
         out.turns = res.get("num_turns") or 0
@@ -313,15 +367,15 @@ def research_game(paths: Paths, row: dict, *, model: str = MODEL, store: bool = 
             (work / f).unlink(missing_ok=True)
         shutil.copytree(work, keep, dirs_exist_ok=True)
         shutil.rmtree(work, ignore_errors=True)
-        _log(paths, model, g.game_id, out)
+        _log(paths, model, g.game_id, out, status=base is not None)
     return out
 
 
-def _log(paths: Paths, model: str, game_id: str, r: ClaudeRun) -> None:
+def _log(paths: Paths, model: str, game_id: str, r: ClaudeRun, *, status: bool = False) -> None:
     u = r.usage
     append_call(paths, {
-        "run_id": r.folder.name if r.folder else game_id, "job": JOB, "model": model,
-        "prompt_version": PROMPT_VERSION, "game_id": game_id, "attempt": 1, "ok": r.ok,
+        "run_id": r.folder.name if r.folder else game_id, "job": f"{JOB}_status" if status else JOB,
+        "model": model, "prompt_version": STATUS_VERSION if status else PROMPT_VERSION, "game_id": game_id, "attempt": 1, "ok": r.ok,
         "error": r.error, "input_tokens": u.get("input_tokens"), "output_tokens": u.get("output_tokens"),
         "cache_read_tokens": u.get("cache_read_input_tokens"),
         "cache_write_tokens": u.get("cache_creation_input_tokens"), "energy_wh": None,
@@ -356,6 +410,56 @@ def run_week(paths: Paths, season: int, week: int, game_ids: list[str] | None = 
 
     def one(r: dict) -> ClaudeRun:
         x = research_game(paths, r, model=model, store=store, run=run)
+        print(f"{x.game_id}: {'stored' if x.stored else 'ok' if x.ok else x.error} "
+              f"({x.seconds / 60:.1f} min, {x.pages} pages, {sum(x.dropped.values())} dropped)", flush=True)  # fmt: skip
+        return x
+
+    with ThreadPoolExecutor(max_workers=max(1, parallel)) as ex:
+        return list(ex.map(one, rows))
+
+
+def latest_full_records(paths: Paths, season: int, week: int) -> dict[str, GameNarrative]:
+    """game_id -> the game's newest stored `claude_max` record of the week (a status record is the
+    newest once one exists: it carries the full record's fields forward)."""
+    from nfl.llm.narrative import load_records
+
+    out: dict[str, GameNarrative] = {}
+    for r in sorted(load_records(paths, (season, season)), key=lambda r: r.known_as_of):
+        if r.week == week and r.producer == PRODUCER:
+            out[r.game_id] = r
+    return out
+
+
+def run_status(paths: Paths, season: int, week: int, game_ids: list[str] | None = None, *, model: str = MODEL, parallel: int = PARALLEL, store: bool = True, run=subprocess.run, login=require_subscription_login) -> list[ClaudeRun]:  # fmt: skip
+    """The late-status pass: for games of the week that already have a stored `claude_max` record
+    and haven't kicked off, a short status-only session merged onto a copy of the latest record
+    (`check_status`). Without `game_ids` it is a pass: games a status pass already stored since the
+    last scheduled one (`STATUS_PASSES`) are skipped, so a rerun resumes it. A game with no record
+    is skipped, never researched in full here."""
+    from nfl.llm.narrative import last_pass, slate, stored_since
+
+    plan = login()
+    print(f"claude login ok (plan {plan}); model {model}; status only", flush=True)
+    rows = slate(paths, season, week).to_dicts()
+    have = latest_full_records(paths, season, week)
+    now = now_utc().replace(tzinfo=None)
+    if game_ids:
+        unknown = set(game_ids) - {r["game_id"] for r in rows}
+        if unknown:
+            raise ValueError(f"not in {season} week {week}: {sorted(unknown)}")
+        rows = [r for r in rows if r["game_id"] in game_ids]
+    else:
+        done = stored_since(paths, season, week, last_pass(now, STATUS_PASSES), "status") if store else set()  # fmt: skip
+        rows = [r for r in rows if r["kickoff_utc"] > now and r["game_id"] not in done]
+        if done:
+            print(f"resuming: {len(done)} games already status-checked in this pass", flush=True)
+    skipped = [r["game_id"] for r in rows if r["game_id"] not in have]
+    rows = [r for r in rows if r["game_id"] in have]
+    if skipped:
+        print(f"no stored record, skipped: {', '.join(skipped)}", flush=True)
+
+    def one(r: dict) -> ClaudeRun:
+        x = research_game(paths, r, model=model, store=store, run=run, base=have[r["game_id"]])
         print(f"{x.game_id}: {'stored' if x.stored else 'ok' if x.ok else x.error} "
               f"({x.seconds / 60:.1f} min, {x.pages} pages, {sum(x.dropped.values())} dropped)", flush=True)  # fmt: skip
         return x

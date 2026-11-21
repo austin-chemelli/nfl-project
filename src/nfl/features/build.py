@@ -28,6 +28,7 @@ FAMILIES = [
     "scheme",
     "matchup",
     "narrative",
+    "news",
     "weather",
 ]
 

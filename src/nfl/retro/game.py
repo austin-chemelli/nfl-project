@@ -707,7 +707,7 @@ def _attribution(r: dict, meta: dict, y: float, feature_group: dict, groups: dic
     for f, v in c.items():
         if f == "home_field":
             continue
-        grp = feature_group.get(f, "other")
+        grp = "news" if f == "news" else feature_group.get(f, "other")  # ADR 0032
         by_group[grp] = by_group.get(grp, 0.0) + v
     base = _ll(_expit(total), y)
     out = []
@@ -716,7 +716,7 @@ def _attribution(r: dict, meta: dict, y: float, feature_group: dict, groups: dic
         out.append(
             GroupValue(
                 group=grp,
-                label=groups.get(grp, grp),
+                label=groups.get(grp, "News" if grp == "news" else grp),
                 pp=_z(pp, 1),
                 value=_z(_ll(_expit(total - cg), y) - base, 4),
             )

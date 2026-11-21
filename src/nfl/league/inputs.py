@@ -318,7 +318,7 @@ def load_inputs(
     student = [(STUDENT_ID, model)]
 
     def score(slate: pl.DataFrame) -> pl.DataFrame:
-        sc = lock.score_approaches(student, feats, slate, as_of)
+        sc = lock.score_approaches(student, feats, slate, as_of, paths=paths)
         return sc[0].frame.select("game_id", "p_home")
 
     out = build_inputs(games, preds, feats, score, season, as_of)

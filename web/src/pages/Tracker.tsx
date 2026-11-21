@@ -6,6 +6,7 @@ import { Tabs } from '../components/Tabs'
 import { Page, Loaded, Section } from '../components/ui'
 import { useMeta, useTracker } from '../data/api'
 import { CurrentSeason } from './tracker/CurrentSeason'
+import { NewsEffect } from './tracker/NewsEffect'
 import { Backtest } from './tracker/Backtest'
 import { Calibration } from './tracker/Calibration'
 import { PlayerClaims } from './tracker/PlayerClaims'
@@ -54,6 +55,7 @@ export default function TrackerPage() {
                       content: (
                         <TabBody>
                           <CurrentSeason t={t} meta={m} />
+                          <NewsEffect e={t.news_effect} />
                           <FinePrint>
                             <p>One season of live games cannot rank models, and in the backtest since 2005 nothing beats the market. Treat everything here as a measurement, not a verdict.</p>
                             <p>{t.current_season.some((r) => r.live) ? 'Before the dashed vertical line, weeks are backfill: models frozen before the season, scored after the fact. A week with any live lock counts from there, with diamonds marking it.' : 'Every week so far is backfill: models frozen before the season, scored after the fact. A dashed vertical line will mark the first week with a graded lock.'} The gray band is roughly the 90% range of a gap at this sample size, so a line inside it can't be told from the market. A handful of 16-game weeks is very noisy, so lines crossing early means little.</p>
