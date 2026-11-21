@@ -1,7 +1,11 @@
-/** Model identity: order, colors (CSS variables from the palette), line style. */
-export const APPROACHES = ['traditionalist', 'analyst', 'sharp', 'student'] as const
+/**
+ * Model identity: order, colors (CSS variables from the palette), line style. `you` is the reader's
+ * own line (ADR 0034): scored in this browser, never published; it is in a page's data only when the
+ * reader saved one, so loops that keep the approaches a game has pick it up with no change.
+ */
+export const APPROACHES = ['traditionalist', 'analyst', 'sharp', 'student', 'you'] as const
 export type ApproachId = (typeof APPROACHES)[number]
-/** The site's headline line: the pick, the slate and the tracker's tiles read it (D5). */
+/** The site's headline line (D5): the server's and the default. Pages read `useHeadline()`, which is the reader's own line when they made it their default. */
 export const HEADLINE = 'student'
 export const REFERENCES = ['market_baseline', 'elo_v0', 'home_naive'] as const
 
@@ -21,6 +25,18 @@ export function dashArray(modelId: string): string | undefined {
 }
 
 export const SHORT: Record<string, string> = {
-  traditionalist: 'Traditionalist', analyst: 'Analyst', sharp: 'Sharp', student: 'Student',
+  traditionalist: 'Traditionalist', analyst: 'Analyst', sharp: 'Sharp', student: 'Student', you: 'You',
   market_baseline: 'Market', elo_v0: 'Elo', home_naive: 'Home 57%', global: 'Global fit',
 }
+
+/** The reader's saved name for their own line (YouProvider calls this when it resolves the saved approach). */
+export function setYouName(name: string) {
+  SHORT.you = name
+}
+
+/** "The Student", "The Sharp"; the reader's own line goes by its saved name ("You" by default). */
+export const theName = (modelId: string) => (modelId === 'you' ? SHORT.you : `The ${SHORT[modelId] ?? modelId}`)
+/** Lower-case "the Student" inside a sentence; the reader's own line by its name. */
+export const theNameLower = (modelId: string) => (modelId === 'you' ? SHORT.you : `the ${SHORT[modelId] ?? modelId}`)
+/** A line that exists only in this browser (never locked, graded or published). */
+export const isUnofficial = (modelId: string) => modelId === 'you'

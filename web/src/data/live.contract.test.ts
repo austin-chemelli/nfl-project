@@ -48,7 +48,7 @@ describe.skipIf(!process.env.LIVE_CONTRACT)('live data parses with this contract
     for (const [path, schema] of [
       ['site/tracker.json', C.Tracker], ['site/hypotheses.json', C.Hypotheses], ['site/coaches.json', C.Coaches],
       ['site/diy_matrix.json', C.DiyMatrix], ['site/league.json', C.LeagueFile], ['site/similar.json', C.SimilarFile],
-      ['site/audit.json', C.Audit], ['site/betting_math.json', C.BettingMath], ['site/betting_week.json', C.BettingWeek], [`site/season_${season - 1}.json`, C.SeasonFile],
+      ['site/audit.json', C.Audit], ['site/betting_math.json', C.BettingMath], ['site/betting_week.json', C.BettingWeek], [`site/season_${season - 1}.json`, C.SeasonFile], [`site/custom_${season}.json`, C.CustomSeason],
     ] as const) await check(path, schema, bad)
 
     const teams = (await check('site/teams.json', C.TeamsFile, bad)) as C.TeamsFile | null

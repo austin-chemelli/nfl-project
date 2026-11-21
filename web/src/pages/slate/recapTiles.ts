@@ -2,6 +2,7 @@
 import type { WeekRecap } from '../../data/contract'
 import { dash, pct } from '../../lib/format'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
+import type { YouWeek } from './helpers'
 
 export type RecapTile = { id: string; label: string; value: string; sub: string; modelId?: string; help?: string }
 export type RecapStrip = { tiles: RecapTile[]; caption: string | null }
@@ -16,7 +17,7 @@ const NOISE = 0.005
  * count: while the week is still being played the caption says how few games the tiles rest on, so one
  * Thursday game doesn't read like a verdict next to the tracker's full season. Said once, not in each tile.
  */
-export function recapTiles(r: WeekRecap, total?: number): RecapStrip {
+export function recapTiles(r: WeekRecap, total?: number, mine: { headline: string; week: YouWeek | null } | null = null): RecapStrip {
   const tiles: RecapTile[] = []
   const done = r.games.length
   const caption = total != null && done < total ? `Week ${r.week} so far: ${done} of ${total} games final` : null
@@ -38,7 +39,12 @@ export function recapTiles(r: WeekRecap, total?: number): RecapStrip {
   const line = r.models.find((m) => m.model_id === HEADLINE)
   const mk = r.models.find((m) => m.model_id === 'market_baseline')
   const name = SHORT[HEADLINE]
-  if (line) tiles.push({ id: 'right', label: 'Picks right', value: `${line.right} of ${line.n}`, sub: `${mk ? `${name}; market ${mk.right} of ${mk.n}` : name}`, modelId: HEADLINE })
+  const you = mine?.week ?? null
+  if (line && you && mine?.headline === 'you') {
+    // the reader's own line leads; the Student's record stays in the sub line. Theirs is computed in the browser, not the public record.
+    tiles.push({ id: 'right', label: 'Picks right', value: `${you.right} of ${you.n}`, sub: `${SHORT.you} (unofficial); ${name} ${line.right} of ${line.n}${mk ? `; market ${mk.right} of ${mk.n}` : ''}`, modelId: 'you' })
+  } else if (line) tiles.push({ id: 'right', label: 'Picks right', value: `${line.right} of ${line.n}`, sub: `${mk ? `${name}; market ${mk.right} of ${mk.n}` : name}`, modelId: HEADLINE })
+  if (you) tiles.push({ id: 'you', label: 'Your line (unofficial)', value: `${you.right} of ${you.n} right`, sub: `log loss ${you.logLoss.toFixed(3)}`, modelId: 'you', help: 'Scored in this browser from the line you saved in Build, on this week\'s graded games. Not locked, not graded, never part of the public record.' })
   const up = r.upsets[0]
   tiles.push(
     up && up.value < UPSET_BELOW

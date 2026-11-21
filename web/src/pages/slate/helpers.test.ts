@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { CardData, GameRow, LeagueFile, Meta } from '../../data/contract'
-import { gapToMarket, cardSentence, contrastLine, correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, parseSort, pickOf, sideText, sortGames, stakesLine, whyLine, winnerMarketP } from './helpers'
+import fs from 'node:fs'
+import path from 'node:path'
+import { CustomSeason } from '../../data/contract'
+import { youWeek, sortsFor, gapToMarket, cardSentence, contrastLine, correct, disagreements, divergenceText, gameStatus, homeWon, neighbours, parseSort, pickOf, sideText, sortGames, stakesLine, whyLine, winnerMarketP } from './helpers'
 
 const pick = (p: number, div: number | null = null) => ({ p_home: p, spread_home: null, status: 'preview' as const, lock_ts: null, divergence: div })
 const game = (over: Partial<GameRow> = {}): GameRow => ({
   game_id: 'g', season: 2026, week: 8, kickoff_utc: '2026-10-30T00:15:00Z', away: 'CAR', home: 'GB', stadium: null, roof: null,
-  neutral_site: false, away_qb: null, home_qb: null, result: null, market: null, card: null, line_move: null,
+  neutral_site: false, away_qb: null, home_qb: null, result: null, market: null, card: null, line_move: null, composites: null,
   models: { traditionalist: pick(0.7), analyst: pick(0.4), sharp: pick(0.55), student: pick(0.5) },
   ...over,
 })
@@ -302,5 +305,50 @@ describe('stakesLine', () => {
     expect(stakesLine({ game_id: 'g' }, undefined)).toBeNull()
     expect(stakesLine({ game_id: 'g' }, null)).toBeNull()
     expect(stakesLine({ game_id: 'other' }, league(chi(0.8, 0.5)))).toBeNull()
+  })
+})
+
+describe('the reader own line in the slate helpers', () => {
+  const withYou = (p: number) => game({ market: { p_home: 0.6, spread_home: -3, total: null } as GameRow['market'], models: { student: pick(0.55), you: pick(p, p - 0.6) } })
+  it('reads the headline it is given', () => {
+    const g = withYou(0.8)
+    expect(gapToMarket(g)).toBeCloseTo(0.05)
+    expect(gapToMarket(g, 'you')).toBeCloseTo(0.2)
+    expect(gameStatus(game({ models: { you: pick(0.8) } }), 'you').status).toBe('preview')
+  })
+  it('sorts by the headline gap to the market', () => {
+    const a = { ...withYou(0.62), game_id: 'a' }
+    const b = { ...withYou(0.9), game_id: 'b' }
+    expect(sortGames([a, b], 'disagreement', 'you').map((g) => g.game_id)).toEqual(['b', 'a'])
+  })
+  it('names the sort for the headline', () => {
+    expect(sortsFor().find((o) => o.value === 'disagreement')?.label).toBe('Student vs market')
+    expect(sortsFor('you').find((o) => o.value === 'disagreement')?.label).toBe('Your line vs market')
+  })
+  it('leaves the reader\'s own line out of the published approaches\' card sentence', () => {
+    const g = game({ models: { student: pick(0.6), analyst: pick(0.6), sharp: pick(0.6), you: pick(0.3) } })
+    expect(cardSentence(g)).toBe('All 3 pick GB')
+    const done = game({ result: { home_score: 20, away_score: 10, margin: 10 }, models: { student: pick(0.6), analyst: pick(0.4), you: pick(0.7) } })
+    expect(cardSentence(done)).toBe('Student called it')
+  })
+})
+
+describe('youWeek', () => {
+  const season = CustomSeason.parse(JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../../test/fixtures/site/custom_2026.json'), 'utf8')))
+  const flat = { W: {}, intercept: 0, a: 1, c: 0 } // p_home = 50% everywhere
+  const home = { W: { quality: 1 }, intercept: 0, a: 1, c: 0 }
+  it('scores a week of graded games in the browser', () => {
+    const r = youWeek(flat, season.games, 3)!
+    expect(r.n).toBe(16)
+    expect(r.logLoss).toBeCloseTo(Math.log(2))
+    expect(r.marketLogLoss).not.toBeNull()
+    const h = youWeek(home, season.games, 3)!
+    expect(h.right).toBe(season.games.filter((g) => g.week === 3 && (g.c.quality > 0) === (g.home_won === 1)).length)
+  })
+  it('limits to exactly the given games, and is null for a week with none', () => {
+    const ids = season.games.filter((g) => g.week === 3).slice(0, 2).map((g) => g.game_id)
+    expect(youWeek(flat, season.games, 3, ids)!.n).toBe(2)
+    expect(youWeek(flat, season.games, 99)).toBeNull()
+    expect(youWeek(flat, season.games, 3, [])).toBeNull()
   })
 })

@@ -4,6 +4,8 @@ import { ago, kickoffEt } from '../lib/format'
 import { useTheme, type Theme } from './theme'
 import { isHidden } from '../lib/hiddenPages'
 import { useScrollFade } from '../lib/useScrollFade'
+import { YouBar } from '../you/YouBar'
+import { YouProvider } from '../you/YouProvider'
 
 const NAV: { to: string; label: string; end?: boolean; listed?: () => boolean }[] = [
   { to: '/', label: 'This week', end: true },
@@ -18,14 +20,16 @@ const NAV: { to: string; label: string; end?: boolean; listed?: () => boolean }[
 
 export function Layout() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <Outlet />
-      </main>
-      <Footer />
-      <ScrollRestoration />
-    </div>
+    <YouProvider>
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1">
+          <Outlet />
+        </main>
+        <Footer />
+        <ScrollRestoration />
+      </div>
+    </YouProvider>
   )
 }
 
@@ -68,6 +72,7 @@ function Header() {
         </button>
       </div>
       <div className="brand-rule" />
+      <YouBar />
     </header>
   )
 }

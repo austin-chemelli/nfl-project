@@ -5,13 +5,21 @@ fitted models compute them for that season (scaler and inner weights trained thr
 the outcome, the vig-free market probability, moneylines, and context flags. Scoring a user's group
 weights W is then a matrix multiply plus a walk-forward Platt calibration:
 
-    logit_raw = Σ_g W_g c_g          p = σ(a_S · logit_raw + c_S),  (a_S, c_S) fitted on seasons < S
+    logit_raw = Σ_g W_g c_g          p = σ(a_S · logit_raw + c_S · g),  (a_S, c_S) fitted on seasons < S
 
-Composites: the Student's artifacts (student.persona, trained through S − 1) supply the 13 football
-groups; `market` and `buzz` are not in the Student (ADR 0012), so their composites come from the
-Sharp's artifact (sharp.persona, trained through S − 1) with the Sharp's own scaler. A group with no
-usable members for a season (matchups and buzz today) has an all-zero composite and is listed in
-`inactive`; its weight does nothing.
+Composites (registry v7, ADR 0031, ADR 0034): only the weighted groups (context-only groups carry no
+weight in any line). The Student's artifacts (student.persona, trained through S − 1) supply the
+football groups and Market behavior (its override: line movement only); Venue & weather and Buzz are
+not in the Student, so they come from the Traditionalist's artifact (then the Sharp's). Inner weights
+don't depend on the approach (each group is fitted on its own members over the same window), so
+these are the composites every published line is built from. A group with no usable history
+(market, buzz: live only) has an all-zero composite in the matrix and is listed in `inactive`.
+
+Home field is zero at a neutral site (engine.NEUTRAL): the matrix carries `neutral`, Venue & weather's
+members are gated in the composites (engine.venue_gate), and the Platt offset is multiplied by
+g = 1 − neutral, so a custom line follows the same rule as the engine:
+
+    p = σ(a_S · Σ_g W_g c_g + c_S · g)
 
 Warmup rows: seasons from the fit's `trained_from` (2002) through 2004 are in the matrix with
 `warmup=1`, composites from the 2004 artifacts (the same models the 2005 backfill uses). They are
@@ -46,20 +54,38 @@ import numpy as np
 import polars as pl
 
 from nfl.approaches import fit
+from nfl.approaches.engine import NEUTRAL, gate, venue_gate
 from nfl.approaches.schema import load_all
 from nfl.config import FIRST_SCORED_SEASON, Paths
 from nfl.features import market as market_features
 from nfl.features import store
-from nfl.features.groups import GROUPS, MARKET_GROUP_CAP
+from nfl.features.groups import GROUPS, MARKET_GROUP_CAP, REGISTRY_VERSION
 from nfl.grade import DIVERGENCE_BUCKETS
 from nfl.ledger import EDGE_THRESHOLD
 
-GROUP_IDS = list(GROUPS)
+GROUP_IDS = [g for g, grp in GROUPS.items() if not grp.context_only]  # the weighted groups
+LIVE_ONLY = ["market", "buzz"]  # no history: zero in the matrix, nonzero at a live lock
 LAST_SEASON = 2025
 BOOTSTRAP = 500
 EPS = 1e-6
-SCHEMA_VERSION = 1
-HOME_GROUP_SOURCES = ("student.persona", "sharp.persona")  # first model with the group wins
+SCHEMA_VERSION = 2  # v2 2026-11-20 (ADR 0034): weighted groups only, `neutral`, venue composites
+# first model with the group wins; every group's inner weights are the same in each (see above)
+HOME_GROUP_SOURCES = ("student.persona", "traditionalist.persona", "sharp.persona")
+
+
+def matrix_key(paths: Paths) -> str:
+    """Names the composites a saved custom line was calibrated on: the registry version, the last
+    season in the matrix and a hash of the source artifacts the live composites come from (trained
+    through that season), so a refit under the same registry changes it too. A browser's saved
+    calibration is valid while the published key matches."""
+    import hashlib
+
+    h = hashlib.sha1()
+    for mid in HOME_GROUP_SOURCES:
+        h.update(fit.artifact_path(paths, mid, LAST_SEASON).read_bytes())
+    return f"{REGISTRY_VERSION}-{LAST_SEASON}-{h.hexdigest()[:8]}"
+
+
 PERSONA_IDS = ["traditionalist", "analyst", "sharp", "student"]
 
 SPREAD_LABELS = ["Pick'em (under 3)", "Moderate (3 to 7)", "Big favorite (7+)"]
@@ -113,12 +139,14 @@ def _context(paths: Paths) -> pl.DataFrame:
 
 
 def _composites(paths: Paths, df: pl.DataFrame, season: int, model_season: int) -> np.ndarray:
-    """(n, 15) composites for `df` (one season's rows) using artifacts trained through model_season."""
+    """(n, len(GROUP_IDS)) composites for `df` (one season's rows) using artifacts trained through
+    model_season, with Venue & weather's members zero at a neutral site (engine.venue_gate)."""
     out = np.zeros((df.height, len(GROUP_IDS)))
     done: set[str] = set()
+    g = gate(df)
     for mid in HOME_GROUP_SOURCES:
-        model = fit.load(paths, mid, model_season)
-        z = model.scaler.transform(df)
+        model = fit.load_checked(paths, mid, model_season)  # refuses a fit from another registry
+        z = venue_gate(model.scaler.transform(df), model.features, g)
         inner = model.meta["inner"]
         for j, gid in enumerate(GROUP_IDS):
             if gid in done or not inner.get(gid):
@@ -165,6 +193,7 @@ def build_matrix(paths: Paths, write: bool = True) -> dict:
         comp = _composites(paths, rows, season, max(season, first) - 1)
         block = rows.select("game_id", "season", "week", "y").with_columns(
             pl.lit(int(season < first)).cast(pl.Int8).alias("warmup"),
+            pl.Series("neutral", (1.0 - gate(rows)).round(0).astype(np.int8)),
             *[pl.Series(f"c_{g}", comp[:, j]) for j, g in enumerate(GROUP_IDS)],
         )
         blocks.append(block)
@@ -191,11 +220,32 @@ def build_matrix(paths: Paths, write: bool = True) -> dict:
         paths.site.mkdir(parents=True, exist_ok=True)
         out = paths.site / "diy_matrix.json"
         out.write_text(
-            json.dumps(to_json(mat, inactive, _weights_block(paths, first, LAST_SEASON)))
+            json.dumps(
+                to_json(
+                    mat,
+                    inactive,
+                    _weights_block(paths, first, LAST_SEASON) | {"key": matrix_key(paths)},
+                )
+            )
         )
         info |= {"parquet": str(d / "matrix.parquet"), "json": str(out),
                  "json_bytes": out.stat().st_size}  # fmt: skip
     return info
+
+
+def ensure_matrix(paths: Paths) -> bool:
+    """Rebuild the matrix when the published one is missing or names other composites (a refit, a
+    registry bump, an older schema), so `nfl site` keeps Build and saved custom lines consistent
+    with the fits without a separate step. Returns True when it rebuilt."""
+    f = paths.site / "diy_matrix.json"
+    try:
+        doc = json.loads(f.read_text())
+        if doc.get("version") == SCHEMA_VERSION and doc.get("key") == matrix_key(paths):
+            return False
+    except OSError, ValueError:
+        pass
+    build_matrix(paths)
+    return True
 
 
 def build_seasons(paths: Paths, mat: pl.DataFrame | None = None) -> dict[str, int]:
@@ -224,6 +274,7 @@ def build_seasons(paths: Paths, mat: pl.DataFrame | None = None) -> dict[str, in
             "kickoff": [None if t is None else t.strftime("%Y-%m-%dT%H:%MZ") for t in rows["kickoff_utc"]],
             "result": [None if v is None else int(v) for v in rows["result"]],
             "home_won": [int(v) for v in rows["y"]],
+            "neutral": [int(v) for v in rows["neutral"]],
             "market_p": [None if v is None else round(float(v), 4) for v in rows["mkt_p"]],
             "c": {k: [round(float(v), 3) for v in rows[f"c_{k}"]] for k in GROUP_IDS},
         }  # fmt: skip
@@ -231,6 +282,29 @@ def build_seasons(paths: Paths, mat: pl.DataFrame | None = None) -> dict[str, in
         out.write_text(json.dumps(doc, separators=(",", ":")))
         sizes[out.name] = out.stat().st_size
     return sizes
+
+
+def composites_at(paths: Paths, locks: pl.DataFrame, season: int) -> pl.DataFrame:
+    """The composites a custom line reads for `locks` (game_id, lock_ts: tz-naive UTC), as of each
+    lock, from the artifacts trained through season − 1: the inputs the published lines read at the
+    same moment (features with known_as_of < lock_ts, ADR 0005). Returns game_id, neutral (0/1) and
+    c_<group> per GROUP_IDS; an empty frame when there is nothing to score or no artifacts yet."""
+    if locks.is_empty():
+        return pl.DataFrame()
+    feats = sorted(
+        {f for mid in HOME_GROUP_SOURCES for f in fit.load(paths, mid, season - 1).features}
+    )
+    fams = sorted({f.split(".", 1)[0] for f in [*feats, NEUTRAL]})
+    store_rows = store.read_features(paths, seasons=(season, season), families=fams)
+    vec = store.game_vectors(store.as_of(store_rows, locks.select("game_id", "lock_ts")))
+    wide = locks.select("game_id").join(
+        store.to_wide(vec, [*feats, NEUTRAL]), on="game_id", how="left"
+    )
+    comp = _composites(paths, wide, season, season - 1)
+    return wide.select("game_id").with_columns(
+        pl.Series("neutral", (1.0 - gate(wide)).round(0).astype(np.int8)),
+        *[pl.Series(f"c_{g}", comp[:, j]) for j, g in enumerate(GROUP_IDS)],
+    )
 
 
 def to_json(mat: pl.DataFrame, inactive: list[str], weights: dict) -> dict:
@@ -245,6 +319,7 @@ def to_json(mat: pl.DataFrame, inactive: list[str], weights: dict) -> dict:
         "version": SCHEMA_VERSION,
         "groups": GROUP_IDS,
         "inactive": inactive,
+        "registry_version": REGISTRY_VERSION,
         "first_scored": FIRST_SCORED_SEASON,
         "n": mat.height,
         "columns": cols,
@@ -281,6 +356,8 @@ def prepare(m: dict) -> dict:
         "inactive": list(m.get("inactive", [])),
         "season": season,
         "warmup": warm,
+        # g = 1 − neutral: home field (the Platt offset) counts only at a real home game
+        "g": 1.0 - np.nan_to_num(arr("neutral"), nan=0.0),
         "y": arr("y"),
         "mkt": arr("mkt_p"),
         "result": arr("result"),
@@ -312,30 +389,45 @@ def load_matrix(path: Path) -> dict:
 # --------------------------------------------------------------------------------------- estimators
 
 
-def _platt(x: np.ndarray, y: np.ndarray) -> tuple[float, float]:
-    """p = σ(a·x + c), maximum likelihood by damped Newton, slope constrained to a >= 0."""
+def _offset_only(y: np.ndarray, g: np.ndarray) -> float:
+    """The c of p = σ(c·g) by maximum likelihood (Newton): home field alone, gated."""
+    c = 0.0
+    for _ in range(50):
+        p = 1.0 / (1.0 + np.exp(-c * g))
+        grad = float((p - y) @ g)
+        h = float((p * (1 - p) * g) @ g) + 1e-12
+        step = grad / h
+        c -= step
+        if abs(step) < 1e-12:
+            break
+    return float(c)
+
+
+def _platt(x: np.ndarray, y: np.ndarray, g: np.ndarray | None = None) -> tuple[float, float]:
+    """p = σ(a·x + c·g), maximum likelihood by damped Newton, slope constrained to a >= 0.
+    g is the neutral-site gate (1 = home field counts; default every row)."""
     if len(y) == 0:
         return 1.0, 0.0
-    ybar = float(np.clip(y.mean(), 1e-6, 1 - 1e-6))
-    c0 = float(np.log(ybar / (1 - ybar)))
+    g = np.ones(len(y)) if g is None else np.asarray(g, dtype=float)
     if float(np.std(x)) < 1e-12:
-        return 0.0, c0
+        return 0.0, _offset_only(y, g)
+    c0 = _offset_only(y, g)
     t = np.array([1.0, 0.0])
 
     def nll(t):
-        eta = t[0] * x + t[1]
+        eta = t[0] * x + t[1] * g
         return float(np.sum(np.logaddexp(0.0, eta) - y * eta))
 
     cur = nll(t)
     for _ in range(30):
-        eta = t[0] * x + t[1]
+        eta = t[0] * x + t[1] * g
         p = 1.0 / (1.0 + np.exp(-eta))
         r = p - y
-        g = np.array([r @ x, r.sum()])
+        grad = np.array([r @ x, r @ g])
         w = p * (1 - p)
-        H = np.array([[(w * x) @ x, (w * x).sum()], [(w * x).sum(), w.sum()]])
+        H = np.array([[(w * x) @ x, (w * x) @ g], [(w * x) @ g, (w * g) @ g]])
         H += np.eye(2) * 1e-8
-        step = np.linalg.solve(H, g)
+        step = np.linalg.solve(H, grad)
         s = 1.0
         while s > 1e-4:
             cand = t - s * step
@@ -355,10 +447,15 @@ def _platt(x: np.ndarray, y: np.ndarray) -> tuple[float, float]:
 
 
 def walk_forward_platt(
-    logit: np.ndarray, y: np.ndarray, season: np.ndarray, scored: list[int]
+    logit: np.ndarray,
+    y: np.ndarray,
+    season: np.ndarray,
+    scored: list[int],
+    g: np.ndarray | None = None,
 ) -> tuple[np.ndarray, dict[int, tuple[float, float, bool]]]:
     """Calibrated logit per row. Season S uses only rows with season < S; if there are none the
-    season calibrates on itself (flag True)."""
+    season calibrates on itself (flag True). `g`: the neutral-site gate per row."""
+    g = np.ones(len(y)) if g is None else g
     out = logit.copy()
     params: dict[int, tuple[float, float, bool]] = {}
     for s in scored:
@@ -366,8 +463,8 @@ def walk_forward_platt(
         prior = season < s
         in_sample = not prior.any()
         win = mask if in_sample else prior
-        a, c = _platt(logit[win], y[win])
-        out[mask] = a * logit[mask] + c
+        a, c = _platt(logit[win], y[win], g[win])
+        out[mask] = a * logit[mask] + c * g[mask]
         params[s] = (a, c, in_sample)
     return out, params
 
@@ -408,7 +505,9 @@ def season_predictions(weights: dict, matrix: dict, season: int) -> dict:
     P = prepare(matrix)
     keep = P["season"] <= season
     raw = _raw_logit(P, weights)
-    lg, params = walk_forward_platt(raw[keep], P["y"][keep], P["season"][keep], [season])
+    lg, params = walk_forward_platt(
+        raw[keep], P["y"][keep], P["season"][keep], [season], P["g"][keep]
+    )
     idx = np.where(keep)[0]
     sel = P["season"][idx] == season
     a, c, _ = params[season]
@@ -498,7 +597,7 @@ def evaluate(weights: dict, matrix: dict, max_season: int | None = None, seed: i
     use = ~P["warmup"] & np.isin(season, scored)
     keep = np.isin(season, scored) | (P["warmup"] & (season < (scored[0] if scored else 0)))
     raw = _raw_logit(P, weights)
-    lg, params = walk_forward_platt(raw[keep], y[keep], season[keep], scored)
+    lg, params = walk_forward_platt(raw[keep], y[keep], season[keep], scored, P["g"][keep])
     logit = np.zeros_like(raw)
     logit[keep] = lg
     p = 1.0 / (1.0 + np.exp(-logit))
@@ -688,9 +787,10 @@ def fit_toward(weights: dict, matrix: dict, lam: float = 1250.0, max_season: int
     cols = [P["groups"].index(g) for g in groups]
     z, y = P["_C"][use][:, cols], P["y"][use]
     w_user = np.array([weights.get(g, 0.0) for g in groups], dtype=float)
-    a, c = _platt(z @ w_user, y)
+    gate_ = P["g"][use]
+    a, c = _platt(z @ w_user, y, gate_)
     w0 = a * w_user
-    b, w = fit.fit_ridge(z, y, w0, lam, b0=c)
+    b, w = fit.fit_ridge(z, y, w0, lam, b0=c, g=gate_)
 
     def share(v):
         tot = float(np.abs(v).sum())
@@ -716,11 +816,11 @@ def encode_weights(signed: dict[str, float]) -> str:
 
 
 def decode_weights(s: str | None) -> dict[str, float]:
-    """Inverse of encode_weights; unknown groups and malformed pieces are ignored."""
+    """Inverse of encode_weights; unknown and context-only groups and malformed pieces are ignored."""
     out: dict[str, float] = {}
     for part in (s or "").split(","):
         g, _, v = part.partition(":")
-        if g in GROUPS:
+        if g in GROUP_IDS:
             try:
                 x = float(v)
             except ValueError:

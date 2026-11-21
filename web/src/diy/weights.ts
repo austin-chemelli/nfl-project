@@ -9,10 +9,13 @@ export type GroupWeights = Record<string, number>
 /** One weight set for every season, or a set per season (the Student's yearly refits). */
 export type Weights = GroupWeights | Record<string, GroupWeights>
 
-/** Group order of the matrix (nfl.features.groups.GROUPS); fixes the order of the encoded string. */
+/**
+ * The weighted groups in matrix order (nfl.approaches.diy.GROUP_IDS: the registry minus its
+ * context-only groups); fixes the order of the encoded string.
+ */
 export const GROUP_IDS = [
   'quality', 'offense', 'defense', 'special_teams', 'quarterback', 'health', 'form', 'stakes', 'rest_travel',
-  'venue_weather', 'coaching', 'off_scheme', 'def_scheme', 'matchups', 'market', 'buzz',
+  'venue_weather', 'market', 'buzz',
 ] as const
 
 /** ADR 0013: Market behavior may take at most this share of a weight set's budget. */

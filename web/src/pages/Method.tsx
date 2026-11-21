@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import { Help } from '../components/Help'
 import { Tabs } from '../components/Tabs'
 import { Card, Loaded, Page, Section, DataTable, td, th } from '../components/ui'
@@ -35,7 +36,7 @@ export default function MethodPage() {
           <Tabs
             label="Method sections"
             tabs={[
-              { id: 'how', label: 'How it works', content: <Stack><HowItWorks meta={m} /><Approaches meta={m} /><Locks /><Retrospective /><TeamPages /><PlayerValue /></Stack> },
+              { id: 'how', label: 'How it works', content: <Stack><HowItWorks meta={m} /><Approaches meta={m} /><YourOwn /><Locks /><Retrospective /><TeamPages /><PlayerValue /></Stack> },
               ...(listed(BETTING_VISIBILITY.math) ? [{ id: 'betting', label: 'Betting math', content: <BettingMathTab /> }] : []),
               { id: 'limits', label: 'Limits and mistakes', content: <Stack><Limits /><Leaks /></Stack> },
               {
@@ -139,6 +140,17 @@ function Approaches({ meta }: { meta: Meta }) {
         <li><strong>Global fit</strong> is a diagnostic, the source of the bars in the game page&apos;s Preview. It is not scored.</li>
       </ul>
       <p className="mt-3 text-[13px] text-ink-2">Bars are scaled to each approach&apos;s largest group. Hover a group name for what it covers.</p>
+    </Section>
+  )
+}
+
+function YourOwn() {
+  return (
+    <Section title="Your own approach" help="An unofficial line of your own, scored in your browser.">
+      <div className="max-w-3xl space-y-3 text-[15px] leading-relaxed">
+        <p>Weight the groups of evidence yourself in <Link className="text-accent underline" to="/build">Build your own</Link>, save it, and it appears as an unofficial line beside the approaches.</p>
+        <p>It is scored in your browser from the same inputs the Student reads, and is never locked, graded or added to the public record. Your line is the one place a result can be shaped by hindsight, so the tracker also shows how it did since you saved.</p>
+      </div>
     </Section>
   )
 }

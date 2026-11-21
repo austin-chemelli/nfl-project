@@ -9,6 +9,7 @@ import { llVsMarket, pct } from '../lib/format'
 import { WeekChart } from './season/WeekChart'
 import { GamesTable } from './season/GamesTable'
 import { isHidden } from '../lib/hiddenPages'
+import { useLines } from '../you/current'
 
 const SET_NAMES: Record<SetId, string> = {
   yours: 'Your weights (from Build your own)',
@@ -56,7 +57,10 @@ function SeasonBody({ meta, matrix, season, first, last }: { meta: Meta; matrix:
   const [sp, setSp] = useSearchParams()
   const navigate = useNavigate()
   const q = useSeasonFile(season)
-  const wParam = sp.get('w') ?? ''
+  const { you } = useLines()
+  // ?set=yours with no ?w= means the reader's saved line
+  const saved = sp.get('set') === 'yours' && !sp.get('w') && you ? encodeWeights(you.points) : ''
+  const wParam = sp.get('w') ?? saved
   const yours = useMemo(() => decodeWeights(wParam), [wParam])
   const hasYours = Object.keys(yours).length > 0
   const setParam = sp.get('set')

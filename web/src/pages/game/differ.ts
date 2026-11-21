@@ -1,7 +1,7 @@
 /** Words for where an approach differs from the market, and for the quarterback what-if (ADR 0024). */
 import type { Game, StrongCall, Swing } from '../../data/contract'
 import { pct } from '../../lib/format'
-import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
+import { APPROACHES, HEADLINE, theNameLower } from '../../lib/models'
 
 /** "Lamar Jackson questionable" / "Lamar Jackson" when he's not on the report. */
 export function whoText(s: { name: string | null; status: string | null } | null): string {
@@ -18,12 +18,15 @@ export const WHY: Record<string, string> = {
 
 /** "If Tyler Huntley starts: the Student has BAL 54% (62% as locked)." from the home team's view of the side. */
 export function whatIfLine(g: Game, s: Swing, model: string = HEADLINE): string | null {
-  const a = s.assumed?.p_home[model]
-  const b = s.alternative?.p_home[model]
+  // the server rescored the swing for its own models only; for the reader's line it falls back to the Student
+  const fallback = s.assumed?.p_home[model] == null || s.alternative?.p_home[model] == null
+  const m = model === 'you' && fallback ? HEADLINE : model
+  const a = s.assumed?.p_home[m]
+  const b = s.alternative?.p_home[m]
   if (a == null || b == null || !s.alternative?.name) return null
   const team = s.team ?? g.home
   const side = (p: number) => (team === g.home ? p : 1 - p)
-  return `If ${s.alternative.name} starts: the ${SHORT[model] ?? model} has ${team} at ${pct(side(b))}, against ${pct(side(a))} with ${s.assumed?.name ?? 'the assumed starter'}.`
+  return `If ${s.alternative.name} starts: ${theNameLower(m)} has ${team} at ${pct(side(b))}, against ${pct(side(a))} with ${s.assumed?.name ?? 'the assumed starter'}.`
 }
 
 /** "Right · the line moved toward it" for a graded call; null before the game. */
@@ -63,7 +66,7 @@ export function liveGaps(g: Game, groupName: (id: string) => string): Gap[] {
       .sort((a, b) => Math.abs(b.pp) - Math.abs(a.pp))
       .slice(0, 3)
       .map((x) => groupName(x.id))
-    out.push({ model: m, team: home ? g.home : g.away, p: home ? p : 1 - p, market: home ? mk : 1 - mk, gap: Math.abs(gap), groups: toward, locked: g.models[m]?.status === 'locked' })
+    out.push({ model: m, team: home ? g.home : g.away, p: home ? p : 1 - p, market: home ? mk : 1 - mk, gap: Math.abs(gap), groups: toward, locked: m !== 'you' && g.models[m]?.status === 'locked' })
   }
   return out.sort((a, b) => b.gap - a.gap)
 }

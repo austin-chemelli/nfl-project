@@ -1,0 +1,438 @@
+{
+ "season": 2026,
+ "lines": {
+  "student": {
+   "W": {
+    "quality": 0.2203000793175077,
+    "offense": 0.26673036056274596,
+    "defense": 0.1562168650346819,
+    "quarterback": 0.22384789275326772,
+    "health": 0.10350744564785207,
+    "form": 0.10032639362143442,
+    "stakes": 0.0722175964769939,
+    "rest_travel": 0.05577099403706427,
+    "special_teams": 0.08136788090416143,
+    "market": 0.065
+   },
+   "intercept": 0.2922573711433588,
+   "a": 1.0,
+   "c": -0.07019310146995582,
+   "p_home": {
+    "2026_01_NE_SEA": 0.5983551934739932,
+    "2026_01_SF_LA": 0.5820131653521478,
+    "2026_01_ATL_PIT": 0.687389020593907,
+    "2026_01_BAL_IND": 0.4891300179947002,
+    "2026_01_BUF_HOU": 0.4876666681589522,
+    "2026_01_CHI_CAR": 0.43827648194504465,
+    "2026_01_CLE_JAX": 0.7088798188965615,
+    "2026_03_BAL_DAL": 0.39413236856984696,
+    "2026_04_IND_WAS": 0.3496500307654884,
+    "2026_05_PHI_JAX": 0.6806198926803634,
+    "2026_06_HOU_JAX": 0.6121919542876318,
+    "2026_07_PIT_NO": 0.380378020074681,
+    "2026_09_JAX_BAL": 0.2385898492600992,
+    "2026_09_CIN_ATL": 0.24389877829678008,
+    "2026_09_CLE_NO": 0.6643407018243519,
+    "2026_09_DAL_IND": 0.43000430451505806,
+    "2026_10_NE_DET": 0.5807956129500518
+   }
+  },
+  "analyst": {
+   "W": {
+    "offense": 0.38509897260787584,
+    "quarterback": 0.28085574096447385,
+    "defense": 0.2449340385871304,
+    "quality": 0.15147735890029765,
+    "health": 0.10174432418730739,
+    "rest_travel": 0.05061367110703602,
+    "special_teams": 0.07054901008306222,
+    "form": 0.03579057923099906,
+    "market": 0.065
+   },
+   "intercept": 0.29606696656599363,
+   "a": 0.9610134619221552,
+   "c": 0.009024900977515939,
+   "p_home": {
+    "2026_01_NE_SEA": 0.5814804582226419,
+    "2026_01_SF_LA": 0.606080364702746,
+    "2026_01_ATL_PIT": 0.7365113693410574,
+    "2026_01_BAL_IND": 0.5194933225292951,
+    "2026_01_BUF_HOU": 0.4900730060868065,
+    "2026_01_CHI_CAR": 0.4362499934384565,
+    "2026_01_CLE_JAX": 0.7443757965508669,
+    "2026_03_BAL_DAL": 0.37760231518434667,
+    "2026_04_IND_WAS": 0.3343711366890347,
+    "2026_05_PHI_JAX": 0.6651330516323426,
+    "2026_06_HOU_JAX": 0.5868127765117587,
+    "2026_07_PIT_NO": 0.39073895272682946,
+    "2026_09_JAX_BAL": 0.27096971227093747,
+    "2026_09_CIN_ATL": 0.2579331164234888,
+    "2026_09_CLE_NO": 0.6849150046686946,
+    "2026_09_DAL_IND": 0.45196285482265275,
+    "2026_10_NE_DET": 0.5510776769407914
+   }
+  },
+  "traditionalist": {
+   "W": {
+    "quality": 0.42119457897583595,
+    "form": 0.23789518372035767,
+    "rest_travel": 0.1496289037539958,
+    "venue_weather": 0.11547720917366096,
+    "stakes": 0.12090729855775652,
+    "defense": 0.08852037424473928,
+    "health": 0.09861470237725188,
+    "quarterback": 0.13851209860121705,
+    "offense": 0.08090286993882305,
+    "buzz": 0.05,
+    "special_teams": 0.07135872659145362
+   },
+   "intercept": 0.2972565249765586,
+   "a": 0.8624029200645531,
+   "c": 0.03209798956486134,
+   "p_home": {
+    "2026_01_NE_SEA": 0.708496773034467,
+    "2026_01_SF_LA": 0.5362816342034616,
+    "2026_01_ATL_PIT": 0.59699481914187,
+    "2026_01_BAL_IND": 0.516779770702731,
+    "2026_01_BUF_HOU": 0.586565711451248,
+    "2026_01_CHI_CAR": 0.4704169940190824,
+    "2026_01_CLE_JAX": 0.655103678981473,
+    "2026_03_BAL_DAL": 0.3827679377027838,
+    "2026_04_IND_WAS": 0.38948010782848264,
+    "2026_05_PHI_JAX": 0.6784978543805347,
+    "2026_06_HOU_JAX": 0.6161521116475861,
+    "2026_07_PIT_NO": 0.3271842988497693,
+    "2026_09_JAX_BAL": 0.26370008425464514,
+    "2026_09_CIN_ATL": 0.212920657288191,
+    "2026_09_CLE_NO": 0.6949518385659387,
+    "2026_09_DAL_IND": 0.46146097546790443,
+    "2026_10_NE_DET": 0.5410118399318289
+   }
+  }
+ },
+ "games": [
+  {
+   "game_id": "2026_01_SF_LA",
+   "neutral": true,
+   "c": {
+    "quality": 0.2923,
+    "offense": 0.699,
+    "defense": 1.3258,
+    "special_teams": 0.0188,
+    "quarterback": -0.3512,
+    "health": -0.4665,
+    "form": 0.5809,
+    "stakes": 0.1767,
+    "rest_travel": -1.3011,
+    "venue_weather": 0.0,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_03_BAL_DAL",
+   "neutral": true,
+   "c": {
+    "quality": -0.2643,
+    "offense": -0.0246,
+    "defense": -1.5403,
+    "special_teams": 0.5264,
+    "quarterback": -0.0222,
+    "health": -0.3739,
+    "form": 0.0251,
+    "stakes": -0.4211,
+    "rest_travel": -1.718,
+    "venue_weather": 0.0,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_04_IND_WAS",
+   "neutral": true,
+   "c": {
+    "quality": 0.2539,
+    "offense": 0.0237,
+    "defense": -0.3177,
+    "special_teams": -0.6254,
+    "quarterback": -1.3835,
+    "health": -1.9737,
+    "form": 0.0608,
+    "stakes": -0.1938,
+    "rest_travel": -1.0832,
+    "venue_weather": 0.0,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_05_PHI_JAX",
+   "neutral": true,
+   "c": {
+    "quality": 1.6725,
+    "offense": 0.9349,
+    "defense": 0.4091,
+    "special_teams": -0.5699,
+    "quarterback": -0.4609,
+    "health": 2.3726,
+    "form": 1.1574,
+    "stakes": -0.1816,
+    "rest_travel": -2.2262,
+    "venue_weather": 0.0,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_06_HOU_JAX",
+   "neutral": true,
+   "c": {
+    "quality": 1.0335,
+    "offense": 0.7862,
+    "defense": -0.7356,
+    "special_teams": 0.4606,
+    "quarterback": 0.0516,
+    "health": 0.7243,
+    "form": 0.8388,
+    "stakes": -0.0372,
+    "rest_travel": -1.28,
+    "venue_weather": 0.0,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_07_PIT_NO",
+   "neutral": true,
+   "c": {
+    "quality": -0.669,
+    "offense": -0.1263,
+    "defense": -0.4076,
+    "special_teams": 0.531,
+    "quarterback": -0.4667,
+    "health": 0.1066,
+    "form": -0.8107,
+    "stakes": -0.0102,
+    "rest_travel": -1.9886,
+    "venue_weather": 0.0,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_09_CIN_ATL",
+   "neutral": true,
+   "c": {
+    "quality": -0.7994,
+    "offense": -0.7839,
+    "defense": 0.5137,
+    "special_teams": -1.4884,
+    "quarterback": -1.5219,
+    "health": -0.7678,
+    "form": -1.2841,
+    "stakes": -0.0236,
+    "rest_travel": -1.9258,
+    "venue_weather": 0.0,
+    "market": -0.1667,
+    "buzz": -2.5809
+   },
+   "news_pts": -0.29
+  },
+  {
+   "game_id": "2026_10_NE_DET",
+   "neutral": true,
+   "c": {
+    "quality": 0.3757,
+    "offense": 0.2743,
+    "defense": -0.2981,
+    "special_teams": 0.7799,
+    "quarterback": -0.2081,
+    "health": 0.996,
+    "form": 1.4517,
+    "stakes": -0.1985,
+    "rest_travel": -2.079,
+    "venue_weather": 0.0,
+    "market": 2.1667,
+    "buzz": -0.601
+   },
+   "news_pts": -0.5
+  },
+  {
+   "game_id": "2026_01_NE_SEA",
+   "neutral": false,
+   "c": {
+    "quality": 0.279,
+    "offense": -0.0576,
+    "defense": 0.4843,
+    "special_teams": 0.0188,
+    "quarterback": -0.3785,
+    "health": -0.5997,
+    "form": 1.7116,
+    "stakes": 0.3503,
+    "rest_travel": 0.0543,
+    "venue_weather": 1.6638,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_01_ATL_PIT",
+   "neutral": false,
+   "c": {
+    "quality": 0.1486,
+    "offense": -0.1127,
+    "defense": -0.3984,
+    "special_teams": 0.0188,
+    "quarterback": 2.7299,
+    "health": 1.7721,
+    "form": -1.2365,
+    "stakes": -0.3172,
+    "rest_travel": -0.4237,
+    "venue_weather": -0.4791,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_01_BAL_IND",
+   "neutral": false,
+   "c": {
+    "quality": -0.1436,
+    "offense": 0.1323,
+    "defense": 0.1041,
+    "special_teams": 0.0188,
+    "quarterback": -1.1963,
+    "health": 1.1195,
+    "form": -1.0178,
+    "stakes": -0.124,
+    "rest_travel": -0.4305,
+    "venue_weather": 1.3809,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_01_BUF_HOU",
+   "neutral": false,
+   "c": {
+    "quality": 0.0156,
+    "offense": -1.2351,
+    "defense": 1.3987,
+    "special_teams": 0.0188,
+    "quarterback": -0.8808,
+    "health": 0.4328,
+    "form": -0.1102,
+    "stakes": 0.1267,
+    "rest_travel": -0.2,
+    "venue_weather": 1.3809,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_01_CHI_CAR",
+   "neutral": false,
+   "c": {
+    "quality": -0.3664,
+    "offense": -0.9138,
+    "defense": -0.405,
+    "special_teams": 0.0188,
+    "quarterback": -0.1277,
+    "health": -0.0365,
+    "form": -0.5135,
+    "stakes": 0.1357,
+    "rest_travel": -0.1786,
+    "venue_weather": -0.4791,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_01_CLE_JAX",
+   "neutral": false,
+   "c": {
+    "quality": 0.6829,
+    "offense": 1.4945,
+    "defense": -0.6283,
+    "special_teams": 0.0188,
+    "quarterback": 0.6923,
+    "health": 0.9744,
+    "form": 0.0289,
+    "stakes": -0.3816,
+    "rest_travel": -0.2824,
+    "venue_weather": -0.4791,
+    "market": 0.0,
+    "buzz": 0.0
+   },
+   "news_pts": 0.0
+  },
+  {
+   "game_id": "2026_09_JAX_BAL",
+   "neutral": false,
+   "c": {
+    "quality": -1.6178,
+    "offense": -0.5089,
+    "defense": -0.721,
+    "special_teams": -0.4636,
+    "quarterback": -1.2727,
+    "health": -0.6587,
+    "form": -1.7195,
+    "stakes": -0.1859,
+    "rest_travel": -0.3341,
+    "venue_weather": 0.5129,
+    "market": -3.0,
+    "buzz": -1.1314
+   },
+   "news_pts": 0.1
+  },
+  {
+   "game_id": "2026_09_CLE_NO",
+   "neutral": false,
+   "c": {
+    "quality": 0.1065,
+    "offense": 0.6128,
+    "defense": -0.7446,
+    "special_teams": 0.145,
+    "quarterback": 1.0549,
+    "health": 0.2058,
+    "form": -0.2633,
+    "stakes": 0.1928,
+    "rest_travel": 2.9194,
+    "venue_weather": 1.3809,
+    "market": 0.6667,
+    "buzz": -1.1314
+   },
+   "news_pts": -0.6
+  },
+  {
+   "game_id": "2026_09_DAL_IND",
+   "neutral": false,
+   "c": {
+    "quality": -0.7347,
+    "offense": -1.0373,
+    "defense": 0.9754,
+    "special_teams": 0.1611,
+    "quarterback": -0.7364,
+    "health": -0.6937,
+    "form": -0.902,
+    "stakes": 0.5062,
+    "rest_travel": -0.071,
+    "venue_weather": 0.6718,
+    "market": -0.6667,
+    "buzz": -1.6971
+   },
+   "news_pts": 0.9
+  }
+ ]
+}

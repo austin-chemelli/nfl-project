@@ -6,12 +6,13 @@ import { isNotFound, useLeague, useSlate } from '../../data/api'
 import type { GameRow, LeagueFile, Meta } from '../../data/contract'
 import { ago, kickoffEt, spreadLabel } from '../../lib/format'
 import { approachOf } from '../../lib/meta'
-import { APPROACHES, colorVar } from '../../lib/models'
+import { colorVar } from '../../lib/models'
+import { useHeadline, useLines } from '../../you/current'
 import { GameCard } from './GameCard'
 import { LastWeek } from './LastWeek'
 import { Recap } from './Recap'
 import { YourPicks } from './YourPicks'
-import { correct, divergenceText, DIVERGE, gameStatus, neighbours, parseSort, pickOf, scoreText, SORTS, sortGames, weekHref, type SortKey } from './helpers'
+import { correct, divergenceText, DIVERGE, gameStatus, neighbours, parseSort, pickOf, scoreText, sortGames, sortsFor, weekHref, type SortKey } from './helpers'
 
 export function WeekView({ meta, season, week }: { meta: Meta; season: number; week: number }) {
   const q = useSlate(season, week)
@@ -80,12 +81,14 @@ function WeekPicker({ meta, season, week }: { meta: Meta; season: number; week: 
 function Games({ meta, games, week, league }: { meta: Meta; games: GameRow[]; week: number; league?: LeagueFile }) {
   const [params, setParams] = useSearchParams()
   const location = useLocation()
+  const headline = useHeadline()
+  const sorts = sortsFor(headline)
   const sort = parseSort(params.get('sort'))
   const table = params.get('view') === 'table'
   if (games.length === 0) return <Card>No games listed for week {week}.</Card>
-  const sorted = sortGames(games, sort)
+  const sorted = sortGames(games, sort, headline)
   const anyFinal = games.some((g) => g.result != null)
-  const options = SORTS.filter((o) => o.value !== 'upset' || anyFinal)
+  const options = sorts.filter((o) => o.value !== 'upset' || anyFinal)
   const setSort = (v: SortKey) =>
     setParams((p) => {
       const n = new URLSearchParams(p)
@@ -96,7 +99,7 @@ function Games({ meta, games, week, league }: { meta: Meta; games: GameRow[]; we
   const viewLink = new URLSearchParams(params)
   if (table) viewLink.delete('view')
   else viewLink.set('view', 'table')
-  const statuses = games.map((g) => gameStatus(g).status)
+  const statuses = games.map((g) => gameStatus(g, headline).status)
   const common = mode(statuses)
   return (
     <>
@@ -125,7 +128,7 @@ function Games({ meta, games, week, league }: { meta: Meta; games: GameRow[]; we
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {sorted.map((g) => (
-              <GameCard key={g.game_id} g={g} league={league} meta={meta} showStatus={gameStatus(g).status !== common} />
+              <GameCard key={g.game_id} g={g} league={league} meta={meta} showStatus={gameStatus(g, headline).status !== common} />
             ))}
           </div>
         )}
@@ -146,9 +149,10 @@ function mode(xs: string[]): string {
 
 /** The one key for every card's strip: dots are home win chance, left is the away side. */
 function CardKey() {
+  const { approaches } = useLines()
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1">
-      {APPROACHES.map((c) => <ModelBadge key={c} modelId={c} />)}
+      {approaches.map((c) => <ModelBadge key={c} modelId={c} />)}
       <span className="inline-flex items-center gap-1.5">
         <span aria-hidden className="inline-block h-3 w-0.5 bg-[var(--series-market)] opacity-60" /> Market
       </span>
@@ -214,7 +218,10 @@ function MarketCell({ g }: { g: GameRow }) {
   )
 }
 
+const YOU_BLURB = 'Your own line from Build: unofficial, scored in this browser'
+
 function GameTable({ meta, games }: { meta: Meta; games: GameRow[] }) {
+  const { approaches } = useLines()
   return (
     <table className="w-full border-collapse text-[14px]">
       <thead>
@@ -223,9 +230,9 @@ function GameTable({ meta, games }: { meta: Meta; games: GameRow[] }) {
           <th className={th}>Game</th>
           <th className={th}><Help text="The betting market's spread: the favorite and how many points it is favored by.">Line</Help></th>
           <th className={th}><Help text="The market's favorite and its win chance, with the bookmaker's margin removed.">Market pick</Help></th>
-          {APPROACHES.map((c) => (
+          {approaches.map((c) => (
             <th key={c} className={th}>
-              <Help text={approachOf(meta, c)?.blurb}>
+              <Help text={c === 'you' ? YOU_BLURB : approachOf(meta, c)?.blurb}>
                 <ModelBadge modelId={c} />
               </Help>
             </th>
@@ -245,7 +252,7 @@ function GameTable({ meta, games }: { meta: Meta; games: GameRow[] }) {
             </td>
             <td className={`${td} whitespace-nowrap`}><MarketCell g={g} /></td>
             <td className={td}><ProbCell pHome={g.market?.p_home} home={g.home} away={g.away} /></td>
-            {APPROACHES.map((c) => (
+            {approaches.map((c) => (
               <td key={c} className={`${td} whitespace-nowrap`}><PickCell g={g} mid={c} /></td>
             ))}
             <td className={td}><StatusCell g={g} /></td>
