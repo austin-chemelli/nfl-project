@@ -29,12 +29,12 @@ Lower is better. A season of live games cannot rank models; see the backtest for
 | Model | Games | Log loss | Δ vs market (90% CI) |
 |---|---|---|---|
 | Market (vig-free moneyline) | 5,834 | 0.6088 |  |
-| The Traditionalist | 5,834 | 0.6290 | +0.0201 (+0.0155 to +0.0255) |
-| The Analyst | 5,834 | 0.6243 | +0.0155 (+0.0118 to +0.0195) |
-| The Sharp | 5,834 | 0.6281 | +0.0193 (+0.0149 to +0.0246) |
-| The Student | 5,834 | 0.6236 | +0.0148 (+0.0112 to +0.0187) |
-| Elo | 5,834 | 0.6290 | +0.0201 (+0.0154 to +0.0239) |
-| Home team 57% | 5,834 | 0.6869 | +0.0780 (+0.0705 to +0.0851) |
+| The Traditionalist | 5,834 | 0.6290 | +0.0201 (+0.0153 to +0.0248) |
+| The Analyst | 5,834 | 0.6243 | +0.0155 (+0.0120 to +0.0196) |
+| The Sharp | 5,834 | 0.6281 | +0.0193 (+0.0153 to +0.0240) |
+| The Student | 5,834 | 0.6236 | +0.0148 (+0.0113 to +0.0186) |
+| Elo | 5,834 | 0.6290 | +0.0201 (+0.0159 to +0.0241) |
+| Home team 57% | 5,834 | 0.6869 | +0.0780 (+0.0707 to +0.0843) |
 
 <!-- scorecard:end -->
 
