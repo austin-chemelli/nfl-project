@@ -7,6 +7,8 @@ import { useAudit, useMeta } from '../data/api'
 import type { Audit, Meta } from '../data/contract'
 import { groupName, helpFor } from '../lib/meta'
 import { colorVar, HEADLINE } from '../lib/models'
+import { BETTING_VISIBILITY, listed } from '../lib/bettingVisibility'
+import { BettingMathTab } from './betting/BettingMathTab'
 import { snapshotAgo, snapshotLabel, sortedShares, topNullRates } from './method/helpers'
 
 const REPO = 'https://github.com/austin-chemelli/nfl-project'
@@ -35,6 +37,7 @@ export default function MethodPage() {
             label="Method sections"
             tabs={[
               { id: 'how', label: 'How it works', content: <Stack><HowItWorks meta={m} /><Approaches meta={m} /><YourOwn /><Locks /><Retrospective /><TeamPages /><PlayerValue /></Stack> },
+              ...(listed(BETTING_VISIBILITY.math) ? [{ id: 'betting', label: 'Betting math', content: <BettingMathTab /> }] : []),
               { id: 'limits', label: 'Limits and mistakes', content: <Stack><Limits /><Leaks /></Stack> },
               {
                 id: 'data',

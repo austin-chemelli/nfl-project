@@ -81,6 +81,19 @@ def refresh(paths: Paths, console: Console, odds: bool = True) -> None:
 
     step("models", _models)
 
+    def _betting():
+        # the betting guide's study (ADR 0033): the week's finished games join its history
+        import polars as pl
+
+        from nfl.betting.site import run_study
+
+        try:
+            run_study(paths)
+        except (Exception, pl.exceptions.PanicException) as e:  # noqa: BLE001
+            console.print(f"[yellow]betting study failed, continuing: {e!r}[/]")
+
+    step("betting study", _betting)
+
     from nfl.site import build as build_site
 
     step("site", lambda: build_site(paths, league_snapshot="refresh"))

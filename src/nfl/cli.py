@@ -738,6 +738,68 @@ def joblock_release(generation: int) -> None:
     joblock.release(generation, joblock.store_from_env())
 
 
+betting_app = typer.Typer(no_args_is_help=True, help="The betting guide (ADR 0033, M29).")
+app.add_typer(betting_app, name="betting")
+
+
+@betting_app.command("study")
+def betting_study(
+    model: str = typer.Option("student", help="The line whose chances drive the model tables."),
+) -> None:
+    """Rerun the betting study on our own history -> marts/betting/study.json (the site reads it)."""
+    from nfl.betting.site import run_study, study_path
+
+    paths = get_paths()
+    s = run_study(paths, model)
+    console.print(f"[bold]betting study:[/bold] {s['games']:,} games {s['seasons'][0]}-{s['seasons'][1]}, "
+                  f"{model} {s['model_versions'].get(model)}")  # fmt: skip
+    t = Table(title="Return by price, every side at the closing-ish moneyline")
+    for c in ("band", "prices", "bets", "win", "fair", "return", "2006-15", "2016-25"):
+        t.add_column(c, justify="right")
+    for b in s["price"]["bands"]:
+        t.add_row(b["label"], b["prices"], f"{b['n']:,}", f"{b['win_rate']:.1%}", f"{b['p_mkt']:.1%}",
+                  f"{b['roi']:+.1%}", f"{b.get('roi_2006-2015', 0):+.1%}", f"{b.get('roi_2016-2025', 0):+.1%}")  # fmt: skip
+    console.print(t)
+    t = Table(title="Singles against parlays of the same picks")
+    for c in ("legs", "return", "hit rate", "losing season", "typical season"):
+        t.add_column(c, justify="right")
+    for r in s["parlays"]["by_legs"]:
+        t.add_row(str(r["legs"]), f"{r['roi']:+.1%}", f"{r['hit_rate']:.1%}",
+                  f"{r['p_losing_season']:.0%}", f"{r['median_season_units']:+.1f} u")  # fmt: skip
+    console.print(t)
+    t = Table(
+        title="Stake sizing: chance of losing half the bankroll in a season (3 / 6 / 10 bets a week)"
+    )
+    t.add_column("rule")
+    t.add_column("lose half", justify="right")
+    t.add_column("typical end", justify="right")
+    by: dict[str, list[dict]] = {}
+    for r in s["staking"]:
+        by.setdefault(r["label"], []).append(r)
+    for lab, rs in by.items():
+        t.add_row(lab, " / ".join(f"{r['p_lose_half']:.0%}" for r in rs),
+                  " / ".join(f"{r['median_end']:.2f}" for r in rs))  # fmt: skip
+    console.print(t)
+    wf = s["walk_forward"]
+    console.print(f"walk-forward search: {wf['rules_tried']} rules, {wf['walk_forward_bets']} bets, "
+                  f"{wf['walk_forward_roi']:+.1%} (best in hindsight {wf['best_in_hindsight_roi']:+.1%}); "
+                  f"blend weight {s['blend']['path'][-1]['w']}")  # fmt: skip
+    for tb in s["targeted"]:
+        console.print(
+            f"targeted {tb['key']}: {tb['n']} bets, {tb['roi']:+.1%}, passes={tb['passes']}"
+        )
+    r = s["rules"]
+    for k in ("ranked", "ranked_walk_forward", "rest", "mid_fav", "long", "big_gap", "model_pick"):
+        v = r[k]
+        if v.get("n"):
+            console.print(
+                f"card rule {k}: {v['n']} bets, {v['roi']:+.1%} "
+                f"(halves {v['roi_first']:+.1%} / {v['roi_second']:+.1%}, 2021-25 {v['roi_2021_2025']:+.1%})"
+            )
+    console.print(f"underdog lean passes the targeted bar: {r['lean_dog_bar']['passes']}")
+    console.print(f"wrote {study_path(paths)}")
+
+
 @app.command("site")
 def site_cmd(season: int = typer.Option(None, help="Default: current season.")) -> None:
     """Write the UI JSON contract (marts/site/): meta, slates, games, tracker, audit."""

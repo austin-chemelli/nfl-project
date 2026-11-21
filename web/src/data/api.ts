@@ -86,6 +86,8 @@ export const useCustomSeason = (season?: number, enabled = true) =>
 export const useTracker = () => useJson('tracker', 'site/tracker.json', C.Tracker)
 export const useHypotheses = () => useJson('hypotheses', 'site/hypotheses.json', C.Hypotheses)
 export const useCoaches = () => useJson('coaches', 'site/coaches.json', C.Coaches)
+export const useBettingMath = () => useJson('betting-math', 'site/betting_math.json', C.BettingMath)
+export const useBettingWeek = () => useJson('betting-week', 'site/betting_week.json', C.BettingWeek)
 export const useDiyMatrix = (enabled = true) => useJson('diy', enabled ? 'site/diy_matrix.json' : null, C.DiyMatrix)
 export const useSeasonFile = (season?: number) =>
   useJson('season', season ? `site/season_${season}.json` : null, C.SeasonFile)

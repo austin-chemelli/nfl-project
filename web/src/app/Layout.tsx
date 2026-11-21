@@ -7,7 +7,7 @@ import { useScrollFade } from '../lib/useScrollFade'
 import { YouBar } from '../you/YouBar'
 import { YouProvider } from '../you/YouProvider'
 
-const NAV = [
+const NAV: { to: string; label: string; end?: boolean; listed?: () => boolean }[] = [
   { to: '/', label: 'This week', end: true },
   { to: '/league', label: 'League' },
   { to: '/team', label: 'Teams' },
@@ -48,7 +48,7 @@ function Header() {
       <div className="mx-auto flex max-w-6xl items-center gap-x-6 gap-y-1 px-4 py-2 sm:px-6">
         <NavLink to="/" className="shrink-0 font-semibold text-ink hover:no-underline">NFL approaches</NavLink>
         <nav ref={navRef} style={navStyle} aria-label="Main" className="-mx-1 flex min-w-0 flex-1 scroll-px-7 gap-1 overflow-x-auto text-[14px]">
-          {NAV.filter((n) => !isHidden(n.to)).map((n) => (
+          {NAV.filter((n) => !isHidden(n.to) && (n.listed?.() ?? true)).map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
