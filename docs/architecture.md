@@ -1,6 +1,6 @@
 # Architecture
 
-Status: current, verified 2026-11-20 for the betting site files (ADR 0033), 2026-11-13 for the Players section as built (M24.7 team health, round 3 key players), the rest 2026-11-09 (§3.8 the candidates ledger live, ADR 0026; §3.9 matchups and paths to an upset, ADR 0028, planned); the live state is [state.md](state.md).
+Status: current, verified 2026-11-20 for §3.4 and §3.8 (model wave 3, ADR 0031) and the betting site files (ADR 0033), 2026-11-13 for the Players section as built (M24.7 team health, round 3 key players), the rest 2026-11-09 (§3.8 the candidates ledger live, ADR 0026; §3.9 matchups and paths to an upset, ADR 0028, planned); the live state is [state.md](state.md).
 
 Planned 2026-10-26 after the local POC. Scope and goals: [PROJECT_BRIEF.md](PROJECT_BRIEF.md). Decisions and their reasons: [adr/](adr/). Work breakdown: [tasks.md](tasks.md). This file says what the system *is*; it does not repeat why.
 
@@ -121,7 +121,8 @@ Families and first features (builders in `nfl/features/<family>.py`):
 | Family | Features (side) | Source |
 |---|---|---|
 | `strength` | `elo_pre` (team), `epa_off`, `epa_def`, `success_off`, `success_def`, `point_diff_pg` (team, season-to-date, shrunk toward prior season / league) | elo, pbp |
-| `environment` | `rest_days`, `travel_km`, `tz_shift` (team); `is_dome`, `is_turf`, `div_game`, `primetime`, `neutral_site`, `temp_c`, `wind_kph` (game) | schedules, stadiums, weather |
+| `environment` | `rest_days`, `travel_km`, `tz_shift` (team); `is_dome`, `is_turf`, `div_game`, `primetime`, `neutral_site` (game; `neutral_site` drives the home-field rule, not a group) | schedules, stadiums |
+| `matchup` | `net_edge_pg` (in Offense since wave 3), `edge_<split>` for the seven FTN situations (context) | the matchup engine (§3.9), 2022+ |
 | `weather` (ADR 0024) | `temp_f`, `wind_mph`, `precip_pct` (game; open-air only; played games from nflverse, upcoming from each forecast at its fetch time). Read by the total and the swing list only, never an approach | schedules, Open-Meteo |
 | `form` | `last3_win_pct`, `last3_margin`, `streak` (team) | games |
 | `decisions` | `fourth_go_rate_oe`, `pass_rate_oe`, `early_down_pass_rate`, `explosive_rate`, `turnover_margin_pg` (team) | pbp (`xpass`/`pass_oe` precomputed), tendencies |
@@ -154,7 +155,7 @@ Scoring: `logit = b + Σ w_f · z_f`, `p_home = σ(logit)`, `spread_home = Φ⁻
 
 **Groups (ADR 0012, M2.8).** Features belong to groups (`docs/feature-groups.md`); a group's composite is `c_g = Σ v_{g,f} z_f` with inner weights `v` taken from the walk-forward global fit and normalized to unit variance, shared by every approach. Personas and the DIY page weigh the ~10 composites; overrides of `v` are allowed and re-normalized. Flat `weights:` on features remain valid as one-feature groups.
 
-**One public line per approach (ADR 0004 amendment, 2026-10-27):** `model_id = <approach>` is the persona lightly fitted and calibrated; `<approach>.fitted` is kept as a diagnostic. **The market's forecast is never an input (ADR 0013):** the Market group holds market *behavior* only, capped at 20% of a persona's budget.
+**One public line per approach (ADR 0004 amendment, 2026-10-27):** `model_id = <approach>` is the persona lightly fitted and calibrated; `<approach>.fitted` is kept as a diagnostic (since wave 3 fitted toward zero for the personas, so it shows what history alone supports). **Model wave 3 (ADR 0031):** one Student (`calibration: shift_10`, home field from the last ten training seasons; no Venue & weather group; the net matchup edge in Offense), and home field is zero at neutral sites by rule for every model (`engine.NEUTRAL`, `Model.neutral_gate`: the intercept and calibration offset are multiplied by 1 − `neutral_site` in fitting and scoring). `nfl.approaches.shadow` walks any variant forward in memory and pairs it with the public line (the audit and the ledger's fourth gate use it). **The market's forecast is never an input (ADR 0013):** the Market group holds market *behavior* only, capped at 20% of a persona's budget.
 
 Flavors as originally designed (`model_id = <approach>.<flavor>`; superseded by the amendment above):
 - **persona**: weights from YAML; Platt calibration `σ(a·logit + b)` fitted walk-forward so the persona's *ranking* is the character's while its confidence is honest.
@@ -249,15 +250,15 @@ flowchart LR
     R -- no --> X
     R -- yes --> M[member in a shadow approach]
     M --> G{paired Δ log loss < 0,<br/>90% CI, 2016+}
-    G -- yes --> P[public Student at a refit]
+    G -- yes --> P[public Student at the next registry bump]
     G -- no --> X
 ```
 
-The first three gates are cheap and high-powered (team-seasons); the last is ADR 0018's bar for a public line. The Student's calibration (a home shift inherited from pooling 2002 onward) was fixed first, as the approach `student_v2` (a 10-season home-field offset beside the Student, live 2026-11-09).
+The first three gates are cheap and high-powered (team-seasons); the last is ADR 0018's bar for a public line, and since wave 3 it runs in code: `nfl candidates run` backtests every feature candidate (`frame="features"`, a store feature with a target group) in shadow against the current Student and writes `shadow_*` columns; verdict `model` = the CI is below 0, and the member may join its group at the next registry bump, mid-season included (ADR 0031). The Student's calibration (a home shift inherited from pooling 2002 onward) was fixed first, as `student_v2` (2026-11-09), and folded into the one Student in wave 3.
 
 ### 3.9 Matchups, paths to an upset, market leans (ADR 0028, M25)
 
-Situation splits are context first. `splits.py` registers each situation once (who chooses it, source, first season); the SQL model `derived/team_split_week` holds every unit's plays, EPA and success with and without each flag per game, as of nothing (consumers read `week < w`). `matchups.py` turns that into per-game edges: the opponent's habit minus the habit already faced, times this unit's gap shrunk toward the league-wide effect (k fitted on earlier seasons), times base plays, in points per game, each with a reliability badge from the candidates ledger. `paths.py` reads `derived/upset_conditions` (dogs' win rates by size and in-game condition since 2006) and says how the underdog wins as conditions and plausibility, never as a probability: pre-game team rates predict a game's turnover margin with r 0.00. `leans.py` sums the ledger's `use` candidates' slopes against the market times this game's gaps into one number in points, graded live. Nothing here is lock code; the headline chance never moves. Edges reach a line only through a separate `matchup` approach after the ledger's gates (phase 3, offseason).
+Situation splits are context first. `splits.py` registers each situation once (who chooses it, source, first season); the SQL model `derived/team_split_week` holds every unit's plays, EPA and success with and without each flag per game, as of nothing (consumers read `week < w`). `matchups.py` turns that into per-game edges: the opponent's habit minus the habit already faced, times this unit's gap shrunk toward the league-wide effect (k fitted on earlier seasons), times base plays, in points per game, each with a reliability badge from the candidates ledger. `paths.py` reads `derived/upset_conditions` (dogs' win rates by size and in-game condition since 2006) and says how the underdog wins as conditions and plausibility, never as a probability: pre-game team rates predict a game's turnover margin with r 0.00. `leans.py` sums the ledger's `use` candidates' slopes against the market times this game's gaps into one number in points, graded live. The engine itself is not lock code. Since wave 3 (ADR 0031) its net edge is also a feature (`features/matchup.py`, `matchup.net_edge_pg`) and a member of Offense, after it passed every ledger gate; the per-situation edges are stored as context only.
 
 ```mermaid
 %%{init: {'themeVariables': {'signalColor': '#999', 'signalTextColor': '#999', 'lineColor': '#999'}}}%%

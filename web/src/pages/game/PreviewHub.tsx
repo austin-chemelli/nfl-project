@@ -50,6 +50,9 @@ export function EdgeCardsSection({ g }: { g: Game }) {
       aside={<More tab="tendencies">Unit ranks and habits</More>}
     >
       {g.matchups?.lede && <p className="mb-4 mt-0 max-w-3xl text-[14px] text-ink">{g.matchups.lede}</p>}
+      <p className="mb-4 mt-0 max-w-3xl text-[13px] text-ink-2" data-testid="edge-scored-note">
+        The net of these edges is in the line (Offense); each situation on its own is shown, not scored.
+      </p>
       <div className="flex flex-col gap-8" data-testid="edge-cards">
         {sides.map((s) => (
           <EdgeCard key={s.team} side={s} colorOf={colorFor(g)} />

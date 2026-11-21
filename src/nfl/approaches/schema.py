@@ -32,6 +32,7 @@ FAMILIES = {
     "scheme",
     "matchup",
     "narrative",
+    "weather",
 }
 ID_RX = re.compile(r"^[a-z][a-z0-9_]*$")
 

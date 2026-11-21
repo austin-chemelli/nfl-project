@@ -46,5 +46,5 @@ def test_only_context_steps_are_optional():
 
 def test_models_are_built_before_the_site_and_a_failure_never_stops_it():
     steps = daily.plan()
-    assert steps.index("features") < steps.index("models") < steps.index("site")
+    assert steps.index("models") < steps.index("features") < steps.index("site")  # ADR 0031
     assert next(s for s in daily.STEPS if s.name == "models").optional

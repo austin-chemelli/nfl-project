@@ -608,12 +608,15 @@ app.add_typer(candidates_app, name="candidates")
 def candidates_run(
     only: Annotated[str | None, typer.Option("--only", help="One candidate id.")] = None,
     season_from: Annotated[int, typer.Option(help="First season of the residual tests.")] = 2006,
+    shadow: Annotated[
+        bool, typer.Option("--shadow/--no-shadow", help="Run the shadow backtests (a few minutes).")
+    ] = True,
 ) -> None:
     """Screen every candidate through the gates; append changed results to marts/candidates.parquet."""
     from nfl import candidate_screen
 
     try:
-        n = candidate_screen.run(get_paths(), only=only, season_from=season_from)
+        n = candidate_screen.run(get_paths(), only=only, season_from=season_from, shadow_on=shadow)
     except ValueError as e:
         raise typer.BadParameter(str(e)) from e
     console.print(f"candidates: {n} new row(s) appended")
@@ -634,7 +637,15 @@ def candidates_list(
     f = lambda v: "" if v is None else f"{v:+.2f}"
     ci = lambda r, k: "" if r[k] is None else f"{f(r[k])} [{f(r[k + '_lo'])},{f(r[k + '_hi'])}]"
     t = Table(
-        "candidate", "kind", "verdict", "split", "future partial r", "vs Student", "vs market", "n"
+        "candidate",
+        "kind",
+        "verdict",
+        "split",
+        "future partial r",
+        "vs Student",
+        "vs market",
+        "n",
+        "shadow dLL",
     )
     for c in t.columns:
         c.no_wrap = True
@@ -643,9 +654,14 @@ def candidates_list(
             ("* " if r["interesting"] else "") + r["candidate"], r["kind"], r["verdict"],
             "" if r["split_half"] is None else f"{r['split_half']:.2f}",
             ci(r, "future_partial"), ci(r, "resid_st"), ci(r, "resid_mk"), str(r["resid_n"] or ""),
+            "" if r["shadow_delta"] is None else
+            f"{r['shadow_delta']:+.4f} [{r['shadow_lo']:+.4f},{r['shadow_hi']:+.4f}]",
         )  # fmt: skip
     console.print(t)
-    console.print("* = interesting. residual slopes are points per SD, positive = candidate helps.")
+    console.print(
+        "* = interesting. residual slopes are points per SD, positive = candidate helps. "
+        "shadow dLL = paired log-loss change vs today's Student (negative = better)."
+    )
 
 
 joblock_app = typer.Typer(no_args_is_help=True, help="One job at a time on the data (ADR 0025).")
@@ -841,7 +857,7 @@ def lock_cmd(
             f"[yellow]lock: no {slot} games left to lock in {res.season} week {res.week}[/]"
         )
         return
-    show = ["market_baseline", "traditionalist", "analyst", "sharp", "student", "student_v2", "elo_v0"]  # fmt: skip
+    show = ["market_baseline", "traditionalist", "analyst", "sharp", "student", "elo_v0"]  # fmt: skip
     t = Table(title=f"{'DRY RUN ' if dry_run else ''}lock {res.season} W{res.week:02d} {slot} "
                     f"at {res.lock_ts:%Y-%m-%d %H:%M}Z: P(home win)")  # fmt: skip
     t.add_column("game")

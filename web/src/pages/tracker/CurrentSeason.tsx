@@ -34,6 +34,9 @@ export function CurrentSeason({ t }: { t: Tracker; meta: Meta }) {
     return i < 0 ? 99 : i // unlisted lines (the diagnostic global fit) go last
   }
   const rows = summary.rows.filter((r) => isPublicLine(r.model_id)).sort((a, b) => order(a.model_id) - order(b.model_id))
+  // a thin marker where a shown line's model changed (this season, on a week the chart has)
+  const changes = (t.model_changes ?? []).filter((c) => c.season === t.season && shown.includes(c.model_id) && weeks.includes(c.week))
+  const changeText = (c: (typeof changes)[number]) => `${label(c.model_id)}: ${c.label}, week ${c.week}`
   const toggle = (m: string) => setShown((s) => (s.includes(m) ? s.filter((x) => x !== m) : [...s, m]))
 
   return (
@@ -71,6 +74,16 @@ export function CurrentSeason({ t }: { t: Tracker; meta: Meta }) {
             {firstLive != null && (
               <ReferenceLine x={firstLive} stroke="var(--text-muted)" strokeDasharray="5 4" label={{ value: `live from week ${firstLive}`, position: 'insideTopRight', fill: 'var(--text-muted)', fontSize: 12 }} />
             )}
+            {changes.map((c) => (
+              <ReferenceLine
+                key={`${c.model_id}-${c.lock_ts}`}
+                x={c.week}
+                stroke={colorVar(c.model_id)}
+                strokeWidth={1}
+                strokeDasharray="1 3"
+                label={{ position: 'insideBottomLeft', content: () => <title>{changeText(c)}</title> }}
+              />
+            ))}
             <XAxis dataKey="week" type="number" domain={[Math.min(...weeks) - 0.5, Math.max(...weeks) + 0.5]} allowDecimals={false} stroke="var(--text-muted)" tick={{ fontSize: 12 }} label={{ value: 'Week', position: 'insideBottom', offset: -2, fill: 'var(--text-muted)', fontSize: 12 }} />
             <YAxis domain={[-lim, lim]} ticks={[-lim, -lim / 2, 0, lim / 2, lim]} allowDataOverflow tickFormatter={(v: number) => (v === 0 ? '0' : signedGap(v).replace(/0+$/, ''))} stroke="var(--text-muted)" tick={{ fontSize: 12 }} width={58} />
             <Tooltip formatter={(v, name) => [signedGap(Number(v)), label(String(name))]} labelFormatter={(w) => `Week ${w}${liveWeeks.has(Number(w)) ? ' (live)' : ''}`} contentStyle={{ background: 'var(--surface-1)', border: '1px solid var(--border)', fontSize: 13 }} />
@@ -96,6 +109,11 @@ export function CurrentSeason({ t }: { t: Tracker; meta: Meta }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      )}
+      {changes.length > 0 && (
+        <p className="mt-1 text-[12px] text-ink-3" data-testid="model-change-note">
+          Model changed: {changes.map(changeText).join('; ')}.
+        </p>
       )}
       <DataTable summary="Show the numbers: this season so far">
         <table className="w-full text-[13px]">
