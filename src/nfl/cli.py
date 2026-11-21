@@ -750,7 +750,7 @@ def betting_study(
             f"targeted {tb['key']}: {tb['n']} bets, {tb['roi']:+.1%}, passes={tb['passes']}"
         )
     r = s["rules"]
-    for k in ("lean_dog", "lean", "no_view", "mid_fav", "long", "big_gap", "model_pick"):
+    for k in ("ranked", "ranked_walk_forward", "rest", "mid_fav", "long", "big_gap", "model_pick"):
         v = r[k]
         if v.get("n"):
             console.print(

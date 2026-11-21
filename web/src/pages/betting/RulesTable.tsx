@@ -1,20 +1,10 @@
 import { TableScroll, td, th } from '../../components/ui'
 import type { GuideRules, RuleStat } from '../../data/contract'
 import { signedPct } from '../../lib/format'
-
-const ROWS: [keyof GuideRules & string, string][] = [
-  ['target', 'Target (all)'],
-  ['lean_dog', 'Underdog lean'],
-  ['lean', 'Other small lean'],
-  ['no_view', 'No view'],
-  ['mid_fav', '−120 to −185'],
-  ['long', '+185 or longer'],
-  ['big_gap', 'Big disagreement'],
-  ['model_pick', "The Student's pick everywhere"],
-]
+import { ROWS, type Row } from './facts'
 
 /** What each group of the card's rules returned in history, by period. */
-export function RulesTable({ rules }: { rules: GuideRules }) {
+export function RulesTable({ rules, rows = ROWS }: { rules: GuideRules; rows?: Row[] }) {
   return (
     <TableScroll>
       <table className="w-full text-[13px]">
@@ -29,8 +19,9 @@ export function RulesTable({ rules }: { rules: GuideRules }) {
           </tr>
         </thead>
         <tbody>
-          {ROWS.map(([key, name]) => {
-            const r = rules[key] as RuleStat
+          {rows.map(([key, name]) => {
+            const r = rules[key] as RuleStat | undefined
+            if (!r) return null
             return (
               <tr key={key}>
                 <td className={td}>{name}</td>

@@ -303,6 +303,21 @@ describe('contract: the betting guide files', () => {
     expect(w.card.games.some((g) => g.sides.some((x) => x.view === 'target'))).toBe(true)
     expect(w.rules.limits.lean_max).toBe(0.06)
     expect(w.closing.length).toBeGreaterThan(0)
+    // the ranking: every side carries its cell, grade and label; the rules carry the cells and the honest numbers
+    const sides = w.card.games.flatMap((g) => g.sides)
+    expect(sides.every((x) => x.cell != null && x.grade != null && x.label)).toBe(true)
+    expect(w.rules.cells?.length).toBe(28)
+    expect(w.rules.ranked_walk_forward?.roi).toBeCloseTo(0.0147)
+    expect(w.rules.rest?.n).toBeGreaterThan(0)
+    expect(w.rules.limits.grades).toEqual([{ min: 0.02, grade: 'A' }, { min: -0.01, grade: 'B' }])
+  })
+
+  it('still parses a week file from before the ranking', () => {
+    const w = read('betting_week.json')
+    for (const x of w.card.games.flatMap((g: { sides: Record<string, unknown>[] }) => g.sides)) for (const k of ['cell', 'score', 'grade', 'label']) delete x[k]
+    for (const k of ['cells', 'ranked', 'ranked_walk_forward', 'rest']) delete w.rules[k]
+    delete w.rules.limits.grades
+    expect(C.BettingWeek.safeParse(w).success).toBe(true)
   })
 
   it('fails when a field is renamed', () => {

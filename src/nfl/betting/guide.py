@@ -1,11 +1,11 @@
 """The weekly betting card and its record (ADR 0033, M29.2). Pure functions over frames the site
 build already holds; sentences are templates filled from the study's numbers (no LLM).
 
-The card (guide v1) shows every game of the week with both teams, each with one view from
-`rules.side_view` (target / avoid / none) and a one-line reason from the study:
-- Target: the model rates the team 2 to 6 points above the market at a price that isn't costly;
-  underdogs at +120 to +185 first. At most rules.MAX_TARGETS a week.
-- Avoid: -120 to -185, +185 or longer, or the model 6+ points above the market.
+The card (guide v1) shows every game of the week with both teams. Each side sits in a history cell
+(price band x where the Student stands against the market, `rules.cell_of`):
+- Avoid: -120 to -185, +185 or longer, or the Student 6+ points above the market (`rules.side_view`).
+- Target: the week's rules.MAX_TARGETS best of the rest, ranked by their cell's shrunk return since
+  2006 (the study's `rules.cells`), graded A/B/C. There is always a list.
 - The windy under: a total, only when the forecast wind is WIND_MPH+ in the open air.
 - The price needed: the break-even price of the blended chance (market + w x the model's
   disagreement, w fitted on every earlier season), in American odds and in exchange cents after a
@@ -62,35 +62,46 @@ def _am(x: float | None) -> str:
     return "–" if x is None else (f"+{x:.0f}" if x > 0 else f"{x:.0f}")
 
 
-def reason(why: str, study: dict, model_name: str, team: str, p_model: float, p_market: float,
-           price: float | None) -> str:  # fmt: skip
-    """One plain sentence for a side's view, from the study's numbers."""
+LABELS = {  # 2-4 words, the card's tag for each kind of side
+    ("heavy_fav", "lean"): "Big favorite, Student likes", ("heavy_fav", "same"): "Big favorite, Student agrees",
+    ("big_fav", "lean"): "Favorite, Student likes", ("big_fav", "same"): "Favorite, Student agrees",
+    ("coin", "lean"): "Coin flip, Student leans", ("coin", "same"): "Coin flip",
+    ("dog", "lean"): "Underdog the Student likes", ("dog", "same"): "Underdog, Student agrees",
+}  # fmt: skip
+AVOID_LABELS = {"mid_fav": "Pricey favorite", "long": "Long shot", "big_gap": "Model too far off"}
+
+
+def label(band: str, cell: str, why: str) -> str:
+    if why in AVOID_LABELS:
+        return AVOID_LABELS[why]
+    if (band, cell) in LABELS:
+        return LABELS[(band, cell)]
+    return {"lean": "Student leans this way", "below": "Student likes it less"}.get(
+        cell, "Fair price"
+    )
+
+
+def reason(why: str, cell_stats: dict | None, study: dict, model_name: str, p_model: float,
+           p_market: float) -> str:  # fmt: skip
+    """One short sentence, from the study's numbers."""
     r = study.get("rules", {})
-    st = r.get(why if why != "over_cap" else "lean", {})
-    roi, n = _pctf(st.get("roi")), st.get("n", 0)
     since = study["seasons"][0]
-    us, them = f"{100 * p_model:.0f}%", f"{100 * p_market:.0f}%"
-    pts = f"{100 * (p_model - p_market):.0f}"
-    if why == "lean_dog":
-        return (f"The {model_name} gives {team} {us} to win, the market {them}: a small lean on an underdog. "
-                f"Since {since} that spot returned {roi} ({n:,} bets), "
-                + (f"but only {_pctf(st.get('roi_2021_2025'))} in 2021-2025." if (st.get("roi_2021_2025") or 0) >= 0
-                   else f"but it lost {100 * abs(st['roi_2021_2025']):.1f}% in 2021-2025: a hunch, not an edge."))  # fmt: skip
-    if why == "lean":
-        return (f"The {model_name} gives {team} {us}, the market {them}: a small lean at a fair price. "
-                f"Small leans like this returned {roi} since {since} ({n:,} bets).")  # fmt: skip
-    if why == "over_cap":
-        return f"A small lean ({us} against {them}), left off the list: the card keeps {MAX_TARGETS} a week."
+    pts = round(100 * (p_model - p_market))
     if why == "mid_fav":
-        return (f"{_am(price)} is the costliest common price: favorites from -120 to -185 returned {roi} "
-                f"since {since}, and lost in both halves of the history, whatever the model said.")  # fmt: skip
+        return f"−120 to −185 favorites lost {_pctf(r.get('mid_fav', {}).get('roi'))[1:]} a bet since {since}."
     if why == "long":
-        return f"+185 or longer: long shots returned {roi} since {since}. Fun to hit, expensive to chase."
+        return f"Long shots lost {_pctf(r.get('long', {}).get('roi'))[1:]} a bet since {since}."
     if why == "big_gap":
-        return (f"The {model_name} is {pts} points above the market ({us} against {them}). When it disagrees "
-                f"this much the market has usually been right (it knows the late news): {roi} since {since}, "
-                f"{_pctf(st.get('roi_second'))} since 2016.")  # fmt: skip
-    return f"No strong view: the {model_name} and the market roughly agree, so a bet costs about the cut ({roi})."
+        return f"{model_name} is {pts} points above the market; the market usually knows why."
+    if not cell_stats:
+        return "Little history for bets like this."
+    roi = cell_stats["roi"]
+    word = "won" if roi > 0 else "lost"
+    return f"Bets like this {word} {abs(100 * roi):.1f}% a bet since {since} ({cell_stats['n']:,} bets)."
+
+
+def _cells(study: dict) -> dict[tuple[str, str], dict]:
+    return {(c["band"], c["cell"]): c for c in study.get("rules", {}).get("cells", [])}
 
 
 def market_now(lines: pl.DataFrame, now: datetime) -> pl.DataFrame:
@@ -123,6 +134,7 @@ def card(
     wk = games.filter(pl.col("week") == week).sort("kickoff_utc", "game_id")
     cons = market_now(lines, now)
     w = float(study["blend"]["path"][-1]["w"]) if study.get("blend") else 0.0
+    cells = _cells(study)
     out = []
     for g in wk.iter_rows(named=True):
         gid = g["game_id"]
@@ -150,6 +162,8 @@ def card(
                 team = g[f"{side}_team"]
                 price = item["market"][f"{side}_ml"]
                 view, why = rules.side_view(px, pm)
+                band, cell = band_of(pm), rules.cell_of(px - pm)
+                cs = cells.get((band, cell))
                 agree = sum(
                     1 for a in APPROACHES
                     if a in p and p[a]["p_home"] is not None and ((p[a]["p_home"] >= 0.5) == (side == "home"))
@@ -157,7 +171,11 @@ def card(
                 item["sides"].append({
                     "side": side, "team": team, "price": price, "p_model": round(px, 4),
                     "p_market": round(pm, 4), "p_blend": round(pb, 4), "gap": round(px - pm, 4),
-                    "band": band_of(pm), "view": view, "why": why, "agree": agree,
+                    "band": band, "cell": cell, "score": None if cs is None else cs["score"],
+                    "grade": rules.grade(None if cs is None else cs["score"]),
+                    "label": label(band, cell, why),
+                    "reason": reason(why, cs, study, model_name, px, pm),
+                    "view": view, "why": why, "agree": agree,
                     "model_pick": px > 0.5,
                     "needed": {"american": round(prices.breakeven_price(pb)), "cents": round(exchange_max_cents(pb), 1)},
                     "clears": None if price is None else prices.ev(pb, price) >= 0,
@@ -172,24 +190,26 @@ def card(
             item["total"] = {
                 "side": "under", "wind_mph": round(mph), "line": (item["market"] or {}).get("total"),
                 "needed": {"american": -110},
-                "reason": (f"Forecast wind {round(mph)} mph in the open air: wind kills passing and kicking. Unders "
-                           f"in 15+ mph wind returned {_pctf(tb.get('roi'))} since {study['seasons'][0]} "
-                           f"({tb.get('n', 0)} games), measured on the wind at kickoff, so expect a bit less."),
+                "label": "Windy under",
+                "reason": (f"{round(mph)} mph wind forecast. Unders in 15+ mph wind won {_pctf(tb.get('roi'))[1:]} "
+                           f"a bet since {study['seasons'][0]} ({tb.get('n', 0)} games)."),
             }  # fmt: skip
         out.append(item)
-    # at most MAX_TARGETS a week, counted over every game including those already played, so the
-    # list doesn't change once a game kicks off
-    flat = [x | {"_g": it} for it in out for x in it["sides"]]
-    rules.cap_targets(
-        flat, lambda x: (*rules.target_priority(x["why"], x["gap"]), x["_g"]["kickoff_utc"])
-    )
+    # the week's MAX_TARGETS best non-avoid sides by their cell's history, counted over every game
+    # including those already played, so the list doesn't change once a game kicks off
+    flat = []
     for it in out:
-        it["sides"] = [{k: v for k, v in x.items() if k != "_g"} for x in flat if x["_g"] is it]
-        for x in it["sides"]:
-            x["reason"] = reason(
-                x["why"], study, model_name, x["team"], x["p_model"], x["p_market"], x["price"]
-            )
+        for x in it["sides"]:  # the same dicts, so the ranking writes through to the card
+            x["_k"] = it["kickoff_utc"]
+            flat.append(x)
+    rules.pick_targets(flat, _rank_key)
+    for x in flat:
+        del x["_k"]
     return {"week": week, "games": out, "blend_w": w}
+
+
+def _rank_key(x: dict) -> tuple:
+    return (-(x["score"] if x.get("score") is not None else -9.0), -x["gap"], x.get("_k", ""))
 
 
 # ---------------------------------------------------------------- record of the card at the locks
@@ -219,7 +239,7 @@ def live_record(paths, season: int, study: dict, headline: str = "student") -> d
     if p.is_empty() or lines.is_empty():
         return empty
     cons = odds.consensus(lines)
-    rows = grade_at_locks(p, cons)
+    rows = grade_at_locks(p, cons, _cells(study))
     df = pl.DataFrame(rows)
     if df.is_empty():
         return empty
@@ -232,11 +252,12 @@ def live_record(paths, season: int, study: dict, headline: str = "student") -> d
     return {"rule_version": RULE_VERSION, "rows": rows, "summary": summ.to_dicts()}
 
 
-def grade_at_locks(p: pl.DataFrame, cons: pl.DataFrame) -> list[dict]:
+def grade_at_locks(p: pl.DataFrame, cons: pl.DataFrame, cells: dict | None = None) -> list[dict]:
     """Pure. p: one lock row per game (game_id, week, lock_ts, p_home, result); cons: consensus
     snapshots (game_id, snapshot_ts, p_home_vigfree, home_ml, away_ml). Each side's view at each
     lock uses only the latest snapshot at or before the lock, priced there; 'none' sides are
-    left out. The weekly cap is applied as on the card."""
+    left out. Targets are the week's best by `cells` (the study's history table), as on the card."""
+    cells = cells or {}
     cons = cons.filter(pl.col("p_home_vigfree").is_not_null()).sort("snapshot_ts")
     at = p.sort("lock_ts").join_asof(
         cons, left_on="lock_ts", right_on="snapshot_ts", by="game_id", strategy="backward", check_sortedness=False
@@ -250,15 +271,19 @@ def grade_at_locks(p: pl.DataFrame, cons: pl.DataFrame) -> list[dict]:
             if price is None:
                 continue
             view, why = rules.side_view(px, pm)
+            cs = cells.get((band_of(pm), rules.cell_of(px - pm)))
             margin = r["result"] if side == "home" else -r["result"]
             won = 1.0 if margin > 0 else 0.0 if margin < 0 else 0.5
             units = (prices.decimal(price) - 1) if won == 1 else (-1.0 if won == 0 else 0.0)
             rows.append({"game_id": r["game_id"], "week": r["week"], "view": view, "why": why, "side": side,
                          "price": round(price), "won": won, "units": round(units, 3),
-                         "_key": (*rules.target_priority(why, px - pm), r.get("kickoff_utc") or r["lock_ts"])})  # fmt: skip
-    for wk in {r["week"] for r in rows}:  # the card's weekly cap, as on the card
-        rules.cap_targets([r for r in rows if r["week"] == wk], lambda x: x["_key"])
-    return [{k: v for k, v in r.items() if k != "_key"} for r in rows if r["view"] != "none"]
+                         "score": None if cs is None else cs["score"], "gap": px - pm,
+                         "cell": rules.cell_of(px - pm),
+                         "_k": str(r.get("kickoff_utc") or r["lock_ts"])})  # fmt: skip
+    for wk in {r["week"] for r in rows}:  # the week's targets, as on the card
+        rules.pick_targets([r for r in rows if r["week"] == wk], _rank_key)
+    keep = ("game_id", "week", "view", "why", "side", "price", "won", "units")
+    return [{k: r[k] for k in keep} for r in rows if r["view"] != "none"]
 
 
 def closing_map(games: pl.DataFrame, lines: pl.DataFrame) -> list[dict]:

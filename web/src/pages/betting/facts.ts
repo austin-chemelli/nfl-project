@@ -32,3 +32,25 @@ export function field(o: object | undefined, key: string): number | null {
   const v = (o as Record<string, unknown> | undefined)?.[key]
   return typeof v === 'number' ? v : null
 }
+
+export type Row = [string, string]
+
+export const ROWS: Row[] = [
+  ['target', 'Target (all)'],
+  ['lean_dog', 'Underdog lean'],
+  ['lean', 'Other small lean'],
+  ['no_view', 'No view'],
+  ['mid_fav', '−120 to −185'],
+  ['long', '+185 or longer'],
+  ['big_gap', 'Big disagreement'],
+  ['model_pick', "The Student's pick everywhere"],
+]
+
+/** The rows the weekly page's track record shows: the ranking, the rest, the skips. */
+export const HISTORY_ROWS: Row[] = [
+  ['ranked_walk_forward', 'Targets (re-ranked each season)'],
+  ['rest', 'Everything else'],
+  ['avoid', 'Stay away'],
+  ['model_pick', "The Student's pick everywhere"],
+]
+

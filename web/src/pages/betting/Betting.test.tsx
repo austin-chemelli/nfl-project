@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import fs from 'node:fs'
+import path from 'node:path'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import { createMemoryRouter, RouterProvider } from 'react-router'
+import { BettingWeek } from '../../data/contract'
+import { ThisWeek } from './ThisWeek'
 import userEvent from '@testing-library/user-event'
 import { resetBankrollCache } from '../../lib/bankroll'
 import { BETS_KEY, getBets, resetBetsCache, type BetEntry } from '../../lib/betLog'
@@ -17,10 +22,9 @@ describe('Betting math, on the Method page', () => {
     const tabs = await screen.findAllByRole('tab', {}, { timeout: 15000 })
     expect(tabs.map((t) => t.textContent)).toEqual(['How it works', 'Betting math', 'Limits and mistakes', 'Data'])
     expect(await screen.findByRole('heading', { level: 3, name: 'Which bets are worth making?' })).toBeInTheDocument()
-    expect(screen.getByText(/7\.2% on 368 bets/)).toBeInTheDocument()
-    // on the wave-3 Student the underdog spot fails the bar: the copy says so
-    expect(screen.getByText(/Nothing for sure/)).toBeInTheDocument()
-    expect(screen.getByText(/doesn.t clear our bar for a real edge/)).toBeInTheDocument()
+    // one-line answers: the ranking's out-of-sample return, and the underdog spot's own numbers
+    expect(screen.getByText(/The week's five best by history; still about the cut out of sample \(\+1\.5%\)/)).toBeInTheDocument()
+    expect(screen.getByText(/\+7\.2% on 368 bets since 2006, −8\.3% in 2021–2025/)).toBeInTheDocument()
   })
 
   it('cites the model audit with the limit from the data', async () => {
@@ -63,68 +67,125 @@ const seeded = (o: Partial<BetEntry> = {}): BetEntry => ({
 })
 
 describe("This week's bets page", () => {
-  it('opens on the strategy box, then targets, stay away and the slate', async () => {
+  const targetCards = async () => {
+    const heads = await screen.findAllByRole('heading', { level: 3 }, { timeout: 15000 })
+    return heads.map((h) => h.closest('li')!)
+  }
+
+  it('opens on the summary strip, the house rules, then targets, stay away and the slate', async () => {
     renderRoute('/betting')
-    expect(await screen.findByRole('heading', { level: 1, name: "This week's bets" })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { level: 3, name: 'How to call your shot' })).toBeInTheDocument()
-    expect(await screen.findByText(/The best spot is an underdog at \+120 to \+185: \+7\.2% on 368 bets since 2006/)).toBeInTheDocument()
-    expect(screen.getByText(/in 2021-2025/)).toBeInTheDocument()
-    const heads = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent)
-    expect(heads.map((h) => h?.split('?')[0])).toEqual(['Targeted bets', 'Stay away', 'The whole slate'])
-    const tabs = screen.getAllByRole('tab').map((t) => t.textContent)
-    expect(tabs).toEqual(['This week', 'Your bets', 'Track record'])
+    expect(await screen.findByRole('heading', { level: 1, name: "This week's bets" }, { timeout: 15000 })).toBeInTheDocument()
+    const heads = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent?.replace(/What is this\?$/, ''))
+    expect(heads).toEqual(['Targets', 'Stay away', 'The slate'])
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['This week', 'Your bets', 'Track record'])
+    const strip = screen.getByRole('group', { name: 'Summary' })
+    expect(within(strip).getByText('Targets').closest('div')).toHaveTextContent('5')
+    expect(within(strip).getByLabelText('Your bankroll')).toBeInTheDocument()
+    expect(within(strip).getByText('1% of your bankroll')).toBeInTheDocument()
   })
 
-  it('shows a target with its price, the price needed and what it would stake', async () => {
+  it('shows the four house rules as chips', async () => {
     renderRoute('/betting')
-    const dal = (await screen.findByRole('heading', { level: 3, name: 'DAL to beat TEN' })).closest('div')!.parentElement!
-    expect(within(dal).getByText('Price too short')).toBeInTheDocument()
-    expect(within(dal).getByText('Only at −331 or better')).toBeInTheDocument()
-    expect(within(dal).getByText(/on an exchange, 75¢ or less/)).toBeInTheDocument()
-    expect(within(dal).getByText(/Student 80% · market 77%/)).toBeInTheDocument()
-    expect(within(dal).getByText(/Stake: 1% of your bankroll/)).toBeInTheDocument()
-    expect(within(dal).queryByText('Best spot')).toBeNull()
+    const rules = await screen.findByRole('list', { name: 'House rules' }, { timeout: 15000 })
+    const items = within(rules).getAllByRole('listitem').map((li) => li.textContent)
+    expect(items).toHaveLength(4)
+    expect(items[0]).toMatch(/Singles/)
+    expect(items[1]).toMatch(/1% a bet/)
+    expect(items[2]).toMatch(/Price shown or better/)
+    expect(items[3]).toMatch(/No −120 to −185, no long shots/)
+    expect(within(rules).getAllByRole('button', { name: 'What is this?' })).toHaveLength(4)
   })
 
-  it('stay away lists tempting sides with their reason, and the slate lists every game with tags', async () => {
+  it('ranks five targets, each with a grade badge and a chance bar', async () => {
     renderRoute('/betting')
-    const stay = (await screen.findByRole('heading', { level: 2, name: /^Stay away/ })).closest('section')!
-    expect(within(stay).getByText('CAR')).toBeInTheDocument()
-    expect(within(stay).getByText('DET')).toBeInTheDocument()
-    const slate = screen.getByRole('heading', { level: 2, name: 'The whole slate' }).closest('section')!
-    expect(within(slate).getAllByRole('row')).toHaveLength(14) // header + 13 games
-    expect(within(slate).getAllByText('Target')).toHaveLength(1)
-    expect(within(slate).getAllByText('Avoid').length).toBeGreaterThan(3)
-    expect(within(slate).getByText(/Untagged sides cost about the cut \(−1\.3%\)/)).toBeInTheDocument()
+    const cards = await targetCards()
+    expect(cards).toHaveLength(5)
+    expect(cards.map((c) => within(c).getByRole('heading', { level: 3 }).textContent?.split(' ')[0])).toEqual(['MIN', 'DAL', 'KC', 'BUF', 'DEN'])
+    for (const c of cards) {
+      expect(within(c).getByRole('img', { name: /^Grade [ABC]$/ })).toBeInTheDocument()
+      expect(within(c).getByRole('img', { name: /^Market \d+%, Student \d+%$/ })).toBeInTheDocument()
+    }
+    const min = cards[0]
+    expect(within(min).getByRole('img', { name: 'Grade B' })).toBeInTheDocument()
+    expect(within(min).getByRole('img', { name: 'Market 39%, Student 40%' })).toBeInTheDocument()
+    expect(within(min).getByText('Underdog, Student agrees')).toBeInTheDocument()
+    // the price now as exchange cents (+145 -> 41¢), no "too short" badge on a target
+    expect(within(min).getByText(/about 41¢ on an exchange/)).toBeInTheDocument()
+    expect(within(min).queryByText(/too short/)).toBeNull()
+    expect(within(min).getByText('+145')).toBeInTheDocument()
+    expect(within(min).getByText('#1')).toBeInTheDocument()
+  })
+
+  it('keeps the explanations in tooltips: the grade says how bets like it did, the label carries the reason', async () => {
+    renderRoute('/betting')
+    const dal = (await targetCards())[1]
+    const tips = within(dal).getAllByRole('tooltip', { hidden: true }).map((t) => t.textContent)
+    expect(tips).toContain('How bets like this have done since 2006: lost 1.6% a bet over 308 bets.')
+    expect(tips).toContain('Bets like this lost 1.6% a bet since 2006 (308 bets).')
+    expect(within(dal).queryByText(/Stake:/)).toBeNull()
+  })
+
+  it('stay away: chips with the reason as the accessible description, and no sentences on the face', async () => {
+    renderRoute('/betting')
+    const stay = (await screen.findByRole('heading', { level: 2, name: /^Stay away/ }, { timeout: 15000 })).closest('section')!
+    const chip = within(stay).getAllByRole('listitem').find((li) => li.textContent?.startsWith('CAR'))!
+    expect(chip).toHaveTextContent(/CAR −\d+ · Pricey favorite/)
+    expect(chip.querySelector('[aria-describedby]')).toHaveAccessibleDescription(/^.+\.$/)
+    expect(within(stay).getByText(/DET/)).toBeInTheDocument()
+    expect(within(stay).getAllByRole('listitem').length).toBeGreaterThan(2)
+  })
+
+  it('the slate has one row per game with a split bar and pills for target and avoid', async () => {
+    renderRoute('/betting')
+    const slate = (await screen.findByRole('heading', { level: 2, name: 'The slate' }, { timeout: 15000 })).closest('section')!
+    const rows = within(slate).getAllByRole('listitem')
+    expect(rows).toHaveLength(13)
+    expect(within(slate).getAllByRole('img', { name: /^Home win chance: market \d+%, Student \d+%$/ })).toHaveLength(13)
+    expect(within(slate).getAllByText('target')).toHaveLength(5)
+    expect(within(slate).getAllByText('skip').length).toBeGreaterThan(3)
+    const dal = within(slate).getByRole('listitem', { name: 'TEN at DAL' })
+    expect(within(dal).getByRole('img')).toHaveAccessibleName('Home win chance: market 77%, Student 80%')
+  })
+
+  it.each([0, 2])('shows %i targets gracefully', async (keep) => {
+    const w = BettingWeek.parse(JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../../test/fixtures/site/betting_week.json'), 'utf8')))
+    let n = 0
+    for (const g of w.card.games) for (const x of g.sides) if (x.view === 'target' && n++ >= keep) x.view = 'none'
+    const router = createMemoryRouter([{ path: '/', element: <ThisWeek w={w} bankroll={null} /> }])
+    render(<RouterProvider router={router} />)
+    expect(within(screen.getByRole('group', { name: 'Summary' })).getByText('Targets').closest('div')).toHaveTextContent(String(keep))
+    if (keep === 0) expect(await screen.findByText(/Nothing clears the bar this week/)).toBeInTheDocument()
+    else expect(screen.getAllByRole('img', { name: /^Grade/ })).toHaveLength(keep)
   })
 
   it('names no sportsbook', async () => {
     renderRoute('/betting')
-    await screen.findByRole('heading', { level: 3, name: 'How to call your shot' })
+    await targetCards()
     expect(document.body.textContent).not.toMatch(/DraftKings|FanDuel|BetMGM|BetRivers|Caesars/)
   })
 
   it('redirects /betting/week to /betting, keeping the tab', async () => {
     renderRoute('/betting/week?tab=record')
     expect(await screen.findByRole('heading', { level: 1, name: "This week's bets" })).toBeInTheDocument()
-    expect(await screen.findByText('This season at the locks')).toBeInTheDocument()
+    expect(await screen.findByText('This season at the locks', {}, { timeout: 15000 })).toBeInTheDocument()
   })
 
   it('works a stake out of a typed bankroll and keeps it', async () => {
     const user = userEvent.setup()
     renderRoute('/betting')
-    await user.type(await screen.findByLabelText('Your bankroll'), '2000')
-    const dal = screen.getByRole('heading', { level: 3, name: 'DAL to beat TEN' }).closest('div')!.parentElement!
-    expect(within(dal).getByText(/Stake: \$20 to win \$5\.00/)).toBeInTheDocument() // 20 × 100/400
+    await user.type(await screen.findByLabelText('Your bankroll', {}, { timeout: 15000 }), '2000')
+    const dal = (await targetCards())[1]
+    expect(within(dal).getByText('$20 → wins $5')).toBeInTheDocument() // 20 × 100/400
+    expect(screen.getByText('$20 a bet')).toBeInTheDocument()
     expect(localStorage.getItem('nfl-bankroll-v1')).toBe('2000')
   })
 
   it('logs a bet from a target: prefilled, added, open until the game is played', async () => {
     const user = userEvent.setup()
     renderRoute('/betting')
-    await user.type(await screen.findByLabelText('Your bankroll'), '1000')
-    const dal = screen.getByRole('heading', { level: 3, name: 'DAL to beat TEN' }).closest('div')!.parentElement!
-    await user.click(within(dal).getByRole('button', { name: 'Log this bet' }))
+    await user.type(await screen.findByLabelText('Your bankroll', {}, { timeout: 15000 }), '1000')
+    const dal = (await targetCards())[1]
+    await user.click(within(dal).getByRole('button', { name: 'Log bet' }))
     const form = await screen.findByRole('form', { name: 'Log a bet' })
     expect(within(form).getByLabelText('Price')).toHaveValue('-400')
     expect(within(form).getByLabelText('Stake ($)')).toHaveValue('10')
@@ -215,12 +276,18 @@ describe("This week's bets page", () => {
     expect(getBets().map((e) => e.id)).toEqual(['imp'])
   })
 
-  it('track record tab: targets against avoids, and the rules in history', async () => {
+  it('track record tab: the return chart, the live record, and the numbers behind it', async () => {
+    const user = userEvent.setup()
     renderRoute('/betting?tab=record')
-    expect(await screen.findByText('Targets against avoids, one unit a bet at the consensus price at each lock.')).toBeInTheDocument()
-    expect(screen.getByText('Targets')).toBeInTheDocument()
-    expect(screen.getByText('Avoids')).toBeInTheDocument()
-    expect(screen.getByRole('row', { name: /Underdog lean 368/ })).toBeInTheDocument()
+    const chart = await screen.findByRole('img', { name: /^Return per bet\./ }, { timeout: 15000 })
+    expect(chart).toHaveAccessibleName(/Targets: \+1\.5% in history, −3\.5% this season/)
+    expect(chart).toHaveAccessibleName(/Stay away: −5\.5% in history, −35\.4% this season/)
+    expect(screen.getByText('History (re-ranked each season)')).toBeInTheDocument()
+    expect(screen.getByText('2026 at our locks')).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: 'Targets' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: 'Avoids' })).toBeInTheDocument()
+    await user.click(screen.getByText('Show the numbers'))
+    expect(screen.getByRole('row', { name: /Targets \(re-ranked each season\) 1,305/ })).toBeInTheDocument()
     expect(screen.getByRole('row', { name: /The Student's pick everywhere/ })).toBeInTheDocument()
   })
 })

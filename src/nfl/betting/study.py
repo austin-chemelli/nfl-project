@@ -711,9 +711,57 @@ def side_rules(s: pl.DataFrame, model: str) -> dict:
     }  # fmt: skip
     out["lean_dog_bar"] = {"neighbour_roi": nb.get("roi"), "neighbour_n": nb.get("n"),
                            "checks": checks, "passes": all(checks.values())}  # fmt: skip
+    # the week's targets: the MAX_TARGETS best non-avoid sides each week, ranked by their cell's
+    # shrunk return. In sample (cells from all of 2006-2025) and walk-forward (cells from the
+    # seasons before, from 2011), the honest version.
+    d = d.with_columns(pl.Series("cell", [rules.cell_of(x) for x in d["gap"]]))
+    table = cell_table(d)
+    out["cells"] = [{"band": b, "cell": c} | v for (b, c), v in sorted(table.items())]
+    out["ranked"] = _rule_stats(_ranked(d, table))
+    wf = [_ranked(d.filter(pl.col("season") == yr), cell_table(d.filter(pl.col("season") < yr)))
+          for yr in range(2011, 2026)]  # fmt: skip
+    out["ranked_walk_forward"] = _rule_stats(pl.concat(wf)) | {"from": 2011}
+    out["rest"] = _rule_stats(
+        d.filter(pl.col("view") != "avoid").join(_ranked(d, table).select("game_id", "side"),
+                                                 on=["game_id", "side"], how="anti")
+    )  # fmt: skip
     out["limits"] = {"lean_min": rules.LEAN_MIN, "lean_max": rules.LEAN_MAX,
-                     "max_targets": rules.MAX_TARGETS}  # fmt: skip
+                     "max_targets": rules.MAX_TARGETS, "shrink_k": rules.SHRINK_K,
+                     "grades": [{"min": lo, "grade": g} for lo, g in rules.GRADES]}  # fmt: skip
     return out
+
+
+def cell_table(d: pl.DataFrame) -> dict[tuple[str, str], dict]:
+    """(band, cell) -> n, roi and the shrunk score (n·roi + K·overall) / (n + K)."""
+    if d.is_empty():
+        return {}
+    overall = float(d["profit"].mean())
+    k = rules.SHRINK_K
+    t = d.group_by("band", "cell").agg(pl.len().alias("n"), pl.col("profit").mean().alias("roi"))
+    return {
+        (r["band"], r["cell"]): {"n": r["n"], "roi": round(r["roi"], 4),
+                                 "score": round((r["n"] * r["roi"] + k * overall) / (r["n"] + k), 4)}
+        for r in t.iter_rows(named=True)
+    }  # fmt: skip
+
+
+def side_score(table: dict, band: str, cell: str) -> float | None:
+    v = table.get((band, cell))
+    return None if v is None else v["score"]
+
+
+def _ranked(d: pl.DataFrame, table: dict) -> pl.DataFrame:
+    """The MAX_TARGETS best non-avoid sides of each week by their cell's score."""
+    if d.is_empty() or not table:
+        return d.head(0).with_columns(pl.lit(None, dtype=pl.Float64).alias("score"))
+    sc = pl.DataFrame([{"band": b, "cell": c, "score": v["score"]} for (b, c), v in table.items()])
+    return (
+        d.filter((pl.col("view") != "avoid") & pl.col("cell").is_in(list(rules.ELIGIBLE_CELLS)))
+        .join(sc, on=["band", "cell"], how="inner")
+        .sort("score", "gap", descending=True)
+        .group_by("season", "week", maintain_order=True).head(rules.MAX_TARGETS)
+        .select(*d.columns, "score")  # group_by().head() moves the keys first; keep one layout
+    )  # fmt: skip
 
 
 # 7. fees, worse prices, exchanges ----------------------------------------------------------------

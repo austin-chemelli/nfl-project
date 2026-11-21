@@ -1,5 +1,5 @@
 /** Plain helpers for the weekly card and the bet log. */
-import type { BettingWeek, CardSide, ClosingGame } from '../../data/contract'
+import type { BettingWeek, CardGame, CardSide, ClosingGame } from '../../data/contract'
 import { dash } from '../../lib/format'
 import { decimalOdds, type BetEntry } from '../../lib/betLog'
 
@@ -56,3 +56,40 @@ export function clvText(e: Pick<BetEntry, 'market'>, v: number | null): string {
   const s = `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`
   return e.market === 'ml' ? `${s} pts` : `${s} on the line`
 }
+
+/** A side's grade circle tone: A good, B neutral, C muted. */
+export const GRADE_TONE: Record<string, string> = {
+  A: 'border-[var(--good)] bg-[var(--good)] text-white',
+  B: 'border-ink-2 text-ink',
+  C: 'border-line text-ink-3',
+}
+
+/** The sides a card calls targets, best first (by their historical score), and the windy unders. */
+export function targetsOf(w: BettingWeek): { g: CardGame; s: CardSide }[] {
+  const rows = w.card.games.flatMap((g) => g.sides.filter((s) => s.view === 'target').map((s) => ({ g, s })))
+  return rows.sort((a, b) => (b.s.score ?? -Infinity) - (a.s.score ?? -Infinity) || a.g.kickoff_utc.localeCompare(b.g.kickoff_utc))
+}
+
+/** The tempting sides to skip: the Student's pick, or a gap past the lean limit; games not yet started. */
+export function stayAway(w: BettingWeek): { g: CardGame; s: CardSide }[] {
+  const lean = w.rules.limits.lean_min
+  return [...w.card.games]
+    .sort((a, b) => a.kickoff_utc.localeCompare(b.kickoff_utc))
+    .filter((g) => !g.started)
+    .flatMap((g) => g.sides.filter((s) => s.view === 'avoid' && (s.model_pick || s.gap >= lean)).map((s) => ({ g, s })))
+}
+
+type RecordRow = { name: string; history: number | null; live: number | null }
+
+/** Return per bet by group: history re-ranked each season, next to this season at our locks. */
+export function recordRows(w: BettingWeek): RecordRow[] {
+  const r = w.rules
+  const live = (v: string) => w.record.summary.find((x) => x.view === v)?.roi ?? null
+  return [
+    { name: 'Targets', history: (r.ranked_walk_forward ?? r.ranked)?.roi ?? null, live: live('target') },
+    { name: 'Everything else', history: r.rest?.roi ?? null, live: null },
+    { name: 'Stay away', history: r.avoid.roi, live: live('avoid') },
+    { name: "The Student's pick everywhere", history: r.model_pick.roi, live: null },
+  ]
+}
+

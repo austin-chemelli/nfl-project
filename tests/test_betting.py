@@ -174,7 +174,30 @@ def test_card_caps_targets_and_counts_started_games():
     c = guide.card(games, _student(ids, [0.56] * n), _lines(rows), {}, STUDY, 11, now)
     t = [x for g in c["games"] for x in g["sides"] if x["view"] == "target"]
     assert len(t) == rules.MAX_TARGETS
-    assert sum(x["why"] == "over_cap" for g in c["games"] for x in g["sides"]) == 2
+    assert (
+        sum(x["team"] == "MIA" and x["view"] == "none" for g in c["games"] for x in g["sides"]) == 2
+    )
+
+
+def test_card_always_lists_targets_ranked_by_history():
+    """No side leans: the week still gets MAX_TARGETS targets, best history first, never an avoid."""
+    now = datetime(2026, 11, 20, 12)
+    kick = now + timedelta(days=2)
+    n = 4
+    ids = [f"g{i}" for i in range(n)]
+    games = _card_games(ids, [kick] * n, ["BUF"] * n, ["MIA"] * n, ["dome"] * n)
+    snap = now - timedelta(hours=3)
+    # market about 70% BUF (big favorite) / 30% MIA (+185 or longer: avoid); the Student agrees
+    rows = [r for gid in ids for r in _game_lines(gid, snap, kick, -250.0, 210.0)]
+    cells = [{"band": "big_fav", "cell": "same", "n": 400, "roi": -0.03, "score": -0.025}]
+    st = STUDY | {"rules": STUDY["rules"] | {"cells": cells}}
+    c = guide.card(games, _student(ids, [0.70] * n), _lines(rows), {}, st, 11, now)
+    sides = [x for g in c["games"] for x in g["sides"]]
+    t = [x for x in sides if x["view"] == "target"]
+    assert len(t) == n  # every BUF side; fewer eligible sides than MAX_TARGETS
+    assert all(x["team"] == "BUF" and x["grade"] == "C" and x["label"] for x in t)
+    assert all(x["view"] == "avoid" for x in sides if x["team"] == "MIA")
+    assert "lost 3.0%" in t[0]["reason"]
 
 
 def test_record_uses_only_odds_known_at_the_lock():

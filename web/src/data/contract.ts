@@ -1411,13 +1411,18 @@ export const GuideRules = z.looseObject({
   big_gap: RuleStat,
   no_view: RuleStat,
   model_pick: RuleStat,
+  // ranking (guide-v1, wave 3): optional so an older live file still parses
+  ranked: RuleStat.optional(),
+  ranked_walk_forward: RuleStat.optional(),
+  rest: RuleStat.optional(),
+  cells: z.array(z.looseObject({ band: z.string(), cell: z.string(), n: num, roi: nnum, score: nnum })).optional(),
   lean_dog_bar: z.looseObject({
     neighbour_roi: nnum,
     neighbour_n: nnum,
     checks: z.looseObject({ both_halves: z.boolean(), range_above_zero: z.boolean(), recent: z.boolean(), neighbour_agrees: z.boolean() }),
     passes: z.boolean(),
   }),
-  limits: z.looseObject({ lean_min: num, lean_max: num, max_targets: num }),
+  limits: z.looseObject({ lean_min: num, lean_max: num, max_targets: num, shrink_k: num.optional(), grades: z.array(z.looseObject({ min: num, grade: z.string() })).optional() }),
 })
 export type GuideRules = z.infer<typeof GuideRules>
 export type RuleStat = z.infer<typeof RuleStat>
@@ -1462,6 +1467,7 @@ const WeekTotal = z.looseObject({
   wind_mph: num,
   line: nnum,
   needed: z.looseObject({ american: num }),
+  label: z.string().optional(),
   reason: z.string(),
 })
 // One team's side of a game. `view` is the card's call: target (back it), avoid (stay away) or none.
@@ -1480,6 +1486,11 @@ const WeekSide = z.looseObject({
   model_pick: z.boolean(),
   needed: z.looseObject({ american: num, cents: num }),
   clears: z.boolean().nullable(),
+  // how bets like this have done since 2006 (optional while an older live file is still served)
+  cell: z.enum(['below', 'same', 'lean', 'big']).optional(),
+  score: nnum.optional(),
+  grade: z.enum(['A', 'B', 'C']).optional(),
+  label: z.string().optional(),
   reason: z.string(),
 })
 export const CardGame = z.looseObject({

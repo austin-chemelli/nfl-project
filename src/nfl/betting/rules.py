@@ -1,14 +1,16 @@
 """The betting guide's rules (ADR 0033, guide v1), shared by the study (which measures them on
 history) and the card (which applies them to this week). Pure functions, no data.
 
-Every side of every game (either team) gets one view from its price band and the gap between the
-model's chance and the market's vig-free chance (in points of win chance):
+Every side of every game (either team) is placed in a cell: its price band x where the model
+stands against the market's vig-free chance (below, same, lean, big; GAP_CELLS). Then:
 - "avoid": priced -120 to -185 (the costliest common price), +185 or longer (long shots), or the
   model is LEAN_MAX+ above the market (its big disagreements lose: the market knows something
   the model doesn't, usually late news).
-- "target": the model is LEAN_MIN to LEAN_MAX above the market at any other price; the strongest
-  spot is an underdog at +120 to +185 ("lean_dog").
-- "none": no view (the model agrees with the market, or rates the side lower): costs about the cut.
+- "target": the week's MAX_TARGETS best of the rest that the model backs (at or above the
+  market: cells same and lean), ranked by their cell's return since 2006
+  (shrunk toward the average by SHRINK_K bets, so a small cell can't top the list on luck).
+  There is always a list; the grade says how good the history behind each one is.
+- "none": everything else.
 """
 
 from __future__ import annotations
@@ -28,7 +30,9 @@ BANDS_ORDER = [b[2] for b in BANDS]
 LEAN_MIN = 0.02  # the model at least 2 points above the market...
 LEAN_MAX = 0.06  # ...and less than 6 (beyond that the market has been right)
 AVOID_BANDS = ("fav", "big_dog", "long")
-MAX_TARGETS = 4  # a week; underdog leans first, then the larger lean
+MAX_TARGETS = 5  # a week, ranked by their cell's history
+SHRINK_K = 200  # bets of the overall average mixed into each cell's return
+GRADES = ((0.02, "A"), (-0.01, "B"))  # shrunk cell return at least this -> grade; else "C"
 
 
 def band_of(p: float) -> str:
@@ -54,14 +58,36 @@ def side_view(p_model: float, p_market: float) -> tuple[str, str]:
     return "none", "no_view"
 
 
-def target_priority(why: str, gap: float) -> tuple[int, float]:
-    """Sort key for the weekly cap: underdog leans first, then the larger lean."""
-    return (0 if why == "lean_dog" else 1, -gap)
+def cell_of(gap: float) -> str:
+    """Where the model stands against the market, for the history cells."""
+    if gap < -LEAN_MIN:
+        return "below"
+    if gap < LEAN_MIN:
+        return "same"
+    if gap < LEAN_MAX:
+        return "lean"
+    return "big"
 
 
-def cap_targets(items: list[dict], key) -> None:
-    """Keep at most MAX_TARGETS 'target' items (in `key` order); demote the rest to 'none' with
-    why 'over_cap', in place."""
-    t = sorted((x for x in items if x["view"] == "target"), key=key)
-    for x in t[MAX_TARGETS:]:
-        x["view"], x["why"] = "none", "over_cap"
+def grade(score: float | None) -> str:
+    if score is None:
+        return "C"
+    for lo, g in GRADES:
+        if score >= lo:
+            return g
+    return "C"
+
+
+ELIGIBLE_CELLS = ("same", "lean")  # a target is a side the model backs: at or above the market
+
+
+def pick_targets(items: list[dict], key) -> None:
+    """Rank every eligible item (not avoid, the model at or above the market) by `key` (best
+    first) and make the top MAX_TARGETS 'target', every other non-avoid 'none', in place. Items
+    carry 'view' (from side_view) and 'cell'."""
+    for x in items:
+        if x["view"] != "avoid":
+            x["view"] = "none"
+    ok = sorted((x for x in items if x["view"] != "avoid" and x["cell"] in ELIGIBLE_CELLS), key=key)
+    for x in ok[:MAX_TARGETS]:
+        x["view"] = "target"
