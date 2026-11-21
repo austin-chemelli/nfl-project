@@ -190,12 +190,15 @@ def apply(rows: pl.DataFrame, side: str, values: dict[str, float | None]) -> pl.
     return out
 
 
-def rescore(models, asof_rows: pl.DataFrame, game_id: str, cut: datetime) -> dict[str, float]:
-    """model_id -> p_home for one game's (possibly modified) as-of rows."""
+def rescore(
+    models, asof_rows: pl.DataFrame, game_id: str, cut: datetime, paths=None
+) -> dict[str, float]:
+    """model_id -> p_home for one game's (possibly modified) as-of rows. `paths` applies the news
+    adjustment with the repeat-gated weights, as the lock does."""
     from nfl import lock
 
     slate = pl.DataFrame({"game_id": [game_id]})
     return {
         s.model_id: float(s.frame["p_home"][0])
-        for s in lock.score_approaches(models, asof_rows, slate, cut)
+        for s in lock.score_approaches(models, asof_rows, slate, cut, paths=paths)
     }

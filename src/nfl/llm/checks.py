@@ -93,6 +93,24 @@ def roster_index(paths: Paths, season: int, week: int) -> dict[str, set[str]]:
     return idx
 
 
+def same_person(a: str, b: str) -> bool:
+    """Two names for one player, tolerant to initials and suffixes: the same last name and first
+    names that agree on their first letter ("J. Brissett" = "Jacoby Brissett Jr.")."""
+    x, y = norm_name(a).split(), norm_name(b).split()
+    if not x or not y or x[-1] != y[-1]:
+        return False
+    return len(x) == 1 or len(y) == 1 or x[0][0] == y[0][0]
+
+
+def on_roster(name: str, team: str, roster: dict[str, set[str]]) -> bool:
+    """`name` is on `team`'s roster. True without any roster (nothing to check against)."""
+    if not roster:
+        return True
+    if team in roster.get(norm_name(name), set()):
+        return True
+    return any(team in teams and same_person(name, k) for k, teams in roster.items())
+
+
 def season_records(games: pl.DataFrame, season: int, teams: tuple[str, ...], before: datetime) -> set[str]:  # fmt: skip
     """Every record ("W-L" and, with ties, "W-L-T") the teams had this season before `before`."""
     g = games.filter(
@@ -267,6 +285,24 @@ def apply(rec: dict, ctx: Context) -> tuple[dict, Counter, list]:
             else:
                 absences.append(a)
         t["key_absences"] = absences
+        # v3 countable facts (ADR 0032): on the team's roster, and the starter with a claim
+        if t.get("qb_named_starter"):
+            q = t["qb_named_starter"]
+            last = norm_name(q).split()[-1] if norm_name(q) else ""
+            if not on_roster(q, team, ctx.roster):
+                gone("qb_named", team, f"team: {q} not on the {team} roster", q)
+                t["qb_named_starter"] = None
+            elif not any(c["category"] == "qb" and c.get("team") == team and last
+                         and last in c["claim"].lower().replace("’", "'") for c in claims):  # fmt: skip
+                gone("qb_named", team, "no claim", q)
+                t["qb_named_starter"] = None
+        out = []
+        for n in t.get("starters_ruled_out", []):
+            if on_roster(n, team, ctx.roster):
+                out.append(n)
+            else:
+                gone("ruled_out", team, f"team: {n} not on the {team} roster", n)
+        t["starters_ruled_out"] = out
         if t.get("qb_name") and (why := wrong_team(t["qb_name"], team, ctx, strict=True)):
             gone("qb", team, f"team: {why}", t["qb_name"])
             t["qb_name"], t["qb_status"] = None, 2

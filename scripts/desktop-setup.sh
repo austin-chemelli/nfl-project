@@ -8,6 +8,10 @@
 #   scripts/desktop-setup.sh --enable        the switch: timer on, old Windows task off, and a pass now
 #                                            (every game not yet kicked off; ~15 min; uploads and rebuilds the site)
 #   scripts/desktop-setup.sh --disable       the reverse: timer off, Windows task back on
+#   scripts/desktop-setup.sh --enable-status  the late-status timer on (Thu 07:30, Sat 10:30 ET; ADR 0032);
+#                                            installed off by default. --disable-status turns it off.
+#   scripts/desktop-setup.sh --enable-repeat  after each full pass, research three games again and upload
+#                                            the rating agreement (ADR 0032); --disable-repeat turns it off.
 #
 # What it can't do for you (it says so when it finds them missing): log in to Claude Code
 # (`claude`, then /login with the Max account), log in to gcloud, turn on systemd in WSL.
@@ -19,9 +23,13 @@ game=""
 case "${1:-}" in
   --enable) mode=enable ;;
   --disable) mode=disable ;;
+  --enable-status) mode=enable-status ;;
+  --disable-status) mode=disable-status ;;
+  --enable-repeat) mode=enable-repeat ;;
+  --disable-repeat) mode=disable-repeat ;;
   --test-game) mode=test; game=${2:?--test-game needs a game id, e.g. 2026_12_BUF_KC} ;;
   "") ;;
-  *) echo "usage: desktop-setup.sh [--test-game <game_id> | --enable | --disable]"; exit 2 ;;
+  *) echo "usage: desktop-setup.sh [--test-game <game_id> | --enable | --disable | --enable-status | --disable-status | --enable-repeat | --disable-repeat]"; exit 2 ;;
 esac
 
 missing=0
@@ -84,7 +92,7 @@ unitdir=${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user
 if [ "$missing" = 0 ]; then  # only on a machine that passed every check above (the desktop)
   mkdir -p "$unitdir"
   changed=0
-  for u in nfl-narrative.service nfl-narrative.timer; do
+  for u in nfl-narrative.service nfl-narrative.timer nfl-narrative-status.service nfl-narrative-status.timer; do
     if ! cmp -s "deploy/$u" "$unitdir/$u"; then cp "deploy/$u" "$unitdir/$u"; changed=1; fi
   done
   [ "$changed" = 1 ] && systemctl --user daemon-reload 2>/dev/null
@@ -96,6 +104,11 @@ if systemctl --user is-enabled nfl-narrative.timer >/dev/null 2>&1; then
   ok "timer on: $(systemctl --user list-timers nfl-narrative.timer --no-legend 2>/dev/null | awk '{print $1, $2, $3}') next"
 else
   note "timer off (scripts/desktop-setup.sh --enable turns it on)"
+fi
+if systemctl --user is-enabled nfl-narrative-status.timer >/dev/null 2>&1; then
+  ok "status timer on: $(systemctl --user list-timers nfl-narrative-status.timer --no-legend 2>/dev/null | awk '{print $1, $2, $3}') next"
+else
+  note "late-status timer off (optional; scripts/desktop-setup.sh --enable-status turns it on)"
 fi
 if [ -x "$schtasks" ] && "$schtasks" /query /tn nfl-narrative >/dev/null 2>&1; then
   state=$("$schtasks" /query /tn nfl-narrative /fo csv /nh 2>/dev/null | tr -d '\r' | awk -F'","' '{print $3}' | tr -d '"')
@@ -130,6 +143,26 @@ case "$mode" in
     # skipped), then the upload and the site rebuild
     systemctl --user start --no-block nfl-narrative.service && ok "a pass started now (about 15 minutes)"
     echo "  follow it: journalctl --user -u nfl-narrative -f"
+    ;;
+  enable-status)
+    step "6. The late-status timer on (Thu 07:30 and Sat 10:30 ET)"
+    [ "$missing" = 0 ] || { echo "  fix the NEED lines first"; exit 1; }
+    systemctl --user enable --now nfl-narrative-status.timer && ok "status timer on"
+    systemctl --user list-timers nfl-narrative-status.timer --no-legend | sed 's/^/  next: /'
+    echo "  try one now: systemctl --user start nfl-narrative-status.service (journalctl --user -u nfl-narrative-status -f)"
+    ;;
+  enable-repeat)
+    step "6. Repeatability on: after each full pass, three games researched again (ADR 0032)"
+    mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/nfl-narrative" &&
+      touch "${XDG_CONFIG_HOME:-$HOME/.config}/nfl-narrative/repeat" && ok "repeat on (about 10 extra minutes a pass)"
+    ;;
+  disable-repeat)
+    step "6. Repeatability off"
+    rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/nfl-narrative/repeat"; ok "repeat off"
+    ;;
+  disable-status)
+    step "6. The late-status timer off"
+    systemctl --user disable --now nfl-narrative-status.timer 2>/dev/null; ok "status timer off"
     ;;
   disable)
     step "6. Back: the timer off, the Windows task on"

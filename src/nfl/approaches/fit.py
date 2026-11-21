@@ -438,6 +438,25 @@ def load(paths: Paths, model_id: str, trained_through: int) -> Model:
     return Model.from_dict(json.loads(artifact_path(paths, model_id, trained_through).read_text()))
 
 
+def load_checked(paths: Paths, model_id: str, trained_through: int) -> Model:
+    """`load` for anything that scores live or backfill rows: refuses an artifact fitted on another
+    feature registry than the code's (its inner weights name features the registry no longer has,
+    ADR 0032). A grouped approach's artifact with no `registry_version` (fitted before it was
+    stamped) counts as a mismatch; ungrouped ones (the global fit) have none to check."""
+    from nfl.approaches.schema import load_all
+
+    m = load(paths, model_id, trained_through)
+    cfg = load_all().get(model_id.split(".")[0])
+    rv = m.meta.get("registry_version")
+    if (rv is None and cfg is not None and cfg.groups) or (rv is not None and rv != REGISTRY_VERSION):  # fmt: skip
+        raise RuntimeError(
+            f"{model_id}: fitted on feature registry "
+            f"{'(unstamped)' if rv is None else f'v{rv}'}, the code is v{REGISTRY_VERSION} (ADR "
+            "0032 took the news ratings out of the groups); run `nfl fit` first"
+        )
+    return m
+
+
 def fit_approach(
     paths: Paths,
     approach: Approach,

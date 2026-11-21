@@ -635,8 +635,8 @@ Plan: `.notes/hub/plans/model-round-3.md` (master), audit `.notes/hub/plans/appr
 - **M27.6 Cutover after the merge.** Fresh bucket copy, `nfl features` (strength, decisions, availability, front, matchup; `nfl models build team_split_week` first), `nfl fit`, `nfl predict --backfill`, `nfl grade`, `nfl hypotheses`, `nfl diy-matrix`, upload, `nfl-site`, a dry-run lock; `nfl candidates run` on the laptop's ledger; `nfl readme`.
 
 **PR 2: the news adjustment and late signals (ADR 0032; round plan decision 1)**
-- M27.7 News ratings leave the groups and become a bounded adjustment in points on the football-only line, with a hidden football-only twin graded weekly.
-- M27.8 Repeatability: three games researched twice a week, rating agreement in the evals; a rating that doesn't repeat gets no weight.
-- M27.9 Countable facts from the research (starters ruled out since Wednesday, a confirmed QB change, a coach fired this week, a depth-chart disagreement), stored point-in-time.
-- M27.10 A late-status pass before each lock that the lock can run without.
+- **M27.7 The news adjustment.** *Built 2026-11-20 (ADR 0032).* Registry v8 (six narrative members out of the groups); `nfl.approaches.news` (declared weights in points sized by the Student's own availability effects, cap 1.5, no double count with the depth chart); the lock adds it to every line and writes `student.core`; game `news` and tracker `news_effect` on the site.
+- **M27.8 Repeatability.** *Built 2026-11-20.* `nfl narrative repeat`, `marts/narrative_repeat.parquet`, `nfl.llm.repeat.agreement`; a rating under 70% agreement with 12+ pairs gets weight 0. On the desktop after each full pass once `desktop-setup.sh --enable-repeat` is on.
+- **M27.9 Countable facts.** *Built 2026-11-20.* Schema v3 (`qb_named_starter`, `starters_ruled_out`, `coach_fired_this_week`), prompt `claude_v2`, roster checks; the `news` family (`news.qb_change_confirmed`, `news.starters_ruled_out`), stamped by the record.
+- **M27.10 The late-status pass.** *Built 2026-11-20.* `nfl narrative claude --status-only`, `STATUS_PASSES` (Thu 07:30, Sat 10:30 ET, outside `PASSES` so the narrative check never needs it), `nfl-narrative-status.timer` installed off (`desktop-setup.sh --enable-status`).
 

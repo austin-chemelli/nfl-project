@@ -12,11 +12,12 @@ import type { Game, Meta } from '../../data/contract'
 import { ptsFor, ptsToward } from '../../lib/format'
 import { edgePct } from '../../lib/meta'
 import { liveBars, liveOnlyGroups, liveReady, previewRows, type LiveBar } from './helpers'
+import { NewsLine } from './NewsLine'
 import { Edges } from './Sections'
 
 export function Preview({ g, meta }: { g: Game; meta: Meta }) {
   const setTab = useSetTab() // before the early return: hooks keep their order
-  if (!g.contributions.global) return <Edges g={g} meta={meta} />
+  if (!g.contributions.global) return (<><NewsLine g={g} /><Edges g={g} meta={meta} /></>)
   const rows = previewRows(g, meta, null)
   const live = liveOnlyGroups(g, meta)
   const bars = liveBars(g, meta).filter((b) => b.lean != null) // a reading the week hasn't produced isn't a row
@@ -27,6 +28,7 @@ export function Preview({ g, meta }: { g: Game; meta: Meta }) {
       title="Who has the edge"
       help="Each bar is what that edge was worth in past games, in points (percentage points of win chance). The label under each name compares this matchup with every game since 2005."
     >
+      <NewsLine g={g} />
       <p className="mb-3 max-w-3xl text-[13px] text-ink-2">
         How much each part of the game favors {g.away} or {g.home}, priced by history, in win-chance points.{' '}
         <button type="button" onClick={() => setTab('approaches')} className="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-accent hover:underline">Each approach's reading →</button>

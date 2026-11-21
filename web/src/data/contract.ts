@@ -344,6 +344,7 @@ export const Slate = z.looseObject({
 export const Contribution = z.looseObject({
   p_home: num,
   home_field_pp: nnum,
+  news_pp: nnum.optional(), // the news adjustment's own piece (ADR 0032); absent on older files
   groups: z.record(z.string(), z.looseObject({ pp: nnum, features: z.record(z.string(), nnum) })),
 })
 
@@ -601,6 +602,16 @@ export const LeansRecord = z.looseObject({
 })
 export type LeansRecord = z.infer<typeof LeansRecord>
 
+/** What the week's news added to the Student's line (ADR 0032): points, home-minus-away; null without research. */
+export const GameNews = z.looseObject({
+  pts: nnum,
+  football_only_spread: nnum, // the Student's spread before the news (home favored > 0)
+  reasons: z.array(z.looseObject({ label: z.string(), team: z.string(), pts: num })),
+  reasons_source: z.string().optional(), // 'recomputed' = today's weights on the stored features
+  cap_pts: num,
+})
+export type GameNews = z.infer<typeof GameNews>
+
 export const Game = GameRow.extend({
   contributions: z.record(z.string(), Contribution),
   edges: z.record(z.string(), z.looseObject({ favors: nstr, strength_pct: nnum })),
@@ -612,6 +623,7 @@ export const Game = GameRow.extend({
   market_events: z.array(MarketEvent).default([]),
   books: Books.nullable().default(null),
   swings: z.array(Swing).default([]),
+  news: GameNews.nullable().default(null),
   strong_calls: z.array(StrongCall).default([]),
   key_players: KeyPlayers.nullable().default(null), // the latest claims before kickoff (ADR 0027)
   lineups: Lineups.nullable().default(null), // the formation map's starters (ADR 0027, M24.5)
@@ -824,12 +836,24 @@ export const WeekRecap = z.looseObject({
 
 // ------------------------------------------------------------------------------------- tracker
 
+/** The Student against its football-only twin over live graded games (ADR 0032). */
+export const NewsEffect = z.looseObject({
+  games: num,
+  moved: num,
+  mean_abs_pts: nnum,
+  delta_log_loss: nnum, // negative = the news helped
+  lo: nnum,
+  hi: nnum,
+})
+export type NewsEffect = z.infer<typeof NewsEffect>
+
 export const Tracker = z.looseObject({
   schema_version: z.string(),
   season: num,
   seasons: z.array(z.looseObject({ season: num, model_id: z.string(), n: num, log_loss: num, brier: num, ece: nnum, spread_mae: nnum })),
   current_season: z.array(z.looseObject({ model_id: z.string(), week: num, n: num, n_live: num.optional(), cum_log_loss: num, live: z.boolean() })),
   weeks_tracked: z.record(z.string(), num),
+  news_effect: NewsEffect.nullable().default(null),
   // where a line's model version changed (first live row with a new config hash); rows before it were scored by the old version
   model_changes: z.array(z.looseObject({ model_id: z.string(), season: num, week: num, lock_ts: z.string(), label: z.string() })).default([]),
   backtest: z.array(

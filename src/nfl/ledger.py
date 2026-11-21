@@ -34,7 +34,7 @@ EDGE_THRESHOLD = 0.05
 SPREAD_THRESHOLD = 1.5
 CLOSE_WINDOW = timedelta(hours=3)
 STAKE = 1.0
-NO_BET_MODELS = {"market_baseline"}
+NO_BET_MODELS = {"market_baseline", "student.core"}  # core: the news twin (ADR 0032), never bet
 
 BET_SCHEMA = {
     "bet_id": pl.Utf8,

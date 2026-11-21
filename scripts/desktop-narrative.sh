@@ -12,6 +12,10 @@
 #           reports a claude.ai login; a login expiring within 3 days logs a WARNING.
 #   local   the open-weight model on Ollama (ADR 0014; the Windows Task Scheduler task). Default
 #           until the switch-over, so the existing task runs unchanged.
+# --status: the late-status pass instead of a full one (ADR 0032; nfl-narrative-status.timer, Thu 07:30
+#   and Sat 10:30 ET, off until `desktop-setup.sh --enable-status`): re-checks who plays for games that
+#   already have a record (`nfl narrative claude --status-only`), then the same upload and site rebuild.
+#   Claude only; nothing waits for it.
 # --dry-run: every check (checkout, login, the week), no research, nothing uploaded or logged.
 #
 # Any failure writes an ERROR to Cloud Logging (log nfl-desktop-narrative), which emails Austin
@@ -21,13 +25,16 @@ cd "$(dirname "$0")/.."
 
 producer=${NARRATIVE_PRODUCER:-local}
 dry=0
+status_mode=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --producer) producer=${2:?--producer needs claude or local}; shift 2 ;;
     --dry-run) dry=1; shift ;;
-    *) echo "usage: desktop-narrative.sh [--producer claude|local] [--dry-run]"; exit 2 ;;
+    --status) status_mode=1; shift ;;
+    *) echo "usage: desktop-narrative.sh [--producer claude|local] [--status] [--dry-run]"; exit 2 ;;
   esac
 done
+if [ "$status_mode" = 1 ]; then producer=claude; fi
 case "$producer" in claude|local) ;; *) echo "unknown producer '$producer'"; exit 2 ;; esac
 
 PROJECT="${GCP_PROJECT:-nfl-project-prod}"
@@ -113,10 +120,13 @@ if [ "$dry" = 1 ]; then
   echo "--dry-run: checks passed; would research $season week $week with producer $producer"
   exit 0
 fi
-log INFO "desktop narrative pass started: $season week $week ($producer)"
+kind="pass"; [ "$status_mode" = 1 ] && kind="status pass"
+log INFO "desktop narrative $kind started: $season week $week ($producer)"
 
 result=$(mktemp)
-if [ "$producer" = claude ]; then
+if [ "$status_mode" = 1 ]; then
+  uv run nfl narrative claude "$season" "$week" --status-only 2>&1 | tee "$result"
+elif [ "$producer" = claude ]; then
   uv run nfl narrative claude "$season" "$week" 2>&1 | tee "$result"
 else
   uv run nfl narrative run "$season" "$week" 2>&1 | tee "$result"
@@ -128,11 +138,23 @@ dir="marts/narrative/season=$season/week=$wk"
 if [ -d "data/$dir" ]; then
   gcloud storage rsync -r "data/$dir" "$BUCKET/$dir" -q || fail "upload $dir"
 fi
+# Repeatability (ADR 0032, A1): after a full Claude pass, research three games again (not stored)
+# and upload the comparison the news adjustment reads. Off unless `desktop-setup.sh --enable-repeat`
+# created the flag file; a failure here warns and never fails the pass.
+repeat_flag="${XDG_CONFIG_HOME:-$HOME/.config}/nfl-narrative/repeat"
+if [ "$status" -eq 0 ] && [ "$kind" = pass ] && [ "$producer" = claude ] && [ -f "$repeat_flag" ]; then
+  if uv run nfl narrative repeat "$season" "$week" --games 3; then
+    gcloud storage cp data/marts/narrative_repeat.parquet "$BUCKET/marts/narrative_repeat.parquet" -q ||
+      log WARNING "repeat upload failed"
+  else
+    log WARNING "repeat run failed (the pass itself is fine)"
+  fi
+fi
 gcloud run jobs execute nfl-site --region "$REGION" --project "$PROJECT" --async -q ||
   fail "starting the site rebuild"
 
 if [ "$status" -ne 0 ]; then
   detail=$(grep '^FAILED ' "$result" | cut -c8- | head -8 | tr '\n' ';' | cut -c1-1200)
-  fail "some games failed in $season week $week (the rest were uploaded; rerunning this script resumes): ${detail:-$(tail -1 "$result" | cut -c1-300)}"
+  fail "some games failed in the $kind, $season week $week (the rest were uploaded; rerunning this script resumes): ${detail:-$(tail -1 "$result" | cut -c1-300)}"
 fi
-log INFO "desktop narrative pass done: $season week $week ($producer)"
+log INFO "desktop narrative $kind done: $season week $week ($producer)"

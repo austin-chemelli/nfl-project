@@ -22,6 +22,13 @@ cited source says; matchup notes rest on matchup or scheme sources; claims are s
 categories instead of mostly injuries. The local pipeline's equivalent is `local_v2`.
 `narrative_v4` (2026-11-02): no betting line in text (the site shows the market from data);
 motivation anchors. Local equivalent `local_v3`.
+
+v3 (2026-11-20, ADR 0032): per team three countable, cited facts the news adjustment and the
+`news.*` features read: `qb_named_starter` (the QB reporting says will start), `starters_ruled_out`
+(starters reported Out or Doubtful, newest status) and `coach_fired_this_week`. All optional and
+defaulted, so v1 and v2 records still load. `pass_kind` says whether a record is a full research
+pass or the late-status pass (`claude_research.run_status`), which copies a full record and
+re-researches only the status fields.
 """
 
 from __future__ import annotations
@@ -37,7 +44,7 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 from nfl.config import Paths
 
-SCHEMA_VERSION = "2"
+SCHEMA_VERSION = "3"
 PROMPT_VERSION = "narrative_v4"
 MAX_SOURCE_AGE_DAYS = 10
 
@@ -91,6 +98,10 @@ class TeamNarrative(BaseModel):
     qb_name: str | None = None
     injury_impact: int = Field(ge=0, le=3)
     key_absences: list[str] = []
+    # v3 (ADR 0032): countable facts; a name only when a page the run opened says it, else empty
+    qb_named_starter: str | None = None  # the QB reporting says will start (a claim cites it)
+    starters_ruled_out: list[str] = []  # starters reported Out/Doubtful or ruled out, newest status
+    coach_fired_this_week: bool = False
     sentiment: float = Field(ge=-1, le=1)  # media tone
     hype: float = Field(ge=0, le=1)  # coverage volume
     coaching_turmoil: float = Field(ge=0, le=1)
@@ -103,7 +114,7 @@ class TeamNarrative(BaseModel):
 
 
 class GameNarrative(BaseModel):
-    schema_version: Literal["1", "2"] = SCHEMA_VERSION
+    schema_version: Literal["1", "2", "3"] = SCHEMA_VERSION
     game_id: str
     season: int
     week: int
@@ -116,6 +127,7 @@ class GameNarrative(BaseModel):
     producer: Literal["claude_code", "api", "local", "claude_max"]
     model: str
     prompt_version: str = PROMPT_VERSION
+    pass_kind: Literal["full", "status"] = "full"  # "status": the late-status pass (ADR 0032)
     home: TeamNarrative
     away: TeamNarrative
     public_pick: Literal["home", "away", "none"] | None = None
@@ -219,15 +231,19 @@ def load_records(paths: Paths, seasons: tuple[int, int] | None = None) -> list[G
 # Friday's injury designations and before the Saturday lock. (weekday, Mon=0; start time, ET.)
 ET = ZoneInfo("America/New_York")
 PASSES = ((2, time(18, 0)), (5, time(7, 0)))
+# The late-status passes (ADR 0032): Thursday 07:30 and Saturday 10:30 ET, status only, before each
+# lock. For documentation and the desktop timer (deploy/nfl-narrative-status.timer); deliberately
+# NOT in PASSES, so the cloud `narrative check` never requires one and the lock never waits for one.
+STATUS_PASSES = ((3, time(7, 30)), (5, time(10, 30)))
 
 
-def last_pass(now: datetime) -> datetime:
+def last_pass(now: datetime, passes: tuple = PASSES) -> datetime:
     """Start of the most recent scheduled pass at or before `now`, both naive UTC."""
     et = now.replace(tzinfo=UTC).astimezone(ET)
     starts = [
         datetime.combine(d, t, ET)
         for d in (et.date() - timedelta(days=n) for n in range(8))
-        for wd, t in PASSES
+        for wd, t in passes
         if d.weekday() == wd
     ]
     return max(x for x in starts if x <= et).astimezone(UTC).replace(tzinfo=None)
@@ -245,12 +261,17 @@ def upcoming_week(paths: Paths, now: datetime) -> tuple[int, int]:
 PASS_PRODUCERS = ("local", "claude_max")
 
 
-def stored_since(paths: Paths, season: int, week: int, since: datetime) -> set[str]:
-    """Games of the week with a record from a scheduled pass's producer from `since` on."""
+def stored_since(paths: Paths, season: int, week: int, since: datetime, kind: str = "full") -> set[str]:  # fmt: skip
+    """Games of the week with a record from a scheduled pass's producer from `since` on. `kind` is
+    the pass kind: a late-status record never stands in for a full pass (it copies the full
+    record before it, so it would hide a game Wednesday's pass missed)."""
     return {
         r.game_id
         for r in load_records(paths, (season, season))
-        if r.week == week and r.producer in PASS_PRODUCERS and r.known_as_of >= since
+        if r.week == week
+        and r.producer in PASS_PRODUCERS
+        and r.known_as_of >= since
+        and r.pass_kind == kind
     }
 
 
@@ -330,6 +351,8 @@ def example() -> dict:
             "qb_name": "Josh Allen",
             "injury_impact": 1,
             "key_absences": ["Example Player (WR, Out)"],
+            "qb_named_starter": "Josh Allen",
+            "starters_ruled_out": ["Example Player"],
             "sentiment": 0.3,
             "hype": 0.7,
             "coaching_turmoil": 0.0,
@@ -360,6 +383,8 @@ def example() -> dict:
             "qb_name": "Lamar Jackson",
             "injury_impact": 2,
             "key_absences": ["Example Player (OT, Doubtful)"],
+            "qb_named_starter": None,
+            "starters_ruled_out": [],
             "sentiment": -0.2,
             "hype": 0.6,
             "coaching_turmoil": 0.1,
