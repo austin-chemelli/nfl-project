@@ -10,9 +10,11 @@ import type { Efficiency, GradedPick, RetroGame, TeamRetro, WpPlay } from '../..
 import { DivergingBars, DriveField, PossessionStrip, RangeRow, TipNote, TipRow, TipTitle, WpChart, type RangeRowData } from '../../charts'
 import { withCodes } from '../../lib/teams'
 import { dash, fmtEff, pct, pts, ptsFor, ptsSide } from '../../lib/format'
+import { Unofficial } from '../../you/YouBar'
+import { youRow, type YouPick } from './helpers'
 import { deservedValue, deservedView, driveLede, garbageLede, driveText, factorLabel, markText, orderedPlays, phaseSummary, playedLikeSteps, swingRows, wpLede, type SwingRow } from './helpers'
 
-export function Retro({ r }: { r: RetroGame }) {
+export function Retro({ r, you }: { r: RetroGame; you?: YouPick }) {
   return (
     <div className="flex flex-col gap-8">
       {r.deserved ? <WhatHappened r={r} /> : <Headlines r={r} />}
@@ -22,7 +24,7 @@ export function Retro({ r }: { r: RetroGame }) {
       <Phases r={r} />
       <EfficiencySection r={r} />
       <SwingSection r={r} />
-      <Forecasts r={r} />
+      <Forecasts r={r} you={you} />
       <Groups key={r.game_id} r={r} />
       <FinePrint>
         {r.deserved && (
@@ -210,7 +212,7 @@ const isRef = (p: GradedPick) => p.kind !== 'approach'
 /** Global is a diagnostic, not a line anyone follows, so it isn't on the game page. */
 const shown = (p: GradedPick) => p.kind !== 'global'
 
-function Forecasts({ r }: { r: RetroGame }) {
+function Forecasts({ r, you }: { r: RetroGame; you?: YouPick }) {
   return (
     <Section
       title="How the forecasts did"
@@ -235,6 +237,7 @@ function Forecasts({ r }: { r: RetroGame }) {
             {r.predictions.filter(shown).map((p) => (
               <PickRow key={p.model_id} p={p} />
             ))}
+            {you && <PickRow p={youRow(r, you)} />}
           </tbody>
         </table>
       </TableScroll>
@@ -255,6 +258,7 @@ function PickRow({ p }: { p: GradedPick }) {
           <span className="ml-2 rounded border border-[var(--good)] px-1.5 py-px text-[11px] font-medium uppercase tracking-wide text-[var(--good)]">Best</span>
         )}
         {ref && <span className="ml-2 text-[11px] uppercase tracking-wide">reference</span>}
+        {p.model_id === 'you' && <Unofficial />}
       </td>
       <td className={`${td} tabular whitespace-nowrap ${cls}`}>
         <span className="font-medium">{p.pick}</span> {pct(p.p_pick)}
@@ -262,7 +266,7 @@ function PickRow({ p }: { p: GradedPick }) {
       <td className={`${td} ${cls}`}>
         {p.right == null ? dash : p.right ? <span aria-label="Right">✓ right</span> : <span aria-label="Wrong">✗ wrong</span>}
       </td>
-      <td className={`${td} tabular ${cls}`}>{p.log_loss.toFixed(2)}</td>
+      <td className={`${td} tabular ${cls}`}>{Number.isNaN(p.log_loss) ? dash : p.log_loss.toFixed(2)}</td>
       <td className={`${td} tabular ${cls}`}>{p.spread_error == null ? dash : `${p.spread_error.toFixed(1)} pts`}</td>
     </tr>
   )

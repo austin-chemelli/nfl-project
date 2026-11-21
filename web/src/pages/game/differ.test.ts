@@ -56,3 +56,15 @@ describe('live gaps before the lock', () => {
     expect(liveGaps({ ...game, market: null, models: { student: game.models.student } } as unknown as Game, name)).toEqual([])
   })
 })
+
+describe('differ words for the reader\'s own line', () => {
+  it('falls back to the Student for the what-if, and says so', () => {
+    expect(whatIfLine(g, qb('BAL'), 'you')).toBe('If Tyler Huntley starts: the Student has BAL at 54%, against 62% with Lamar Jackson.')
+  })
+  it('uses the reader\'s number when the server has one', () => {
+    const s = qb('BAL')
+    s.assumed!.p_home.you = 0.5
+    s.alternative!.p_home.you = 0.4
+    expect(whatIfLine(g, s, 'you')).toBe('If Tyler Huntley starts: You has BAL at 40%, against 50% with Lamar Jackson.')
+  })
+})

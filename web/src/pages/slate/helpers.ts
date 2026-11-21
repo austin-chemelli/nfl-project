@@ -1,6 +1,8 @@
 /** Pure helpers for the Slate page (port of nfl.ui.slate_helpers). */
 import type { CardData, GameRow, LeagueFile, Meta } from '../../data/contract'
 import { APPROACHES, HEADLINE, REFERENCES, SHORT } from '../../lib/models'
+import type { CustomGame } from '../../data/contract'
+import { scoreLine, type LineParams } from '../../you/line'
 import { pct } from '../../lib/format'
 import { edgePct, groupOf } from '../../lib/meta'
 import { injuryRank, ordinal } from '../game/helpers'
@@ -33,8 +35,8 @@ export function correct(game: GameRow, mid: string): boolean | null {
 }
 
 /** The game's status from its headline line, else in a fixed order, so it never depends on key order. */
-export function gameStatus(game: GameRow): { status: string; lockTs: string | null } {
-  const m = [HEADLINE, ...APPROACHES, ...REFERENCES].map((id) => game.models[id]).find((x) => x != null)
+export function gameStatus(game: GameRow, headline: string = HEADLINE): { status: string; lockTs: string | null } {
+  const m = [headline, HEADLINE, ...APPROACHES, ...REFERENCES].map((id) => game.models[id]).find((x) => x != null)
   return m ? { status: m.status, lockTs: m.lock_ts } : { status: 'none', lockTs: null }
 }
 
@@ -62,7 +64,7 @@ export function disagreements(games: GameRow[], n = 3): Disagreement[] {
     const ps: Record<string, number> = {}
     for (const a of APPROACHES) {
       const p = g.models[a]?.p_home
-      if (p != null) ps[a] = p
+      if (p != null && a !== 'you') ps[a] = p
     }
     const ids = Object.keys(ps)
     if (ids.length < 2) continue
@@ -95,20 +97,24 @@ export const SORTS: { value: SortKey; label: string }[] = [
   { value: 'disagreement', label: 'Student vs market' },
   { value: 'upset', label: 'Upset' },
 ]
+/** The sort options, the disagreement one named for the line the page leads with. */
+export const sortsFor = (headline: string = HEADLINE): { value: SortKey; label: string }[] =>
+  SORTS.map((o) => (o.value === 'disagreement' ? { ...o, label: headline === 'you' ? 'Your line vs market' : `${SHORT[headline] ?? headline} vs market` } : o))
 export const parseSort = (s: string | null): SortKey => (SORTS.some((o) => o.value === s) ? (s as SortKey) : 'kickoff')
 
 /** Within 5 points of 50% is a toss-up, not an upset or a clear favorite. */
 const TOSS_UP = 0.05
 
+/** The published approaches' picks: the reader's own line is shown beside them, never counted among them. */
 const approachPs = (g: GameRow): { id: string; p: number }[] =>
-  APPROACHES.flatMap((a) => {
+  APPROACHES.filter((a) => a !== 'you').flatMap((a) => {
     const p = g.models[a]?.p_home
     return p == null ? [] : [{ id: a, p }]
   })
 
 /** |headline approach − market| in home win chance; null if either is missing. */
-export function gapToMarket(g: GameRow): number | null {
-  const m = g.models[HEADLINE]?.p_home
+export function gapToMarket(g: GameRow, headline: string = HEADLINE): number | null {
+  const m = g.models[headline]?.p_home
   const mk = g.market?.p_home
   return m == null || mk == null ? null : Math.abs(m - mk)
 }
@@ -121,10 +127,10 @@ export function winnerMarketP(g: GameRow): number | null {
 }
 
 /** Games in display order; ties keep kickoff order. Upset: finished games, the winner's lowest market chance first, then the rest. */
-export function sortGames(games: GameRow[], sort: SortKey): GameRow[] {
+export function sortGames(games: GameRow[], sort: SortKey, headline: string = HEADLINE): GameRow[] {
   const base = byKickoff(games)
   if (sort === 'kickoff') return base
-  const key = (g: GameRow) => (sort === 'disagreement' ? (gapToMarket(g) == null ? null : -gapToMarket(g)!) : winnerMarketP(g))
+  const key = (g: GameRow) => (sort === 'disagreement' ? (gapToMarket(g, headline) == null ? null : -gapToMarket(g, headline)!) : winnerMarketP(g))
   return base
     .map((g, i) => ({ g, i, k: key(g) }))
     .sort((a, b) => (a.k == null || b.k == null ? Number(a.k == null) - Number(b.k == null) : a.k - b.k) || a.i - b.i)
@@ -132,6 +138,8 @@ export function sortGames(games: GameRow[], sort: SortKey): GameRow[] {
 }
 
 const short = (id: string) => SHORT[id] ?? id
+/** "You take" / "the Student takes": the reader's own line is addressed as "you". */
+const takes = (ids: string[]) => (ids.length === 1 && ids[0] !== 'you' ? 'takes' : 'take')
 const names = (ids: string[]) => (ids.length <= 1 ? ids.map(short).join('') : `${ids.slice(0, -1).map(short).join(', ')} and ${short(ids[ids.length - 1])}`)
 
 /** One plain line for a matchup card, computed from the row. */
@@ -145,7 +153,7 @@ export function cardSentence(g: GameRow): string {
   if (onHome.length > 0 && onAway.length > 0) {
     if (onHome.length === onAway.length) return `Approaches split ${onHome.length}–${onAway.length}`
     const [major, minor, side, other] = onHome.length > onAway.length ? [onHome, onAway, g.home, g.away] : [onAway, onHome, g.away, g.home]
-    return `Split ${major.length}–${minor.length} ${side}; ${names(minor.map((x) => x.id))} ${minor.length === 1 ? 'takes' : 'take'} ${other}`
+    return `Split ${major.length}–${minor.length} ${side}; ${names(minor.map((x) => x.id))} ${takes(minor.map((x) => x.id))} ${other}`
   }
   const side = onHome.length ? g.home : g.away
   const n = ps.length === 4 ? 'All four' : `All ${ps.length}`
@@ -154,7 +162,7 @@ export function cardSentence(g: GameRow): string {
   if ((mk >= 0.5) !== (side === g.home)) return `${n} pick ${side}; the market leans ${mk >= 0.5 ? g.home : g.away}`
   const far = ps.reduce((a, b) => (Math.abs(b.p - mk) > Math.abs(a.p - mk) ? b : a))
   const gap = Math.round(100 * Math.abs(far.p - mk))
-  if (Math.abs(far.p - mk) >= DIVERGE) return `${short(far.id)} is ${gap} pts from the market on ${far.p > mk ? g.home : g.away}`
+  if (Math.abs(far.p - mk) >= DIVERGE) return `${short(far.id)} ${far.id === 'you' ? 'are' : 'is'} ${gap} pts from the market on ${far.p > mk ? g.home : g.away}`
   return `${n} agree with the market`
 }
 
@@ -270,4 +278,35 @@ export function stakesLine(g: { game_id: string }, league: LeagueFile | null | u
     if (text) return `Playoff stakes: ${text}.`
   }
   return null
+}
+
+// ------------------------------------------------------------ the reader's own record (ADR 0034)
+
+export type YouWeek = { n: number; right: number; logLoss: number; marketLogLoss: number | null }
+
+const ll = (p: number, won: boolean) => -Math.log(won ? p : 1 - p)
+
+/**
+ * The reader's line over one week's graded games, scored in the browser from the season file
+ * (`site/custom_<season>.json`). `ids`, when given, limits it to exactly those games (the recap's).
+ * Null when no game of the week is graded. The market's log loss covers the same games.
+ */
+export function youWeek(line: LineParams, games: CustomGame[], week: number, ids?: readonly string[]): YouWeek | null {
+  const rows = games.filter((g) => g.week === week && (ids == null || ids.includes(g.game_id)))
+  if (rows.length === 0) return null
+  let right = 0
+  let loss = 0
+  let mk = 0
+  let nMk = 0
+  for (const g of rows) {
+    const p = scoreLine(line, g).p_home
+    const won = g.home_won === 1
+    if ((p >= 0.5) === won) right++
+    loss += ll(p, won)
+    if (g.p_market != null) {
+      mk += ll(g.p_market, won)
+      nMk++
+    }
+  }
+  return { n: rows.length, right, logLoss: loss / rows.length, marketLogLoss: nMk === rows.length ? mk / nMk : null }
 }

@@ -115,6 +115,10 @@ def main() -> None:
     season = _load(src, "season_2025.json")
     _dump(season, "season_2025.json")
 
+    custom = _load(src, "custom_2026.json")  # ADR 0034: the reader's line's season record
+    custom["games"] = [g for g in custom["games"] if g["week"] <= WEEK]
+    _dump(custom, "custom_2026.json")
+
     audit = _load(src, "audit.json")
     audit["null_rates"] = audit.get("null_rates", [])[:40]
     _dump(audit, "audit.json")
@@ -183,7 +187,7 @@ def _extras(w: dict, P: dict, max_season: int | None) -> dict:
     use = ~P["warmup"] & np.isin(season, scored)
     keep = np.isin(season, scored) | (P["warmup"] & (season < scored[0]))
     raw = diy._raw_logit(P, w)
-    lg, _ = diy.walk_forward_platt(raw[keep], P["y"][keep], season[keep], scored)
+    lg, _ = diy.walk_forward_platt(raw[keep], P["y"][keep], season[keep], scored, P["g"][keep])
     logit = np.zeros_like(raw)
     logit[keep] = lg
     p = 1 / (1 + np.exp(-logit))
@@ -204,6 +208,40 @@ def _extras(w: dict, P: dict, max_season: int | None) -> dict:
     }
 
 
+def line_parity(paths, n_home: int = 6) -> dict:
+    """ADR 0034: published lines against the browser's scoring path. For this season's backfill rows
+    of the Student, the Analyst and the Traditionalist: the game's composites (as `nfl site`
+    publishes them), the line's group weights, intercept and calibration, and the engine's p_home.
+    Every neutral-site game plus the first `n_home` home games, so the gate is exercised."""
+    import polars as pl
+
+    from nfl.approaches import fit
+    from nfl.config import current_season
+
+    season = current_season()
+    preds = pl.read_parquet(paths.marts / "predictions.parquet").filter(
+        (pl.col("season") == season) & pl.col("is_backfill")
+    )
+    out = {"season": season, "lines": {}, "games": []}
+    stu = preds.filter(pl.col("model_id") == "student").select("game_id", "lock_ts")
+    comp = diy.composites_at(paths, stu, season)
+    pick = pl.concat(
+        [comp.filter(pl.col("neutral") == 1), comp.filter(pl.col("neutral") == 0).head(n_home)]
+    )
+    ids = pick["game_id"].to_list()
+    for r in pick.iter_rows(named=True):
+        out["games"].append({"game_id": r["game_id"], "neutral": bool(r["neutral"]),
+                             "c": {g: round(float(r[f"c_{g}"]), 4) for g in diy.GROUP_IDS}})  # fmt: skip
+    for mid in ("student", "analyst", "traditionalist"):
+        art = fit.load(paths, mid, season - 1)
+        rows = preds.filter((pl.col("model_id") == mid) & pl.col("game_id").is_in(ids))
+        out["lines"][mid] = {
+            "W": art.meta["group_weights"], "intercept": art.intercept, "a": art.calib_a,
+            "c": art.calib_c, "p_home": dict(zip(rows["game_id"], rows["p_home"], strict=True)),
+        }  # fmt: skip
+    return out
+
+
 def diy_main() -> None:
     """Expected outputs of the Python evaluator on fixed weight sets (see the module docstring)."""
     m = _diy_matrix(get_paths().site)
@@ -221,7 +259,7 @@ def diy_main() -> None:
         "single_group": {"quality": 80.0},
         "contrarian_mix": {"quality": 60.0, "form": -40.0, "quarterback": 25.5, "health": -10.0},
         "market_over_cap": {"quality": 50.0, "offense": 20.0, "market": 60.0},
-        "fractional": {"quality": 33.3333333, "defense": 12.5, "coaching": -7.25},
+        "fractional": {"quality": 33.3333333, "defense": 12.5, "venue_weather": -7.25},
     }
     cases = []
 
@@ -294,6 +332,7 @@ def diy_main() -> None:
         "cases": cases,
     }
     OUT_DIY.mkdir(parents=True, exist_ok=True)
+    (OUT_DIY / "lines.json").write_text(json.dumps(line_parity(get_paths()), indent=1) + "\n")
     (OUT_DIY / "matrix.json").write_text(json.dumps(m, separators=(",", ":")) + "\n")
     (OUT_DIY / "parity.json").write_text(json.dumps(_clean(doc), separators=(",", ":")) + "\n")
     total = sum(p.stat().st_size for p in OUT_DIY.glob("*.json"))

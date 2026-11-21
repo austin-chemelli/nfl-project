@@ -11,18 +11,13 @@ describe('hidden pages on the live site', () => {
     renderRoute('/method')
     const nav = within(await screen.findByRole('navigation', { name: 'Main' }))
     expect(nav.queryByRole('link', { name: 'Coaches' })).toBeNull()
-    expect(nav.queryByRole('link', { name: 'Build' })).toBeNull()
-    for (const name of ['This week', 'League', 'Tracker', 'History', 'How it works']) expect(nav.getByRole('link', { name })).toBeInTheDocument()
+    for (const name of ['This week', 'League', 'Tracker', 'History', 'Build', 'How it works']) expect(nav.getByRole('link', { name })).toBeInTheDocument()
   })
 
   it('answers their URLs like pages that do not exist', async () => {
-    for (const url of ['/coaches', '/build?w=abc']) {
-      const { unmount } = renderRoute(url)
-      expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/not found|no page|doesn't exist/i)
-      expect(screen.queryByText('Coaches & schemes')).toBeNull()
-      expect(screen.queryByText('Build your own approach')).toBeNull()
-      unmount()
-    }
+    renderRoute('/coaches')
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/not found|no page|doesn't exist/i)
+    expect(screen.queryByText('Coaches & schemes')).toBeNull()
   })
 
   it('drops the League panel\'s link to Coaches and keeps the panel', async () => {
@@ -32,15 +27,15 @@ describe('hidden pages on the live site', () => {
     expect(within(panel).getByRole('link', { name: /Wk 1 vs DEN/ })).toBeInTheDocument()
   })
 
-  it('drops the Season page\'s link back to Build and keeps the page', async () => {
+  it('keeps the Season page\'s link back to Build, which is live again (M30)', async () => {
     renderRoute('/season/2025?set=yours&w=quality:70,form:30&team=PHI')
     expect(await screen.findByRole('heading', { level: 1, name: /Season view/ })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Back to Build your own' })).toBeNull()
+    expect(await screen.findByRole('link', { name: 'Back to Build your own' })).toBeInTheDocument()
   })
 
   it('hides only what is listed', () => {
     expect(isHidden('/coaches')).toBe(true)
-    expect(isHidden('/build')).toBe(true)
+    expect(isHidden('/build')).toBe(false)
     expect(isHidden('/season')).toBe(false)
     expect(isHidden('/tracker')).toBe(false)
   })

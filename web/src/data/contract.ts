@@ -64,6 +64,47 @@ export const TendencyMetric = z.looseObject({
   help: z.string(),
 })
 
+// ------------------------------------------------------- your own approach (ADR 0034, M30)
+// Inputs for a reader's custom line, scored in the browser (src/nfl/site.py, "your own approach").
+
+/** One game's group composites as of the headline row's lock (or the graded lock, in custom_<season>.json). */
+export const Composites = z.looseObject({
+  as_of: nstr,
+  neutral: z.boolean(),
+  c: z.record(z.string(), num),
+})
+
+/** meta.custom: what a saved custom line is tied to; older meta files lack it (no "You" anywhere). */
+export const CustomMeta = z.looseObject({
+  registry_version: z.string(),
+  key: z.string(),
+  trained_through: num,
+  groups: z.array(z.string()),
+  live_only: z.array(z.string()),
+  market_cap: num,
+})
+
+export const CustomGame = Composites.extend({
+  game_id: z.string(),
+  week: num,
+  home: z.string(),
+  away: z.string(),
+  kickoff_utc: nstr,
+  home_won: num,
+  status: z.enum(['locked', 'backfill']),
+  p_student: nnum,
+  p_market: nnum,
+})
+
+/** site/custom_<season>.json: every graded game with the composites at the Student's graded lock. */
+export const CustomSeason = z.looseObject({
+  schema_version: z.string(),
+  season: num,
+  key: z.string(),
+  groups: z.array(z.string()),
+  games: z.array(CustomGame),
+})
+
 export const Meta = z.looseObject({
   schema_version: z.string(),
   generated_at: z.string(),
@@ -87,6 +128,7 @@ export const Meta = z.looseObject({
   last_lock: z.looseObject({ lock_ts: z.string(), season: num, week: num, slot: nstr }).nullable(),
   // the situation registry (ADR 0028): labels and one-sentence definitions; older files lack it
   split_defs: z.record(z.string(), z.looseObject({ label: z.string(), definition: z.string(), chooser: z.enum(['offense', 'defense', 'neither']), no_edge: z.string().default('') })).default({}),
+  custom: CustomMeta.nullable().default(null),
 })
 
 // --------------------------------------------------------------------------------------- slate
@@ -329,6 +371,8 @@ export const GameRow = z.looseObject({
     return null
   }),
   line_move: LineMove.nullable().default(null),
+  // ADR 0034: the inputs a saved custom line reads; older files lack it (no "You" on that game)
+  composites: Composites.nullable().default(null),
 })
 
 export const Slate = z.looseObject({
@@ -1058,6 +1102,10 @@ export type CoachSide = z.infer<typeof CoachSide>
 export type CoachSummary = z.infer<typeof CoachSummary>
 export type TeamCaller = z.infer<typeof TeamCaller>
 export type DiyMatrix = z.infer<typeof DiyMatrix>
+export type Composites = z.infer<typeof Composites>
+export type CustomMeta = z.infer<typeof CustomMeta>
+export type CustomGame = z.infer<typeof CustomGame>
+export type CustomSeason = z.infer<typeof CustomSeason>
 export type SeasonFile = z.infer<typeof SeasonFile>
 export type Audit = z.infer<typeof Audit>
 export type RetroGame = z.infer<typeof RetroGame>

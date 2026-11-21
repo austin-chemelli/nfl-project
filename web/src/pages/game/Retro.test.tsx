@@ -4,12 +4,25 @@ import { describe, expect, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { RetroGame } from '../../data/contract'
+import { youRow } from './helpers'
 import { Retro } from './Retro'
 
 const FIX = path.resolve(import.meta.dirname, '../../test/fixtures/site/retro/2026_08_CAR_GB.json')
 const r = RetroGame.parse(JSON.parse(fs.readFileSync(FIX, 'utf8')))
 
 describe('Retro', () => {
+  it('adds the reader\'s own line to the forecasts, graded in the browser and marked unofficial (ADR 0034)', () => {
+    const away = r.result.margin < 0
+    const you = { p_home: away ? 0.3 : 0.7, spread_home: away ? -4 : 4 }
+    const row = youRow(r, you)
+    expect(row).toMatchObject({ model_id: 'you', right: true, pick: away ? r.away : r.home, best: false })
+    expect(row.log_loss).toBeCloseTo(-Math.log(0.7), 6)
+    expect(row.spread_error).toBeCloseTo(Math.abs(you.spread_home - r.result.margin), 6)
+    render(<Retro r={r} you={you} />)
+    const tr = screen.getByText('unofficial').closest('tr') as HTMLElement
+    expect(within(tr).getByText('✓ right')).toBeInTheDocument()
+  })
+
   it('renders headlines and the forecast table with the best model highlighted', () => {
     const { container } = render(<Retro r={r} />)
     expect(screen.getAllByText(/Green Bay lost 3 of its 3 fumbles/, { selector: 'li' }).length).toBeGreaterThan(0)

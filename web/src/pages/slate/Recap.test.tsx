@@ -35,6 +35,23 @@ const recap = (over: Partial<WeekRecap> = {}): WeekRecap => ({
   ...over,
 })
 
+describe('recapTiles with the reader line', () => {
+  const you = { n: 10, right: 8, logLoss: 0.55, marketLogLoss: 0.62 }
+  it('adds an unofficial tile beside the public ones, leaving the Student lead', () => {
+    const t = recapTiles(recap(), undefined, { headline: 'student', week: you }).tiles
+    expect(t.map((x) => x.id)).toEqual(['best', 'market', 'right', 'you', 'upset', 'luck'])
+    expect(t[2]).toMatchObject({ value: '7 of 10', modelId: 'student' })
+    expect(t[3]).toMatchObject({ label: 'Your line (unofficial)', value: '8 of 10 right', sub: 'log loss 0.550' })
+  })
+  it('leads Picks right with yours when it is the headline', () => {
+    const t = recapTiles(recap(), undefined, { headline: 'you', week: you }).tiles
+    expect(t[2]).toMatchObject({ value: '8 of 10', sub: 'You (unofficial); Student 7 of 10; market 6 of 10', modelId: 'you' })
+  })
+  it('adds nothing without a line', () => {
+    expect(recapTiles(recap(), undefined, { headline: 'student', week: null }).tiles.map((x) => x.id)).toEqual(['best', 'market', 'right', 'upset', 'luck'])
+  })
+})
+
 describe('recapTiles', () => {
   it('states the week in five tiles', () => {
     const { tiles: t, caption } = recapTiles(recap())

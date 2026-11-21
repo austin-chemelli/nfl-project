@@ -1,8 +1,12 @@
 import { ModelBadge, Section } from '../../components/ui'
 import type { Game, Meta } from '../../data/contract'
 import { groupOf } from '../../lib/meta'
-import { SHORT } from '../../lib/models'
+import { theName, theNameLower } from '../../lib/models'
+import { useHeadline } from '../../you/current'
 import { STRONG_GAP, WHY, factorLines, gapSentence, liveGaps, outcome, whatIfLine, whoText } from './differ'
+
+/** Who "has CIN at 70%": "The Student", or "Your line" (the saved name reads oddly as a subject). */
+const subject = (model: string, lower = false) => (model === 'you' ? (lower ? 'your line' : 'Your line') : lower ? theNameLower(model) : theName(model))
 
 /**
  * Where the approaches differ from the market, and what could swing the game (ADR 0024). The strong calls
@@ -10,6 +14,7 @@ import { STRONG_GAP, WHY, factorLines, gapSentence, liveGaps, outcome, whatIfLin
  * quarterback, rescored with the locked models. Nothing here is the market's view.
  */
 export function Differ({ g, meta }: { g: Game; meta: Meta }) {
+  const headline = useHeadline()
   const qbs = g.swings.filter((s) => s.kind === 'qb')
   const factors = factorLines(g.swings)
   const gaps = liveGaps(g, (id) => groupOf(meta, id)?.name ?? id)
@@ -33,17 +38,17 @@ export function Differ({ g, meta }: { g: Game; meta: Meta }) {
             <li key={x.model} className="rounded-md border border-line bg-surface-1 p-2.5">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-[13px]">
                 <ModelBadge modelId={x.model} />
-                <span className="text-ink-3">{x.locked ? 'At the lock' : 'Not locked yet: the next lock records it if it holds'}</span>
+                <span className="text-ink-3">{x.model === 'you' ? 'Unofficial: scored in this browser, never recorded' : x.locked ? 'At the lock' : 'Not locked yet: the next lock records it if it holds'}</span>
               </div>
-              <p className="m-0 mt-1 text-ink">The {SHORT[x.model] ?? x.model} {gapSentence(x)}</p>
+              <p className="m-0 mt-1 text-ink">{subject(x.model)} {gapSentence(x)}</p>
             </li>
           ))}
         </ul>
       ) : gaps.length > 0 ? (
-        <p className="m-0 text-ink-2">Every approach is within 10 points of the market. The biggest gap: the {SHORT[gaps[0].model] ?? gaps[0].model} {gapSentence(gaps[0])}</p>
+        <p className="m-0 text-ink-2">Every approach is within 10 points of the market. The biggest gap: {subject(gaps[0].model, true)} {gapSentence(gaps[0])}</p>
       ) : null}
       {qbs.map((s) => {
-        const line = whatIfLine(g, s)
+        const line = whatIfLine(g, s, headline)
         return line ? (
           <p key={s.team ?? ''} className="m-0 mt-3 text-ink">
             <span className="text-ink-2">Our line assumes {whoText(s.assumed)} starts for {s.team}, though {WHY[s.why ?? ''] ?? 'the starter is in doubt'}.</span> {line}

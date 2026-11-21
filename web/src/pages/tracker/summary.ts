@@ -9,8 +9,9 @@ import type { Tracker } from '../../data/contract'
 import { APPROACHES, HEADLINE, SHORT } from '../../lib/models'
 import { calibrationVerdict, currentSummary, GAP_BAND, type CurrentRow } from './helpers'
 import { label } from './names'
+import type { YourRecord } from './yourRecord'
 
-export type TabId = 'season' | 'backtest' | 'calibration' | 'bets'
+export type TabId = 'season' | 'backtest' | 'calibration' | 'bets' | 'you'
 
 export type TileSpec = {
   id: string
@@ -31,17 +32,34 @@ function gapWords(delta: number): string {
   return `${n3(delta)} ${delta > 0 ? 'worse' : 'better'} than the market`
 }
 
-export function summaryTiles(t: Tracker): TileSpec[] {
+/**
+ * `headline` is the line the page leads with: 'you' swaps the first tile for the reader's own unofficial
+ * record (`yours`, scored in the browser); every other tile stays the Student's official one.
+ */
+export function summaryTiles(t: Tracker, headline: string = HEADLINE, yours: YourRecord | null = null): TileSpec[] {
   const cur = currentSummary(t.current_season)
-  return [vsMarketTile(cur.rows), liveTile(cur), bestTile(cur.rows), calibrationTile(t), betsTile(t)]
+  const first = headline === 'you' ? yourTile(yours) : vsMarketTile(cur.rows, headline)
+  return [first, liveTile(cur), bestTile(cur.rows), calibrationTile(t), betsTile(t)]
 }
 
-function vsMarketTile(rows: CurrentRow[]): TileSpec {
-  const line = rows.find((r) => r.model_id === HEADLINE)
-  if (!line || line.delta == null) return { id: 'season', label: `${NAME} vs the market`, value: '–', sub: 'no graded games yet', tab: 'season', modelId: HEADLINE }
+/** "Your line vs the market": the same noise rule, from the browser-scored record (unofficial). */
+function yourTile(rec: YourRecord | null): TileSpec {
+  const base = { id: 'season', label: 'Your line vs the market', tab: 'you' as const, modelId: 'you' }
+  const you = rec?.all.you
+  const market = rec?.all.market
+  if (!you || you.logLoss == null || market?.logLoss == null) return { ...base, value: '–', sub: 'unofficial · no games yet' }
+  const delta = you.logLoss - market.logLoss
+  const value = Math.abs(delta) < GAP_BAND ? 'Same as market' : delta > 0 ? 'Trails the market' : 'Beats the market'
+  return { ...base, value, sub: `unofficial · ${plural(you.n, 'game')}` }
+}
+
+function vsMarketTile(rows: CurrentRow[], headline: string = HEADLINE): TileSpec {
+  const name = SHORT[headline] ?? headline
+  const line = rows.find((r) => r.model_id === headline)
+  if (!line || line.delta == null) return { id: 'season', label: `${name} vs the market`, value: '–', sub: 'no graded games yet', tab: 'season', modelId: headline }
   const value = Math.abs(line.delta) < GAP_BAND ? 'Same as market' : line.delta > 0 ? 'Trails the market' : 'Beats the market'
   return {
-    id: 'season', label: `${NAME} vs the market`, value, tab: 'season', modelId: HEADLINE,
+    id: 'season', label: `${name} vs the market`, value, tab: 'season', modelId: headline,
     // log loss never alone (format.ts): the gap to the market, and the sample
     sub: Math.abs(line.delta) < GAP_BAND ? `within ${GAP_BAND} over ${plural(line.games, 'game')}` : `${line.delta.toFixed(3).replace('-', '')} ${line.delta > 0 ? 'behind' : 'ahead'}, ${plural(line.games, 'game')}`,
   }
