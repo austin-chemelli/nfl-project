@@ -1,0 +1,841 @@
+{
+ "code_version": "e9564b8",
+ "conventions": "p_home = home win probability; spread_home > 0 = home favored (points)",
+ "data_snapshot": "20261128T170127Z",
+ "games": [
+  {
+   "away": "ATL",
+   "game_id": "2026_12_ATL_MIN",
+   "home": "MIN",
+   "kickoff_utc": "2026-11-29T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.7335,
+    "source": "odds_api",
+    "spread_home": 7.0,
+    "total": 41.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.7079,
+     "spread_home": 7.3885
+    },
+    "elo_v0": {
+     "p_home": 0.7812,
+     "spread_home": 8.8419
+    },
+    "global": {
+     "p_home": 0.6668,
+     "spread_home": 5.8213
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.7335,
+     "spread_home": 7.0
+    },
+    "sharp": {
+     "p_home": 0.7199,
+     "spread_home": 7.8648
+    },
+    "student": {
+     "p_home": 0.7016,
+     "spread_home": 7.1412
+    },
+    "student.core": {
+     "p_home": 0.712,
+     "spread_home": 7.5512
+    },
+    "traditionalist": {
+     "p_home": 0.7309,
+     "spread_home": 8.31
+    }
+   },
+   "news": {
+    "pts": -0.41,
+    "reasons": [
+     {
+      "input": "narrative.qb_status",
+      "pts": -0.5,
+      "team": "home",
+      "value": 1.0
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": 0.09,
+      "team": "home",
+      "value": 0.3
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 45.5699
+   }
+  },
+  {
+   "away": "BAL",
+   "game_id": "2026_12_BAL_HOU",
+   "home": "HOU",
+   "kickoff_utc": "2026-11-29T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.7269,
+    "source": "odds_api",
+    "spread_home": 6.5,
+    "total": 47.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.7466,
+     "spread_home": 8.9615
+    },
+    "elo_v0": {
+     "p_home": 0.6934,
+     "spread_home": 5.6703
+    },
+    "global": {
+     "p_home": 0.7354,
+     "spread_home": 8.4945
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.7269,
+     "spread_home": 6.5
+    },
+    "sharp": {
+     "p_home": 0.7041,
+     "spread_home": 7.2393
+    },
+    "student": {
+     "p_home": 0.7469,
+     "spread_home": 8.9758
+    },
+    "student.core": {
+     "p_home": 0.7256,
+     "spread_home": 8.0958
+    },
+    "traditionalist": {
+     "p_home": 0.8208,
+     "spread_home": 12.3978
+    }
+   },
+   "news": {
+    "pts": 0.88,
+    "reasons": [
+     {
+      "input": "narrative.qb_status",
+      "pts": 1.0,
+      "team": "away",
+      "value": 2.0
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": -0.21,
+      "team": "away",
+      "value": 0.7
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": 0.09,
+      "team": "home",
+      "value": 0.3
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 45.5032
+   }
+  },
+  {
+   "away": "NO",
+   "game_id": "2026_12_NO_CIN",
+   "home": "CIN",
+   "kickoff_utc": "2026-11-29T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.8167,
+    "source": "odds_api",
+    "spread_home": 9.5,
+    "total": 48.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.7808,
+     "spread_home": 10.4612
+    },
+    "elo_v0": {
+     "p_home": 0.8071,
+     "spread_home": 9.9438
+    },
+    "global": {
+     "p_home": 0.768,
+     "spread_home": 9.8869
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.8167,
+     "spread_home": 9.5
+    },
+    "sharp": {
+     "p_home": 0.7748,
+     "spread_home": 10.188
+    },
+    "student": {
+     "p_home": 0.7713,
+     "spread_home": 10.0321
+    },
+    "student.core": {
+     "p_home": 0.7693,
+     "spread_home": 9.9421
+    },
+    "traditionalist": {
+     "p_home": 0.793,
+     "spread_home": 11.0274
+    }
+   },
+   "news": {
+    "pts": 0.09,
+    "reasons": [
+     {
+      "input": "narrative.motivation",
+      "pts": 0.09,
+      "team": "home",
+      "value": 0.3
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 46.3647
+   }
+  },
+  {
+   "away": "NYG",
+   "game_id": "2026_12_NYG_IND",
+   "home": "IND",
+   "kickoff_utc": "2026-11-29T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.3053,
+    "source": "odds_api",
+    "spread_home": -5.5,
+    "total": 41.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.4128,
+     "spread_home": -2.9735
+    },
+    "elo_v0": {
+     "p_home": 0.408,
+     "spread_home": -2.5852
+    },
+    "global": {
+     "p_home": 0.4889,
+     "spread_home": -0.3756
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.3053,
+     "spread_home": -5.5
+    },
+    "sharp": {
+     "p_home": 0.4459,
+     "spread_home": -1.836
+    },
+    "student": {
+     "p_home": 0.3955,
+     "spread_home": -3.5776
+    },
+    "student.core": {
+     "p_home": 0.3715,
+     "spread_home": -4.4276
+    },
+    "traditionalist": {
+     "p_home": 0.4018,
+     "spread_home": -3.356
+    }
+   },
+   "news": {
+    "pts": 0.85,
+    "reasons": [
+     {
+      "input": "narrative.qb_status",
+      "pts": 1.0,
+      "team": "away",
+      "value": 2.0
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": -0.09,
+      "team": "away",
+      "value": 0.3
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": -0.06,
+      "team": "home",
+      "value": -0.2
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 41.7144
+   }
+  },
+  {
+   "away": "NYJ",
+   "game_id": "2026_12_NYJ_MIA",
+   "home": "MIA",
+   "kickoff_utc": "2026-11-29T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-28T01:07:24Z",
+    "p_home_vigfree": 0.3194,
+    "source": "odds_api",
+    "spread_home": -5.5,
+    "total": 40.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.3426,
+     "spread_home": -5.4741
+    },
+    "elo_v0": {
+     "p_home": 0.5774,
+     "spread_home": 2.1681
+    },
+    "global": {
+     "p_home": 0.4177,
+     "spread_home": -2.8054
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.3194,
+     "spread_home": -5.5
+    },
+    "sharp": {
+     "p_home": 0.3181,
+     "spread_home": -6.3866
+    },
+    "student": {
+     "p_home": 0.3442,
+     "spread_home": -5.4153
+    },
+    "student.core": {
+     "p_home": 0.3442,
+     "spread_home": -5.4153
+    },
+    "traditionalist": {
+     "p_home": 0.3926,
+     "spread_home": -3.681
+    }
+   },
+   "news": {
+    "pts": 0.0,
+    "reasons": [
+     {
+      "input": "narrative.injury_impact",
+      "pts": 0.2,
+      "team": "away",
+      "value": 1.0
+     },
+     {
+      "input": "news.starters_ruled_out",
+      "pts": -0.2,
+      "team": "home",
+      "value": 1.0
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 42.2971
+   }
+  },
+  {
+   "away": "TEN",
+   "game_id": "2026_12_TEN_JAX",
+   "home": "JAX",
+   "kickoff_utc": "2026-11-29T18:00:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.8769,
+    "source": "odds_api",
+    "spread_home": 14.0,
+    "total": 48.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.8724,
+     "spread_home": 15.3628
+    },
+    "elo_v0": {
+     "p_home": 0.9026,
+     "spread_home": 15.4683
+    },
+    "global": {
+     "p_home": 0.8565,
+     "spread_home": 14.3712
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.8769,
+     "spread_home": 14.0
+    },
+    "sharp": {
+     "p_home": 0.8377,
+     "spread_home": 13.2961
+    },
+    "student": {
+     "p_home": 0.8555,
+     "spread_home": 14.3153
+    },
+    "student.core": {
+     "p_home": 0.854,
+     "spread_home": 14.2253
+    },
+    "traditionalist": {
+     "p_home": 0.853,
+     "spread_home": 14.1646
+    }
+   },
+   "news": {
+    "pts": 0.09,
+    "reasons": [
+     {
+      "input": "narrative.qb_status",
+      "pts": 1.0,
+      "team": "away",
+      "value": 2.0
+     },
+     {
+      "input": "narrative.qb_status",
+      "pts": -1.0,
+      "team": "home",
+      "value": 2.0
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": 0.09,
+      "team": "home",
+      "value": 0.3
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 44.3311
+   }
+  },
+  {
+   "away": "NE",
+   "game_id": "2026_12_NE_LAC",
+   "home": "LAC",
+   "kickoff_utc": "2026-11-29T21:05:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.4128,
+    "source": "odds_api",
+    "spread_home": -3.0,
+    "total": 35.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.3728,
+     "spread_home": -4.3814
+    },
+    "elo_v0": {
+     "p_home": 0.344,
+     "spread_home": -4.4864
+    },
+    "global": {
+     "p_home": 0.4163,
+     "spread_home": -2.8521
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.4128,
+     "spread_home": -3.0
+    },
+    "sharp": {
+     "p_home": 0.3823,
+     "spread_home": -4.0419
+    },
+    "student": {
+     "p_home": 0.3849,
+     "spread_home": -3.9501
+    },
+    "student.core": {
+     "p_home": 0.3594,
+     "spread_home": -4.8601
+    },
+    "traditionalist": {
+     "p_home": 0.486,
+     "spread_home": -0.4747
+    }
+   },
+   "news": {
+    "pts": 0.91,
+    "reasons": [
+     {
+      "input": "narrative.qb_status",
+      "pts": 1.0,
+      "team": "away",
+      "value": 2.0
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": -0.09,
+      "team": "away",
+      "value": 0.3
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 43.3385
+   }
+  },
+  {
+   "away": "SEA",
+   "game_id": "2026_12_SEA_SF",
+   "home": "SF",
+   "kickoff_utc": "2026-11-29T21:25:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.4718,
+    "source": "odds_api",
+    "spread_home": -1.5,
+    "total": 42.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.6198,
+     "spread_home": 4.1152
+    },
+    "elo_v0": {
+     "p_home": 0.6081,
+     "spread_home": 3.0515
+    },
+    "global": {
+     "p_home": 0.6388,
+     "spread_home": 4.7943
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.4718,
+     "spread_home": -1.5
+    },
+    "sharp": {
+     "p_home": 0.6033,
+     "spread_home": 3.5348
+    },
+    "student": {
+     "p_home": 0.5953,
+     "spread_home": 3.2565
+    },
+    "student.core": {
+     "p_home": 0.597,
+     "spread_home": 3.3165
+    },
+    "traditionalist": {
+     "p_home": 0.5548,
+     "spread_home": 1.8603
+    }
+   },
+   "news": {
+    "pts": -0.06,
+    "reasons": [
+     {
+      "input": "narrative.motivation",
+      "pts": -0.15,
+      "team": "away",
+      "value": 0.5
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": 0.09,
+      "team": "home",
+      "value": 0.3
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 46.4176
+   }
+  },
+  {
+   "away": "WAS",
+   "game_id": "2026_12_WAS_ARI",
+   "home": "ARI",
+   "kickoff_utc": "2026-11-29T21:25:00Z",
+   "market": {
+    "as_of": "2026-11-28T01:07:24Z",
+    "p_home_vigfree": 0.2598,
+    "source": "odds_api",
+    "spread_home": -6.5,
+    "total": 41.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.2417,
+     "spread_home": -9.4618
+    },
+    "elo_v0": {
+     "p_home": 0.4252,
+     "spread_home": -2.0941
+    },
+    "global": {
+     "p_home": 0.3494,
+     "spread_home": -5.2248
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.2598,
+     "spread_home": -6.5
+    },
+    "sharp": {
+     "p_home": 0.2588,
+     "spread_home": -8.7367
+    },
+    "student": {
+     "p_home": 0.2308,
+     "spread_home": -9.9368
+    },
+    "student.core": {
+     "p_home": 0.2329,
+     "spread_home": -9.8468
+    },
+    "traditionalist": {
+     "p_home": 0.2414,
+     "spread_home": -9.4759
+    }
+   },
+   "news": {
+    "pts": -0.09,
+    "reasons": [
+     {
+      "input": "narrative.motivation",
+      "pts": -0.09,
+      "team": "away",
+      "value": 0.3
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 42.8341
+   }
+  },
+  {
+   "away": "LV",
+   "game_id": "2026_12_LV_CLE",
+   "home": "CLE",
+   "kickoff_utc": "2026-11-30T01:20:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.6704,
+    "source": "odds_api",
+    "spread_home": 4.5,
+    "total": 39.0
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.7504,
+     "spread_home": 9.1246
+    },
+    "elo_v0": {
+     "p_home": 0.6616,
+     "spread_home": 4.658
+    },
+    "global": {
+     "p_home": 0.6969,
+     "spread_home": 6.9585
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.6704,
+     "spread_home": 4.5
+    },
+    "sharp": {
+     "p_home": 0.7017,
+     "spread_home": 7.1469
+    },
+    "student": {
+     "p_home": 0.7246,
+     "spread_home": 8.054
+    },
+    "student.core": {
+     "p_home": 0.7239,
+     "spread_home": 8.024
+    },
+    "traditionalist": {
+     "p_home": 0.7812,
+     "spread_home": 10.4815
+    }
+   },
+   "news": {
+    "pts": 0.03,
+    "reasons": [
+     {
+      "input": "narrative.motivation",
+      "pts": 0.06,
+      "team": "home",
+      "value": 0.2
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": -0.03,
+      "team": "away",
+      "value": 0.1
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 40.5136
+   }
+  },
+  {
+   "away": "CAR",
+   "game_id": "2026_12_CAR_TB",
+   "home": "TB",
+   "kickoff_utc": "2026-12-01T01:15:00Z",
+   "market": {
+    "as_of": "2026-11-28T17:02:09Z",
+    "p_home_vigfree": 0.5971,
+    "source": "odds_api",
+    "spread_home": 3.0,
+    "total": 43.5
+   },
+   "models": {
+    "analyst": {
+     "p_home": 0.6342,
+     "spread_home": 4.6295
+    },
+    "elo_v0": {
+     "p_home": 0.6084,
+     "spread_home": 3.0624
+    },
+    "global": {
+     "p_home": 0.5881,
+     "spread_home": 3.0052
+    },
+    "home_naive": {
+     "p_home": 0.57,
+     "spread_home": 2.0
+    },
+    "market_baseline": {
+     "p_home": 0.5971,
+     "spread_home": 3.0
+    },
+    "sharp": {
+     "p_home": 0.6962,
+     "spread_home": 6.9333
+    },
+    "student": {
+     "p_home": 0.6239,
+     "spread_home": 4.2631
+    },
+    "student.core": {
+     "p_home": 0.6149,
+     "spread_home": 3.9431
+    },
+    "traditionalist": {
+     "p_home": 0.5926,
+     "spread_home": 3.1629
+    }
+   },
+   "news": {
+    "pts": 0.32,
+    "reasons": [
+     {
+      "input": "narrative.qb_status",
+      "pts": 1.0,
+      "team": "away",
+      "value": 2.0
+     },
+     {
+      "input": "narrative.qb_status",
+      "pts": -1.0,
+      "team": "home",
+      "value": 2.0
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": 0.21,
+      "team": "home",
+      "value": 0.7
+     },
+     {
+      "input": "narrative.injury_impact",
+      "pts": 0.2,
+      "team": "away",
+      "value": 1.0
+     },
+     {
+      "input": "narrative.injury_impact",
+      "pts": -0.2,
+      "team": "home",
+      "value": 1.0
+     },
+     {
+      "input": "news.starters_ruled_out",
+      "pts": 0.2,
+      "team": "away",
+      "value": 1.0
+     },
+     {
+      "input": "narrative.motivation",
+      "pts": -0.09,
+      "team": "away",
+      "value": 0.3
+     }
+    ]
+   },
+   "student_total": {
+    "sd": 13.4238,
+    "total": 44.0499
+   }
+  }
+ ],
+ "lock_ts": "2026-11-28T17:08:41Z",
+ "odds_snapshot": "20261128T170209Z",
+ "schema_version": "1",
+ "season": 2026,
+ "slot": "sat",
+ "week": 12
+}
